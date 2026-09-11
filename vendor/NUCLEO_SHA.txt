@@ -1,0 +1,8 @@
+origen  https://github.com/dasniela/ISCQuotingCore
+commit  d0ea69177af3b7bd31b72457623eed00ecfd33c8
+fecha   2026-09-10T15:53:26+00:00
+
+Copia hecha por scripts/vendorizar_nucleo.py.
+El catálogo de las calculadoras se vació al copiar: los datos
+salen de Neon. Para actualizar, vuelve a pasar el script sobre un
+clon al día y revisa el diff.

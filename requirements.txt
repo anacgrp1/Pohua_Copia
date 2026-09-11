@@ -1,0 +1,66 @@
+# Cotizador — dependencias del servidor (API + worker de correo).
+# La app de escritorio tiene las suyas en requirements-desktop.txt y las de
+# desarrollo están en requirements-dev.txt.
+
+# --- Base de datos ---
+psycopg2-binary>=2.9        # PostgreSQL (duplicados, RFQs, catálogo de costeo)
+
+# --- Correo ---
+schedule>=1.2               # Ejecución periódica del ciclo de detección
+requests>=2.31              # Microsoft Graph API
+beautifulsoup4>=4.12        # Limpieza del cuerpo HTML de los correos (COT-53)
+lxml>=5.0                   # Parser HTML rápido para BeautifulSoup (COT-53)
+
+# --- Configuración ---
+python-dotenv>=1.0          # Variables de entorno (.env)
+
+# --- IA ---
+anthropic>=0.39             # Claude: visión de planos y extracción del correo
+
+# --- Almacenamiento de planos ---
+azure-storage-blob>=12.19   # Persistencia de planos en modo <Token> (COT-56)
+
+# --- Web ---
+fastapi>=0.110              # Framework web (API + PWA)
+uvicorn[standard]>=0.29     # Servidor ASGI
+pydantic>=2.0               # Validación de datos de la API
+
+# --- Autenticación (COT-100) ---
+# El hash de contraseñas usa hashlib de la stdlib, así que sólo hace falta la
+# librería de JWT para los tokens de sesión.
+pyjwt>=2.8
+
+# --- Generación de cotizaciones en PDF ---
+# Faltaban las dos: pdf/generator.py importa jinja2 a nivel de módulo, así que
+# sin ella cualquier import de ese módulo reventaba con ImportError.
+jinja2>=3.1
+weasyprint>=61.0            # Requiere libpango y libcairo (ver Dockerfile)
+
+# imaplib, email, hashlib, secrets y json son parte de la stdlib de Python.
+#
+# NOTA: el motor de costeo (pricing/engine.js) corre sobre Node.js, que no se
+# instala con pip. Ver Dockerfile y package.json.
+
+# --- Núcleo de cotización (dasniela/ISCQuotingCore) -------------------------
+# El lector de planos es una aplicación Flask que se monta dentro de esta API
+# (api/lector.py), así que Flask y el puente WSGI->ASGI son dependencias del
+# servidor, no del lector.
+#
+# El paquete `isc-nucleo` en sí NO se declara aquí todavía: este repositorio es
+# privado y la máquina que construye no tiene sesión de GitHub. Está decidido
+# en el README del núcleo, seccion "Sin decidir: como instala Render desde un
+# repositorio privado", y hay que elegir antes del primer despliegue. En local
+# basta con `pip install -e ISCQuotingCore`.
+Flask>=3.0.0,<4.0.0         # El lector de planos del núcleo
+a2wsgi>=1.10                # Puente WSGI->ASGI para montarlo (el de Starlette está deprecado)
+PyMuPDF>=1.24.0,<2.0.0      # Lectura de planos PDF (isc_extractor y quote_pdf)
+Pillow>=10.0.0,<13.0.0      # Recortes de las cotas leídas
+jsonschema>=4.20.0,<5.0.0   # Valida lo que devuelve el modelo contra el esquema
+
+# El PDF de la oferta llega como multipart/form-data (POST /quoting/oferta).
+# FastAPI no lo pide al instalarse pero lo EXIGE al registrar la ruta, así que
+# sin esto la aplicación entera no arranca -- no falla sólo ese endpoint. En
+# local no se notaba porque ya estaba instalado por otra vía; en un build limpio
+# se cayó el despliegue.
+python-multipart>=0.0.9     # Subida del PDF de la oferta
+pywebpush>=2.0              # Web Push: los avisos de la campana en el teléfono

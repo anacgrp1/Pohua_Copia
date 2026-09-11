@@ -1,0 +1,448 @@
+{
+  "tipo_resorte": "compresion",
+  "identificacion": {
+    "numero_parte": "625482500A",
+    "nombre_parte": "SPRING, HORN, DAB V36.3NA",
+    "numero_plano": "625 48 25",
+    "revision": "001",
+    "fecha_revision": "2013-06-08",
+    "cliente": "Autoliv",
+    "estandar_dibujo": "ISO 1101",
+    "escala": "2:1",
+    "unidad_dimensional": "mm",
+    "masa": "1.5 g"
+  },
+  "material": {
+    "designacion": "ASTM A313 302",
+    "alternativas": [],
+    "norma": "ASTM A313",
+    "tipo_o_grado": "302",
+    "tratamiento_termico": null,
+    "acabado_superficial": null,
+    "referencia_documento_externo": null
+  },
+  "dimensiones_mm": {
+    "diametro_exterior": {
+      "nominal": 13.8,
+      "tolerancia_mas": 0.35,
+      "tolerancia_menos": 0.35,
+      "valor_maximo": null,
+      "valor_minimo": null,
+      "es_referencia": false,
+      "texto_original": "D = Ø13.8 +/- 0.35 mm"
+    },
+    "diametro_interior": {
+      "nominal": 11.6,
+      "tolerancia_mas": 0.35,
+      "tolerancia_menos": 0.35,
+      "valor_maximo": null,
+      "valor_minimo": null,
+      "es_referencia": false,
+      "texto_original": "d = Ø11.6 +/- 0.35 mm"
+    },
+    "diametro_medio": null,
+    "diametro_alambre": {
+      "nominal": 1.1,
+      "tolerancia_mas": 0.02,
+      "tolerancia_menos": 0.02,
+      "valor_maximo": null,
+      "valor_minimo": null,
+      "es_referencia": false,
+      "texto_original": "1.1 +/- 0.02 mm"
+    },
+    "longitud_libre_L0": {
+      "nominal": 19.75,
+      "tolerancia_mas": null,
+      "tolerancia_menos": null,
+      "valor_maximo": null,
+      "valor_minimo": null,
+      "es_referencia": true,
+      "texto_original": "19.75 mm (ref.)"
+    },
+    "longitud_libre_unsprung_L0max": null,
+    "longitud_comprimida_Ls": null,
+    "longitud_minima_L3": {
+      "nominal": null,
+      "tolerancia_mas": null,
+      "tolerancia_menos": null,
+      "valor_maximo": null,
+      "valor_minimo": null,
+      "es_referencia": true,
+      "texto_original": "TO BE DEFINED BY SUPPLIER"
+    },
+    "paso": null
+  },
+  "espiras": {
+    "numero_espiras_totales": 6,
+    "numero_espiras_activas": 3,
+    "numero_espiras_muertas_totales": null,
+    "numero_espiras_muertas_por_extremo": null,
+    "sentido_enrollado": "derecho"
+  },
+  "extremos": {
+    "tipo": "GROUNDED",
+    "rebabeo": "IF NECESSARY",
+    "rectificado": true
+  },
+  "cargas": [
+    {
+      "etiqueta": "F1",
+      "longitud_mm": 16.0,
+      "fuerza_N": 7.5,
+      "unidad_fuerza_original": "N",
+      "deflexion_mm": null,
+      "tolerancia_fuerza_pct": 10,
+      "tolerancia_fuerza_absoluta_N": null,
+      "condiciones_medicion": null
+    },
+    {
+      "etiqueta": "F2",
+      "longitud_mm": 14.0,
+      "fuerza_N": 11.5,
+      "unidad_fuerza_original": "N",
+      "deflexion_mm": null,
+      "tolerancia_fuerza_pct": 10,
+      "tolerancia_fuerza_absoluta_N": null,
+      "condiciones_medicion": null
+    }
+  ],
+  "rigidez_lineal_N_por_mm": 2.0,
+  "esfuerzo_trabajo_MPa": null,
+  "carrera_trabajo_mm": {
+    "nominal": 2.0,
+    "tolerancia_mas": 0.5,
+    "tolerancia_menos": 0.5,
+    "valor_maximo": null,
+    "valor_minimo": null,
+    "es_referencia": true,
+    "texto_original": "2 +/- 0.5 mm (FOR INFORMATION)"
+  },
+  "condiciones_operacion": {
+    "temperatura_min_C": -35,
+    "temperatura_max_C": 85,
+    "frecuencia_ciclos": 400000,
+    "resistencia_corrosion": "Salt spray test per NF X41002 or VSS DIN 50021. No red rust after 48h.",
+    "conductividad_electrica": "Final part must conduct 12V max; 10mA max without damage."
+  },
+  "caracteristicas_clasificadas": [
+    {
+      "dim_no": "117",
+      "designacion": "ANTI-TANGLE",
+      "valor": "Joined coils in middle zone",
+      "clasificacion": "SC",
+      "sistema_clasificacion": "Autoliv ASM"
+    },
+    {
+      "dim_no": "116",
+      "designacion": "ELECTRICAL CONDUCTIVITY",
+      "valor": "12V max, 10mA max without damage",
+      "clasificacion": "CC",
+      "sistema_clasificacion": "Autoliv ASM"
+    },
+    {
+      "dim_no": "114",
+      "designacion": "CORROSION RESISTANCE: SALT SPRAY TEST",
+      "valor": "NF X41002 or VSS DIN 50021, no red rust after 48h",
+      "clasificacion": "SC",
+      "sistema_clasificacion": "Autoliv ASM"
+    },
+    {
+      "dim_no": "113",
+      "designacion": "EXTERNAL DIAMETER D",
+      "valor": "Ø13.8 +/- 0.35 mm",
+      "clasificacion": "SC",
+      "sistema_clasificacion": "Autoliv ASM"
+    },
+    {
+      "dim_no": "107",
+      "designacion": "EXTREMITY",
+      "valor": "GROUNDED",
+      "clasificacion": "SC",
+      "sistema_clasificacion": "Autoliv ASM"
+    },
+    {
+      "dim_no": "106",
+      "designacion": "MATERIAL",
+      "valor": "ASTM A313 302",
+      "clasificacion": "CC",
+      "sistema_clasificacion": "Autoliv ASM"
+    }
+  ],
+  "notas_generales": [
+    "PART REFERENCE: 625482500A",
+    "Proyeccion ISO 128-30; do not scale.",
+    "Supplier quality requirements: Autoliv Supplier Manual (ASM).",
+    "Traceability classification: AS 4 Level 2. Production characteristics: AS 52."
+  ],
+  "historial_revisiones": [
+    {
+      "rev": "000",
+      "fecha": null,
+      "autor": null,
+      "descripcion": "INITIAL DRAWING (ECO 164366)."
+    },
+    {
+      "rev": "001",
+      "fecha": "2013-06-08",
+      "autor": null,
+      "descripcion": "Removed note 2, updated DIM NO 100-117 (ECO 216244)."
+    }
+  ],
+  "metadatos_extraccion": {
+    "campos_no_visibles": [
+      "material.tratamiento_termico",
+      "material.acabado_superficial",
+      "dimensiones_mm.diametro_medio",
+      "dimensiones_mm.longitud_libre_unsprung_L0max",
+      "dimensiones_mm.longitud_comprimida_Ls",
+      "dimensiones_mm.paso",
+      "esfuerzo_trabajo_MPa",
+      "espiras.numero_espiras_muertas_totales"
+    ],
+    "confianza_general": "alta",
+    "comentarios": "Migrado de v2 example_output.json. Rigidez calculada k = (F2-F1)/(L1-L2) = (11.5-7.5)/(16-14) = 2.0 N/mm.",
+    "version_schema": "v3"
+  },
+  "localizacion": [
+    {
+      "campo": "dimensiones_mm.diametro_alambre",
+      "pagina": 0,
+      "nbox": [
+        0.62,
+        0.15,
+        0.23,
+        0.045
+      ]
+    },
+    {
+      "campo": "dimensiones_mm.diametro_exterior",
+      "pagina": 0,
+      "nbox": [
+        0.62,
+        0.205,
+        0.23,
+        0.045
+      ]
+    },
+    {
+      "campo": "dimensiones_mm.diametro_interior",
+      "pagina": 0,
+      "nbox": [
+        0.62,
+        0.26,
+        0.23,
+        0.045
+      ]
+    },
+    {
+      "campo": "dimensiones_mm.diametro_medio",
+      "pagina": 0,
+      "nbox": [
+        0.62,
+        0.315,
+        0.23,
+        0.045
+      ]
+    },
+    {
+      "campo": "dimensiones_mm.longitud_libre_L0",
+      "pagina": 0,
+      "nbox": [
+        0.09,
+        0.3,
+        0.2,
+        0.045
+      ]
+    },
+    {
+      "campo": "dimensiones_mm.longitud_comprimida_Ls",
+      "pagina": 0,
+      "nbox": [
+        0.09,
+        0.36,
+        0.2,
+        0.045
+      ]
+    },
+    {
+      "campo": "espiras.numero_espiras_totales",
+      "pagina": 0,
+      "nbox": [
+        0.62,
+        0.37,
+        0.23,
+        0.045
+      ]
+    },
+    {
+      "campo": "material.designacion",
+      "pagina": 0,
+      "nbox": [
+        0.62,
+        0.425,
+        0.3,
+        0.045
+      ]
+    },
+    {
+      "campo": "extremos.rectificado",
+      "pagina": 0,
+      "nbox": [
+        0.62,
+        0.48,
+        0.3,
+        0.045
+      ]
+    },
+    {
+      "campo": "cargas[0]",
+      "pagina": 0,
+      "nbox": [
+        0.09,
+        0.52,
+        0.36,
+        0.05
+      ]
+    },
+    {
+      "campo": "cargas[1]",
+      "pagina": 0,
+      "nbox": [
+        0.09,
+        0.58,
+        0.36,
+        0.05
+      ]
+    },
+    {
+      "campo": "identificacion.numero_parte",
+      "pagina": 0,
+      "nbox": [
+        0.62,
+        0.86,
+        0.3,
+        0.045
+      ]
+    },
+    {
+      "campo": "identificacion.cliente",
+      "pagina": 0,
+      "nbox": [
+        0.62,
+        0.91,
+        0.3,
+        0.045
+      ]
+    },
+    {
+      "campo": "identificacion.revision",
+      "pagina": 0,
+      "nbox": [
+        0.9,
+        0.86,
+        0.08,
+        0.045
+      ]
+    },
+    {
+      "campo": "caracteristicas_clasificadas[0]",
+      "pagina": 0,
+      "nbox": [
+        0.09,
+        0.64,
+        0.43,
+        0.034
+      ]
+    },
+    {
+      "campo": "caracteristicas_clasificadas[1]",
+      "pagina": 0,
+      "nbox": [
+        0.09,
+        0.678,
+        0.43,
+        0.034
+      ]
+    },
+    {
+      "campo": "caracteristicas_clasificadas[2]",
+      "pagina": 0,
+      "nbox": [
+        0.09,
+        0.716,
+        0.43,
+        0.034
+      ]
+    },
+    {
+      "campo": "caracteristicas_clasificadas[3]",
+      "pagina": 0,
+      "nbox": [
+        0.09,
+        0.754,
+        0.43,
+        0.034
+      ]
+    },
+    {
+      "campo": "caracteristicas_clasificadas[4]",
+      "pagina": 0,
+      "nbox": [
+        0.09,
+        0.792,
+        0.43,
+        0.034
+      ]
+    },
+    {
+      "campo": "caracteristicas_clasificadas[5]",
+      "pagina": 0,
+      "nbox": [
+        0.09,
+        0.8300000000000001,
+        0.43,
+        0.034
+      ]
+    },
+    {
+      "campo": "notas_generales[0]",
+      "pagina": 0,
+      "nbox": [
+        0.09,
+        0.7,
+        0.43,
+        0.034
+      ]
+    },
+    {
+      "campo": "notas_generales[1]",
+      "pagina": 0,
+      "nbox": [
+        0.09,
+        0.738,
+        0.43,
+        0.034
+      ]
+    },
+    {
+      "campo": "notas_generales[2]",
+      "pagina": 0,
+      "nbox": [
+        0.09,
+        0.7759999999999999,
+        0.43,
+        0.034
+      ]
+    },
+    {
+      "campo": "notas_generales[3]",
+      "pagina": 0,
+      "nbox": [
+        0.09,
+        0.814,
+        0.43,
+        0.034
+      ]
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+# Entorno y Secretos - NUNCA subir
+.env
+.env.*
+!.env.example
+
+# Cache de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node (motor de costeo)
+node_modules/
+
+# Logs del Sistema
+*.log
+app.log
+
+# IDEs y Editores / SO
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store
+
+# ==============================================================================
+# Datos con PII de clientes / fuentes del legado - NUNCA subir al repo
+# (contienen contactos, direcciones y datos comerciales reales)
+#
+# ATENCION: tres de estos archivos SI llegaron a subirse y siguen en el
+# historial de git. Añadirlos aquí evita que vuelva a pasar, pero NO los saca
+# de los commits anteriores. Ver docs/OPERACION.md, sección "Purga del
+# historial", para el procedimiento.
+# ==============================================================================
+03_data.sql
+**/03_data.sql
+ISC_V4_DATA*.json
+**/ISC_V4_DATA*.json
+Customer_Contacts_Merged.xlsx
+**/Customer_Contacts_Merged.xlsx
+revision_pendiente.csv
+**/revision_pendiente.csv
+*.dump
+
+# Volcados de datos reales de clientes.
+#
+# Estos datos YA ESTÁN cargados en Neon, que es donde deben vivir. En el
+# repositorio sólo eran una copia de la cartera comercial al alcance de
+# cualquiera con acceso al código.
+#
+# Para desarrollo local existe sql/seed_clientes_demo.sql, con empresas
+# inventadas.
+isc_customer_contacts.sql
+isc_schema_postgres.sql
+sql/seed_contactos_isc.sql
+sql/seed_clientes_isc.sql
+sql/seed_clientes_top12.sql
+
+# El núcleo de cotización (dasniela/ISCQuotingCore), clonado aquí al lado.
+#
+# Es OTRO repositorio. Se clona dentro para trabajar en local sin pedir
+# permisos por cada carpeta, pero no se versiona aquí: tendríamos dos
+# historias del mismo código y volveríamos al problema que ese repositorio
+# existe para resolver. En el despliegue entra como paquete instalado, no
+# como copia.
+ISCQuotingCore/
+
+# `vendor/` y `pricing/nucleo/` SÍ se versionan: son la copia del núcleo que
+# hace scripts/vendorizar_nucleo.py, y son justo lo que permite que Render
+# construya sin credenciales para un repositorio privado. El catálogo se vació
+# al copiarlas, así que no llevan datos de ISC. No las añadas aquí.
+
+# El extracto del catálogo de taller (Rodea, 2026-09-03).
+#
+# Lleva precios de proveedor con fecha y 116 registros de lo que ISC paga por
+# recubrir por pieza. Se carga en Neon con scripts/cargar_catalogo.py y se
+# borra: en el repositorio serían una copia de los costes de ISC al alcance de
+# cualquiera con acceso al código, y además una segunda verdad del mismo dato.
+_extracto_catalogo/
+
+# Las carpetas de trabajo del lector, que se crean solas al arrancarlo.
+#
+# `_uploads` y `_crops` guardan los planos que se leen y los recortes de cada
+# cota; `_specs`, el JSON de ingenieria de cada lectura; `Quotes`, las ofertas
+# en PDF. Son planos y ofertas de clientes de ISC: no van al repositorio, y el
+# lector las vuelve a crear solo si no estan.
+#
+# La clave del modelo tampoco. En Render entra por la variable de entorno
+# ANTHROPIC_API_KEY; el fichero solo existe cuando alguien trabaja en local.
+vendor/lector/_crops/
+vendor/lector/_uploads/
+vendor/lector/_specs/
+vendor/lector/api_key.txt
+vendor/Quotes/
+vendor/**/__pycache__/
+
+# Los planos que llegan por correo, guardados en disco en modo <Local>
+# (PLANOS_DIR). Son planos de clientes de ISC: en Render van a Blob Storage y
+# en local se quedan en la carpeta, nunca en el repositorio.
+planos/

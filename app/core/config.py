@@ -1,0 +1,507 @@
+import logging
+import os
+from pathlib import Path
+from typing import Any, Dict, List, Optional, get_type_hints
+from urllib.parse import urlparse
+
+from app.core.exceptions import ConfigurationError
+
+# NOTA: este módulo NO llama a logging.basicConfig().  La configuración de
+# logs (consola + archivo rotativo) vive en app/core/logging.py y la aplican
+# los puntos de entrada (app.main, api.server, desktop_app.main).  Configurar
+# el logging aquí, como efecto secundario de un import, pisaba esa config.
+logger = logging.getLogger("ConfigLoader")
+
+
+class Settings:
+    """Clase centralizada para gestionar las variables de entorno de la aplicación.
+
+    Carga variables desde el entorno del sistema y, en su defecto, desde un archivo .env.
+    Realiza conversión de tipos y validación de variables críticas según el tipo de entorno
+    (dev/prod) y el método de autenticación seleccionado (local/token).
+    """
+
+    # --- Variables de Control ---
+    APP_ENV: str = "dev"
+    AUTH_METHOD: str = "local"
+    MAIL_MODE: str = "imap"
+
+    # --- Configuración IMAP / SMTP (Método Local / imap) ---
+    IMAP_SERVER: Optional[str] = None
+    IMAP_HOST: Optional[str] = None
+    IMAP_PORT: int = 993
+    IMAP_USER: Optional[str] = None
+    IMAP_PASSWORD: Optional[str] = None
+    IMAP_FOLDER: str = "INBOX"
+    # La carpeta del buzón que se lee. Vale para los dos proveedores —IMAP y
+    # Graph—, por eso no lleva prefijo; `IMAP_FOLDER` se conserva como alias.
+    #
+    # Existe para poder probar el flujo entero con una carpeta aparte (TEST) sin
+    # que el sistema se coma la bandeja de entrada de ventas mientras se afina:
+    # se mueve un correo a esa carpeta, se corre el ciclo, y lo que pasa pasa
+    # ahí. Cuando el flujo esté validado, se quita la variable y vuelve a INBOX.
+    MAIL_FOLDER: str = "INBOX"
+    SMTP_SERVER: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USE_TLS: bool = True
+
+    # --- Configuración Azure AD / OAuth2 (Método Token / graph) ---
+    AZURE_CLIENT_ID: Optional[str] = None
+    AZURE_TENANT_ID: Optional[str] = None
+    AZURE_CLIENT_SECRET: Optional[str] = None
+    GRAPH_CLIENT_ID: Optional[str] = None
+    GRAPH_TENANT_ID: Optional[str] = None
+    GRAPH_CLIENT_SECRET: Optional[str] = None
+    GRAPH_USER: Optional[str] = None
+
+    # --- PostgreSQL ---
+    DATABASE_URL: str = ""  # URL completa (Neon/Railway/Render la inyectan)
+    PG_HOST: str = "localhost"
+    PG_PORT: int = 5432
+    PG_DATABASE: str = "cotizador"
+    PG_USER: str = "postgres"
+    PG_PASSWORD: str = ""
+    POSTGREST_URL: str = "http://localhost:3000"  # Solo para dev local con Docker
+
+    # --- Scheduler ---
+    INTERVALO_MINUTOS: int = 5
+
+    # --- Local Worker / Failover ---
+    # Sin valor por defecto a proposito: en prod _validate() exige que este
+    # definida.  En dev, si se deja vacia, el endpoint de heartbeat se apaga
+    # en vez de aceptar un secreto conocido por todo el mundo.
+    WORKER_SECRET_KEY: str = ""
+    WEB_SERVER_URL: str = "http://localhost:8000"
+
+    # --- Autenticación de la API (COT-100) ---
+    # Clave con la que se firman los tokens de sesión (JWT HS256).
+    # Obligatoria en prod.  Generar con:
+    #   python -c "import secrets;print(secrets.token_urlsafe(48))"
+    JWT_SECRET: str = ""
+    JWT_ALGORITHM: str = "HS256"
+    # Duración de la sesión en minutos (8 h por defecto = una jornada).
+    JWT_EXPIRE_MINUTES: int = 480
+    # Orígenes permitidos por CORS, separados por coma.
+    # Vacío = mismo origen únicamente (la PWA se sirve desde el propio FastAPI).
+    CORS_ORIGINS: str = ""
+
+    # --- Multimodal Vision Model (Anthropic Claude) ---
+    ANTHROPIC_API_KEY: str = ""
+    VISION_MODEL: str = "claude-opus-4-8"
+    VISION_MAX_TOKENS: int = 2048
+    VISION_TEMPERATURE: float = 0.0
+
+    # --- Modelo de lenguaje: extracción del cuerpo del correo (COT-61) ---
+    # Si se deja vacío se usa VISION_MODEL.
+    LLM_MODEL: str = ""
+    # Confianza mínima para dar por bueno un campo extraído del correo.
+    # Por debajo, el campo no se usa ni se pide al cliente: lo valida el PM.
+    UMBRAL_CONFIANZA: float = 0.7
+
+    # --- Almacenamiento de planos (COT-56) ---
+    # <Local>: carpeta en disco. <Token>: contenedor de Azure Blob Storage.
+    PLANOS_DIR: str = "planos"
+    BLOB_CONNECTION_STRING: str = ""
+    BLOB_CONTAINER: str = "planos"
+
+    # --- Factibilidad (COT-74) ---
+    # Nota: el motor de factibilidad tiene su propio umbral de confianza en
+    # reglas/factibilidad.json. No es este: aquel decide cuanto pesa una
+    # lectura dudosa en el dictamen, este decide que campos se aceptan.
+    # Archivo con las directrices de la planta que lee el motor de COT-75.
+    # Ruta relativa a la raiz del proyecto, o absoluta.
+    REGLAS_FACTIBILIDAD: str = "reglas/factibilidad.json"
+
+    # --- Web Push: los avisos en el teléfono ---
+    # Par de claves VAPID (scripts/generar_vapid.py). Sin ellas la campana
+    # sigue funcionando dentro de la app; sólo no llega nada al teléfono.
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_PRIVATE_KEY: str = ""
+    # A quién puede escribir el servicio de push si algo falla (mailto:...).
+    # Vacío = el buzón configurado (IMAP_USER / GRAPH_USER).
+    VAPID_SUBJECT: str = ""
+
+    # --- Correo saliente (COT-36) ---
+    # Interruptor del envío automático de respuestas al comprador. Apagado
+    # por defecto: el correo se construye y se registra, pero no sale.
+    ENVIO_AUTOMATICO: bool = False
+
+    def __init__(self, env_file_path: Optional[str] = None) -> None:
+        """Inicializa las configuraciones cargando el archivo .env si existe."""
+        # Ruta del archivo .env (por defecto el directorio actual de ejecución o raíz del proyecto)
+        if env_file_path is None:
+            env_file_path = os.path.join(os.getcwd(), ".env")
+
+        # 1. Cargar archivo .env en os.environ si no está definido en el sistema
+        self._load_dotenv(env_file_path)
+
+        # 2. Asignar y convertir tipos
+        self._populate_settings()
+
+        # 2b. Sincronizar DATABASE_URL ↔ PG_* (prioridad: DATABASE_URL)
+        self._sync_database_url()
+
+        # 3. Validar consistencia de los datos
+        self._validate()
+
+    def _load_dotenv(self, file_path: str) -> None:
+        """Lee un archivo .env y carga las variables a os.environ si no existen en el sistema."""
+        path = Path(file_path)
+        if not path.is_file():
+            logger.warning(
+                f"No se encontró el archivo .env en: {path.absolute()}. "
+                "Se usarán variables del sistema."
+            )
+            return
+
+        logger.info(f"Cargando variables de entorno desde: {path.absolute()}")
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    # Ignorar comentarios y líneas vacías
+                    if not line or line.startswith("#"):
+                        continue
+
+                    # Dividir solo por el primer signo '='
+                    if "=" in line:
+                        key, val = line.split("=", 1)
+                        key = key.strip()
+                        val = val.strip()
+
+                        # Limpiar comillas si existen
+                        if (val.startswith('"') and val.endswith('"')) or (
+                            val.startswith("'") and val.endswith("'")
+                        ):
+                            val = val[1:-1]
+
+                        # El entorno del sistema (os.environ) tiene prioridad sobre el archivo .env
+                        if key not in os.environ:
+                            os.environ[key] = val
+        except Exception as e:
+            logger.error(f"Error al leer el archivo .env: {e}")
+
+    def _populate_settings(self) -> None:
+        """Puebla las propiedades de la clase extrayendo de os.environ con tipos correctos."""
+        # Obtener las anotaciones de tipo declaradas en la clase
+        type_hints = get_type_hints(self.__class__)
+
+        # 1. Resolver alias mutuos en os.environ antes de poblar
+        # MAIL_MODE <-> AUTH_METHOD
+        mail_mode = os.environ.get("MAIL_MODE")
+        auth_method = os.environ.get("AUTH_METHOD")
+        if mail_mode and not auth_method:
+            os.environ["AUTH_METHOD"] = "token" if mail_mode.lower() == "graph" else "local"
+        elif auth_method and not mail_mode:
+            os.environ["MAIL_MODE"] = "graph" if auth_method.lower() == "token" else "imap"
+
+        # MAIL_FOLDER <-> IMAP_FOLDER: el mismo dato con el nombre viejo y el nuevo.
+        mail_folder = os.environ.get("MAIL_FOLDER")
+        imap_folder = os.environ.get("IMAP_FOLDER")
+        if mail_folder and not imap_folder:
+            os.environ["IMAP_FOLDER"] = mail_folder
+        elif imap_folder and not mail_folder:
+            os.environ["MAIL_FOLDER"] = imap_folder
+
+        # IMAP_HOST <-> IMAP_SERVER
+        imap_host = os.environ.get("IMAP_HOST")
+        imap_server = os.environ.get("IMAP_SERVER")
+        if imap_host and not imap_server:
+            os.environ["IMAP_SERVER"] = imap_host
+        elif imap_server and not imap_host:
+            os.environ["IMAP_HOST"] = imap_server
+
+        # GRAPH_TENANT_ID <-> AZURE_TENANT_ID
+        graph_tenant = os.environ.get("GRAPH_TENANT_ID")
+        azure_tenant = os.environ.get("AZURE_TENANT_ID")
+        if graph_tenant and not azure_tenant:
+            os.environ["AZURE_TENANT_ID"] = graph_tenant
+        elif azure_tenant and not graph_tenant:
+            os.environ["GRAPH_TENANT_ID"] = azure_tenant
+
+        # GRAPH_CLIENT_ID <-> AZURE_CLIENT_ID
+        graph_client = os.environ.get("GRAPH_CLIENT_ID")
+        azure_client = os.environ.get("AZURE_CLIENT_ID")
+        if graph_client and not azure_client:
+            os.environ["AZURE_CLIENT_ID"] = graph_client
+        elif azure_client and not graph_client:
+            os.environ["GRAPH_CLIENT_ID"] = azure_client
+
+        # GRAPH_CLIENT_SECRET <-> AZURE_CLIENT_SECRET
+        graph_secret = os.environ.get("GRAPH_CLIENT_SECRET")
+        azure_secret = os.environ.get("AZURE_CLIENT_SECRET")
+        if graph_secret and not azure_secret:
+            os.environ["AZURE_CLIENT_SECRET"] = graph_secret
+        elif azure_secret and not graph_secret:
+            os.environ["GRAPH_CLIENT_SECRET"] = azure_secret
+
+        for key, expected_type in type_hints.items():
+            # Obtener valor de os.environ o usar el valor por defecto definido en la clase
+            raw_val = os.environ.get(key)
+            if raw_val is None:
+                continue
+
+            try:
+                # Conversión de tipos
+                converted_val = self._convert_type(raw_val, expected_type)
+                setattr(self, key, converted_val)
+            except Exception as e:
+                raise ConfigurationError(
+                    f"Error de conversión de tipos para la variable '{key}' "
+                    f"(valor: '{raw_val}', tipo esperado: {expected_type}): {e}"
+                )
+
+    def _convert_type(self, value: str, expected_type: Any) -> Any:
+        """Helper para convertir strings a tipos nativos de Python."""
+        # Manejar tipos Optional (ej. Optional[str], que se representa
+        # internamente como Union[str, None])
+        # En Python 3.8+, los tipos de Union tienen __origin__ y __args__
+        origin = getattr(expected_type, "__origin__", None)
+        if origin is not None:
+            # Extraer los tipos reales de la unión (por ejemplo, str y NoneType en Optional[str])
+            args = getattr(expected_type, "__args__", ())
+            # Filtrar NoneType
+            non_none_types = [t for t in args if t is not type(None)]
+            if non_none_types:
+                expected_type = non_none_types[0]
+
+        # Convertir a booleanos de forma segura
+        if expected_type is bool:
+            return value.lower() in ("true", "1", "yes", "on")
+
+        # Convertir a enteros
+        if expected_type is int:
+            return int(value)
+
+        # Convertir a float
+        if expected_type is float:
+            return float(value)
+
+        # Por defecto tratar como string
+        return value
+
+    def _sync_database_url(self) -> None:
+        """Sincroniza DATABASE_URL con las variables PG_* individuales.
+
+        Si DATABASE_URL está definida (Neon, Railway, Render, etc.), extrae
+        host/port/dbname/user/password y los escribe en los atributos PG_*
+        para que todo el código los pueda usar de forma uniforme.
+
+        Si DATABASE_URL no está definida pero las PG_* sí, construye la URL
+        sintetizada para que ``database_dsn`` siempre funcione.
+        """
+        if self.DATABASE_URL:
+            try:
+                parsed = urlparse(self.DATABASE_URL)
+                self.PG_HOST = parsed.hostname or self.PG_HOST
+                self.PG_PORT = parsed.port or self.PG_PORT
+                self.PG_DATABASE = (parsed.path or "").lstrip("/") or self.PG_DATABASE
+                self.PG_USER = parsed.username or self.PG_USER
+                self.PG_PASSWORD = parsed.password or self.PG_PASSWORD
+                logger.info("DATABASE_URL detectada → host=%s, db=%s",
+                            self.PG_HOST, self.PG_DATABASE)
+            except Exception as e:
+                raise ConfigurationError(
+                    f"DATABASE_URL no se pudo parsear: {e}")
+        else:
+            # Sintetizar desde PG_* individuales
+            pwd = self.PG_PASSWORD
+            self.DATABASE_URL = (
+                f"postgresql://{self.PG_USER}:{pwd}"
+                f"@{self.PG_HOST}:{self.PG_PORT}"
+                f"/{self.PG_DATABASE}"
+            )
+
+    @property
+    def database_dsn(self) -> str:
+        """Devuelve la URL de conexión lista para psycopg2.
+
+        Añade ``sslmode=require`` si el host no es localhost (clouds lo exigen).
+        """
+        url = self.DATABASE_URL
+        is_remote = self.PG_HOST not in ("localhost", "127.0.0.1", "db")
+        if is_remote and "sslmode" not in url:
+            separator = "&" if "?" in url else "?"
+            url = f"{url}{separator}sslmode=require"
+        return url
+
+    def _validate(self) -> None:
+        """Valida que no falten variables críticas según el tipo de entorno y el modo híbrido."""
+        # Validar APP_ENV
+        if self.APP_ENV not in ("dev", "prod"):
+            raise ConfigurationError(
+                f"APP_ENV inválido: '{self.APP_ENV}'. Debe ser 'dev' o 'prod'."
+            )
+
+        # Validar AUTH_METHOD
+        if self.AUTH_METHOD not in ("local", "token"):
+            raise ConfigurationError(
+                f"AUTH_METHOD inválido: '{self.AUTH_METHOD}'. Debe ser 'local' o 'token'."
+            )
+
+        # Validaciones de Seguridad y Robustez en PRODUCCIÓN
+        if self.APP_ENV == "prod":
+            logger.warning(
+                "INICIANDO EN ENTORNO DE PRODUCCIÓN. "
+                "Se aplicarán políticas estrictas de seguridad."
+            )
+            self._validate_prod_secrets()
+
+        # Validar configuración según método de autenticación híbrido
+        if self.AUTH_METHOD == "local":
+            self._validate_local_auth()
+        elif self.AUTH_METHOD == "token":
+            self._validate_token_auth()
+
+        logger.info("Configuración cargada y validada exitosamente.")
+
+    def _validate_prod_secrets(self) -> None:
+        """Exige en producción los secretos que en dev pueden faltar.
+
+        Sin esto la app arrancaba en Render con JWT_SECRET vacío (tokens
+        firmados con cadena vacía = cualquiera podía fabricarse una sesión) y
+        con el secreto del worker en su valor de plantilla.
+        """
+        if not self.JWT_SECRET:
+            raise ConfigurationError(
+                "SEGURIDAD: JWT_SECRET es obligatoria con APP_ENV=prod. "
+                "Genérala con: python -c \"import secrets; print(secrets.token_urlsafe(48))\""
+            )
+        if len(self.JWT_SECRET) < 32:
+            raise ConfigurationError(
+                "SEGURIDAD: JWT_SECRET es demasiado corta (mínimo 32 caracteres)."
+            )
+        if self.JWT_SECRET in ("cambiame", "changeme", "secret", "default_secret_for_dev"):
+            raise ConfigurationError(
+                "SEGURIDAD: JWT_SECRET tiene un valor de plantilla. Genera una real."
+            )
+        if not self.WORKER_SECRET_KEY:
+            raise ConfigurationError(
+                "SEGURIDAD: WORKER_SECRET_KEY es obligatoria con APP_ENV=prod "
+                "(la usa la app de escritorio para su heartbeat)."
+            )
+        if self.WORKER_SECRET_KEY == "default_secret_for_dev":
+            raise ConfigurationError(
+                "SEGURIDAD: WORKER_SECRET_KEY conserva el valor por defecto de desarrollo."
+            )
+        if not self.DATABASE_URL:
+            raise ConfigurationError(
+                "DATABASE_URL es obligatoria con APP_ENV=prod."
+            )
+        if "*" in self.cors_origins:
+            raise ConfigurationError(
+                "SEGURIDAD: CORS_ORIGINS no puede ser '*' en producción. "
+                "Enumera los orígenes concretos, o déjala vacía para permitir solo el mismo origen."
+            )
+
+    def _validate_local_auth(self) -> None:
+        """Valida las variables del entorno @Local@."""
+        critical_vars = {
+            "IMAP_SERVER": self.IMAP_SERVER,
+            "IMAP_USER": self.IMAP_USER,
+            "IMAP_PASSWORD": self.IMAP_PASSWORD
+        }
+
+        # Validar presencia
+        for var_name, var_val in critical_vars.items():
+            if not var_val:
+                logger.warning(
+                    "Falta variable crítica para AUTH_METHOD='local': "
+                    f"'{var_name}' no está definida en el entorno. El correo no funcionará."
+                )
+
+        # En producción, validar que no se usen valores por defecto de la plantilla
+        if self.APP_ENV == "prod":
+            if self.IMAP_PASSWORD == "tu_contraseña_segura":
+                raise ConfigurationError(
+                    "SEGURIDAD: No se permite usar la contraseña por defecto de IMAP "
+                    "en el entorno de producción."
+                )
+            if self.IMAP_USER == "usuario@example.com":
+                raise ConfigurationError(
+                    "SEGURIDAD: No se permite usar el usuario por defecto de IMAP "
+                    "en el entorno de producción."
+                )
+
+    def _validate_token_auth(self) -> None:
+        """Valida las variables del entorno @Token@ (Azure AD)."""
+        critical_vars = {
+            "AZURE_CLIENT_ID": self.AZURE_CLIENT_ID,
+            "AZURE_TENANT_ID": self.AZURE_TENANT_ID,
+            "AZURE_CLIENT_SECRET": self.AZURE_CLIENT_SECRET
+        }
+
+        # Validar presencia
+        for var_name, var_val in critical_vars.items():
+            if not var_val:
+                raise ConfigurationError(
+                    "Falta variable crítica para AUTH_METHOD='token': "
+                    f"'{var_name}' no está definida en el entorno."
+                )
+
+        # En producción, validar que no se usen valores por defecto de la plantilla
+        if self.APP_ENV == "prod":
+            if self.AZURE_CLIENT_SECRET == "tu_client_secret_seguro_de_azure":
+                raise ConfigurationError(
+                    "SEGURIDAD: No se permite usar el AZURE_CLIENT_SECRET por defecto "
+                    "en el entorno de producción."
+                )
+            # Chequeo rápido de GUIDs por defecto
+            default_guid = "00000000-0000-0000-0000-000000000000"
+            if self.AZURE_CLIENT_ID == default_guid or self.AZURE_TENANT_ID == default_guid:
+                raise ConfigurationError(
+                    "SEGURIDAD: Los identificadores de Azure (ClientID/TenantID) "
+                    "no pueden ser el valor GUID por defecto en producción."
+                )
+
+    @property
+    def cors_origins(self) -> List[str]:
+        """Lista de orígenes permitidos por CORS, ya limpia.
+
+        Vacía significa "solo mismo origen": la PWA se sirve desde este mismo
+        FastAPI, así que no hace falta abrir CORS salvo en desarrollo con el
+        frontend en otro puerto.
+        """
+        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    # Nombres cuyo VALOR nunca debe aparecer en un log o en una respuesta.
+    # Se compara por subcadena, así que cubre las variantes (GRAPH_/AZURE_...).
+    _CLAVES_SENSIBLES = (
+        "PASSWORD", "SECRET", "TOKEN", "API_KEY", "APIKEY",
+        "DATABASE_URL", "CONNECTION_STRING", "DSN",
+    )
+
+    @classmethod
+    def es_sensible(cls, clave: str) -> bool:
+        """True si el valor de esa variable no debe mostrarse nunca."""
+        arriba = clave.upper()
+        return any(marca in arriba for marca in cls._CLAVES_SENSIBLES)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Valores actuales, con los secretos tapados.
+
+        Antes solo se redactaba PASSWORD y SECRET, así que DATABASE_URL (que
+        lleva la contraseña de Neon dentro del DSN) y ANTHROPIC_API_KEY salían
+        en claro en cualquier volcado de configuración.
+        """
+        return {
+            k: ("[REDACTED]" if self.es_sensible(k) else v)
+            for k, v in self.__dict__.items()
+            if not k.startswith("_") and not callable(v)
+        }
+
+
+# Instancia única (Singleton) para ser importada por toda la aplicación
+try:
+    settings = Settings()
+    # Exportar los atributos de settings a nivel de módulo para compatibilidad
+    # con import config; config.VAR
+    for _key in dir(settings):
+        if not _key.startswith("_"):
+            _value = getattr(settings, _key)
+            if not callable(_value):
+                globals()[_key] = _value
+except ConfigurationError as err:
+    logger.critical(f"ERROR DE CONFIGURACIÓN CRÍTICO: {err}")
+    # En entornos de script o aplicación en ejecución, lanzar el error detiene el inicio incorrecto
+    raise err

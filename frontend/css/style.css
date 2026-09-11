@@ -1,0 +1,5371 @@
+/* ============================================================================
+   CGR Cotizador · LEAN AI-LAB
+   Design System — Premium Dark Mode Industrial
+   ============================================================================ */
+
+/* --------------------------------------------------------------------------
+   CSS Custom Properties (Design Tokens)
+   -------------------------------------------------------------------------- */
+:root {
+    /* --- Primary palette: Solid Blue Brand Identity --- */
+    --cgr-primary:        #1b3d79;
+    --cgr-primary-light:  #2f59a3;
+    --cgr-primary-dark:   #122b58;
+    --cgr-primary-glow:   rgba(27, 61, 121, 0.25);
+
+    /* --- Accent palette: Fancy Pink --- */
+    --cgr-accent:         #b31671;
+    --cgr-accent-light:   #d8759d;
+    --cgr-accent-dark:    #8b0e55;
+    --cgr-accent-glow:    rgba(179, 22, 113, 0.25);
+
+    /* --- Los cuatro colores de la fila de abajo del brand book de CGR ---
+       Se guardan con su valor exacto y sin retocar: son los de la marca, y
+       cualquier ajuste de legibilidad se hace en los tokens semánticos de más
+       abajo, no aquí. Los usan las tarjetas de cifras del Monitor, una cada
+       uno, en este mismo orden. */
+    --cgr-gris:           #869199;   /* Soft grey  */
+    --cgr-azul-frio:      #148ec2;   /* Cool blue  */
+    --cgr-verde:          #a4ae2d;   /* Vivid green */
+    --cgr-naranja:        #d67c2f;   /* Warm orange */
+
+    /* --- Surface / Background --- */
+    --bg-base:            #0f172a;
+    --bg-surface:         #172033;
+    --bg-card:            #1e293b;
+    --bg-card-hover:      #26334a;
+    --bg-elevated:        #334155;
+    /* Más claro que la tarjeta (--bg-card), no más oscuro: un campo casi negro
+       sobre azul marino cansa la vista y no se ve dónde empieza. */
+    --bg-input:           #273246;
+    /* El mismo gris para el autorrelleno del navegador, más abajo. */
+    --bg-autorelleno:     #273246;
+
+    /* --- Borders --- */
+    --border-subtle:      rgba(255, 255, 255, 0.06);
+    --border-default:     rgba(255, 255, 255, 0.10);
+    --border-strong:      rgba(255, 255, 255, 0.18);
+    --border-focus:       var(--cgr-accent);
+
+    /* --- Text --- */
+    --text-primary:       #f8fafc;
+    /* Medidos sobre el fondo de las tarjetas: los tonos anteriores dejaban las
+       etiquetas pequeñas ("Service Status", "Emails Processed") en 3:1, por
+       debajo del 4.5:1 que hace falta para leer texto de 11-13 px sin forzar
+       la vista. El texto atenuado, además, era translúcido: sobre la tarjeta
+       y sobre el fondo estrellado salía de dos colores distintos. */
+    --text-secondary:     #a3aeba;
+    --text-muted:         #8e99a6;
+    --text-inverse:       #0f172a;
+
+    /* --- Semantic colors --- */
+    --color-success:      #a4ae2d;
+    --color-success-bg:   rgba(164, 174, 45, 0.12);
+    --color-warning:      #d67c2f;
+    --color-warning-bg:   rgba(214, 124, 47, 0.12);
+    --color-error:        #b31671;
+    --color-error-bg:     rgba(179, 22, 113, 0.12);
+    --color-info:         #148ec2;
+    --color-info-bg:      rgba(20, 142, 194, 0.12);
+
+    /* --- Estado badges --- */
+    --badge-new:          var(--color-info);
+    --badge-review:       var(--color-warning);
+    --badge-approved:     var(--color-success);
+    --badge-declined:     var(--color-error);
+
+    /* --- Spacing scale --- */
+    --sp-1:  4px;
+    --sp-2:  8px;
+    --sp-3:  12px;
+    --sp-4:  16px;
+    --sp-5:  20px;
+    --sp-6:  24px;
+    --sp-8:  32px;
+    --sp-10: 40px;
+    --sp-12: 48px;
+    --sp-16: 64px;
+
+    /* --- Radius --- */
+    --radius-sm:  6px;
+    --radius-md:  10px;
+    --radius-lg:  16px;
+    --radius-xl:  24px;
+    --radius-full: 9999px;
+
+    /* --- Shadow --- */
+    --shadow-sm:  0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md:  0 4px 12px rgba(0,0,0,0.4);
+    --shadow-lg:  0 8px 32px rgba(0,0,0,0.5);
+    --shadow-glow: 0 0 20px var(--cgr-primary-glow);
+
+    /* --- Typography --- */
+    --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+
+    /* --- Sidebar --- */
+    --sidebar-width: 260px;
+    --sidebar-collapsed: 68px;
+
+    /* --- Transitions --- */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 400ms;
+
+    /* --- Alambre cromado del resorte de portada ---
+       El cromado en sí (las bandas claras, oscuras y cálidas) va en el
+       degradado del SVG: el metal es igual en los dos temas. Aquí sólo el
+       canto y la sombra, que sí dependen del fondo. */
+    --metal-borde:        #0d1420;
+    --metal-sombra:       #0a0f19;
+
+    /* --- Registro del servicio ---
+       Tonos propios: los de texto generales se pensaron para 14 px sobre las
+       tarjetas, no para 12 px monoespaciados sobre el fondo del registro. */
+    --log-texto:          #c3ccd8;
+    --log-tenue:          #98a3b2;
+    --log-error:          #ff6ba8;
+    --log-aviso:          #f0a55c;
+}
+
+
+/* --------------------------------------------------------------------------
+   Reset & Base
+   -------------------------------------------------------------------------- */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-sans);
+    background: var(--bg-base);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* El atributo hidden debe ganar a cualquier display propio de la app */
+[hidden] { display: none !important; }
+
+a { color: var(--cgr-primary-light); text-decoration: none; }
+a:hover { color: var(--cgr-primary); }
+
+::selection {
+    background: var(--cgr-primary);
+    color: white;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+
+/* --------------------------------------------------------------------------
+   Layout: Sidebar + Content
+   -------------------------------------------------------------------------- */
+.app-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--sidebar-width);
+    height: 100vh;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.sidebar-header {
+    padding: var(--sp-5) var(--sp-4);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+}
+
+.sidebar-brand {
+    display: flex;
+    flex-direction: column;
+    /* min-width: 0 permite que se recorte si la barra se estrecha, en vez de
+       empujar los logos fuera. */
+    min-width: 0;
+}
+
+.sidebar-brand-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.sidebar-brand-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.sidebar-nav {
+    flex: 1;
+    padding: var(--sp-4) var(--sp-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    overflow-y: auto;
+}
+
+/* El orden del menú para admin.
+ *
+ * Para todo el mundo el primero es el Resumen: se entra a ver cómo va todo.
+ * Para admin no: el Monitor —el registro del servicio— es su primera parada,
+ * y el Resumen se va al final. Decisión de ISC.
+ *
+ * Se hace con `order` sobre el mismo marcado, no moviendo nodos: así el HTML
+ * sigue siendo uno solo, no hay un reacomodo visible al cargar la sesión, y
+ * el recorrido del teclado lo sigue marcando el orden visual del flex.
+ * La etiqueta de sección se queda arriba del todo pase lo que pase.
+ */
+.sidebar-nav--admin .sidebar-section-label            { order: -2; }
+.sidebar-nav--admin .nav-item[data-page="monitor"]    { order: -1; }
+.sidebar-nav--admin .nav-item[data-page="resumen"]    { order: 9; }
+
+.sidebar-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: var(--sp-4) var(--sp-3) var(--sp-2);
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+}
+
+.nav-item:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.nav-item.active {
+    background: var(--cgr-accent-glow);
+    color: var(--cgr-accent-light);
+}
+
+.nav-item svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.nav-item.active svg {
+    opacity: 1;
+}
+
+.nav-badge {
+    margin-left: auto;
+    background: var(--cgr-accent);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    min-width: 20px;
+    text-align: center;
+}
+
+.sidebar-footer {
+    padding: var(--sp-4) var(--sp-6);
+    border-top: 1px solid var(--border-subtle);
+}
+
+.sidebar-status {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-error);
+    flex-shrink: 0;
+}
+
+.status-dot.running {
+    background: var(--color-success);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+}
+
+
+/* --------------------------------------------------------------------------
+   Main Content Area
+   -------------------------------------------------------------------------- */
+.main-content {
+    margin-left: var(--sidebar-width);
+    flex: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    /* min-width: 0 en un hijo flexible no es opcional: sin él, el contenido
+       ancho (una tabla, una línea larga de registro) le impone su tamaño al
+       contenedor y toda la página se desplaza en horizontal. */
+    min-width: 0;
+}
+
+.page-header {
+    padding: var(--sp-6) var(--sp-8);
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(12px);
+}
+
+.page-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.page-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.page-body {
+    flex: 1;
+    padding: var(--sp-8);
+    min-width: 0;
+}
+
+.page-view {
+    display: none;
+}
+
+.page-view.active {
+    display: block;
+    animation: fadeIn var(--duration-normal) var(--ease-out);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* --------------------------------------------------------------------------
+   Status Cards
+   -------------------------------------------------------------------------- */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--sp-5);
+    margin-bottom: var(--sp-8);
+}
+
+.status-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-6);
+    transition: all var(--duration-fast) var(--ease-out);
+    position: relative;
+    overflow: hidden;
+}
+
+.status-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--card-accent, var(--cgr-primary));
+    opacity: 0;
+    transition: opacity var(--duration-fast);
+}
+
+.status-card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.status-card:hover::before {
+    opacity: 1;
+}
+
+.card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--sp-4);
+    background: var(--card-accent-bg, var(--color-info-bg));
+}
+
+.card-icon svg {
+    width: 20px;
+    height: 20px;
+    color: var(--card-accent, var(--cgr-primary));
+}
+
+.card-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+    margin-bottom: var(--sp-1);
+}
+
+.card-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+
+/* --------------------------------------------------------------------------
+   KPI — la fila de cifras del Monitor
+   --------------------------------------------------------------------------
+   Cuatro tarjetas en UNA sola línea, cada una con uno de los cuatro colores de
+   la fila de abajo del brand book de CGR y en ese mismo orden: gris, azul
+   frío, verde y naranja.
+
+   El color no está sólo en un cuadradito: baña la tarjeta entera (franja
+   izquierda, degradado de fondo y el icono grande al fondo a la derecha). Así
+   se distinguen de un vistazo sin tener que leer la etiqueta, que es para lo
+   que sirve una fila de cifras.
+
+   El icono es una pastilla sólida arriba a la izquierda, con el dibujo en
+   blanco encima: un bloque de color macizo se reconoce de lejos y de un
+   vistazo —antes de leer nada— ya se sabe qué tarjeta se está mirando. Debajo
+   van la cifra y la etiqueta, en esa columna, que es como se lee.
+
+   Antes el icono era una marca de agua enorme detrás del texto. Se leía como
+   suciedad del fondo y obligaba a recortar el ancho de la etiqueta para que no
+   se metiera encima del dibujo.
+   -------------------------------------------------------------------------- */
+.kpi-fila {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-6);
+}
+
+.kpi {
+    /* Cada tarjeta sobreescribe --kpi con su color de marca. */
+    --kpi: var(--cgr-gris);
+
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    padding: var(--sp-5);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    transition: transform var(--duration-fast) var(--ease-out),
+                box-shadow var(--duration-fast) var(--ease-out),
+                border-color var(--duration-fast) var(--ease-out);
+}
+
+/* El tinte va en una capa aparte y no en `background` porque el fondo de la
+   tarjeta lo pone la regla del velo (más abajo, con backdrop-filter): si lo
+   metiera aquí, una de las dos ganaría y perderíamos o el color o el
+   desenfoque. */
+.kpi::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /* Dos capas: un tinte plano en toda la tarjeta y, encima, una mancha
+       redonda que asoma por la esquina de arriba a la derecha. La mancha está
+       cortada por el borde a propósito —se lee como papel de color y no como
+       un adorno pegado— y ocupa justo la esquina que la cifra deja libre. */
+    background:
+        radial-gradient(ellipse 58% 52% at 102% -2%,
+            color-mix(in srgb, var(--kpi) 14%, transparent) 0 99%,
+            transparent 100%),
+        color-mix(in srgb, var(--kpi) 8%, transparent);
+    transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.kpi:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: color-mix(in srgb, var(--kpi) 40%, var(--border-strong));
+}
+
+.kpi-texto {
+    position: relative;   /* por encima del tinte y de la mancha */
+    z-index: 1;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.kpi-valor {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text-primary);
+    margin-bottom: var(--sp-1);
+    /* NO se parten las palabras. Con `overflow-wrap: anywhere`, "Running" se
+       quedaba en "Runnin / g" en cuanto la tarjeta se estrechaba. La tarjeta
+       recorta lo que se salga; partir la palabra no arregla nada y se lee
+       peor. */
+    overflow-wrap: normal;
+    word-break: keep-all;
+}
+
+.kpi-etiqueta {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+/* La pastilla del icono: cuadrado redondeado, color macizo y el dibujo en
+   blanco encima. Es lo primero que se ve de la tarjeta. */
+.kpi-icono {
+    position: relative;
+    z-index: 1;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    background: var(--kpi);
+    color: #fff;
+    pointer-events: none;
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--kpi) 38%, transparent);
+}
+
+/* El color de la pastilla, un punto más vivo que el de la marca.
+   ------------------------------------------------------------------------
+   No es un color aparte que haya que mantener a mano en cuatro sitios: se
+   calcula a partir de --kpi subiéndole la saturación y poniéndole un techo de
+   luminosidad, que es lo que hace falta para que el dibujo blanco de encima se
+   lea también sobre el verde, que es el más claro de los cuatro.
+
+   Va en una capa de fondo y no en un `filter` sobre la pastilla entera porque
+   un filtro alcanzaría también al dibujo y lo apagaría. Donde no haya colores
+   relativos (navegadores viejos) se queda el --kpi de arriba, que ya sirve. */
+@supports (background: hsl(from red h s l)) {
+    .kpi-icono::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: hsl(from var(--kpi) h calc(s * 1.25) min(l, 40));
+    }
+}
+
+.kpi-icono svg {
+    position: relative;   /* por encima de la capa de color */
+    z-index: 1;
+    width: 26px;
+    height: 26px;
+    stroke-width: 2;
+}
+
+/* Cuántas caben en fila.
+   ------------------------------------------------------------------------
+   La medida no es el ancho de la ventana sino el de la tarjeta: por debajo de
+   unos 230 px la cifra y la etiqueta se meten debajo de la marca de agua. Con
+   el menú lateral ocupando ~260 px, cuatro tarjetas necesitan una ventana de
+   unos 1240 px; por debajo van de dos en dos, y en el móvil estrecho de una en
+   una. Los breakpoints salen de medir dónde empiezan a solaparse, no de la
+   lista de tamaños de teléfonos de moda. */
+@media (max-width: 1240px) {
+    .kpi-fila { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 480px) {
+    /* Dos en fila hasta el final. Apiladas de una en una ocupaban media
+       pantalla del teléfono y empujaban el registro fuera de la vista, que es
+       lo que de verdad se viene a leer al Monitor. La pastilla encoge con
+       ellas y la tarjeta se queda en tres alturas de texto. */
+    .kpi         { min-height: 112px; padding: var(--sp-3) var(--sp-4); gap: var(--sp-2); }
+    .kpi-valor   { font-size: 19px; }
+    .kpi-etiqueta{ font-size: 11px; }
+    .kpi-icono   { width: 40px; height: 40px; border-radius: 13px; }
+    .kpi-icono svg { width: 20px; height: 20px; }
+}
+
+/* Por debajo de esto no caben dos: la etiqueta se parte en tres líneas. */
+@media (max-width: 340px) {
+    .kpi-fila { grid-template-columns: 1fr; }
+}
+
+/* Sin color-mix (Safari < 16.2, Firefox < 113) no hay degradado: se queda la
+   franja de la izquierda y la marca de agua, que ya distinguen las tarjetas. */
+@supports not (background: color-mix(in srgb, red 50%, transparent)) {
+    .kpi::before { display: none; }
+}
+
+/* En claro el papel es blanco: el mismo tinte se ve más fuerte, así que baja.
+   La mancha de la esquina baja menos —sobre blanco un color flojo desaparece y
+   la esquina se quedaría lisa— y así se conserva el contraste entre las dos
+   capas, que es lo que da el relieve. */
+:root[data-tema="light"] .kpi::before {
+    background:
+        radial-gradient(ellipse 58% 52% at 102% -2%,
+            color-mix(in srgb, var(--kpi) 13%, transparent) 0 99%,
+            transparent 100%),
+        color-mix(in srgb, var(--kpi) 7%, transparent);
+}
+
+
+/* --------------------------------------------------------------------------
+   Resumen — la pantalla de mando del Plant Manager
+   --------------------------------------------------------------------------
+   Se conserva la composición de la referencia que dio ISC: las cifras arriba a
+   la izquierda y, a su derecha, la pieza grande —allí un globo terráqueo, aquí
+   el resorte de estrellas de la portada—. Debajo, a lo ancho, la cola de
+   revisión; y al pie los dos repartos.
+
+   En el teléfono todo se apila y el resorte pasa el último: en una pantalla
+   estrecha lo primero tienen que ser las cifras y lo que hay que atender, no
+   el adorno.
+   -------------------------------------------------------------------------- */
+.resumen {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-5);
+}
+
+/* La tira de cifras es la MISMA que la del Monitor —cuatro en una fila, a
+   todo el ancho— y aquí sólo se le quita el margen de abajo, porque el hueco
+   entre bloques ya lo pone el `gap` de .resumen. */
+.resumen-kpis { margin-bottom: 0; }
+
+/* La cola de revisión manda; el resorte se queda con lo que sobre, con un
+   tope para que en un monitor muy ancho no se convierta en un póster. */
+.resumen-medio {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr);
+    gap: var(--sp-5);
+    align-items: stretch;
+}
+
+.resumen-marca {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    /* El lienzo se dibuja hasta el borde de la ficha: sin recorte se le verían
+       las esquinas cuadradas asomando por debajo del redondeo. */
+    overflow: hidden;
+    /* Alto de sobra: el resorte es una hélice vertical y en una caja apaisada
+       se aplasta hasta parecer un ovillo. Necesita más alto que ancho. */
+    min-height: 360px;
+}
+
+.resumen-lienzo {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 300px;
+    border-radius: var(--radio-md);
+    overflow: hidden;
+    /* El mismo cielo que la PORTADA, y por tanto distinto en cada tema.
+       Antes esta caja era azul marino fija en los dos, y en modo claro se veía
+       como un recorte oscuro pegado encima de una ficha clara. Ahora lleva
+       exactamente los mismos degradados que la pantalla de entrada sobre
+       --bg-base, así que en oscuro es el espacio de siempre y en claro es el
+       azul que se vuelve malva de la portada: el resorte se ve igual en los
+       dos porque el fondo cambia con el tema, no el resorte.
+       El resorte se sigue dibujando con estrellas blancas, como en el resto de
+       la aplicación. */
+    background:
+        radial-gradient(circle at 20% 0%, var(--cgr-primary-glow), transparent 55%),
+        radial-gradient(circle at 85% 100%, var(--cgr-accent-glow), transparent 55%),
+        radial-gradient(circle at 50% 40%,
+            rgba(47, 89, 163, 0.30) 0%,
+            rgba(27, 61, 121, 0.18) 38%,
+            rgba(179, 22, 113, 0.07) 68%,
+            transparent 100%),
+        var(--bg-base);
+}
+
+.resumen-lienzo canvas { display: block; width: 100%; height: 100%; }
+
+.resumen-sello {
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.resumen-sello strong { color: var(--text-secondary); font-weight: 600; }
+
+.resumen-dos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--sp-5);
+    align-items: start;
+}
+
+.resumen-vacio {
+    margin: 0;
+    padding: var(--sp-6) var(--sp-4);
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* --- Clientes estrella ----------------------------------------------------
+   El Top 12 que hace la mitad de las ventas de ISC (COT-71). Una rejilla que
+   mete las columnas que caben, no un número fijo: son doce nombres de largo
+   muy desigual —"Toro" y "Stone Manufacturing & Supply Company"— y repartirlos
+   en columnas iguales dejaba medio panel vacío al lado de los cortos. */
+.resumen-estrellas {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: var(--sp-2) var(--sp-4);
+}
+
+.resumen-estrella {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    min-width: 0;
+    padding: var(--sp-2) var(--sp-2) var(--sp-2) 0;
+}
+
+.resumen-estrella-marca {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    color: var(--cgr-naranja);
+}
+.resumen-estrella-marca svg { width: 100%; height: 100%; display: block; }
+
+/* La columna de texto tiene que poder encogerse: sin `min-width: 0` un nombre
+   largo estira su celda y descuadra toda la rejilla. */
+.resumen-estrella-texto {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.resumen-estrella-nombre {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+    /* El nombre NO se recorta. En una lista de clientes el nombre es el dato;
+       "Ruskin - Air Distribution Technolo…" obliga a adivinar de quién se
+       habla. Una fila más alta se perdona antes que un cliente sin
+       identificar. */
+    overflow-wrap: anywhere;
+}
+
+.resumen-estrella-dato {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* El "hace N días" es la señal del panel, así que va con el peso de un dato y
+   no con el de un pie de foto. */
+.resumen-estrella-cuando {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+.resumen-estrella-sep { opacity: .5; }
+
+/* Un cliente grande sin ninguna RFQ es la fila que más dice de esta lista, así
+   que se marca: la estrella pierde color y el nombre baja de peso. No se
+   esconde ni se manda al final — se ve, que es el punto. */
+.resumen-estrella--quieto .resumen-estrella-marca { color: var(--text-muted); opacity: .55; }
+.resumen-estrella--quieto .resumen-estrella-nombre { color: var(--text-secondary); font-weight: 500; }
+.resumen-estrella--quieto .resumen-estrella-cuando { font-weight: 500; color: var(--text-muted); }
+
+/* Las filas se alinean arriba: con un nombre de dos líneas al lado de uno de
+   una, centrarlas dejaba las estrellas a distinta altura y la columna se veía
+   torcida. */
+.resumen-estrella { align-items: flex-start; }
+.resumen-estrella-marca { margin-top: 2px; }
+
+.resumen-estrellas-nota { font-size: 12px; color: var(--text-muted); }
+
+/* --- Barras horizontales -------------------------------------------------
+   No es una gráfica: son cuatro o cinco valores, y una barra con su número al
+   lado se lee igual de bien en un teléfono que en un monitor, sin ejes y sin
+   cargar ninguna librería. */
+.resumen-barras {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+}
+
+.resumen-barras li {
+    display: grid;
+    grid-template-columns: minmax(90px, 34%) 1fr auto;
+    align-items: center;
+    gap: var(--sp-3);
+}
+
+.resumen-barra-nombre {
+    font-size: 13px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.resumen-barra-pista {
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: var(--bg-elevated);
+    overflow: hidden;
+}
+
+.resumen-barra-valor {
+    display: block;
+    height: 100%;
+    border-radius: var(--radius-full);
+    background: linear-gradient(90deg, var(--cgr-primary-light), var(--cgr-azul-frio));
+}
+
+.resumen-barra-cifra {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- La cola de revisión -------------------------------------------------
+   Cada fila abre su RFQ, así que se comporta como algo pulsable: cambia de
+   fondo al pasar por encima y tiene marco de foco para el teclado. */
+.resumen-fila { cursor: pointer; }
+.resumen-fila:hover { background: var(--bg-card-hover); }
+
+.resumen-fila:focus-visible {
+    outline: 2px solid var(--cgr-accent);
+    outline-offset: -2px;
+}
+
+/* El identificador del RFQ y la espera no se parten nunca: "RFQ-1001" en dos
+   renglones se lee como dos cosas. La columna del motivo es la única con texto
+   largo de verdad, así que es la que se queda con el sobrante. */
+.resumen-tabla th:first-child,
+.resumen-tabla td:first-child,
+.resumen-tabla th:nth-child(2),
+.resumen-tabla td:nth-child(2),
+.resumen-tabla th:nth-child(3),
+.resumen-tabla td:nth-child(3) { white-space: nowrap; width: 1%; }
+
+/* La gravedad, en la franja de la izquierda: el mismo lenguaje que en el panel
+   de notificaciones, para que no haya que aprenderlo dos veces. */
+.resumen-fila td:first-child { border-left: 3px solid transparent; }
+.resumen-fila--critico td:first-child { border-left-color: var(--color-error); }
+.resumen-fila--aviso   td:first-child { border-left-color: var(--color-warning); }
+
+.badge-critico {
+    background: var(--color-error-bg);
+    color: var(--color-error);
+    font-weight: 700;
+}
+
+/* En pantallas medianas el resorte deja de caber al lado. */
+@media (max-width: 1100px) {
+    .resumen-medio { grid-template-columns: 1fr; }
+    .resumen-marca { min-height: 320px; }
+}
+
+@media (max-width: 768px) {
+    .resumen { gap: var(--sp-4); }
+    .resumen-dos { gap: var(--sp-4); }
+    /* Las cifras se reparten como en el Monitor: la regla es de .kpi-fila y
+       aquí no se toca, para que las dos pantallas se vean igual. */
+    /* El resorte, el último: en un teléfono lo primero son las cifras y lo que
+       hay que atender. */
+    .resumen-marca { min-height: 280px; }
+    .resumen-barras li { grid-template-columns: minmax(70px, 40%) 1fr auto; }
+}
+
+
+/* --------------------------------------------------------------------------
+   Contraseñas — el ojo y la lista de requisitos
+   --------------------------------------------------------------------------
+   Dos piezas, las dos las monta js/components/password.js sobre cualquier
+   campo de contraseña de la aplicación.
+
+   El ojo va DENTRO del campo, sobre su borde derecho, y el campo reserva ese
+   hueco con padding: puesto al lado, cada formulario tendría que decidir dónde
+   ponerlo y en el teléfono empujaría el campo hasta partirlo.
+   -------------------------------------------------------------------------- */
+.pw-caja {
+    position: relative;
+    display: block;
+}
+
+/* El hueco del botón. Se pisa el padding derecho del campo, no su ancho: así
+   el campo sigue midiendo lo mismo que los demás del formulario. */
+.pw-caja > .form-input { padding-right: 44px; }
+
+.pw-ojo {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color var(--duration-fast), background var(--duration-fast);
+}
+
+.pw-ojo svg { width: 18px; height: 18px; }
+.pw-ojo:hover { color: var(--text-primary); background: var(--bg-card-hover); }
+.pw-ojo--abierto { color: var(--cgr-primary-light); }
+
+/* --- Los requisitos ------------------------------------------------------ */
+.pw-reglas {
+    margin: var(--sp-2) 0 0;
+}
+
+.pw-reglas-titulo {
+    margin: 0 0 var(--sp-1);
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.pw-reglas-lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.pw-regla {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: 12px;
+    color: var(--text-muted);
+    /* El color cambia al cumplirse; sin transición el salto a verde en mitad
+       de una palabra da un parpadeo desagradable. */
+    transition: color var(--duration-fast);
+}
+
+.pw-marca {
+    display: flex;
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    color: var(--border-default);
+}
+
+.pw-marca svg { width: 100%; height: 100%; }
+
+/* Cumplido. El color NO es lo único que lo dice: el punto se convierte en
+   palomita. Quien no distinga el verde ve igualmente que cambió la figura. */
+.pw-regla--ok { color: var(--color-success); }
+.pw-regla--ok .pw-marca { color: var(--color-success); }
+
+/* --------------------------------------------------------------------------
+   Notificaciones — la campana de la esquina
+   --------------------------------------------------------------------------
+   El botón es el mismo redondo de 40 px que el de tema (comparten regla más
+   arriba); lo propio de aquí es el globo con la cuenta y el panel.
+   -------------------------------------------------------------------------- */
+.notif { position: relative; }
+
+.notif-globo {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-full);
+    /* El borde del color de la tarjeta recorta el globo contra el botón: sin
+       él, pegado al borde redondo, parece que se sale. */
+    border: 2px solid var(--bg-card);
+    background: var(--cgr-primary-light);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* Con alguna crítica, el globo cambia de color. Es la única diferencia: no
+   parpadea ni se mueve, que en una barra que está siempre en pantalla acaba
+   siendo un tic en el rabillo del ojo. */
+.notif-globo--critico { background: var(--color-error); }
+
+/* En computadora: un desplegable colgando del botón. Lo enseña y lo esconde la
+   clase del contenedor, no `hidden`, para que en el teléfono la misma pieza
+   pueda entrar deslizándose (una transición sobre display:none no ocurre). */
+.notif-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + var(--sp-2));
+    right: 0;
+    width: min(360px, calc(100vw - var(--sp-5) * 2));
+    max-height: min(60vh, 460px);
+    overflow-y: auto;
+    padding: var(--sp-2);
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    z-index: 10;
+}
+
+.notif--abierto .notif-panel { display: block; }
+
+/* El velo no existe en computadora: allí se cierra pulsando fuera. */
+.notif-velo { display: none; }
+
+/* La ✕ tampoco: un desplegable no la necesita. */
+.notif-cerrar { display: none; }
+
+.notif-cabecera {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-3) var(--sp-3);
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: var(--sp-2);
+}
+
+.notif-titulo { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.notif-cuenta { font-size: 12px; color: var(--text-muted); }
+
+/* El rótulo que separa los avisos nuevos de la cola de espera (COT-77). Sólo
+   se pinta cuando hay las dos listas: con una sola, sobra. */
+.notif-seccion {
+    margin: var(--sp-3) 0 var(--sp-1);
+    padding: 0 var(--sp-3);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.notif-lista + .notif-seccion { margin-top: var(--sp-4); }
+
+/* "Marcar todo leído". Va en la cabecera, en tamaño de texto y sin recuadro:
+   es la acción secundaria del panel, y un botón sólido ahí competiría con los
+   avisos, que es lo que se viene a leer. */
+.notif-leertodo {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    font-size: 12px;
+    color: var(--cgr-primary-light, var(--text-secondary));
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    white-space: nowrap;
+}
+.notif-leertodo:hover { color: var(--text-primary); }
+
+.notif-vacio {
+    margin: 0;
+    padding: var(--sp-5) var(--sp-4);
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.notif-lista { display: flex; flex-direction: column; gap: 2px; }
+
+.notif-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    padding: var(--sp-3);
+    text-align: left;
+    border: 0;
+    /* La franja de color a la izquierda dice la gravedad sin leer nada. */
+    border-left: 3px solid transparent;
+    border-radius: var(--radius-md);
+    background: transparent;
+    font-family: var(--font-sans);
+    cursor: pointer;
+}
+
+.notif-item:hover { background: var(--bg-card-hover); }
+
+.notif-item:focus-visible {
+    outline: 2px solid var(--cgr-accent);
+    outline-offset: -2px;
+}
+
+.notif-item--critico { border-left-color: var(--color-error); }
+.notif-item--aviso   { border-left-color: var(--color-warning); }
+
+.notif-item-cabecera {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-3);
+}
+
+.notif-item-rfq {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.notif-item-dias {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.notif-item-cliente {
+    font-size: 12px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* El motivo puede ser el título largo de una bandera: dos líneas y corta. */
+.notif-item-motivo {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+
+/* --- En el teléfono, las notificaciones son un cajón por la derecha -------
+   Un desplegable de 360 px colgando de la esquina se come casi toda la
+   pantalla del teléfono y aun así deja las líneas cortadas. Aquí es un cajón
+   a pantalla completa que entra por la derecha, hermano del menú que entra por
+   la izquierda: mismo velo, mismo deslizamiento, misma forma de cerrarse.
+   Sólo cambia el lado, y sólo lo hacen las notificaciones —el resto de
+   desplegables de la esquina siguen siendo desplegables—. */
+@media (max-width: 768px) {
+    .notif-panel {
+        display: block;          /* siempre en el árbol: lo mueve el transform */
+        position: fixed;
+        top: var(--alto-instalar, 0px);
+        right: 0;
+        bottom: 0;
+        left: auto;
+        width: min(86vw, 340px);
+        max-height: none;
+        padding: 0 var(--sp-2) var(--sp-4);
+        border: 0;
+        border-left: 1px solid var(--border-default);
+        border-radius: 0;
+        box-shadow: -12px 0 40px rgba(0, 0, 0, 0.45);
+        transform: translateX(100%);
+        /* `visibility` además del transform: sin ella el cajón cerrado sigue
+           siendo alcanzable con el tabulador, fuera de la pantalla. */
+        visibility: hidden;
+        transition: transform var(--duration-normal) var(--ease-out),
+                    visibility var(--duration-normal);
+        z-index: 320;
+    }
+
+    .notif--abierto .notif-panel {
+        transform: translateX(0);
+        visibility: visible;
+    }
+
+    .notif-velo {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity var(--duration-normal) var(--ease-out),
+                    visibility var(--duration-normal);
+        z-index: 310;
+    }
+
+    .notif--abierto .notif-velo { opacity: 1; visibility: visible; }
+
+    /* Con el cajón abierto, la página de debajo no se desplaza. */
+    body.notif-abierta { overflow: hidden; }
+
+    /* La cabecera se queda arriba al desplazar la lista, y ahí vive la ✕. */
+    .notif-cabecera {
+        display: flex;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        padding: var(--sp-4) var(--sp-2) var(--sp-3);
+        margin-bottom: var(--sp-2);
+        background: var(--bg-card);
+    }
+
+    .notif-titulo { font-size: 15px; margin-right: auto; }
+
+    .notif-cerrar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        margin-left: var(--sp-2);
+        padding: 0;
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-full);
+        background: var(--bg-card);
+        color: var(--text-secondary);
+        cursor: pointer;
+    }
+
+    .notif-cerrar svg { width: 16px; height: 16px; display: block; }
+
+    .notif-cerrar:focus-visible {
+        outline: 2px solid var(--cgr-accent);
+        outline-offset: 2px;
+    }
+
+    /* Más aire en cada aviso: en el cajón hay sitio y se pulsa con el dedo. */
+    .notif-item { padding: var(--sp-4) var(--sp-3); }
+    .notif-item-rfq { font-size: 14px; }
+    .notif-item-cliente { font-size: 13px; }
+    .notif-item-motivo { font-size: 12px; }
+}
+
+
+/* --------------------------------------------------------------------------
+   Aviso de instalación — la barra de arriba, sólo en el móvil
+   --------------------------------------------------------------------------
+   Va en el flujo del documento, NO fija. Una barra fija sobre el contenido
+   taparía la cabecera de la página justo al abrir, que es cuando hay que leer
+   dónde está uno. En el flujo empuja la página hacia abajo y no tapa nada.
+
+   Lo que no puede empujar son los elementos fijos y pegajosos —el menú
+   lateral, la cabecera, los botones de las esquinas—, que se colocan respecto
+   a la ventana y no al documento. Por eso js/components/instalar.js publica el
+   alto de la barra en --alto-instalar y esas reglas se lo suman. Uno solo, en
+   vez de repetir el número en cinco sitios y que se desincronicen.
+   -------------------------------------------------------------------------- */
+.instalar-barra {
+    position: relative;
+    z-index: 400;   /* por encima de la esquina (300) y del cajón (200) */
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-default);
+    box-shadow: var(--shadow-sm);
+}
+
+.instalar-icono {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-full);
+    background: var(--cgr-primary-glow);
+    color: var(--cgr-primary-light);
+}
+
+.instalar-icono svg { width: 18px; height: 18px; }
+
+.instalar-texto {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--text-primary);
+}
+
+.instalar-boton { flex: 0 0 auto; white-space: nowrap; }
+
+.instalar-cerrar {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.instalar-cerrar:hover { color: var(--text-primary); }
+
+.instalar-cerrar:focus-visible {
+    outline: 2px solid var(--cgr-accent);
+    outline-offset: 2px;
+}
+
+.instalar-cerrar svg { width: 16px; height: 16px; display: block; }
+
+/* --- Hueco para la barra en todo lo que se coloca respecto a la ventana --- */
+.instalar-barra ~ .app-layout .sidebar {
+    top: var(--alto-instalar, 0px);
+    height: calc(100vh - var(--alto-instalar, 0px));
+}
+
+.instalar-barra ~ .app-layout .page-header { top: var(--alto-instalar, 0px); }
+
+.instalar-barra ~ .barra-esquina { top: calc(var(--alto-instalar, 0px) + var(--sp-4)); }
+.instalar-barra ~ .mobile-toggle { top: calc(var(--alto-instalar, 0px) + var(--sp-4)); }
+
+/* La portada y el login miden una pantalla entera. Con la barra encima, esa
+   pantalla es más corta; sin descontarla, sobra justo el alto de la barra y la
+   página se puede desplazar sin tener nada que enseñar. */
+.instalar-barra ~ .home-screen .portada,
+.instalar-barra ~ .login-screen {
+    min-height: calc(100vh - var(--alto-instalar, 0px));
+    min-height: calc(100dvh - var(--alto-instalar, 0px));
+}
+
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-5);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all var(--duration-fast) var(--ease-out);
+    white-space: nowrap;
+    /* Ningún botón debe imponer su ancho al contenedor: con textos largos
+       empujaban la página hacia los lados en pantallas estrechas. */
+    min-width: 0;
+}
+
+/* --- Variante compacta en píldora ---------------------------------------
+   La usan los accesos rápidos del asistente. Es un .btn con otra forma, no un
+   botón aparte: así comparte tipografía, espaciado, foco y transiciones con
+   todos los demás en vez de ser una quinta familia de botones. */
+.btn-chip {
+    padding: 6px 12px;
+    gap: 6px;
+    border-radius: var(--radius-full);
+    border-color: var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.btn-chip:hover {
+    border-color: var(--border-strong);
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+}
+
+/* El de "needs attention" avisa de trabajo parado: se distingue del resto. */
+.btn-chip--aviso { color: var(--color-warning); }
+.btn-chip--aviso:hover { color: var(--color-warning); border-color: var(--color-warning); }
+
+.btn svg { width: 16px; height: 16px; }
+
+.btn-primary {
+    background: var(--cgr-primary);
+    color: white;
+    border-color: var(--cgr-primary);
+}
+.btn-primary:hover {
+    background: var(--cgr-primary-dark);
+    box-shadow: var(--shadow-glow);
+}
+
+.btn-secondary {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border-color: var(--border-default);
+}
+.btn-secondary:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-strong);
+}
+
+.btn-success {
+    background: var(--color-success);
+    color: white;
+}
+.btn-success:hover { filter: brightness(1.1); }
+
+.btn-danger {
+    background: var(--color-error);
+    color: white;
+}
+.btn-danger:hover { filter: brightness(1.1); }
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+}
+.btn-ghost:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.btn-icon {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    justify-content: center;
+    border-radius: var(--radius-md);
+}
+
+
+/* --------------------------------------------------------------------------
+   Tables
+   -------------------------------------------------------------------------- */
+.data-table-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.data-table thead {
+    background: var(--bg-elevated);
+}
+
+.data-table th {
+    padding: var(--sp-3) var(--sp-4);
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.data-table td {
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+}
+
+.data-table tbody tr {
+    transition: background var(--duration-fast);
+}
+
+.data-table tbody tr:hover {
+    background: var(--bg-card-hover);
+}
+
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.table-empty {
+    text-align: center;
+    padding: var(--sp-12) var(--sp-6);
+    color: var(--text-muted);
+}
+
+.table-empty svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--sp-4);
+    opacity: 0.3;
+}
+
+
+/* --------------------------------------------------------------------------
+   Estado Badges
+   -------------------------------------------------------------------------- */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.badge-new        { background: rgba(59,130,246,0.15); color: #60A5FA; }
+.badge-review     { background: rgba(245,158,11,0.15); color: #FBBF24; }
+.badge-approved   { background: rgba(16,185,129,0.15); color: #34D399; }
+.badge-declined   { background: rgba(239,68,68,0.15); color: #F87171; }
+
+.badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+
+/* --------------------------------------------------------------------------
+   Forms
+   -------------------------------------------------------------------------- */
+.form-group {
+    margin-bottom: var(--sp-5);
+}
+
+.form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: var(--sp-2);
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+    width: 100%;
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--bg-input);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    transition: border-color var(--duration-fast);
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px var(--cgr-primary-glow);
+}
+
+/* --- Autorrelleno del navegador ------------------------------------------
+   Cuando Chrome rellena un campo guardado le pinta SU fondo (un azul muy
+   claro) con prioridad de agente de usuario: `background` no lo cambia. Por eso
+   la contraseña recordada salía como una barra blanca en medio del tema
+   oscuro.
+
+   El único recurso es taparlo con una sombra interior enorme —eso sí se
+   respeta— y decir aparte de qué color va el texto, porque `color` tampoco
+   llega. La transición larguísima es para el instante en que el navegador
+   revierte su color al enfocar: así no se ve el destello blanco. */
+.form-input:-webkit-autofill,
+.form-input:-webkit-autofill:hover,
+.form-input:-webkit-autofill:focus,
+.form-input:-webkit-autofill:active {
+    box-shadow: 0 0 0 1000px var(--bg-autorelleno) inset;
+    -webkit-text-fill-color: var(--text-primary);
+    caret-color: var(--text-primary);
+    transition: background-color 100000s ease-in-out 0s;
+}
+
+/* Al enfocar se conserva el anillo, que la sombra interior lo había sustituido. */
+.form-input:-webkit-autofill:focus {
+    box-shadow: 0 0 0 1000px var(--bg-autorelleno) inset,
+                0 0 0 3px var(--cgr-primary-glow);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+
+/* --------------------------------------------------------------------------
+   Detail Panels
+   -------------------------------------------------------------------------- */
+.detail-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-6);
+    margin-bottom: var(--sp-5);
+}
+
+.detail-panel-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: var(--sp-4);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 14px;
+}
+
+.detail-row:last-child { border-bottom: none; }
+
+.detail-key {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.detail-value {
+    color: var(--text-primary);
+    font-weight: 600;
+    text-align: right;
+}
+
+
+/* --------------------------------------------------------------------------
+   Avisos (toasts)
+   --------------------------------------------------------------------------
+   Abajo a la derecha, no arriba: arriba chocan con la cabecera de página y con
+   el botón de tema, y ahí es justo donde está mirando quien acaba de pulsar
+   algo. Abajo aparecen fuera del camino y se leen igual.
+
+   Los nuevos se añaden al final, así que la pila crece hacia arriba desde la
+   esquina y el más reciente queda siempre en el mismo sitio.
+   -------------------------------------------------------------------------- */
+.toast-container {
+    position: fixed;
+    /* Por encima de la barra del asistente, que ocupa esta misma esquina. El
+       alto lo publica el propio asistente (js/components/assistant.js) porque
+       cambia al abrir su panel; el 0px de respaldo es para la portada y el
+       login, donde esa barra no existe. */
+    bottom: calc(var(--alto-asistente, 0px) + var(--sp-4));
+    right: var(--sp-6);
+    transition: bottom var(--duration-normal) var(--ease-out);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    align-items: flex-end;
+    /* La capa no debe robar clics; cada aviso sí los acepta. */
+    pointer-events: none;
+}
+
+.toast {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-size: 14px;
+    color: var(--text-primary);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    pointer-events: auto;
+    animation: avisoEntra var(--duration-normal) var(--ease-out);
+    max-width: 400px;
+}
+
+/* Todos los avisos son iguales; lo único que cambia es el color del icono.
+   Antes llevaban además un filete de color a la izquierda, que rompía la forma
+   y hacía que un error y un acierto parecieran dos componentes distintos. */
+.toast svg { flex: 0 0 auto; }
+
+.toast.toast-success svg { color: var(--color-success); }
+.toast.toast-error   svg { color: var(--color-error); }
+.toast.toast-warning svg { color: var(--color-warning); }
+.toast.toast-info    svg { color: var(--color-info); }
+
+.toast.removing {
+    animation: avisoSale var(--duration-fast) var(--ease-out) forwards;
+}
+
+@keyframes avisoEntra {
+    from { opacity: 0; transform: translate(24px, 8px) scale(0.97); }
+    to   { opacity: 1; transform: translate(0, 0) scale(1); }
+}
+
+@keyframes avisoSale {
+    from { opacity: 1; transform: translate(0, 0) scale(1); }
+    to   { opacity: 0; transform: translate(24px, 4px) scale(0.97); }
+}
+
+/* En pantallas estrechas ocupan el ancho, que si no quedan colgando. */
+@media (max-width: 480px) {
+    .toast-container {
+        left: var(--sp-4);
+        right: var(--sp-4);
+        bottom: calc(var(--alto-asistente, 0px) + var(--sp-3));
+        align-items: stretch;
+    }
+    .toast { max-width: none; }
+}
+
+
+/* --------------------------------------------------------------------------
+   Diálogos de confirmación
+   --------------------------------------------------------------------------
+   El mismo lenguaje que los avisos —misma caja, mismo redondeo, mismo icono a
+   la izquierda— porque son lo mismo visto de otro lado: uno informa de algo
+   hecho, el otro pregunta antes de hacerlo. Sustituyen a `confirm()` y
+   `prompt()`, que pintan una caja gris del sistema.
+
+   Va por debajo de los avisos (z-index) a propósito: si sale un aviso con el
+   diálogo abierto, tiene que poder leerse.
+   -------------------------------------------------------------------------- */
+.dialogo-fondo {
+    position: fixed;
+    inset: 0;
+    z-index: 9500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-6);
+    background: rgba(4, 8, 18, 0.55);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    animation: dialogoFondoEntra var(--duration-fast) var(--ease-out);
+}
+
+.dialogo {
+    width: 100%;
+    max-width: 420px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: var(--sp-6);
+    animation: dialogoEntra var(--duration-normal) var(--ease-out);
+}
+
+.dialogo-cabecera {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: var(--sp-3);
+}
+
+.dialogo-icono {
+    display: inline-flex;
+    color: var(--color-info);
+}
+
+.dialogo--peligro .dialogo-icono { color: var(--color-error); }
+
+.dialogo-titulo {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.dialogo-mensaje {
+    margin: 0 0 var(--sp-5);
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
+.dialogo-campo { margin-bottom: var(--sp-5); }
+
+/* Un campo obligatorio vacío se marca al intentar aceptar, no antes: avisar
+   de un error que todavía no se ha cometido sólo molesta. */
+.dialogo-campo.campo-invalido {
+    border-color: var(--color-error);
+    box-shadow: 0 0 0 3px var(--color-error-bg);
+}
+
+.dialogo-acciones {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--sp-3);
+}
+
+.dialogo-fondo.cerrando { animation: dialogoFondoSale var(--duration-fast) var(--ease-out) forwards; }
+
+@keyframes dialogoFondoEntra { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dialogoFondoSale  { from { opacity: 1; } to { opacity: 0; } }
+
+@keyframes dialogoEntra {
+    from { opacity: 0; transform: translateY(12px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Quien pide menos movimiento recibe la caja ya puesta, sin desplazamientos. */
+@media (prefers-reduced-motion: reduce) {
+    .toast,
+    .toast.removing,
+    .dialogo,
+    .dialogo-fondo {
+        animation-duration: 0.01ms;
+    }
+}
+
+
+/* --------------------------------------------------------------------------
+   Loading Spinner
+   -------------------------------------------------------------------------- */
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-default);
+    border-top-color: var(--cgr-primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-overlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-12);
+    color: var(--text-muted);
+    gap: var(--sp-3);
+}
+
+
+/* --------------------------------------------------------------------------
+   Mobile Hamburger
+   -------------------------------------------------------------------------- */
+/* El botón del menú NO tiene estilo propio: lleva el mismo que los de la
+   esquina derecha (idioma, tema, perfil), y ese estilo está escrito una sola
+   vez, junto a ellos, en la regla de `.tema-toggle, .mobile-toggle`. Aquí sólo
+   queda lo que es suyo: dónde se coloca y cuándo aparece.
+
+   Antes se copió el estilo a mano y se fue quedando atrás: le faltaba el
+   tamaño del icono —el <svg> no lleva width, así que crecía hasta los 40 px
+   del botón mientras los de la derecha miden 18—, el color atenuado y el
+   comportamiento al pasar el ratón. Al lado del de tema no parecían botones
+   de la misma aplicación. */
+.mobile-toggle {
+    display: none;
+    position: fixed;
+    top: var(--sp-4);
+    left: var(--sp-4);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 99;
+}
+
+
+/* --------------------------------------------------------------------------
+   User Profile & Layout Additions
+   -------------------------------------------------------------------------- */
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3);
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+
+.user-profile-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--cgr-primary-glow);
+    color: var(--cgr-primary-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.user-profile-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.user-profile-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-email {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-rol {
+    margin-top: var(--sp-1);
+    align-self: flex-start;
+    padding: 1px var(--sp-2);
+    border-radius: var(--radius-full);
+    background: var(--color-info-bg);
+    color: var(--color-info);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.user-rol:empty { display: none; }
+
+.user-logout {
+    margin-left: auto;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+}
+
+.quoting-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-6);
+    height: calc(100vh - 160px);
+}
+
+.quoting-column {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.quoting-column-header {
+    padding: var(--sp-4) var(--sp-6);
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-elevated);
+}
+
+.quoting-column-header h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.quoting-column-content {
+    padding: var(--sp-4);
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* --------------------------------------------------------------------------
+   Pantalla de Acceso (Login)
+   -------------------------------------------------------------------------- */
+.login-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: var(--sp-6);
+    background:
+        radial-gradient(circle at 20% 0%, var(--cgr-primary-glow), transparent 55%),
+        radial-gradient(circle at 85% 100%, var(--cgr-accent-glow), transparent 55%),
+        var(--bg-base);
+}
+
+.login-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: var(--sp-8);
+}
+
+.login-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-8);
+}
+
+.login-brand-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.login-brand-sub {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.login-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: var(--sp-1);
+}
+
+.login-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: var(--sp-6);
+}
+
+.login-error {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-4);
+    margin-bottom: var(--sp-5);
+    border: 1px solid var(--color-error);
+    background: var(--color-error-bg);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 13px;
+}
+
+.login-submit {
+    width: 100%;
+    justify-content: center;
+}
+
+.login-submit .spinner {
+    width: 16px;
+    height: 16px;
+    border-top-color: white;
+}
+
+.login-footer {
+    margin-top: var(--sp-6);
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+
+    .mobile-toggle {
+        display: flex;
+    }
+
+    .mobile-overlay.active {
+        display: block;
+    }
+
+    .page-header {
+        padding: var(--sp-4) var(--sp-5);
+        padding-left: 56px;
+    }
+
+    .page-body {
+        padding: var(--sp-5);
+    }
+
+    .cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+}
+
+@media (max-width: 480px) {
+    .cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .login-card {
+        padding: var(--sp-6);
+    }
+}
+
+/* ============================================================================
+   FONDO ESPACIAL
+   ============================================================================
+   Capa decorativa detrás de toda la aplicación: un resplandor radial con los
+   colores de la marca que late despacio, y encima un campo de estrellas que
+   suben y parpadean.
+
+   Las estrellas se dibujan en un <canvas> desde /js/starfield.js. Aquí sólo se
+   coloca la capa; el lienzo no lleva estilo de color a propósito, para que el
+   resplandor de abajo se vea a través.
+
+   Notas sobre la adaptación del fragmento original:
+   - `position: fixed`, no `absolute`: con `absolute` la capa queda anclada al
+     inicio del documento y el fondo se despega al desplazarse por las tablas
+     de RFQ.
+   - Sin `overflow: hidden` en html/body. El original lo llevaba para evitar
+     barras de desplazamiento, pero aquí dejaría las tablas sin poder
+     desplazarse. Con la capa en `fixed` no hacen falta.
+   - Sin `background-color` propio: el de la aplicación es --bg-base.
+   - Toda la capa vive en z-index 0 y el contenido de la aplicación en 1, para
+     que las estrellas nunca queden por encima del texto.
+   ========================================================================= */
+
+/* Capa contenedora. `pointer-events: none` para que nunca robe un clic, y
+   `overflow: hidden` para que nada de aquí genere barras de desplazamiento. */
+.space-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+/* El contenido de la aplicación va por encima del fondo. */
+.app-layout,
+.login-screen {
+    position: relative;
+    z-index: 1;
+}
+
+/* La pantalla de acceso traía `var(--bg-base)` opaco al final de su fondo, que
+   tapaba las estrellas por completo. Se quita el color sólido y se conservan
+   sus dos resplandores, que ahora se mezclan con el campo estelar. */
+.login-screen {
+    background:
+        radial-gradient(circle at 20% 0%, var(--cgr-primary-glow), transparent 55%),
+        radial-gradient(circle at 85% 100%, var(--cgr-accent-glow), transparent 55%);
+}
+
+/* --- Resplandor de la marca --------------------------------------------- */
+.glow-background {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at 50% 40%,
+        rgba(47, 89, 163, 0.30) 0%,     /* --cgr-primary-light */
+        rgba(27, 61, 121, 0.18) 38%,    /* --cgr-primary */
+        rgba(179, 22, 113, 0.07) 68%,   /* --cgr-accent, apenas un tinte */
+        transparent 100%);
+    /* SIN animación, a propósito.
+       Este resplandor cubre la ventana entera y lleva `mix-blend-mode`.
+       Animarle la escala y la opacidad obligaba al navegador a rehacer la
+       mezcla de toda la pantalla en cada fotograma: medido, la portada bajaba
+       de 60 a 23 fps en un monitor grande, y el coste lo pagaban TODAS las
+       pantallas de la aplicación, no sólo esta. Quieto se pinta una vez y se
+       queda cacheado; el latido no compensaba ni de lejos. */
+    mix-blend-mode: screen;
+    opacity: 0.9;
+}
+
+/* --- Lienzo de las estrellas --------------------------------------------
+   Un solo <canvas> en lugar de un elemento por estrella: con 400 estrellas,
+   400 nodos animándose por CSS cargan mucho más que un lienzo.
+   El tamaño real (y la densidad de pantalla) los ajusta starfield.js. */
+#starfield {
+    display: block;
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+/* --- Accesibilidad ------------------------------------------------------
+   Con "reducir movimiento" activado el fondo se queda quieto: starfield.js
+   pinta las estrellas una sola vez, sin animarlas, y aquí se para el latido
+   del resplandor. */
+@media (prefers-reduced-motion: reduce) {
+    .glow-background {
+        animation: none !important;
+        opacity: 0.85;
+    }
+}
+
+/* --- Velo: dejar que el fondo espacial se vea a través de las superficies ---
+
+   Sin esto el efecto sólo se aprecia en la pantalla de acceso: dentro de la
+   aplicación, la barra lateral y las tarjetas son opacas y tapan el campo de
+   estrellas por completo.
+
+   Se aplica un ligero translúcido MÁS desenfoque de fondo. El desenfoque es
+   lo que mantiene el texto legible: sin él, una estrella justo detrás de una
+   letra la ensucia; con él, lo que hay debajo se convierte en color plano.
+
+   Para ajustarlo hay un único punto de control: --space-veil.
+     1     = superficies opacas (efecto desactivado dentro de la app)
+     0.92  = valor actual, discreto
+     0.80  = fondo mucho más presente
+*/
+:root {
+    --space-veil: 0.92;
+
+    --bg-surface-veil: color-mix(in srgb, var(--bg-surface) calc(var(--space-veil) * 100%), transparent);
+    --bg-card-veil:    color-mix(in srgb, var(--bg-card)    calc(var(--space-veil) * 100%), transparent);
+    --bg-input-veil:   color-mix(in srgb, var(--bg-input)   calc(var(--space-veil) * 100%), transparent);
+}
+
+/* Qué lleva velo y qué no.
+   Lo llevan las superficies que se apoyan DIRECTAMENTE sobre el fondo: la
+   barra lateral, la cabecera, las tarjetas, los paneles, el recorrido del
+   correo y la barra del asistente. Detrás de ellas está el cielo, así que
+   dejarlo ver es el efecto que se busca.
+   NO lo llevan los menús que se abren flotando —notificaciones, perfil,
+   idioma, diálogos—: ésos caen encima del contenido, y translúcidos dejarían
+   ver el texto de debajo en vez de las estrellas, que es otra cosa y se lee
+   fatal. */
+.sidebar,
+.page-header,
+.status-card,
+.kpi,
+.card,
+.panel,
+.data-card,
+.flujo,
+.assistant-barra {
+    background: var(--bg-card-veil);
+    backdrop-filter: blur(14px) saturate(115%);
+    -webkit-backdrop-filter: blur(14px) saturate(115%);
+}
+
+.sidebar,
+.page-header {
+    background: var(--bg-surface-veil);
+}
+
+/* Navegadores sin color-mix (Safari < 16.2, Firefox < 113): se quedan con el
+   color opaco de siempre. El fondo se sigue viendo en los márgenes, sólo que
+   no a través de las tarjetas. */
+@supports not (background: color-mix(in srgb, red 50%, transparent)) {
+    .sidebar, .page-header { background: var(--bg-surface); }
+    .monitor-log { background: var(--bg-input); }
+    .status-card, .kpi, .card, .panel, .data-card,
+    .flujo, .assistant-barra { background: var(--bg-card); }
+}
+
+/* El desenfoque de fondo es caro en móviles modestos y ahí el fondo casi no se
+   ve igualmente, porque la pantalla la ocupa el contenido. */
+@media (max-width: 768px) {
+    .sidebar, .page-header, .status-card, .kpi, .card, .panel, .data-card,
+    .flujo, .assistant-barra, .monitor-log {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+}
+
+/* --- Marca de entorno local ---------------------------------------------
+   Franja discreta en la esquina que sólo se ve cuando la página se sirve
+   desde localhost. Con la pestaña de producción y la local abiertas a la vez
+   son idénticas, y aprobar o declinar un RFQ creyendo que estás probando
+   escribe en la base que usa la planta.
+   Se oculta por defecto: el <script> de index.html añade .es-local al <html>
+   sólo cuando corresponde, así que en Render nunca aparece. */
+.marca-local { display: none; }
+
+.es-local .marca-local {
+    display: block;
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 10001;            /* por encima de todo, incluidos los toasts */
+    padding: 2px var(--sp-3, 12px);
+    background: var(--cgr-accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    border-bottom-left-radius: 6px;
+    pointer-events: none;      /* nunca estorba a un clic */
+    user-select: none;
+}
+
+/* ============================================================================
+   PANTALLA DE INICIO (antes del login)
+   ============================================================================
+   Lo primero que se ve. Misma composición que la pantalla de acceso — tarjeta
+   centrada sobre el fondo estrellado — para que las dos se lean como parte de
+   lo mismo y no como dos diseños distintos.
+
+   Contenido: los dos logos, el resorte animado, el nombre y un botón.
+   ========================================================================= */
+
+.home-screen {
+    position: relative;
+    z-index: 1;
+    /* Un contenedor a secas, sin flex ni relleno: quien centra y respira es
+       .portada, que va dentro. Con `display: flex` aquí, la portada se
+       encogía al ancho de su contenido y el lienzo del resorte salía de 386 px
+       en un monitor de 1600; y el relleno, sumado a los 100dvh de la portada,
+       hacía que la página se pudiera desplazar. */
+    outline: none;             /* recibe el foco al entrar, pero sin marco */
+    background:
+        radial-gradient(circle at 20% 0%, var(--cgr-primary-glow), transparent 55%),
+        radial-gradient(circle at 85% 100%, var(--cgr-accent-glow), transparent 55%);
+}
+
+
+
+/* --- Resorte animado -----------------------------------------------------
+   El alambre no es un trazo: son cuatro trazos superpuestos sobre el mismo
+   recorrido —silueta, cuerpo cromado, sombra y brillo— y los dos últimos van
+   desplazados unos píxeles arriba y abajo del eje. Eso es lo que convierte un
+   trazo plano en un tubo redondo.
+
+   Los anchos van juntos aquí a propósito: si la silueta no es claramente más
+   ancha que el cuerpo, el alambre pierde el borde y se ve dibujado. */
+
+
+/* Silueta: el canto oscuro del alambre redondo. */
+
+/* Cuerpo cromado. */
+
+/* Sombra propia, justo por debajo del eje del alambre. */
+
+/* Brillo especular, justo por encima. */
+
+/* Las vueltas que pasan por detrás: más apagadas, que están más lejos y
+   además les da el aire que hay entre ellas. */
+
+
+
+
+@media (max-width: 480px) {
+    .home-title { font-size: 1.6rem; }
+}
+
+/* ============================================================================
+   MARCA: EL CONJUNTO DE LOGOS Y "POHUA"
+   ============================================================================
+   Los logos de ISC y CGR son artes pensadas sobre blanco: sobre el azul oscuro
+   de la aplicación quedan apagados y el de CGR, que lleva texto azul marino,
+   casi no se lee.
+
+   Los dos van juntos dentro de UN solo contenedor blanco —el "lockup"— y no en
+   dos tejas separadas: así se leen como una sola firma de marca, que es como
+   aparecen en la papelería, y el conjunto se mantiene idéntico en la portada,
+   en el login y en la barra lateral.
+   ========================================================================= */
+
+.logo-lockup {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+
+    background: #fff;
+    border-radius: var(--radius-md, 8px);
+    padding: 8px 14px;
+    /* Un borde muy tenue para que el blanco no "flote" sobre el fondo. */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    /* Que no se estire ni se encoja dentro de un flex padre. */
+    flex: 0 0 auto;
+    max-width: 100%;
+}
+
+.logo-lockup img {
+    display: block;
+    width: auto;
+    /* Tope de seguridad: si el CSS no llegara a cargar del todo, una imagen sin
+       restringir se pinta a su tamaño original y se come la pantalla. */
+    max-width: 100%;
+    object-fit: contain;
+}
+
+/* Alturas distintas a propósito: el de ISC es vertical (el resorte sobre las
+   letras) y el de CGR apaisado; a la misma altura, el de CGR pesaría el doble. */
+.logo-lockup__isc { height: 52px; max-height: 52px; }
+.logo-lockup__cgr { height: 34px; max-height: 34px; }
+
+/* Filete de separación entre los dos, dentro del mismo blanco: se distinguen
+   como dos marcas sin romper el conjunto. */
+.logo-lockup__cgr {
+    padding-left: 14px;
+    margin-left: -2px;
+    border-left: 1px solid rgba(15, 23, 42, 0.14);
+    box-sizing: content-box;
+}
+
+/* --- El conjunto como botón ----------------------------------------------
+   En la portada y el login vuelve a la portada; en la barra lateral va al
+   Dashboard. Es un <button> de verdad, no un div con onclick: así se llega con
+   el tabulador y se activa con Enter, como cualquier control. */
+.logo-boton {
+    display: inline-flex;
+    align-items: center;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: var(--radius-md, 8px);
+    transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.logo-boton:hover  { transform: translateY(-1px); filter: brightness(1.06); }
+.logo-boton:active { transform: translateY(0); }
+
+.logo-boton:focus-visible {
+    outline: 2px solid var(--cgr-accent);
+    outline-offset: 3px;
+}
+
+/* --- Ajustes por pantalla ------------------------------------------------
+   Cambia el tamaño del conjunto, nunca su forma: el contenedor blanco con los
+   dos logos dentro es el mismo en los tres sitios. */
+
+/* Login: algo más pequeño, que la tarjeta lleva el formulario debajo. */
+.login-brand .logo-lockup { padding: 6px 10px; gap: 10px; }
+.login-brand .logo-lockup__isc { height: 40px; max-height: 40px; }
+.login-brand .logo-lockup__cgr { height: 26px; max-height: 26px; padding-left: 10px; }
+
+/* Barra lateral: es estrecha, así que el conjunto va debajo del nombre. */
+.sidebar-header .logo-boton { flex: 0 0 auto; }
+.sidebar-header .logo-lockup { padding: 6px 9px; gap: 9px; }
+.sidebar-header .logo-lockup__isc { height: 31px; max-height: 31px; }
+.sidebar-header .logo-lockup__cgr { height: 20px; max-height: 20px; padding-left: 9px; }
+
+@media (max-width: 480px) {
+    .logo-lockup { padding: 6px 10px; gap: 10px; }
+    .logo-lockup__isc { height: 42px; max-height: 42px; }
+    .logo-lockup__cgr { height: 27px; max-height: 27px; padding-left: 10px; }
+}
+
+/* ============================================================================
+   TEMA CLARO
+   ============================================================================
+   El tema por defecto es el oscuro: es el que tienen todas las variables en
+   :root. Aquí sólo se redefinen las de superficie, texto y borde cuando el
+   <html> lleva data-tema="light".
+
+   Los colores de marca (azul y rosa de CGR) NO cambian: son la identidad.
+   Lo que cambia es el papel sobre el que se pintan.
+
+   El fondo estrellado se apaga en claro. Un cielo nocturno sobre papel blanco
+   no funciona: las estrellas son blancas y desaparecerían. En su lugar queda
+   un degradado suave con los mismos colores de la marca.
+   ========================================================================= */
+
+:root[data-tema="light"] {
+    /* --- Superficies ---
+       El fondo NO es blanco roto. Con #f1f4f9 la pantalla entera era casi
+       papel y las tarjetas, que son blancas, se perdían dentro: no se veía
+       dónde acababa una y empezaba el fondo, y el degradado de marca no se
+       leía. Este azul grisáceo es el mismo tono del tema oscuro subido de
+       claridad, que es lo que se busca: la misma imagen, en claro. */
+    --bg-base:            #c3cddf;
+    /* Ninguna superficie es blanco puro. El blanco al 100 % sobre una pantalla
+       encendida es la superficie más brillante que existe: en una jornada
+       entera delante del cotizador, cansa. Todas llevan el mismo azul lavanda
+       de la portada, cada una un escalón más clara que el fondo, que es lo que
+       las separa; el contraste del texto lo tiene de sobra (el título va a
+       16:1 sobre la tarjeta). El único blanco que queda es la placa de los
+       logos, y ese es de marca. */
+    --bg-surface:         #d2dae9;   /* menú lateral y cabecera */
+    --bg-card:            #d9e1ef;   /* tarjetas y paneles */
+    --bg-card-hover:      #ced7e8;
+    --bg-elevated:        #c3cddf;
+    --bg-input:           #e3e9f5;   /* un punto más claro: se ve dónde escribir */
+    --bg-autorelleno:     #e3e9f5;
+
+    /* --- Bordes: en claro se dibujan con negro translúcido, no con blanco --- */
+    --border-subtle:      rgba(15, 23, 42, 0.08);
+    --border-default:     rgba(15, 23, 42, 0.14);
+    --border-strong:      rgba(15, 23, 42, 0.24);
+
+    /* --- Texto --- */
+    --text-primary:       #0f172a;
+    --text-secondary:     #414c63;
+    /* Sólido, no translúcido: al 75 % de opacidad las etiquetas se quedaban
+       en 3.6:1 sobre blanco. Y se oscurece con el fondo: el tono anterior
+       (#5c6880) daba 5.0:1 sobre las superficies casi blancas de antes, pero
+       sobre estas —más oscuras— caía a 4.1, por debajo del mínimo. */
+    --text-muted:         #4d576d;
+    --text-inverse:       #ffffff;
+
+    /* El azul claro de marca no contrasta sobre papel blanco: para texto y
+       enlaces se usa el tono oscuro. */
+    --cgr-primary-light:  #24488a;
+    --cgr-accent-light:   #8b0e55;
+
+    /* Los resplandores tienen que ser mucho más tenues o manchan. */
+    --cgr-primary-glow:   rgba(27, 61, 121, 0.10);
+    --cgr-accent-glow:    rgba(179, 22, 113, 0.08);
+
+    /* --- Semánticos: los mismos tonos de marca, oscurecidos para que se lean.
+       Se oscurecieron otra vez al bajar las superficies: el verde se quedaba en
+       3.5:1 y el naranja en 3.9 sobre las tarjetas nuevas, por debajo del 4.5
+       que necesita un texto de 12-13 px. Los fondos tintados no se tocan: son
+       transparencias del color de marca y siguen siendo suaves. */
+    --color-success:      #525a12;
+    --color-success-bg:   rgba(164, 174, 45, 0.16);
+    --color-warning:      #7d4013;
+    --color-warning-bg:   rgba(214, 124, 47, 0.16);
+    --color-error:        #a3125f;
+    --color-error-bg:     rgba(179, 22, 113, 0.10);
+    --color-info:         #0d5f82;
+    --color-info-bg:      rgba(20, 142, 194, 0.12);
+
+    /* --- Sombras: en claro, suaves; las del tema oscuro se ven como manchas --- */
+    --shadow-sm:  0 1px 2px rgba(15, 23, 42, 0.06);
+    --shadow-md:  0 4px 12px rgba(15, 23, 42, 0.08);
+    --shadow-lg:  0 8px 32px rgba(15, 23, 42, 0.12);
+
+    /* Estuvo en 1 —superficies opacas— mientras el campo de estrellas no se
+       pintaba en claro: no había nada detrás que dejar ver. Ahora las estrellas
+       están en los dos temas, así que las superficies se abren en los dos.
+       Un poco más que en oscuro (0.85 frente a 0.92) porque sobre papel el
+       mismo porcentaje se nota la mitad. Medido: con este valor el subtítulo,
+       que es el texto más flojo de la pantalla, se queda en 4.6:1 —por encima
+       del 4.5 que hace falta—; bajarlo más lo tira por debajo. */
+    --space-veil: 0.85;
+
+    /* --- Registro del servicio, sobre papel --- */
+    --log-texto:          #333d4d;
+    /* La hora y el origen de cada línea. Con las superficies ya no blancas,
+       el tono anterior (#6b7688) se quedaba en 4.3:1 sobre la caja del
+       registro; éste vuelve a pasar de 4.5. */
+    --log-tenue:          #515b6e;
+    --log-error:          #a3125f;
+    --log-aviso:          #77400f;
+}
+
+/* En claro se conserva EL MISMO fondo del tema oscuro —misma geometría, mismos
+   colores de marca, mismas estrellas— sólo que en tono claro.
+
+   El campo de estrellas estuvo apagado en claro mientras el fondo era casi
+   blanco: puntos blancos sobre papel no se ven. Ahora el fondo tiene tono y
+   las estrellas se pintan oscuras (js/starfield.js cambia la tinta con el
+   tema), así que se quedan encendidas en las dos vistas. */
+
+:root[data-tema="light"] .glow-background {
+    background: radial-gradient(circle at 50% 40%,
+        rgba(47, 89, 163, 0.17) 0%,     /* --cgr-primary-light */
+        rgba(27, 61, 121, 0.11) 38%,    /* --cgr-primary */
+        rgba(179, 22, 113, 0.07) 68%,   /* --cgr-accent, apenas un tinte */
+        transparent 100%);
+    /* `screen` aclara, y sobre un fondo claro no dejaría ver nada. `multiply`
+       hace lo mismo en el otro sentido: tiñe sin ensuciar. */
+    mix-blend-mode: multiply;
+}
+
+:root[data-tema="light"] body {
+    background:
+        radial-gradient(circle at 15% -10%, rgba(47, 89, 163, 0.16), transparent 55%),
+        radial-gradient(circle at 90% 110%, rgba(179, 22, 113, 0.13), transparent 55%),
+        var(--bg-base);
+    background-attachment: fixed;
+}
+
+/* La portada en claro NO usa el fondo de la aplicación: lleva el suyo, bastante
+   más oscuro. Es la única pantalla que es sólo fondo —no hay tarjetas blancas
+   que separar de él— y con el tono suave de la aplicación se quedaba en un
+   blanco lavado donde ni el degradado de marca ni el resorte de estrellas se
+   veían. Aquí el fondo ES la imagen, así que se le da cuerpo: el mismo
+   degradado del tema oscuro, misma geometría y mismos colores, subido de
+   claridad. */
+/* Sobre el fondo con cuerpo de la portada, el gris del lema se quedaba en
+   3.7:1 —es texto de 17 px, necesita 4.5— y el halo que lleva detrás estaba
+   calculado para el fondo claro de la aplicación, no para éste. Se oscurece el
+   texto y se recorta el halo. */
+:root[data-tema="light"] .portada-lema {
+    color: #2c3854;
+    text-shadow: 0 0 18px rgba(255, 255, 255, 0.55);
+}
+
+:root[data-tema="light"] .home-screen,
+:root[data-tema="light"] .login-screen {
+    background:
+        radial-gradient(circle at 15% -10%, rgba(27, 61, 121, 0.34), transparent 58%),
+        radial-gradient(circle at 90% 110%, rgba(179, 22, 113, 0.26), transparent 58%),
+        #9dafcb;
+}
+
+/* El conjunto de logos es blanco: sobre una tarjeta clara necesita un borde
+   para no fundirse con ella. */
+:root[data-tema="light"] .logo-lockup {
+    border: 1px solid var(--border-subtle);
+    box-shadow: none;
+}
+
+/* En claro, el halo de color de los sobres los emborrona: sombra normal. */
+:root[data-tema="light"] .flujo-svg .sobre,
+:root[data-tema="light"] .flujo-svg .sobre--espera {
+    filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.35));
+}
+
+/* El cromado no cambia —el metal es el mismo—, pero sobre papel el canto casi
+   negro se lee como tinta. Se aclara un punto y la sombra se suaviza. */
+:root[data-tema="light"] {
+    --metal-borde:  #38424f;
+    --metal-sombra: #596373;
+}
+
+
+/* ============================================================================
+   BOTÓN DE TEMA
+   ============================================================================
+   Arriba a la derecha, siempre visible: en la portada, en el login y dentro
+   de la aplicación. Va fijo, así que no depende de qué pantalla esté montada.
+   ========================================================================= */
+
+/* Los controles redondos de 40 px: el de tema (esquina derecha) y el del menú
+   lateral (esquina izquierda). Comparten regla a propósito —son la misma
+   pieza en dos esquinas— y así no puede volver a pasar que uno evolucione y
+   el otro se quede como estaba. El de idioma y el de perfil son de la misma
+   familia pero llevan texto al lado, así que tienen ancho propio. */
+.tema-toggle,
+.mobile-toggle,
+.notif-boton {
+    /* Sin `display` aquí a propósito: el del menú se enseña y se esconde según
+       el ancho de la pantalla y lo decide su propia regla, que está más arriba
+       en el archivo. Ponerlo aquí lo haría aparecer también en el escritorio. */
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-full);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: color var(--duration-fast) var(--ease-out),
+                border-color var(--duration-fast) var(--ease-out),
+                transform var(--duration-fast) var(--ease-out);
+}
+
+.tema-toggle:hover,
+.mobile-toggle:hover,
+.notif-boton:hover {
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+    transform: translateY(-1px);
+}
+
+.tema-toggle:focus-visible,
+.mobile-toggle:focus-visible,
+.notif-boton:focus-visible {
+    outline: 2px solid var(--cgr-accent);
+    outline-offset: 2px;
+}
+
+/* La posición la pone .barra-esquina: antes cada control de la esquina se
+   colocaba solo con su propio `right`, y añadir uno descolocaba a los otros. */
+.tema-toggle,
+.notif-boton { display: inline-flex; }
+
+.tema-toggle svg,
+.mobile-toggle svg,
+.notif-boton svg { width: 18px; height: 18px; display: block; }
+
+/* Se muestra el icono del tema al que se va a cambiar, no el actual:
+   en oscuro se ve un sol (pulsa para aclarar) y en claro una luna. */
+.tema-toggle .icono-sol  { display: block; }
+.tema-toggle .icono-luna { display: none; }
+:root[data-tema="light"] .tema-toggle .icono-sol  { display: none; }
+:root[data-tema="light"] .tema-toggle .icono-luna { display: block; }
+
+/* La marca LOCAL vivía arriba a la derecha y chocaba con el botón: se pasa a
+   la izquierda, que es donde ya no estorba a nada. */
+.es-local .marca-local {
+    right: auto;
+    left: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 6px;
+}
+
+/* En móvil la esquina superior derecha la ocupa el botón del menú. */
+@media (max-width: 1024px) {
+    .tema-toggle {
+        top: var(--sp-3);
+        right: var(--sp-3);
+    }
+}
+
+
+/* El botón de tema va fijo en la esquina superior derecha, así que dentro de
+   la aplicación se montaba encima de los botones de la barra superior. Se le
+   reserva el hueco: 40px del botón + los márgenes a cada lado. */
+.page-header { padding-right: calc(var(--sp-8) + 40px + var(--sp-4)); }
+
+@media (max-width: 1024px) {
+    .page-header { padding-right: calc(var(--sp-6) + 40px + var(--sp-3)); }
+}
+
+
+/* ============================================================================
+   ASISTENTE
+   ============================================================================
+   Barra fija al pie de la aplicación, la misma en todas las pantallas. Va
+   dentro de <main>, no del <body>, para que no tape la barra lateral.
+
+   El panel de resultados sale POR ENCIMA de la barra, no debajo: si saliera
+   debajo, cada respuesta empujaría la barra fuera de la pantalla.
+   ========================================================================= */
+.assistant-dock {
+    position: sticky;
+    bottom: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    padding: var(--sp-4) var(--sp-8) var(--sp-5);
+    /* Un velo con desenfoque en vez de un color opaco: el fondo estrellado se
+       sigue viendo por debajo y la barra no parece una tapa pegada. */
+    background: linear-gradient(to top,
+        var(--bg-base) 40%,
+        color-mix(in srgb, var(--bg-base) 70%, transparent) 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-top: 1px solid var(--border-subtle);
+}
+
+/* --- La barra ------------------------------------------------------------ */
+.assistant-barra {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: 6px 8px 6px var(--sp-4);
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: 14px;
+    box-shadow: var(--shadow-md);
+    transition: border-color var(--duration-fast);
+}
+
+.assistant-barra:focus-within { border-color: var(--border-focus); }
+
+/* Es un <button>, así que hay que devolverle el aspecto que tenía de <span>:
+   sin marco, sin fondo, sin relleno. Sigue siendo el sol de Pohua a la
+   izquierda del campo; lo que cambia es que ahora se puede tocar —en el
+   teléfono pliega la barra, en el escritorio lleva el foco al campo—. */
+.assistant-chispa {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--cgr-accent-light);
+    flex: 0 0 auto;
+    cursor: pointer;
+    /* Un poco de área de toque de más sin mover el icono: en un teléfono un
+       objetivo de 22px se falla. */
+    margin: -8px;
+    padding: 8px;
+    border-radius: var(--radius-full);
+}
+
+.assistant-chispa:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+}
+
+/* El sol de Pohua se pinta relleno, no con trazo: es una silueta, no un icono
+   de línea como los demás. */
+.icono-sol { fill: currentColor; display: block; }
+
+.assistant-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: none;
+    background: none;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    padding: 8px 0;
+}
+
+.assistant-input:focus { outline: none; }
+.assistant-input::placeholder { color: var(--text-muted); }
+
+.assistant-enviar { flex: 0 0 auto; }
+
+/* Deshabilitado mientras dura la consulta: cada envío es una llamada de pago
+   y el doble clic es gratis para quien lo hace. */
+.assistant-enviar:disabled { opacity: 0.5; cursor: progress; }
+
+/* --- Los tres accesos rápidos -------------------------------------------
+   Son consultas a la base de datos, no al modelo. Usan .btn-chip, la variante
+   compacta del sistema de botones; aquí sólo va su colocación. */
+.assistant-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+}
+
+.assistant-acciones .btn-chip svg { flex: 0 0 auto; }
+
+/* --- El panel de resultados ---------------------------------------------- */
+.assistant-panel {
+    max-height: 46vh;
+    overflow-y: auto;
+    padding: var(--sp-5);
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    animation: avisoEntra var(--duration-normal) var(--ease-out);
+}
+
+.assistant-panel-head {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
+}
+
+.assistant-panel-head h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.assistant-nota {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+}
+
+.assistant-panel-head .btn-icon { margin-left: auto; }
+
+.assistant-cargando,
+.assistant-vacio,
+.assistant-error {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.assistant-error { color: var(--color-error); }
+
+.assistant-pregunta {
+    margin: 0 0 var(--sp-3);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.assistant-respuesta {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.6;
+    /* La respuesta del modelo puede traer saltos de línea propios. */
+    white-space: pre-wrap;
+}
+
+/* Cifras del resumen. */
+.assistant-cifras {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-5);
+}
+
+.assistant-cifra {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+
+.assistant-cifra strong { font-size: 22px; color: var(--text-primary); line-height: 1.1; }
+.assistant-cifra span   { font-size: 11px; color: var(--text-muted); }
+
+.assistant-columnas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--sp-5);
+}
+
+.assistant-columnas h4 {
+    margin: 0 0 var(--sp-2);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.assistant-lista { list-style: none; margin: 0; padding: 0; }
+
+.assistant-lista li {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: 5px 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.assistant-lista li:last-child { border-bottom: none; }
+.assistant-lista li b { color: var(--text-primary); }
+.assistant-lista li.vacio { color: var(--text-muted); }
+
+/* Tabla de "needs attention". */
+.assistant-tabla-caja { overflow-x: auto; }
+
+.assistant-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.assistant-tabla th {
+    text-align: left;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-default);
+    white-space: nowrap;
+}
+
+.assistant-tabla td {
+    padding: 8px 10px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.assistant-tabla tr:last-child td { border-bottom: none; }
+.assistant-critico { color: var(--color-error); }
+
+.assistant-enlace {
+    color: var(--cgr-primary-light);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.assistant-enlace:hover { text-decoration: underline; }
+
+/* La burbuja es cosa del teléfono: en el escritorio la barra cabe de sobra y
+   estar siempre a la vista es justo lo que se quiere de ella. */
+.assistant-burbuja { display: none; }
+
+@media (max-width: 768px) {
+    .assistant-dock { padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+    .assistant-panel { max-height: 55vh; padding: var(--sp-4); }
+    /* Los botones no caben en fila en un teléfono: se deslizan. */
+    .assistant-acciones {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        min-width: 0;
+    }
+    .assistant-acciones::-webkit-scrollbar { display: none; }
+    .assistant-acciones .btn-chip { flex: 0 0 auto; }
+
+    /* ---------------------------------------------------------------------
+       La burbuja
+       ---------------------------------------------------------------------
+       En un teléfono la barra del asistente se comía dos filas fijas —campo
+       más tres accesos rápidos— justo en la pantalla donde menos sitio hay, y
+       encima tapaba el final de cada lista. Plegada es un botón redondo en la
+       esquina; tocarlo despliega la barra completa, y el botón de cerrar de
+       los accesos rápidos la vuelve a plegar.
+
+       Fija a la ventana, no pegajosa dentro del contenido: una burbuja que se
+       queda atrás al desplazar no es una burbuja, es un adorno en mitad de la
+       página.
+       --------------------------------------------------------------------- */
+    .assistant-dock {
+        position: fixed;
+        left: 0;
+        right: 0;
+        /* Por encima del velo del menú lateral, que es lo único que se le
+           puede poner delante. */
+        bottom: 0;
+        transition: none;
+    }
+
+    /* --- Plegada: sólo el botón, sin velo ni borde de barra --------------- */
+    .assistant-dock:not(.assistant-dock--abierto) {
+        left: auto;
+        right: var(--sp-4);
+        bottom: calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
+        width: auto;
+        padding: 0;
+        gap: 0;
+        background: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        border-top: none;
+    }
+
+    .assistant-dock:not(.assistant-dock--abierto) .assistant-barra,
+    .assistant-dock:not(.assistant-dock--abierto) .assistant-acciones,
+    .assistant-dock:not(.assistant-dock--abierto) .assistant-panel {
+        display: none;
+    }
+
+    .assistant-burbuja {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        padding: 0;
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-full);
+        background: var(--cgr-primary);
+        color: #fff;
+        box-shadow: var(--shadow-lg, 0 10px 30px rgba(0, 0, 0, 0.35));
+        cursor: pointer;
+    }
+
+    .assistant-burbuja .icono-sol { width: 26px; height: 26px; }
+    .assistant-burbuja:active { transform: scale(0.94); }
+
+    /* --- Desplegada ------------------------------------------------------ */
+    .assistant-dock--abierto .assistant-burbuja { display: none; }
+
+    /* Plegada, el hueco que hay que dejar libre al final de la página es el
+       de la burbuja y su margen, no el de la barra entera. Lo publica el JS
+       en --alto-asistente midiendo el muelle de verdad, así que aquí sólo
+       hace falta que la página lo respete. */
+    .page-body { padding-bottom: calc(var(--alto-asistente, 0px) + var(--sp-6)); }
+}
+
+
+/* ============================================================================
+   MONITOR: EL REGISTRO
+   ============================================================================
+   Tipografía monoespaciada y columnas fijas para hora, nivel y origen: con
+   ancho variable, el ojo no puede recorrer la columna de niveles en vertical,
+   que es justo como se lee un registro cuando se busca un error.
+   ========================================================================= */
+.monitor-logs {
+    display: flex;
+    flex-direction: column;
+    /* Alto atado a la ventana, descontando cabecera, márgenes, las tarjetas de
+       cifras que ahora van encima y la barra del asistente. Con `height: 100%`
+       no funcionaría: el contenedor de la vista no tiene alto propio, así que
+       el registro colapsaría a nada. */
+    height: calc(100vh - 500px);
+    min-height: 240px;
+    margin-top: var(--sp-5);
+}
+
+.monitor-logs-head {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-3);
+}
+
+.monitor-logs-titulo {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.monitor-logs-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: auto;
+}
+
+.monitor-log {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: var(--sp-4);
+    /* La caja del registro también deja ver el cielo: es la superficie más
+       grande de la pantalla y opaca cortaba el fondo en seco justo en medio. */
+    background: var(--bg-input-veil, var(--bg-input));
+    backdrop-filter: blur(14px) saturate(115%);
+    -webkit-backdrop-filter: blur(14px) saturate(115%);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.monitor-log:focus-visible {
+    outline: 2px solid var(--cgr-accent);
+    outline-offset: 2px;
+}
+
+.log-vacio {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.log-linea {
+    display: grid;
+    grid-template-columns: 62px 54px 150px 1fr;
+    gap: var(--sp-3);
+    padding: 1px 0;
+    /* El mensaje es lo que de verdad se lee aquí: con --text-secundario sobre
+       el fondo del registro se quedaba en 4:1 de contraste, por debajo de lo
+       que se aguanta leyendo cien líneas seguidas. */
+    color: var(--log-texto);
+}
+
+.log-hora   { color: var(--log-tenue); }
+.log-origen { color: var(--log-tenue); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.log-nivel {
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--color-info);
+}
+
+.log-mensaje { word-break: break-word; }
+
+.log-linea--warning .log-nivel,
+.log-linea--warn    .log-nivel { color: var(--log-aviso); }
+.log-linea--error   .log-nivel,
+.log-linea--critical .log-nivel { color: var(--log-error); }
+.log-linea--debug   .log-nivel { color: var(--log-tenue); }
+
+/* Las líneas de un rastro de excepción no llevan cabecera: ocupan todo el
+   ancho y van sangradas, como en una consola. */
+.log-linea--trace {
+    grid-template-columns: 1fr;
+    color: var(--log-error);
+    padding-left: var(--sp-6);
+}
+
+.log-linea--error   { background: var(--color-error-bg); }
+.log-linea--warning { background: var(--color-warning-bg); }
+
+@media (max-width: 768px) {
+    /* En un teléfono no caben cuatro columnas: se queda hora y mensaje. */
+    .log-linea { grid-template-columns: 54px 1fr; }
+    .log-nivel, .log-origen { display: none; }
+}
+
+
+/* ============================================================================
+   MAIL: EL RECORRIDO DEL CORREO
+   ============================================================================
+   Las cinco etapas por las que pasa un correo desde el cliente hasta Sales,
+   con la cifra real de cada una. Las etapas donde el trabajo se PARA a esperar
+   a una persona van en ámbar: es el dato que importa de un vistazo.
+   ========================================================================= */
+.flujo {
+    margin-top: var(--sp-6);
+    padding: var(--sp-6);
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+}
+
+.flujo-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--sp-6);
+}
+
+.flujo-titulo {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.flujo-estado {
+    font-size: 12px;
+    color: var(--color-success);
+}
+
+.flujo-estado--parado { color: var(--text-muted); }
+
+/* --- El diagrama ---------------------------------------------------------
+   Nodos unidos por enlaces, con sobres viajando por ellos. Todo es SVG: las
+   posiciones las calcula el JS según el ancho, así que aquí sólo van colores,
+   grosores y tipografía.
+
+   El SVG lleva viewBox y `width: 100%`, de modo que escala solo. Lo que NO
+   escala es el texto: por eso el diagrama gira a vertical por debajo de 720 px
+   en lugar de encogerse hasta ser ilegible. */
+.flujo-pista {
+    position: relative;
+    width: 100%;
+}
+
+.flujo-svg {
+    display: block;
+    width: 100%;
+    overflow: visible;
+}
+
+/* --- Enlaces --- */
+.flujo-svg .enlace {
+    stroke: var(--border-strong);
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+/* Un enlace que lleva a una etapa donde el trabajo se para: se marca, y además
+   se dibuja a trazos, que es como se lee "aquí no fluye". */
+.flujo-svg .enlace--espera {
+    stroke: var(--color-warning);
+    stroke-dasharray: 5 5;
+    opacity: 0.75;
+}
+
+/* --- Nodos --- */
+.flujo-svg .nodo-halo {
+    fill: var(--cgr-primary-glow);
+    opacity: 0.5;
+}
+
+.flujo-svg .nodo-caja {
+    fill: var(--bg-surface);
+    stroke: var(--border-default);
+    stroke-width: 1.5;
+}
+
+.flujo-svg .nodo-icono { color: var(--cgr-primary-light); }
+
+.flujo-svg .nodo-total {
+    fill: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.flujo-svg .nodo-etiqueta {
+    fill: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+/* Etapas donde el trabajo espera a una persona. */
+.flujo-svg .nodo--espera .nodo-caja {
+    stroke: var(--color-warning);
+    stroke-width: 2;
+}
+.flujo-svg .nodo--espera .nodo-halo  { fill: var(--color-warning); opacity: 0.18; }
+.flujo-svg .nodo--espera .nodo-icono { color: var(--color-warning); }
+.flujo-svg .nodo--espera .nodo-total { fill: var(--color-warning); }
+
+/* Una etapa a cero no es un problema: se apaga para que no compita con las
+   que sí tienen algo. */
+.flujo-svg .nodo--vacio .nodo-halo  { opacity: 0.12; }
+.flujo-svg .nodo--vacio .nodo-icono { color: var(--text-muted); }
+.flujo-svg .nodo--vacio .nodo-total { fill: var(--text-muted); }
+
+/* --- Sobres en tránsito ---
+   El resplandor es lo que los hace legibles sobre el fondo estrellado: sin él,
+   un rectángulo de 18 px se pierde entre las estrellas. */
+.flujo-svg .sobre {
+    color: #fff;
+    /* El resplandor es lo que los hace legibles sobre el fondo oscuro. En claro
+       ese mismo halo los emborrona: allí se cambia por una sombra normal. */
+    filter: drop-shadow(0 0 6px var(--cgr-accent));
+}
+
+.flujo-svg .sobre rect {
+    fill: var(--cgr-accent);
+    stroke: none;
+}
+
+.flujo-svg .sobre--espera {
+    filter: drop-shadow(0 0 6px var(--color-warning));
+}
+
+.flujo-svg .sobre--espera rect { fill: var(--color-warning); }
+
+.flujo-error {
+    margin: 0;
+    padding: var(--sp-4) 0;
+    font-size: 13px;
+    color: var(--color-error);
+}
+
+.flujo-controles {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--sp-3);
+    margin-top: var(--sp-6);
+    padding-top: var(--sp-5);
+    border-top: 1px solid var(--border-subtle);
+}
+
+/* El diagrama se recoloca solo (el JS lo gira a vertical por debajo de 720 px);
+   aquí sólo quedan los controles, que en un teléfono van a ancho completo. */
+@media (max-width: 720px) {
+    .flujo { padding: var(--sp-4); }
+    .flujo-controles {
+        justify-content: stretch;
+        /* Que se apilen antes que desbordar: a 320 px los dos botones con su
+           icono y su texto no caben en una fila. */
+        flex-wrap: wrap;
+    }
+    .flujo-controles .btn {
+        flex: 1 1 130px;
+        justify-content: center;
+        min-width: 0;
+    }
+}
+
+/* Quien pide menos movimiento ve el diagrama quieto: el JS no arranca la
+   animación y los sobres ni se dibujan. */
+
+
+/* --- Pantallas vacías a propósito ---------------------------------------- */
+.pantalla-vacia {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-4);
+    min-height: 320px;
+    color: var(--text-muted);
+}
+
+.pantalla-vacia p { margin: 0; font-size: 14px; }
+
+
+/* ============================================================================
+   TELÉFONO
+   ============================================================================
+   Todo lo que cambia por debajo de 768 px vive aquí junto, en vez de repartido
+   en cinco @media sueltos como estaba.
+
+   La idea: una sola columna, nada que se desplace en horizontal salvo lo que
+   está pensado para deslizarse, y el menú lateral como cajón que entra desde
+   la izquierda por encima del contenido.
+   ========================================================================= */
+
+/* El botón del menú es un interruptor: enseña ☰ cerrado y ✕ abierto. */
+.mobile-toggle .icono-cerrar-menu { display: none; }
+.mobile-toggle[aria-expanded="true"] .icono-menu { display: none; }
+.mobile-toggle[aria-expanded="true"] .icono-cerrar-menu { display: block; }
+
+/* El botón tiene que quedar POR ENCIMA del cajón para poder cerrarlo. */
+.mobile-toggle { z-index: 200; }
+
+.mobile-overlay {
+    opacity: 0;
+    transition: opacity var(--duration-normal) var(--ease-out);
+}
+
+.mobile-overlay.active { opacity: 1; }
+
+/* Con el cajón abierto, la página de debajo no se desplaza. */
+body.menu-abierto { overflow: hidden; }
+
+@media (max-width: 768px) {
+    /* --- El cajón --- */
+    .sidebar {
+        /* Ancho relativo con tope: en un teléfono pequeño 260 px fijos se comen
+           la pantalla; en uno grande, más de 300 no aporta nada. */
+        width: min(82vw, 300px);
+        box-shadow: none;
+    }
+
+    .sidebar.open {
+        box-shadow: 12px 0 40px rgba(0, 0, 0, 0.5);
+    }
+
+    /* El botón de cerrar (✕) está fijo en la esquina y cae justo encima del
+       logo del cajón: se le abre hueco mientras está desplegado. */
+    body.menu-abierto .sidebar-header { padding-left: 62px; }
+
+    /* Con el cajón abierto, los botones de la esquina derecha —idioma, tema y
+       perfil— se van al fondo: quedan DEBAJO del velo y del cajón en vez de
+       flotar por encima.
+
+       El truco es el z-index 0. La aplicación entera vive dentro de
+       .app-layout, que tiene z-index 1 y por tanto crea su propio contexto de
+       apilamiento: cualquier valor por debajo de ese 1 deja la barra detrás de
+       todo lo que hay dentro, velo y cajón incluidos, por muy alto que sea el
+       z-index del velo. Bajar la barra a 90 o a 50 no serviría de nada, porque
+       la comparación no es contra el velo sino contra .app-layout.
+
+       Se apagan también para el ratón y para el teclado: verlos apagados
+       detrás del velo y que aún respondieran a un toque sería peor que
+       dejarlos delante. Vuelven solos al cerrar el cajón. */
+    body.menu-abierto .barra-esquina {
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    /* El del menú NO baja: es el ✕ que cierra el cajón y tiene que seguir
+       siendo lo más alto de la pantalla. */
+
+    /* El botón del menú y el del tema ocupan las dos esquinas de arriba: el
+       título necesita hueco en los dos lados para no quedar debajo. */
+    .page-header {
+        padding: var(--sp-4) var(--sp-5);
+        /* 16 (margen) + 40 (botón) + 12 de aire, a cada lado. */
+        padding-left: 68px;
+        padding-right: 64px;
+    }
+
+    .page-title { font-size: 20px; }
+
+    /* --- Contenido --- */
+    .page-body { padding: var(--sp-4); }
+
+    .cards-grid { grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); }
+
+    .status-card { padding: var(--sp-4); }
+    .card-value  { font-size: 24px; }
+
+    /* En el móvil la tarjeta encoge y la marca de agua con ella: al tamaño de
+       antes se comía el texto. */
+    .kpi-fila    { gap: var(--sp-3); }
+    .kpi         { min-height: 132px; padding: var(--sp-4); gap: var(--sp-3); }
+    .kpi-valor   { font-size: 22px; }
+    .kpi-etiqueta{ font-size: 12px; }
+    .kpi-icono   { width: 48px; height: 48px; border-radius: 15px; }
+    .kpi-icono svg { width: 23px; height: 23px; }
+
+    .flujo { padding: var(--sp-4); margin-top: var(--sp-4); }
+    .flujo-head { gap: var(--sp-2); margin-bottom: var(--sp-4); }
+    .flujo-titulo { font-size: 14px; }
+
+    /* Las tablas anchas se deslizan dentro de su caja, nunca arrastran la
+       página entera. */
+    .assistant-tabla-caja,
+    .detail-panel,
+    .table-wrap { max-width: 100%; overflow-x: auto; }
+}
+
+/* Teléfonos estrechos: las tarjetas ya no caben de dos en dos. */
+@media (max-width: 460px) {
+    .cards-grid { grid-template-columns: 1fr; }
+
+    .page-header { padding-left: 64px; padding-right: 60px; }
+    .page-title { font-size: 18px; }
+    .page-subtitle { font-size: 12px; }
+
+    .assistant-barra { padding-left: var(--sp-3); }
+    .assistant-input { font-size: 16px; }   /* < 16px hace que iOS haga zoom */
+}
+
+
+
+/* ============================================================================
+   AVATARES
+   ============================================================================
+   Foto si la hay; si no, iniciales sobre un color derivado del correo. Las
+   iniciales no son un hueco a la espera de una foto: son identidad suficiente,
+   y el color estable hace que la misma persona se reconozca de un vistazo en
+   una lista aunque nadie suba nunca una imagen.
+
+   La saturación y la luminosidad son fijas a propósito: sólo varía el tono. Con
+   colores libres, unos avatares saldrían legibles con texto blanco encima y
+   otros no.
+   ========================================================================= */
+.avatar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border-radius: var(--radius-full);
+    background: hsl(var(--avatar-tono, 210) 42% 42%);
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    user-select: none;
+}
+
+.avatar-letras { line-height: 1; }
+
+/* Las iniciales sólo mientras NO hay foto. Se apagan cuando la imagen ya está
+   puesta (lo marca avatar.js), no confiando en que la tape: una foto con
+   transparencia dejaba asomar las letras por debajo y se leía el nombre encima
+   de la cara. Si la foto no llega, la clase no se pone y las letras siguen
+   ahí, que es lo que tiene que pasar. */
+.avatar--con-foto .avatar-letras { visibility: hidden; }
+
+/* La foto va encima de las iniciales: si no carga, el <img> se retira solo y
+   quedan las letras debajo, en vez del icono roto del navegador. */
+.avatar-foto {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar--sm { width: 32px;  height: 32px;  font-size: 12px; }
+.avatar--md { width: 44px;  height: 44px;  font-size: 15px; }
+.avatar--lg { width: 104px; height: 104px; font-size: 34px; }
+
+
+/* ============================================================================
+   PERFIL
+   ========================================================================= */
+.perfil-tabs {
+    display: flex;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-5);
+    border-bottom: 1px solid var(--border-subtle);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.perfil-tabs::-webkit-scrollbar { display: none; }
+
+.perfil-tab {
+    flex: 0 0 auto;
+    padding: var(--sp-3) var(--sp-4);
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color var(--duration-fast), border-color var(--duration-fast);
+}
+
+.perfil-tab:hover { color: var(--text-primary); }
+
+.perfil-tab.active {
+    color: var(--cgr-accent-light);
+    border-bottom-color: var(--cgr-accent);
+}
+
+.perfil-tab:focus-visible {
+    outline: 2px solid var(--cgr-accent);
+    outline-offset: -2px;
+}
+
+/* Las tres tarjetas del perfil propio. Se reparten solas: en un monitor ancho
+   caben las tres en fila, en una tableta dos, en un teléfono una. */
+/* "Mi perfil": una sola columna con ancho máximo.
+   Antes era una rejilla de auto-fit que colocaba la foto y los datos en
+   paralelo y tiraba la contraseña a una tercera columna; como la ficha de la
+   foto es mucho más baja que el formulario, debajo quedaba un hueco del alto
+   de media pantalla. Un formulario se lee y se rellena en vertical: en columna
+   no hay huecos que explicar y el orden de los campos ES el orden en que se
+   editan. */
+.perfil-columna {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-5);
+    /* Un campo para escribir un nombre no mejora por medir 1.200 px. */
+    max-width: 760px;
+}
+
+/* La rejilla sigue existiendo para las pestañas de Usuarios y Sistema, que sí
+   son tablas anchas. */
+.perfil-rejilla {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--sp-5);
+    align-items: start;
+}
+
+/* La foto y sus botones, arriba del todo de la ficha de datos y separados del
+   resto por una línea: son parte del mismo "quién soy", pero se cambian de
+   otra manera —al momento, sin pasar por "Guardar"— y la línea lo dice sin
+   tener que escribirlo. */
+.perfil-identidad {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-5);
+    padding-bottom: var(--sp-5);
+    margin-bottom: var(--sp-1);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.perfil-identidad-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2) var(--sp-3);
+    min-width: 0;
+}
+
+/* La nota siempre en su propia línea, debajo de los botones. */
+.perfil-identidad-acciones .perfil-nota { flex: 1 0 100%; }
+
+/* El <label> que abre el selector de fichero tiene que parecer y comportarse
+   como el resto de botones: sin esto, es el único control de la pantalla que
+   no reacciona al ratón. */
+.perfil-identidad-acciones label.btn { cursor: pointer; }
+
+.perfil-rol { margin: 0; }
+
+.panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-6);
+}
+
+.panel-titulo {
+    margin: 0 0 var(--sp-5);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.panel-cabecera {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-5);
+    flex-wrap: wrap;
+}
+
+.panel-cabecera .panel-titulo { margin: 0; margin-right: auto; }
+
+.perfil-form { display: flex; flex-direction: column; gap: var(--sp-4); }
+
+.perfil-nota {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+/* Avisos del panel de Sistema: uno cuando la base va por detrás del código y
+   otro cuando está al día. Comparten forma con la nota destacada; sólo cambia
+   el color, que es lo que se lee de un vistazo. */
+.perfil-nota--alerta,
+.perfil-nota--ok {
+    margin-bottom: var(--sp-4);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--radius-md);
+    border-left: 3px solid;
+}
+
+.perfil-nota--alerta {
+    background: var(--color-warning-bg);
+    border-left-color: var(--color-warning);
+    color: var(--color-warning);
+    font-weight: 600;
+}
+
+.perfil-nota--ok {
+    background: var(--color-success-bg);
+    border-left-color: var(--color-success);
+    color: var(--color-success);
+}
+
+.perfil-nota--destacada {
+    margin-bottom: var(--sp-4);
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--color-info-bg);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+}
+
+.perfil-acciones { display: flex; justify-content: flex-end; }
+
+/* La marca de externo. Gris a propósito: dice de dónde es la persona, no que
+   pase nada malo, así que no compite con los colores de estado. */
+.badge-externo {
+    background: color-mix(in srgb, var(--cgr-gris) 22%, transparent);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 10px;
+    vertical-align: middle;
+}
+
+/* Casilla de los diálogos: el cuadro y su texto en la misma línea. */
+.form-casilla {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.form-casilla input {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    accent-color: var(--cgr-primary-light);
+    cursor: pointer;
+}
+
+.badge-rol {
+    background: var(--cgr-primary-glow);
+    color: var(--cgr-primary-light);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+
+/* --- Tablas de usuarios y de configuración ------------------------------- */
+.tabla-caja { overflow-x: auto; }
+
+.tabla-usuarios,
+.tabla-config {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.tabla-usuarios th,
+.tabla-config th {
+    text-align: left;
+    padding: var(--sp-2) var(--sp-3);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-default);
+    white-space: nowrap;
+}
+
+.tabla-usuarios td,
+.tabla-config td {
+    padding: var(--sp-3);
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: middle;
+}
+
+.tabla-usuarios tr:last-child td,
+.tabla-config tr:last-child td { border-bottom: none; }
+
+.usuario-celda {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+}
+
+.usuario-celda strong { display: block; color: var(--text-primary); }
+
+.usuario-correo {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.usuario-rol { min-width: 140px; padding: 6px 10px; font-size: 13px; }
+
+.usuario-acciones {
+    display: flex;
+    gap: var(--sp-2);
+    justify-content: flex-end;
+    white-space: nowrap;
+}
+
+/* Un usuario dado de baja se atenúa, pero se sigue leyendo: sus decisiones
+   pasadas sobre RFQs siguen ahí y hay que poder ver quién fue. */
+.usuario--baja { opacity: 0.55; }
+
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+.badge-ok   { background: var(--color-success-bg); color: var(--color-success); }
+.badge-baja { background: var(--bg-elevated);      color: var(--text-muted); }
+
+.tabla-config code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-primary);
+}
+
+.config-valor { font-family: var(--font-mono); font-size: 12px; }
+.config-valor--vacio { color: var(--color-warning); }
+.config-oculto { color: var(--text-muted); letter-spacing: 0.15em; }
+
+
+/* --- La ficha del usuario en el pie de la barra lateral ------------------ */
+.user-fila {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+/* Es un botón que lleva al perfil: necesita comportarse como tal sin dejar de
+   parecer la ficha que era. */
+.user-profile {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 1px solid transparent;
+    background: none;
+    font-family: var(--font-sans);
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--duration-fast), border-color var(--duration-fast);
+}
+
+.user-profile:hover { border-color: var(--border-default); }
+
+.user-profile:focus-visible {
+    outline: 2px solid var(--cgr-accent);
+    outline-offset: 2px;
+}
+
+.user-profile-icon { flex: 0 0 auto; }
+
+
+/* --- Diálogo de varios campos ------------------------------------------- */
+.dialogo--formulario { max-width: 460px; }
+
+.dialogo-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-5);
+}
+
+.dialogo-nota {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.form-input.campo-invalido,
+.form-select.campo-invalido {
+    border-color: var(--color-error);
+    box-shadow: 0 0 0 3px var(--color-error-bg);
+}
+
+
+@media (max-width: 768px) {
+    .perfil-rejilla { grid-template-columns: 1fr; gap: var(--sp-4); }
+    .perfil-columna { gap: var(--sp-4); max-width: none; }
+    .panel { padding: var(--sp-4); }
+    .avatar--lg { width: 84px; height: 84px; font-size: 28px; }
+    .perfil-acciones .btn { flex: 1 1 auto; justify-content: center; }
+
+    /* En el teléfono la foto se pone encima de sus botones: en fila, el avatar
+       deja unos 200 px y "Cambiar foto" se parte en dos líneas. */
+    .perfil-identidad {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--sp-4);
+    }
+    .perfil-identidad-acciones { width: 100%; }
+    .perfil-identidad-acciones .btn { flex: 1 1 auto; justify-content: center; }
+
+    /* --- La lista de usuarios, en tarjetas ---------------------------------
+       Cinco columnas en un teléfono obligan a deslizar la tabla de lado para
+       llegar a los botones, que es justo donde está la acción. En vertical
+       cada usuario es una ficha y todo queda a la vista.
+
+       La cabecera se oculta y su texto vuelve como etiqueta de cada celda
+       (data-etiqueta): si no, un "2026-09-06 09:02" suelto no dice de qué
+       fecha se trata. */
+    .tabla-usuarios,
+    .tabla-usuarios tbody,
+    .tabla-usuarios tr,
+    .tabla-usuarios td { display: block; width: 100%; }
+
+    .tabla-usuarios thead { display: none; }
+
+    .tabla-usuarios tr {
+        padding: var(--sp-4);
+        margin-bottom: var(--sp-3);
+        background: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+    }
+
+    .tabla-usuarios tr:last-child { margin-bottom: 0; }
+
+    .tabla-usuarios td {
+        display: flex;
+        align-items: center;
+        gap: var(--sp-3);
+        padding: 6px 0;
+        border: none;
+    }
+
+    .tabla-usuarios td[data-etiqueta]::before {
+        content: attr(data-etiqueta);
+        flex: 0 0 92px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+    }
+
+    /* La primera celda (avatar y nombre) hace de cabecera de la ficha. */
+    .tabla-usuarios td:first-child {
+        padding-bottom: var(--sp-3);
+        margin-bottom: var(--sp-2);
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .usuario-rol { flex: 1 1 auto; min-width: 0; }
+
+    .usuario-acciones {
+        justify-content: stretch;
+        padding-top: var(--sp-3);
+    }
+    .usuario-acciones .btn { flex: 1 1 0; justify-content: center; }
+}
+
+
+/* ============================================================================
+   SELECTOR DE IDIOMA
+   ============================================================================
+   Junto al botón de tema: son la misma clase de cosa —preferencias de quien
+   mira, no ajustes del sistema— y quien busca una espera la otra al lado.
+
+   Lista propia y no un <select>: el nativo se pinta con el estilo del sistema
+   operativo y en esta esquina, sobre el fondo estrellado, canta.
+   ========================================================================= */
+.idioma { position: relative; }
+
+.idioma-boton {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-full);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: color var(--duration-fast), border-color var(--duration-fast);
+}
+
+.idioma-boton:hover { color: var(--text-primary); border-color: var(--border-strong); }
+
+.idioma-boton:focus-visible,
+.idioma-opcion:focus-visible {
+    outline: 2px solid var(--cgr-accent);
+    outline-offset: 2px;
+}
+
+.idioma-corto { line-height: 1; }
+
+.idioma-lista {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 160px;
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    animation: avisoEntra var(--duration-fast) var(--ease-out);
+}
+
+.idioma-opcion {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.idioma-opcion:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+
+.idioma-opcion.activa {
+    color: var(--cgr-accent-light);
+    font-weight: 600;
+}
+
+/* El código (EN/ES/FR) en su cajita: hace de ancla visual y alinea las tres
+   etiquetas, que tienen anchos muy distintos. */
+.idioma-opcion .idioma-corto {
+    flex: 0 0 26px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+.idioma-opcion.activa .idioma-corto { color: var(--cgr-accent-light); }
+
+/* La cabecera reserva sitio para los DOS botones de la esquina. */
+
+
+@media (max-width: 768px) {
+    /* En un teléfono sólo el código, sin el globo: el ancho manda. */
+    .idioma-boton { padding: 0 10px; }
+    .idioma-boton svg { display: none; }
+}
+
+
+/* ============================================================================
+   BARRA DE LA ESQUINA: idioma, tema y perfil
+   ============================================================================
+   Los tres van juntos en una fila fija. Antes cada uno se colocaba por su
+   cuenta con `position: fixed` y su propio cálculo de `right`, así que añadir
+   uno obligaba a recalcular los demás y en un teléfono se pisaban.
+
+   Con una barra, el navegador reparte: se añaden o se quitan controles y el
+   resto se recoloca solo.
+   ========================================================================= */
+.barra-esquina {
+    position: fixed;
+    top: var(--sp-4);
+    right: var(--sp-4);
+    z-index: 300;   /* por encima de la barra lateral (100) y del cajón (200) */
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+/* La cabecera reserva sitio para la barra. Es una variable porque su ancho
+   depende de cuántos controles haya y de si el nombre cabe. */
+.page-header { padding-right: var(--hueco-esquina, 320px); }
+
+
+/* ============================================================================
+   RELOJ DE LAS TRES CASAS
+   ============================================================================
+   Fijo, arriba y centrado en la ventana: entre el título de la página (a la
+   izquierda) y la barra de la esquina (a la derecha) queda un hueco que no
+   usaba nadie, y es justo donde el ojo espera un reloj.
+
+   Va centrado respecto a la VENTANA, no al contenido: así no se mueve al
+   plegar la barra lateral ni al pasar de la portada a la aplicación, que es
+   lo que se espera de un reloj de pared.
+
+   El mismo z-index que la barra de la esquina (300): los dos se montan sobre
+   la cabecera pegajosa (50) y ninguno tapa al otro porque no se solapan.
+   ========================================================================= */
+.reloj {
+    position: fixed;
+    top: var(--sp-4);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 300;
+}
+
+.reloj-boton {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    height: 40px;
+    padding: 0 14px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-full);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: var(--shadow-sm);
+    transition: color var(--duration-fast) var(--ease-out),
+                border-color var(--duration-fast) var(--ease-out),
+                transform var(--duration-fast) var(--ease-out);
+}
+
+.reloj-boton:hover {
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+    transform: translateY(-1px);
+}
+
+.reloj-boton:focus-visible {
+    outline: 2px solid var(--cgr-accent);
+    outline-offset: 2px;
+}
+
+.reloj-boton:active { transform: translateY(0); }
+
+.reloj-icono {
+    width: 16px;
+    height: 16px;
+    display: block;
+    flex: none;
+    color: var(--cgr-accent-light);
+}
+
+/* Cifras de ancho fijo. Sin esto el "1" es más estrecho que el "8" y la
+   pastilla entera se encoge y se estira cada segundo, que a la vista es un
+   temblor constante justo en el centro de la pantalla. */
+.reloj-fecha,
+.reloj-hora {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+    letter-spacing: 0.01em;
+}
+
+.reloj-fecha { color: var(--text-muted); }
+
+.reloj-hora {
+    color: var(--text-primary);
+    font-weight: 600;
+    /* Sitio para el formato más largo de los tres ("12:00:00 a. m."), para
+       que al rotar de casa la pastilla no dé un salto de ancho. */
+    min-width: 8.6ch;
+}
+
+/* El punto que separa fecha, hora y ciudad. Es un elemento y no un carácter
+   para poder esconder el bloque de al lado y su separador con la misma regla
+   cuando la pantalla se estrecha. */
+.reloj-punto {
+    width: 3px;
+    height: 3px;
+    flex: none;
+    border-radius: var(--radius-full);
+    background: var(--border-strong);
+}
+
+.reloj-ciudad {
+    color: var(--text-secondary);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+/* El código corto (KC / QRO / SEV) sustituye al nombre cuando ya no cabe;
+   en pantalla ancha sobra, porque está el nombre entero. */
+.reloj-codigo {
+    display: none;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--cgr-accent-light);
+}
+
+/* Cada casa se distingue también por color, no sólo por el nombre: de un
+   vistazo se sabe qué hora se está mirando sin llegar a leerla. */
+.reloj-boton[data-casa="kc"]  .reloj-icono { color: #7dd3fc; }
+.reloj-boton[data-casa="qro"] .reloj-icono { color: #86efac; }
+.reloj-boton[data-casa="sev"] .reloj-icono { color: #c4b5fd; }
+
+/* Fuera de la aplicación el reloj se esconde: lo apaga js/reloj.js, que es
+   quien sabe qué pantalla se está enseñando. La regla está escrita porque
+   `.reloj` podría ganar un `display` algún día y entonces `hidden` dejaría de
+   bastar. */
+.reloj[hidden] { display: none; }
+
+/* Si hay aviso de instalación arriba, el reloj baja con todo lo demás. */
+.instalar-barra ~ .reloj { top: calc(var(--alto-instalar, 0px) + var(--sp-4)); }
+
+/* --- Cómo se encoge ------------------------------------------------------
+   Por orden de lo que menos falta hace: primero la fecha (casi siempre se
+   sabe qué día es), después el nombre de la ciudad, que pasa a su código. La
+   hora, que es a lo que se viene, no se va nunca. */
+/* Los cortes van holgados a propósito. El reloj se centra respecto a la
+   VENTANA, pero el título de la página empieza después de la barra lateral,
+   así que el hueco libre no está centrado: al estrecharse, el título sube
+   hacia el reloj antes de lo que sugeriría la cuenta. */
+@media (max-width: 1400px) {
+    .reloj-fecha,
+    .reloj-fecha + .reloj-punto { display: none; }
+}
+
+@media (max-width: 1200px) {
+    .reloj-ciudad,
+    .reloj-punto--ciudad { display: none; }
+    .reloj-codigo { display: inline; }
+    .reloj-boton { padding: 0 12px; font-size: 12px; }
+}
+
+@media (max-width: 1024px) {
+    .reloj { top: calc(var(--alto-instalar, 0px) + var(--sp-3)); }
+    .instalar-barra ~ .reloj { top: calc(var(--alto-instalar, 0px) + var(--sp-3)); }
+}
+
+/* --- Cuando deja de caber en medio: se baja debajo del usuario ------------
+   El reloj se centra respecto a la VENTANA, no respecto al hueco que queda
+   entre el título y los controles. Al estrechar, ese hueco se mueve hacia la
+   derecha y el reloj acaba encima del título: se veía "Overvie⟨reloj⟩" con el
+   código de ciudad cortado por el borde de la campana.
+
+   A partir de aquí deja de estar centrado y se pone bajo la barra de la
+   esquina, alineado a la derecha con ella. Ahí hay sitio libre en todas las
+   pantallas —debajo del usuario no hay nada— y sigue estando arriba, que es
+   donde se busca la hora.
+
+   El corte es 1100 y no 840 porque el choque empieza mucho antes de que la
+   pantalla sea un teléfono: con la barra lateral abierta, a 905 px el título
+   ya está debajo del reloj.
+
+   Antes, de 840 para abajo, el reloj simplemente se escondía. Se recupera: en
+   un teléfono la hora del sistema está arriba, sí, pero la del reloj no es la
+   misma —es la de Kansas City, Querétaro o Sevran—, y esa no la da el
+   teléfono. Esconderla era perder la función entera. */
+@media (max-width: 1100px) {
+    .reloj,
+    .instalar-barra ~ .reloj {
+        /* 40px es el alto de los botones de la barra de la esquina; el hueco
+           es el mismo aire que separa los controles entre sí. */
+        top: calc(var(--alto-instalar, 0px) + var(--sp-3) + 40px + var(--sp-2));
+        left: auto;
+        right: var(--sp-4);
+        transform: none;
+    }
+
+    /* Y la cabecera le deja el sitio: sin esto el reloj cae encima del
+       subtítulo cuando éste es largo y se parte en dos líneas. */
+    .page-header {
+        min-height: calc(40px + var(--sp-2) + 34px + var(--sp-5));
+    }
+    .page-header > div { max-width: calc(100% - 128px); }
+}
+
+@media (max-width: 840px) {
+    .reloj, .instalar-barra ~ .reloj { right: var(--sp-3); }
+    .reloj-boton { padding: 0 10px; font-size: 11.5px; }
+}
+
+/* En el teléfono no caben en la misma banda el título, el subtítulo y el
+   reloj: reservándole sitio al lado, el subtítulo se quedaba en una columna
+   de una palabra por línea ("How / everything / is / going / right / now").
+
+   Así que arriba va una banda sólo de controles —menú, usuario y reloj— y el
+   título empieza debajo, con el ancho entero. La cabecera crece, pero es la
+   única forma de que las tres cosas se lean. */
+@media (max-width: 768px) {
+    .page-header {
+        /* 40 del botón + aire + 34 del reloj + el respiro de siempre. */
+        padding-top: calc(40px + var(--sp-2) + 34px + var(--sp-5));
+        padding-right: var(--sp-5);
+        min-height: 0;
+    }
+    .page-header > div { max-width: 100%; }
+
+    /* Y aquí la cabecera DEJA DE ESTAR PEGADA ARRIBA.
+       --------------------------------------------------------------
+       Con la banda de controles encima, en el teléfono mide 174 px: el
+       36 % de la pantalla. Pegada, se comía un tercio de la vista todo
+       el rato y el título quedaba flotando en medio de la calculadora,
+       sin relación con lo que había debajo.
+
+       Y se veía a través. El velo de estas superficies está pensado
+       para que se vean las estrellas del fondo, y funciona porque
+       lleva `backdrop-filter`; pero el desenfoque se apaga a 768 por
+       rendimiento (regla de más arriba), y un velo sin desenfoque
+       sobre contenido que se desplaza no es un velo: es papel de
+       calco. Se leían las dos cosas a la vez.
+
+       La cabecera es la única de esas superficies con contenido
+       pasando por detrás, así que es la única a la que le pasa.
+
+       Suelta, el título vuelve a pertenecer a la página: está arriba
+       del todo y se va con ella. Los controles —menú, avisos, idioma,
+       tema, usuario y reloj— siguen fijos y siempre a mano, que es lo
+       que de verdad hace falta tener siempre delante. */
+    .page-header {
+        position: static;
+        /* Opaca: aunque ya no pase nada por detrás, esta cabecera se
+           sigue leyendo sobre el degradado, y el velo aquí sólo la
+           emborronaba sin enseñar nada. */
+        background: var(--bg-surface);
+    }
+}
+
+/* Quien pide menos movimiento no quiere un dígito parpadeando: el reloj
+   sigue funcionando, pero sin la animación del botón. */
+@media (prefers-reduced-motion: reduce) {
+    .reloj-boton { transition: none; }
+    .reloj-boton:hover { transform: none; }
+}
+
+
+/* --- El botón: avatar, nombre y rol -------------------------------------- */
+.perfil-menu { position: relative; }
+
+.perfil-menu-boton {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    height: 40px;
+    padding: 0 10px 0 4px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-full);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    max-width: 220px;
+    transition: border-color var(--duration-fast);
+}
+
+.perfil-menu-boton:hover { border-color: var(--border-strong); }
+
+.perfil-menu-boton:focus-visible {
+    outline: 2px solid var(--cgr-accent);
+    outline-offset: 2px;
+}
+
+.perfil-menu-texto {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;   /* deja que el nombre se recorte en vez de estirar el botón */
+    line-height: 1.15;
+}
+
+.perfil-menu-nombre {
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.perfil-menu-rol {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.perfil-menu-flecha { flex: 0 0 auto; color: var(--text-muted); }
+.perfil-menu-boton[aria-expanded="true"] .perfil-menu-flecha { transform: rotate(180deg); }
+
+
+/* --- El panel ------------------------------------------------------------ */
+.perfil-menu-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 280px;
+    padding: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    animation: avisoEntra var(--duration-fast) var(--ease-out);
+}
+
+.perfil-menu-ficha {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3);
+}
+
+.perfil-menu-ficha-texto {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 2px;
+}
+
+.perfil-menu-ficha-texto strong {
+    font-size: 14px;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.perfil-menu-ficha-texto span {
+    font-size: 12px;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.perfil-menu-grupo {
+    padding-top: 6px;
+    margin-top: 6px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.perfil-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    width: 100%;
+    padding: 9px 10px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 13.5px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.perfil-menu-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+
+.perfil-menu-item:focus-visible {
+    outline: 2px solid var(--cgr-accent);
+    outline-offset: -2px;
+}
+
+.perfil-menu-item svg { flex: 0 0 auto; color: var(--text-muted); }
+.perfil-menu-item:hover svg { color: var(--cgr-accent-light); }
+
+/* Salir se distingue: es la única del menú que te saca de la aplicación. */
+.perfil-menu-item--salir { color: var(--color-error); }
+.perfil-menu-item--salir svg { color: var(--color-error); }
+.perfil-menu-item--salir:hover { background: var(--color-error-bg); color: var(--color-error); }
+
+
+@media (max-width: 900px) {
+    /* Sin sitio para el nombre: queda el avatar, que ya identifica. */
+    .perfil-menu-texto, .perfil-menu-flecha { display: none; }
+    .perfil-menu-boton { padding: 0; width: 40px; justify-content: center; }
+}
+
+@media (max-width: 768px) {
+    .barra-esquina,
+    .instalar-barra ~ .barra-esquina { top: calc(var(--alto-instalar, 0px) + var(--sp-3)); }
+    .barra-esquina { right: var(--sp-3); gap: 6px; }
+    /* El del menú baja lo mismo que la barra de la derecha: si no, los de una
+       esquina y el de la otra quedan a distinta altura y se nota. */
+    .mobile-toggle,
+    .instalar-barra ~ .mobile-toggle { top: calc(var(--alto-instalar, 0px) + var(--sp-3)); }
+    .mobile-toggle { left: var(--sp-3); }
+    .perfil-menu-panel {
+        width: min(280px, calc(100vw - var(--sp-5) * 2));
+    }
+}
+
+
+/* ============================================================================
+   PORTADA
+   ============================================================================
+   A sangre, no en tarjeta: la escultura de alambre ocupa el fondo y el texto va
+   encima. La versión anterior encerraba todo en una caja de 420 px y dejaba el
+   resto del monitor vacío.
+
+   Tres capas: el campo de estrellas (de toda la aplicación), el lienzo del
+   resorte y el contenido.
+   ========================================================================= */
+.portada {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    /* Se usa dvh donde exista: en un móvil, 100vh cuenta la barra de
+       direcciones que luego se esconde, y el contenido queda descentrado. */
+    min-height: 100dvh;
+    padding: var(--sp-8) var(--sp-6);
+    overflow: hidden;
+}
+
+/* --- La escultura -------------------------------------------------------- */
+.portada-lienzo {
+    position: absolute;
+    inset: 0;
+    /* Sin eventos: los clics tienen que llegar al botón que está encima. */
+    pointer-events: none;
+    /* El difuminado de los bordes lo hace el propio lienzo, apagando las
+       estrellas según se alejan del centro. Con `mask-image` el navegador
+       tenía que aplicar la máscara sobre un lienzo animado a pantalla completa
+       en cada fotograma: medido, costaba un tercio de los fotogramas. En el
+       lienzo es una multiplicación que ya se estaba haciendo de todos modos. */
+}
+
+.portada-lienzo canvas { display: block; width: 100%; height: 100%; }
+
+/* En la portada, las estrellas las pinta el lienzo del resorte: son las mismas
+   que forman las espiras. El campo de estrellas general se apaga para no tener
+   dos cielos encima del otro, uno quieto y otro formándose. */
+:root.portada-activa #starfield { opacity: 0; }
+
+#starfield { transition: opacity 600ms var(--ease-out); }
+
+/* --- El contenido -------------------------------------------------------- */
+.portada-contenido {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--sp-4);
+    max-width: 560px;
+}
+
+.portada-logos { margin-bottom: var(--sp-6); }
+
+.portada-nombre,
+.portada-pie {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.portada-titulo {
+    margin: 0;
+    font-size: clamp(44px, 8vw, 76px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--text-primary);
+    /* SIN halo. Llevaba uno del color del fondo para despegarlo del resorte,
+       pero a 76 px se veía como una mancha de luz alrededor de las letras —una
+       aureola— y era lo primero que saltaba a la vista de toda la portada. El
+       nombre se lee igual sin él: es texto de 44-76 px en negrita, y lo que
+       pasa por detrás son puntos de un par de píxeles. */
+}
+
+.portada-marca {
+    margin: 0;
+    font-size: clamp(12px, 1.6vw, 15px);
+    font-weight: 700;
+    letter-spacing: 0.36em;
+    text-transform: uppercase;
+    color: var(--cgr-accent-light);
+    text-shadow: 0 0 20px var(--bg-base);
+}
+
+.portada-lema {
+    margin: var(--sp-2) 0 0;
+    max-width: 42ch;
+    font-size: clamp(14px, 1.8vw, 17px);
+    line-height: 1.6;
+    color: var(--text-secondary);
+    text-shadow: 0 0 20px var(--bg-base);
+}
+
+.portada-cta {
+    margin-top: var(--sp-5);
+    padding: var(--sp-4) var(--sp-8);
+    font-size: 15px;
+    border-radius: var(--radius-full);
+    box-shadow: 0 8px 30px var(--cgr-primary-glow);
+}
+
+.portada-cta svg { transition: transform var(--duration-fast) var(--ease-out); }
+.portada-cta:hover svg { transform: translateX(3px); }
+
+@media (max-width: 768px) {
+    .portada { padding: var(--sp-6) var(--sp-4); }
+    .portada-logos { margin-bottom: var(--sp-4); }
+    .portada-cta { width: 100%; justify-content: center; }
+}
+
+/* --------------------------------------------------------------------------
+   La portada en computadora
+   --------------------------------------------------------------------------
+   En una pantalla ancha, apilar logo-nombre-lema-botón en el centro deja el
+   resorte tapado justo por su parte más vistosa y media pantalla vacía a los
+   lados. Aquí el contenido se reparte por los bordes y el resorte se queda con
+   el centro:
+
+       logos            Pohua
+      (arriba izq.)   RFQ QUOTER            ← fila de arriba
+                      (arriba centro)
+
+                    [ el resorte ]          ← el centro, libre
+
+                       lema
+                     [ Sign In ]            ← fila de abajo, centrada
+
+   Es rejilla y no posicionamiento absoluto: con `position: absolute` cada
+   bloque necesita su propio cálculo de `top`/`left` y en cuanto uno crece
+   —el lema en francés ocupa una línea más— se solapan. La rejilla los
+   recoloca sola.
+
+   A partir de 900 px, que es donde el resorte deja de rozar el texto de los
+   lados. Por debajo sigue mandando la pila centrada de siempre. */
+@media (min-width: 900px) {
+    .portada-contenido {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        grid-template-rows: auto 1fr auto;
+        grid-template-areas:
+            "logos  nombre  ."
+            ".      .       ."
+            ".      pie     .";
+        align-items: start;
+        justify-items: center;
+        gap: 0;
+        width: 100%;
+        max-width: none;
+        /* Alto de la portada menos su relleno: así "arriba" y "abajo" son los
+           bordes de la pantalla y no los del texto. */
+        min-height: calc(100dvh - var(--sp-8) * 2);
+    }
+
+    .portada-logos {
+        grid-area: logos;
+        justify-self: start;
+        margin-bottom: 0;
+    }
+
+    .portada-nombre { grid-area: nombre; }
+
+    .portada-pie {
+        grid-area: pie;
+        align-self: end;
+        gap: var(--sp-5);
+    }
+
+    /* El lema ya no va pegado al nombre, así que recupera su propio aire. */
+    .portada-lema { margin: 0; }
+    .portada-cta  { margin-top: 0; }
+}
+
+
+/* ============================================================================
+   COTIZACIÓN — la calculadora, a pantalla completa
+   ============================================================================
+   Aquí había una fila de pestañas y sobraba: las tres caras del núcleo ya son
+   una sola ventana dentro de la calculadora. El Spring Calculator se abre con
+   su botón y los planos se leen desde el propio formulario, igual que en la
+   planta.
+
+   El diagnóstico de las piezas ya no se pinta: sirvió para montar todo esto,
+   pero como tira permanente era ruido. Sigue entero en la API. Lo único que
+   se enseña es cuando no hay calculadora que montar, porque un marco vacío
+   parecería una avería.
+   ========================================================================= */
+.quoting {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-5);
+    min-width: 0;
+}
+
+/* El hueco para los avisos está siempre en el HTML, casi siempre vacío. Un
+   hijo vacío no ocupa alto, pero el `gap` del contenedor sí: eran 20 px de
+   aire entre la cabecera y la calculadora sin nada dentro. */
+#quotingAviso:empty { display: none; }
+
+
+
+
+
+
+
+
+
+
+
+/* El punto de aviso de la pestaña. Va fuera del panel para que se vea sin
+   entrar: quien viene a leer un plano tiene que saber que el lector está en
+   modo demo ANTES de subirlo. */
+
+
+.quoting-cargando {
+    padding: var(--sp-6);
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+/* --- La cabecera del panel: el veredicto de una línea --------------------- */
+.quoting-cabecera {
+    padding: var(--sp-4) var(--sp-5);
+    border: 1px solid var(--border-subtle);
+    border-left: 3px solid var(--cgr-gris);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+}
+
+.quoting-cabecera strong { font-size: 15px; color: var(--text-primary); }
+.quoting-cabecera p { margin: 4px 0 0; font-size: 13px; color: var(--text-muted); }
+.quoting-cabecera.bien { border-left-color: var(--cgr-verde); }
+.quoting-cabecera.mal  { border-left-color: var(--cgr-naranja); }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* --- El marco de las calculadoras ----------------------------------------
+   Alto por viewport y no por contenido: dentro va una aplicación entera que
+   se organiza sola, y un iframe no crece con lo que lleva dentro. El resto
+   (cabecera, pestañas y el asistente del pie) ocupa alrededor de 300 px; el
+   mínimo evita que en una pantalla baja quede una rendija inservible. */
+/* Una sola barra de desplazamiento, y es la de Pohua.
+   ------------------------------------------------------------------------
+   Antes había dos: la de la página y la del marco, una al lado de la otra, y
+   la del marco salía a media pantalla —dentro de la tarjeta— en vez de en el
+   borde de la ventana como en Overview y en el resto de Pohua.
+
+   Se probó lo contrario: clavar el marco al alto de la ventana y dejar que la
+   que se desplazara fuera la calculadora. Se ve como una aplicación dentro de
+   otra, que es justo lo que no queremos.
+
+   Así que ahora Quoting se desplaza como cualquier otra página: el marco mide
+   lo que mida su contenido —se lo pone `js/isc-nube.js` desde dentro, que es
+   el único que puede medirlo— y baja la página entera, con el degradado del
+   fondo siguiendo hasta abajo.
+
+   No hay reglas de `:has()` porque ya no hace falta ninguna: esta pantalla se
+   comporta como las demás. */
+.quoting-marco {
+    width: 100%;
+    display: block;
+
+    /* Mientras la calculadora arranca todavía no ha medido nada, y un iframe
+       sin altura vale 150 px: se vería un salto al cargar. Con esto reserva un
+       trozo razonable y nada más. Era 70vh y ese fue un mal número: si la
+       calculadora no llega a pintar —pasó—, lo que se ve es medio pantallazo
+       vacío en vez de una caja pequeña que se nota rara enseguida. */
+    min-height: 320px;
+
+    /* Sin costuras. El borde y el radio dibujaban el contorno de un marco y
+       delataban que ahí dentro vive otra aplicación; el fondo blanco hacía que
+       en tema oscuro se viera un rectángulo encendido antes de que cargara.
+       Ahora hereda el papel de Pohua y la calculadora se pinta encima con los
+       mismos colores (js/isc-nube.js), así que no hay nada que enmarcar. */
+    border: 0;
+    /* El mismo papel que se le pasa a la calculadora, para que no se vea un
+       salto de tono entre el marco y lo que hay dentro mientras carga. */
+    background: var(--bg-base);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* La barra de acciones de la calculadora (Reset, Save, Preview PDF, Approve)
+   no vive aquí: se queda dentro del marco y `js/isc-nube.js` la clava al borde
+   inferior de la ventana con un `transform`. Se intentó traerla a Pohua con
+   `adoptNode` y rompía la calculadora entera —al sacar el nodo, sus
+   `getElementById` devuelven null y el render se cae—, así que los nodos no
+   salen del marco. */
+
+/* --- Lo que todavía no se puede montar ------------------------------------ */
+.quoting-pendiente {
+    margin-top: var(--sp-4);
+    padding: var(--sp-6);
+    border: 1px dashed var(--border-default);
+    border-radius: var(--radius-md);
+}
+
+.quoting-pendiente h3 {
+    margin: 0 0 var(--sp-2);
+    font-size: 15px;
+    color: var(--text-primary);
+}
+
+.quoting-pendiente p {
+    margin: 0 0 var(--sp-3);
+    max-width: 68ch;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.quoting-pendiente-nota { color: var(--text-muted); }
+
+.quoting-reintentar { margin-top: var(--sp-4); }
+
+
+
+/* --------------------------------------------------------------------------
+   La ventana de revisión del Plant Manager (js/components/revision.js)
+   --------------------------------------------------------------------------
+   En la compu es una caja compacta en el centro, por encima de todo menos de
+   los diálogos de confirmación (9500) y los avisos: "¿Aprobar?" tiene que
+   poder salir encima de ella. En el teléfono ocupa la pantalla entera, en una
+   sola columna, con el pie fijo abajo y botones de 44 px: es lo que se toca
+   con el pulgar desde el correo, no una ventana más.
+
+   Todo sale de los mismos tokens que el resto: en claro y en oscuro se ve
+   como Pohua, no como algo pegado encima.
+   -------------------------------------------------------------------------- */
+.revision-fondo {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-6);
+    background: rgba(4, 8, 18, 0.55);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    animation: dialogoFondoEntra var(--duration-fast) var(--ease-out);
+}
+
+body.revision-abierta { overflow: hidden; }
+
+.revision {
+    width: 100%;
+    max-width: 960px;
+    max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    animation: dialogoEntra var(--duration-normal) var(--ease-out);
+}
+
+.revision--cargando {
+    min-height: 220px;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+}
+
+.revision-fondo.ocupado .revision { opacity: 0.85; pointer-events: none; }
+
+/* --- Cabecera: PN · tipo · RFQ · cliente --------------------------------- */
+.revision-cab {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-4) var(--sp-5);
+    border-bottom: 1px solid var(--border-subtle);
+    background: color-mix(in srgb, var(--cgr-primary) 12%, var(--bg-card));
+}
+
+.revision-titulo {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.revision-sep { margin: 0 var(--sp-2); color: var(--text-muted); font-weight: 400; }
+
+.revision-cerrar {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-default);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--duration-fast) var(--ease-out);
+}
+.revision-cerrar:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+/* --- Cuerpo: lo único que hace scroll ----------------------------------- */
+.revision-cuerpo {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--sp-4) var(--sp-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+}
+/* Los hijos con overflow (la fila de tramos, la cascada) se encogerían a
+   cero dentro de la columna flexible: que midan lo que miden. */
+.revision-cuerpo > * { flex: none; }
+
+.revision-rotulo {
+    margin-bottom: var(--sp-2);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+/* Lo común a todos los tramos: material, diámetro, peso, precios del alambre */
+.revision-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+.revision-chip {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 108px;
+    padding: 6px 12px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+}
+.revision-chip-etq { font-size: 11px; color: var(--text-muted); }
+.revision-chip-val {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+.revision-chip-val small { font-weight: 400; color: var(--text-muted); }
+
+/* Los tramos: uno por cantidad. La franja de la izquierda dice si llega al
+   objetivo (verde) o se queda corto (ámbar), igual que las fichas de abajo. */
+.revision-tramos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--sp-2);
+}
+
+.revision-tramo {
+    appearance: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    text-align: left;
+    font: inherit;
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-left: 4px solid var(--color-warning);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+}
+.revision-tramo.llega { border-left-color: var(--color-success); }
+.revision-tramo:hover { background: var(--bg-card-hover); }
+.revision-tramo.activo {
+    background: color-mix(in srgb, var(--cgr-primary) 16%, var(--bg-card));
+    outline: 2px solid var(--cgr-primary-light);
+    outline-offset: -1px;
+}
+.revision-tramo-qty    { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.revision-tramo-precio { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.revision-tramo-precio small { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.revision-tramo-margen { font-size: 12px; color: var(--text-secondary); }
+.revision-tramo small  { font-size: 11px; color: var(--text-muted); }
+
+.revision-sin-tramos {
+    padding: var(--sp-4);
+    border: 1px dashed var(--border-default);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* La franja de avisos: ámbar si hay algo que mirar, magenta si el costeo
+   falló, azul si sólo son motivos informativos. */
+.revision-franja {
+    display: flex;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-warning);
+    border-left-width: 4px;
+    background: var(--color-warning-bg);
+    color: var(--text-primary);
+    font-size: 13px;
+    line-height: 1.5;
+}
+.revision-franja svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--color-warning); }
+.revision-franja ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.revision-franja--error { border-color: var(--color-error); background: var(--color-error-bg); }
+.revision-franja--error svg { color: var(--color-error); }
+.revision-franja--info  { border-color: var(--color-info);  background: var(--color-info-bg); }
+.revision-franja--info svg { color: var(--color-info); }
+.revision-aviso--info { color: var(--text-secondary); }
+
+/* La cascada: venta → AV → C/CV → C/CD → resultado. Cinco fichas en fila. */
+.revision-cascada {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--sp-2);
+}
+
+.revision-ficha {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+}
+.revision-ficha-etq { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.revision-ficha-val { font-size: 19px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.revision-ficha-sub { font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+/* La última ficha es el veredicto del número: verde llega, ámbar se queda corto. */
+.revision-ficha--ok    { border-color: var(--color-success); background: var(--color-success-bg); }
+.revision-ficha--ok .revision-ficha-val    { color: var(--color-success); }
+.revision-ficha--corto { border-color: var(--color-warning); background: var(--color-warning-bg); }
+.revision-ficha--corto .revision-ficha-val { color: var(--color-warning); }
+
+/* Material · Ruta · Totales, en tres columnas. */
+.revision-columnas {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-3);
+}
+
+.revision-bloque {
+    min-width: 0;
+    padding: var(--sp-3) var(--sp-4);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+}
+.revision-bloque h4 {
+    margin: 0 0 var(--sp-2);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.revision-fila {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--sp-3);
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+.revision-fila:last-child { border-bottom: 0; }
+.revision-fila b { color: var(--text-primary); font-variant-numeric: tabular-nums; text-align: right; }
+.revision-fila b small, .revision-fila small { font-weight: 400; color: var(--text-muted); }
+
+.revision-nota { margin-top: var(--sp-2); font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+.revision-notas pre {
+    margin: 0;
+    white-space: pre-wrap;
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+}
+
+/* --- Pie: qué pasa con cada botón, y los botones ------------------------ */
+.revision-pie {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    padding: var(--sp-3) var(--sp-5);
+    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+}
+.revision-pie-nota { flex: 1; min-width: 0; font-size: 12px; line-height: 1.45; color: var(--text-muted); }
+.revision-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-2); }
+
+/* Rechazar es la salida rara: está, pero no compite con Aprobar. */
+.revision-btn--suave {
+    background: transparent;
+    color: var(--color-error);
+    border-color: var(--color-error);
+}
+.revision-btn--suave:hover { background: var(--color-error-bg); filter: none; }
+
+@supports not (background: color-mix(in srgb, red 50%, transparent)) {
+    .revision-cab { background: var(--bg-surface); }
+    .revision-tramo.activo { background: var(--bg-elevated); }
+}
+
+/* --- Compu estrecha: las cinco fichas pasan a tres y dos ---------------- */
+@media (max-width: 980px) {
+    .revision-cascada { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .revision-columnas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* --- Teléfono: pantalla entera, una columna --------------------------- */
+@media (max-width: 768px) {
+    .revision-fondo { padding: 0; }
+
+    .revision {
+        max-width: none;
+        max-height: none;
+        height: 100vh;
+        height: 100dvh;
+        border: 0;
+        border-radius: 0;
+    }
+
+    /* La cabecera en dos filas: estado y cierre arriba, el título a todo el
+       ancho debajo. En 390 px el título de cuatro piezas no cabe al lado. */
+    .revision-cab { flex-wrap: wrap; padding: var(--sp-3) var(--sp-4); padding-top: calc(var(--sp-3) + env(safe-area-inset-top)); }
+    .revision-cab .badge { order: 1; }
+    .revision-cerrar { order: 2; margin-left: auto; }
+    .revision-titulo { order: 3; flex: 1 1 100%; white-space: normal; font-size: 14px; line-height: 1.35; }
+    .revision-cuerpo { padding: var(--sp-3) var(--sp-4); gap: var(--sp-3); }
+
+    .revision-chip { flex: 1 1 calc(50% - var(--sp-2)); min-width: 0; }
+
+    /* Los tramos como tarjetas que se pasan con el dedo. */
+    .revision-tramos {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 calc(-1 * var(--sp-4));
+        padding: 2px var(--sp-4);
+    }
+    .revision-tramo { flex: 0 0 min(62vw, 220px); scroll-snap-align: center; }
+
+    /* La cascada deja de ser fichas y pasa a ser una lista en cascada. */
+    .revision-cascada { grid-template-columns: 1fr; gap: 0; border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; }
+    .revision-ficha {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        align-items: baseline;
+        column-gap: var(--sp-3);
+        padding: 10px 12px;
+        border: 0;
+        border-bottom: 1px solid var(--border-subtle);
+        border-radius: 0;
+    }
+    .revision-ficha:last-child { border-bottom: 0; }
+    .revision-ficha-etq { font-size: 13px; color: var(--text-secondary); white-space: normal; }
+    .revision-ficha-val { font-size: 16px; }
+    .revision-ficha-sub { min-width: 3.5em; text-align: right; }
+    .revision-ficha--ok, .revision-ficha--corto { border-left: 4px solid var(--color-success); padding-left: 8px; }
+    .revision-ficha--corto { border-left-color: var(--color-warning); }
+
+    .revision-columnas { grid-template-columns: 1fr; }
+
+    /* El pie: el botón principal a todo el ancho arriba; Devolver y Aprobar
+       debajo, en punteado, con 44 px de alto para el pulgar. */
+    .revision-pie {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--sp-3);
+        padding-bottom: calc(var(--sp-3) + env(safe-area-inset-bottom));
+    }
+    .revision-pie-nota { font-size: 11px; }
+    .revision-acciones { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+    .revision-acciones .btn { min-height: 44px; justify-content: center; }
+    .revision-acciones [data-accion="cotizar"] { grid-column: 1 / -1; order: -1; }
+    .revision-acciones [data-accion="declinar"] { grid-column: 1 / -1; }
+    .revision-acciones [data-accion="devolver"],
+    .revision-acciones [data-accion="aprobar"] {
+        background: transparent;
+        border: 1px dashed var(--border-strong);
+        color: var(--text-primary);
+    }
+    .revision-acciones [data-accion="aprobar"] { border-color: var(--color-success); color: var(--color-success); }
+}
+
+
+/* --- La pantalla de la oferta (js/pages/quote-review.js) ------------------ */
+.oferta-aviso {
+    padding: var(--sp-3) var(--sp-4);
+    border-left-width: 4px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-primary);
+}
+.oferta-aviso ul { margin: 0; padding-left: 18px; }
+.oferta-aviso .detail-panel-title { margin-bottom: var(--sp-2); }
+.oferta-aviso--info { border-color: var(--color-info);    background: var(--color-info-bg); }
+.oferta-aviso--warn { border-color: var(--color-warning); background: var(--color-warning-bg); }
+.oferta-aviso--warn .detail-panel-title { color: var(--color-warning); }
+.oferta-aviso--ok   { border-color: var(--color-success); background: var(--color-success-bg); }
+
+/* Los mensajes de los diálogos pueden traer varias líneas (los motivos). */
+.dialogo-mensaje { white-space: pre-line; }
+
+/* Dos paneles lado a lado en la compu; en el teléfono, uno debajo del otro:
+   a 390 px dos columnas parten cada valor en cinco líneas. */
+.cards-grid--dos { grid-template-columns: 1fr 1fr; }
+@media (max-width: 768px) {
+    .cards-grid--dos { grid-template-columns: 1fr; }
+}
+
+/* --- El pie de la campana: los avisos en este dispositivo (Web Push) ------ */
+.notif-pie {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-top: var(--sp-2);
+    padding: var(--sp-3);
+    border-top: 1px solid var(--border-subtle);
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--text-muted);
+}
+.notif-pie svg { flex: none; width: 16px; height: 16px; color: var(--text-muted); }
+.notif-pie-texto { flex: 1; min-width: 0; }
+.notif-pie-boton {
+    flex: none;
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-strong);
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 32px;
+}
+.notif-pie-boton:hover { background: var(--bg-elevated); }
+.notif-pie-boton--primario {
+    border-color: var(--cgr-primary);
+    background: var(--cgr-primary);
+    color: #fff;
+}
+.notif-pie-boton--primario:hover { filter: brightness(1.1); background: var(--cgr-primary); }
+@media (max-width: 768px) {
+    .notif-pie { padding: var(--sp-3) var(--sp-4) calc(var(--sp-3) + env(safe-area-inset-bottom)); }
+    .notif-pie-boton { min-height: 40px; padding: 8px 14px; }
+}
+

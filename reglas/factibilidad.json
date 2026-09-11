@@ -1,0 +1,230 @@
+{
+  "version": "0.2",
+  "actualizado": "2026-08-20",
+  "fuente": "Derivadas del ISC Price Calculator y del Spring Engineering Calculator: ISC_V4_DATA.json rev 2104 (2026-08-10, john.tvrdy) — dbs.machines, dbs.matReference, dbs.materialLegend y params.wireMaxIn — más las reglas de manufacturabilidad del Spring Engineering Calculator. Contrastadas contra las 346 partidas realmente cotizadas en ese archivo. PENDIENTE de validación por la planta: ver 'pendientes'.",
+
+  "tipos_fabricables": ["compresion", "torsion", "extension"],
+
+  "tolerancia_minima_mm": null,
+  "confianza_minima": 0.7,
+
+  "puntuacion": {
+    "nota": "Modelo del Spring Engineering Calculator: cada hallazgo resta puntos y el score es 100 menos la suma, acotado a 0-100. Las bandas y el umbral son los suyos: de 'Engineering review' hacia abajo (menos de 70) el diseño no se libera sin que alguien lo mire. Un hallazgo 'crit' manda a revisión aunque el score quede alto: son límites duros, no acumulables. Una penalización puede declararse como número (aplica a los dos lados del rango) o como {min, max}, porque ISC cobra distinto cada extremo.",
+    "umbral_factible": 70,
+    "bandas": [
+      {"desde": 90, "banda": "Easy to manufacture"},
+      {"desde": 70, "banda": "Manufacturable"},
+      {"desde": 50, "banda": "Engineering review"},
+      {"desde": 30, "banda": "High manufacturing risk"},
+      {"desde": 0, "banda": "Not recommended"}
+    ],
+    "origen": {
+      "de_isc": "Las penalizaciones del índice de resorte (por tipo y por lado: compresión 26/20 y 10/8; torsión y extensión 24/18 y 9/7), las de espiras (compresión Na<3 = 10, torsión Nb<3 = 8) y la de calibre fuera del rango del material (15) son literalmente las del Spring Engineering Calculator.",
+      "nuestras": "Las demás son nuestras, porque ISC no las puntúa: su modelo trata la capacidad de máquina como un sí/no aparte (selectMachine) y el límite de 15 mm como una bandera que bloquea la cotización, sin restar puntos. Aquí sí restan, para que el score refleje también los datos que faltan y la confianza de la extracción. El 20 de 'fuera_del_preferido' está calibrado para que UNA desviación de la envolvente de máquinas siga pasando (los 11 casos reales entre 6 y 15 mm quedan en 80) y DOS ya no (12 mm de alambre con 90+ de OD cae a 60): nada de lo que la planta declara puede enrollar eso."
+    },
+    "penalizaciones": {
+      "tipo_no_fabricable": 40,
+      "tipo_desconocido": 12,
+      "material_no_soportado": 30,
+      "material_ausente": 12,
+      "material_fuera_de_rango": 15,
+      "fuera_de_rango": 24,
+      "fuera_del_preferido": 20,
+      "dato_ausente": 10,
+      "dato_no_numerico": 10,
+      "tolerancia_mas_fina": 20,
+      "confianza_baja": 12
+    }
+  },
+
+  "materiales_soportados": [
+    {
+      "nombre": "Music Wire (ASTM A228)",
+      "codigo": "MW",
+      "rango_alambre_mm": {"min": 0.1, "max": 6.5},
+      "alias": ["mw", "music wire", "a228", "astm a228", "piano wire", "alambre musical", "acero musical"]
+    },
+    {
+      "nombre": "Galvanized Music Wire",
+      "codigo": "GMW",
+      "alias": ["gmw", "galvanized music wire", "music wire galvanizado"]
+    },
+    {
+      "nombre": "Hard Drawn (ASTM A227)",
+      "codigo": "HD",
+      "rango_alambre_mm": {"min": 0.7, "max": 12.0},
+      "alias": ["hd", "hard drawn", "a227", "astm a227", "estirado duro", "acero estirado en frio"]
+    },
+    {
+      "nombre": "Galvanized Hard Drawn",
+      "codigo": "GHD",
+      "alias": ["ghd", "galvanized hard drawn", "hard drawn galvanizado"]
+    },
+    {
+      "nombre": "Soft Galvanized",
+      "codigo": "SG",
+      "alias": ["sg", "soft galvanized", "galvanizado suave"]
+    },
+    {
+      "nombre": "Oil Tempered (ASTM A229)",
+      "codigo": "OT",
+      "rango_alambre_mm": {"min": 0.5, "max": 16.0},
+      "alias": ["ot", "oil tempered", "a229", "astm a229", "templado en aceite"]
+    },
+    {
+      "nombre": "Chrome Silicon (ASTM A401)",
+      "codigo": "CSI",
+      "rango_alambre_mm": {"min": 0.8, "max": 12.0},
+      "alias": ["csi", "chrome silicon", "a401", "astm a401", "cromo silicio", "crsi"]
+    },
+    {
+      "nombre": "Stainless Steel 302/304 (ASTM A313)",
+      "codigo": "SS",
+      "rango_alambre_mm": {"min": 0.1, "max": 10.0},
+      "alias": ["ss", "302", "304", "aisi 302", "aisi 304", "302 304", "a313", "astm a313",
+                "stainless 302", "stainless 304", "inoxidable 302", "inoxidable 304"]
+    },
+    {
+      "nombre": "Stainless Steel 17-7 PH",
+      "codigo": "SS177",
+      "rango_alambre_mm": {"min": 0.2, "max": 6.0},
+      "alias": ["ss177", "17 7", "17 7 ph", "17 7ph", "631", "a313 631"]
+    },
+    {
+      "nombre": "Stainless Steel 316 (ASTM A313 Type 316)",
+      "codigo": "316",
+      "alias": ["316", "aisi 316", "ss316", "inoxidable 316", "stainless 316", "316l"]
+    },
+    {
+      "nombre": "Phosphor Bronze (ASTM B159)",
+      "codigo": "PHOSB",
+      "rango_alambre_mm": {"min": 0.1, "max": 7.5},
+      "alias": ["phosb", "phosphor bronze", "b159", "astm b159", "bronce fosforado"]
+    },
+    {
+      "nombre": "Inconel X-750 (AMS 5698/5699)",
+      "codigo": "INCX750",
+      "rango_alambre_mm": {"min": 0.4, "max": 8.0},
+      "alias": ["incx750", "inconel", "inconel x 750", "x 750", "ams 5698", "ams 5699"]
+    },
+    {
+      "nombre": "Hastelloy C-276",
+      "codigo": "HAST",
+      "alias": ["hast", "hastelloy", "hastelloy c 276", "c 276"]
+    },
+    {
+      "nombre": "Brass Wire",
+      "codigo": "BRASS",
+      "alias": ["brass", "brass wire", "laton", "alambre de laton"]
+    },
+    {
+      "nombre": "Round Bar Stock",
+      "codigo": "BB",
+      "alias": ["bb", "round bar", "round bar stock", "barra redonda"]
+    }
+  ],
+
+  "rangos": {
+    "_comun": {
+      "diametro_alambre_mm": {
+        "max": 15.0,
+        "preferido_min": 0.15,
+        "preferido_max": 6.0,
+        "nota": "El máximo de 15 mm (0.59 in) es la regla de negocio del ISC Price Calculator: 'Wire Ø >= 0.59 in — NOT FEASIBLE at ISC. Do not price.' El rango preferido es la envolvente de las 6 máquinas con capacidad declarada; entre 6 y 15 mm la planta sí ha cotizado (11 de 346 partidas), pero ninguna máquina lo declara."
+      },
+      "diametro_exterior_mm": {
+        "preferido_max": 90.0,
+        "nota": "OD máximo de la máquina más grande con capacidad declarada (Nucoil HX-60). No hay un límite duro declarado por el negocio."
+      },
+      "indice_resorte": {
+        "min": 4.0,
+        "max": 15.0,
+        "preferido_min": 5.0,
+        "preferido_max": 12.0,
+        "penalizacion": {
+          "fuera_de_rango": {"min": 26, "max": 20},
+          "fuera_del_preferido": {"min": 10, "max": 8}
+        },
+        "nota": "Del Spring Engineering Calculator: C<4 es muy difícil de enrollar y castiga el herramental (26 puntos); C>15 da una espira floja y propensa a enredarse (20). El rango cómodo es 5-12. Estos valores son los de compresión; torsión y extensión los bajan en sus propios bloques."
+      }
+    },
+    "compresion": {
+      "numero_espiras_activas": {
+        "preferido_min": 3.0,
+        "penalizacion": {"fuera_del_preferido": {"min": 10}},
+        "nota": "ISC, compresión: debajo de ~3 espiras activas la constante es difícil de sostener y dominan los efectos de los extremos (10 puntos)."
+      }
+    },
+    "extension": {
+      "indice_resorte": {
+        "penalizacion": {
+          "fuera_de_rango": {"min": 24, "max": 18},
+          "fuera_del_preferido": {"min": 9, "max": 7}
+        },
+        "nota": "Mismos umbrales de índice que compresión, con las penalizaciones que ISC usa para extensión: 24/18 y 9/7."
+      }
+    },
+    "torsion": {
+      "diametro_alambre_mm": {
+        "max": 15.0,
+        "preferido_min": 0.2,
+        "preferido_max": 6.0,
+        "nota": "Cuatro máquinas hacen torsión (TF-23, ZX250, TF-45, AIM 3000); la más fina arranca en 0.20 mm."
+      },
+      "diametro_exterior_mm": {
+        "preferido_max": 80.0,
+        "nota": "La máquina de torsión con mayor OD es la AIM 3000 (80 mm); la HX-60, que llega a 90, no hace torsión."
+      },
+      "indice_resorte": {
+        "penalizacion": {
+          "fuera_de_rango": {"min": 24, "max": 18},
+          "fuera_del_preferido": {"min": 9, "max": 7}
+        },
+        "nota": "Mismos umbrales de índice que compresión, con las penalizaciones que ISC usa para torsión: 24/18 y 9/7."
+      },
+      "numero_espiras_activas": {
+        "preferido_min": 3.0,
+        "penalizacion": {"fuera_del_preferido": {"min": 8}},
+        "nota": "ISC, torsión: debajo de ~3 espiras de cuerpo la constante la dominan los brazos y es difícil de sostener (8 puntos)."
+      }
+    }
+  },
+
+  "requeridos": {
+    "_comun": ["diametro_alambre_mm", "diametro_exterior_mm", "material"],
+    "compresion": ["longitud_libre_mm"],
+    "extension": ["longitud_libre_mm"],
+    "torsion": ["angulo_brazos_grados"]
+  },
+
+  "pendientes": [
+    "Alambre formado: son 40 de las 346 partidas cotizadas (11.5%), pero la planta no tiene reglas declaradas para ellas y las de resorte enrollado no aplican — el índice de resorte sobre un doblez leído como diámetro exterior da un crítico falso. Hasta que las defina, NO está en 'tipos_fabricables': todo wire form va a revisión del plant manager por tipo no fabricable. Sub-ensamble (2 partidas) queda igual, y ahí sí parece lo correcto.",
+    "Longitud libre: no existe un límite declarado en ninguna fuente. Se exige el dato para compresión y extensión, pero no se valida contra ningún rango.",
+    "Tolerancia mínima: la planta no tiene un valor declarado, así que 'tolerancia_minima_mm' va en null y el motor NO evalúa tolerancias. En cuanto haya un número, se pone aquí y la validación se enciende sola.",
+    "Capacidad de 29 de las 35 máquinas: sólo 6 tienen wireMin/wireMax/odMax capturados, y el propio Spring Engineering Calculator las marca como 'ESTIMATED capability data - edit in the Databases tab with real shop specs'. Confirmar con la planta y, sobre todo, capturar las TORIN/FENN, KMH y SIMPLEX MC 50, que son las candidatas a cubrir el tramo de 6 a 15 mm.",
+    "Paso vs diámetro de alambre (espiras que se tocan) y ángulo de hélice > 12 grados: son reglas del Spring Engineering Calculator que comparan dos campos entre sí; el motor hoy sólo compara un campo contra un rango.",
+    "Reglas de esfuerzo (factores de seguridad, pandeo, esfuerzo en el gancho, dirección de carga en torsión): necesitan la carga de trabajo, que no viene ni del correo ni del plano."
+  ],
+
+  "referencia": {
+    "nota": "El motor NO lee este bloque. Está aquí para que quien edite los rangos vea de dónde salieron y pueda recalcularlos cuando cambie el parque de máquinas.",
+    "maquinas_con_capacidad_declarada": [
+      {"nombre": "Nucoil CSF-200", "alambre_mm": [0.15, 2.0], "od_max_mm": 25, "tipos": ["compresion", "extension"]},
+      {"nombre": "Shinko TF-23", "alambre_mm": [0.20, 2.3], "od_max_mm": 30, "tipos": ["compresion", "extension", "torsion"]},
+      {"nombre": "ZX250", "alambre_mm": [0.30, 2.5], "od_max_mm": 32, "tipos": ["compresion", "extension", "torsion"]},
+      {"nombre": "Shinko TF-45", "alambre_mm": [0.50, 4.5], "od_max_mm": 55, "tipos": ["compresion", "extension", "torsion"]},
+      {"nombre": "AIM 3000", "alambre_mm": [0.80, 6.0], "od_max_mm": 80, "tipos": ["compresion", "extension", "torsion"]},
+      {"nombre": "Nucoil HX-60", "alambre_mm": [1.00, 6.0], "od_max_mm": 90, "tipos": ["compresion", "extension"]}
+    ],
+    "maquinas_sin_capacidad_capturada": 29,
+    "evidencia_de_lo_cotizado": {
+      "partidas_analizadas": 346,
+      "alambre_min_mm": 0.305,
+      "alambre_max_mm": 12.954,
+      "mediana_mm": 2.032,
+      "sobre_el_envolvente_de_6mm": 11,
+      "sobre_el_limite_duro_de_15mm": 0,
+      "tipos": {"compresion": 195, "torsion": 62, "extension": 47, "alambre_formado": 40, "sub_ensamble": 2}
+    }
+  }
+}

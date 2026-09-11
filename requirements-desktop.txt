@@ -1,0 +1,10 @@
+# Dependencias exclusivas de la app de escritorio (desktop_app/main.py).
+#
+# Van aparte de requirements.txt a propósito: PySide6 pesa unos 100 MB y el
+# servidor de Render no la necesita para nada. Antes no estaba en ningún
+# archivo, así que la app de escritorio no arrancaba en una máquina limpia.
+#
+# Instalación en el equipo de la planta:
+#     pip install -r requirements.txt -r requirements-desktop.txt
+
+PySide6>=6.6

@@ -1,0 +1,13 @@
+{
+  "name": "cotizador-pricing-engine",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Motor de costeo de Rodea. Lo ejecuta pricing/engine.py en un subproceso de Node; declara aquí la versión mínima para que el entorno de despliegue instale Node.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "check": "node --check pricing/engine.js && node --check pricing/runner.js"
+  },
+  "dependencies": {}
+}

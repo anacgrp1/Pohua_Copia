@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Pohua — Automatic RFQ quoting for industrial springs">
+    <meta name="theme-color" content="#0B0F19">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Pohua · RFQ Quoter</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <!-- Los siete tamaños son el MISMO dibujo, assets/app-icon.png, escalado:
+         el icono de la aplicación es uno y se ve igual en todas partes.
+         Los genera scripts/generar_iconos.py; no se editan a mano. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="/assets/favicon-48.png">
+    <!-- iOS no lee los iconos del manifest y redondea las esquinas él mismo. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tema claro/oscuro.
+         Va aquí, antes de la hoja de estilos, y a propósito no está en un
+         archivo aparte: tiene que ejecutarse antes del primer pintado. Si se
+         decidiera el tema después de cargar el CSS, la página aparecería
+         oscura un instante y saltaría a clara (el "flash" típico). -->
+    <script>
+        (function () {
+            try {
+                var guardado = localStorage.getItem('cgr-tema');
+                if (guardado !== 'light' && guardado !== 'dark') {
+                    guardado = (window.matchMedia &&
+                                window.matchMedia('(prefers-color-scheme: light)').matches)
+                               ? 'light' : 'dark';
+                }
+                document.documentElement.dataset.tema = guardado;
+                marcarBarra(guardado);
+            } catch (e) {
+                document.documentElement.dataset.tema = 'dark';
+                marcarBarra('dark');
+            }
+
+            // El color de la barra del navegador, ya en el primer pintado. Sin
+            // esto arranca con el valor del <meta> —el del tema oscuro— y en
+            // claro se ve una franja que no pega con la página hasta que
+            // js/tema.js la corrige. Los valores son --bg-surface de cada
+            // tema; el CSS todavía no está cargado, así que aquí van a mano.
+            function marcarBarra(tema) {
+                var meta = document.querySelector('meta[name="theme-color"]');
+                if (meta) meta.setAttribute('content', tema === 'light' ? '#e9eef7' : '#172033');
+            }
+        })();
+    </script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <!-- Marca de entorno: sólo aparece en localhost. Sirve para no confundir
+         una pestaña local con la de producción cuando están las dos abiertas
+         y acabar aprobando o declinando un RFQ de verdad creyendo que se está
+         probando. -->
+    <script>
+        if (['localhost', '127.0.0.1', '::1'].includes(location.hostname)) {
+            document.documentElement.classList.add('es-local');
+        }
+    </script>
+    <div class="marca-local" aria-hidden="true">LOCAL</div>
+
+    <!-- ============================================================= -->
+    <!-- EL SOL DE POHUA                                                -->
+    <!-- El dibujo va UNA vez aquí y se reutiliza con <use href="#..">  -->
+    <!-- allá donde haga falta. Repetirlo en cada sitio serían 4 KB de  -->
+    <!-- trazo por copia. Se pinta con `fill: currentColor`, así toma   -->
+    <!-- el color de donde se ponga.                                    -->
+    <!-- ============================================================= -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+        <symbol id="pohua-sol" viewBox="0 0 98 98"><g transform="translate(0.000000,98.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M470 903 c-25 -127 -39 -163 -62 -163 -6 0 -6 6 1 14 17 21 -7 33 -26 13 -25 -25 -9 -49 29 -45 28 2 37 10 55 46 22 44 22 44 36 10 18 -42 40 -60 69 -56 26 3 37 36 16 49 -22 14 -31 10 -25 -11 7 -27 -11 -25 -23 3 -6 12 -19 60 -30 106 -24 104 -26 106 -40 34z M210 763 c2 -27 69 -136 75 -121 4 9 2 25 -4 37 -14 26 -14 31 3 25 7 -3 13 -12 12 -21 0 -9 5 -18 13 -21 10 -3 12 0 8 11 -4 12 -2 14 10 10 10 -4 14 -2 11 7 -5 16 -128 86 -128 73z M476 754 c-9 -23 -8 -24 14 -24 11 0 20 2 20 4 0 12 -13 36 -20 36 -4 0 -11 -7 -14 -16z M701 739 c-30 -16 -60 -31 -65 -33 -6 -3 1 -16 17 -30 15 -14 27 -30 27 -36 0 -25 18 -5 53 60 43 79 43 79 -32 39z M398 689 c-58 -26 -63 -37 -31 -83 19 -30 22 -40 13 -52 -14 -16 -66 -19 -75 -5 -8 13 16 26 43 22 12 -1 22 2 22 8 0 6 -9 11 -19 11 -15 0 -18 5 -14 23 4 20 3 20 -19 -6 -40 -46 -64 -137 -26 -99 7 7 27 12 46 12 70 0 93 41 52 93 -11 14 -20 28 -20 31 0 11 62 37 76 32 16 -6 20 -76 3 -76 -5 0 -7 5 -4 10 3 6 -1 10 -9 10 -8 0 -18 -4 -21 -10 -3 -5 -1 -10 5 -10 6 0 8 -4 5 -10 -7 -11 0 -12 33 -4 18 5 22 13 22 49 0 81 -8 86 -82 54z M506 694 c-16 -41 -6 -102 17 -108 32 -8 39 -7 32 4 -3 6 -1 10 5 10 6 0 8 5 5 10 -3 6 -13 10 -21 10 -8 0 -12 -4 -9 -10 3 -5 1 -10 -4 -10 -14 0 -14 67 0 75 38 24 82 -32 54 -69 -35 -47 -9 -86 57 -86 19 0 39 -5 46 -12 38 -38 14 53 -26 99 -21 25 -23 26 -19 6 3 -13 -1 -24 -9 -27 -21 -8 -26 11 -9 37 18 28 4 46 -58 72 -46 19 -53 19 -61 -1z m141 -126 c4 10 8 10 19 1 19 -16 8 -29 -25 -29 -31 0 -57 23 -46 40 5 8 14 6 27 -7 16 -13 22 -15 25 -5z M394 649 c-10 -17 13 -36 27 -22 12 12 4 33 -11 33 -5 0 -12 -5 -16 -11z M554 649 c-10 -17 13 -36 27 -22 12 12 4 33 -11 33 -5 0 -12 -5 -16 -11z M210 595 c-16 -19 -3 -40 16 -24 8 7 14 7 14 1 0 -20 -30 -33 -121 -53 -125 -27 -126 -23 11 -54 41 -10 83 -22 93 -27 24 -12 21 -27 -4 -21 -17 5 -20 2 -17 -13 5 -29 52 -26 56 4 4 29 -14 51 -57 69 -34 15 -34 15 5 32 22 10 44 29 51 43 19 43 -18 78 -47 43z M722 593 c-15 -26 8 -64 51 -83 22 -10 34 -21 28 -24 -6 -4 -18 0 -27 8 -22 22 -44 20 -44 -5 0 -16 4 -19 23 -13 19 6 19 4 -6 -16 -37 -29 -35 -75 3 -75 16 0 26 6 28 19 3 15 0 18 -17 13 -25 -6 -28 9 -3 21 9 5 51 17 92 27 137 31 136 27 11 54 -91 20 -121 33 -121 53 0 6 6 6 14 -1 19 -16 32 5 16 24 -16 20 -37 19 -48 -2z M460 573 c-18 -6 -80 -71 -80 -83 0 -31 71 -85 110 -84 42 1 80 26 80 51 0 7 7 13 15 13 8 0 15 9 15 20 0 11 -6 20 -13 20 -8 0 -19 11 -25 25 -16 35 -63 52 -102 38z m72 -30 c29 -34 28 -49 -7 -67 -35 -19 -60 -14 -51 11 4 9 1 13 -6 11 -18 -6 -19 -21 -3 -42 12 -15 19 -17 44 -8 34 12 43 -1 12 -18 -32 -17 -58 -12 -80 16 -28 36 -27 42 14 61 39 18 78 3 45 -17 -13 -8 -13 -10 1 -10 26 0 29 11 13 41 -14 28 -15 29 -44 14 -39 -20 -47 -19 -25 5 22 25 67 26 87 3z M221 506 c-24 -13 -24 -13 -2 -26 27 -14 34 -9 29 18 -3 19 -5 19 -27 8z M302 493 c2 -10 13 -18 26 -19 25 -1 30 21 6 30 -26 10 -36 7 -32 -11z M627 504 c-15 -15 -6 -24 24 -24 20 0 29 4 27 13 -5 14 -40 21 -51 11z M270 470 c0 -18 41 -99 58 -112 13 -11 15 -10 10 10 -5 17 -2 22 13 22 10 0 19 5 19 11 0 6 -10 9 -22 8 -27 -4 -51 9 -43 22 9 14 61 11 75 -5 9 -12 6 -22 -13 -52 -32 -46 -27 -57 33 -83 58 -25 66 -26 74 -5 10 26 7 104 -4 104 -5 0 -10 -18 -10 -40 0 -26 -5 -43 -15 -46 -29 -11 -34 6 -13 42 17 30 19 37 7 44 -19 12 -36 -19 -18 -32 11 -8 10 -9 -4 -4 -11 3 -20 0 -23 -9 -4 -8 -11 -15 -16 -15 -5 0 0 15 11 34 39 62 20 96 -53 96 -19 0 -38 5 -41 10 -8 13 -25 13 -25 0z M685 470 c-3 -5 -22 -10 -41 -10 -68 0 -95 -39 -59 -86 8 -10 14 -26 14 -34 0 -13 -1 -13 -12 1 -7 9 -17 14 -23 12 -7 -2 -10 6 -9 22 2 14 -1 25 -5 25 -18 0 -19 -19 -4 -55 16 -40 14 -51 -11 -42 -10 4 -15 20 -15 47 0 22 -4 40 -10 40 -12 0 -13 -90 -1 -109 11 -17 88 8 115 37 14 17 14 21 -10 56 -28 41 -21 66 20 66 35 0 50 -14 31 -30 -12 -10 -15 -10 -15 1 0 11 -2 11 -10 -1 -9 -13 -10 -13 -10 0 0 13 -2 13 -9 0 -12 -18 -5 -31 14 -24 10 4 12 0 8 -18 -6 -20 -4 -21 9 -10 17 13 58 94 58 112 0 13 -17 13 -25 0z M242 285 c-17 -36 -29 -65 -27 -65 10 0 125 60 125 65 0 12 -34 43 -42 39 -4 -3 -8 2 -8 10 0 32 -16 15 -48 -49z m48 10 c0 -8 -4 -15 -10 -15 -5 0 -7 7 -4 15 4 8 8 15 10 15 2 0 4 -7 4 -15z M671 329 c-11 -18 -11 -23 1 -31 9 -6 6 -7 -9 -3 -48 13 -30 -16 28 -45 76 -39 79 -36 39 39 -36 68 -40 70 -59 40z M387 259 c-21 -12 -22 -32 -2 -49 19 -16 40 -3 24 16 -7 8 -7 14 -1 14 20 0 33 -30 53 -121 27 -125 23 -126 54 11 10 41 22 83 27 93 12 24 27 21 21 -4 -5 -17 -2 -20 13 -17 29 5 26 52 -4 56 -29 4 -51 -14 -70 -58 -8 -19 -17 -30 -19 -23 -2 6 3 23 12 36 16 25 -1 47 -26 32 -4 -3 -21 1 -37 9 -19 10 -33 11 -45 5z"/></g></symbol>
+    </svg>
+
+    <!-- ============================================================= -->
+    <!-- FONDO ESPACIAL                                                 -->
+    <!-- Decorativo: aria-hidden para que los lectores de pantalla lo   -->
+    <!-- ignoren. Las estrellas las inyecta /js/starfield.js.           -->
+    <!-- ============================================================= -->
+    <div class="space-bg" aria-hidden="true">
+        <div class="glow-background"></div>
+        <canvas id="starfield"></canvas>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- RELOJ DE LAS TRES CASAS                                        -->
+    <!-- Arriba y al centro, entre el título y los controles de la      -->
+    <!-- esquina. Tres modos —Kansas City, Querétaro y Sevran— y cada   -->
+    <!-- uno con la fecha y la hora escritas como se escriben allí. Un  -->
+    <!-- clic rota; con Mayúsculas, hacia atrás. Lo lleva js/reloj.js.  -->
+    <!-- ============================================================= -->
+    <div class="reloj" id="reloj">
+        <button type="button" class="reloj-boton" id="btnReloj" aria-live="off">
+            <svg class="reloj-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/>
+            </svg>
+            <span class="reloj-fecha" id="relojFecha"></span>
+            <span class="reloj-punto" aria-hidden="true"></span>
+            <span class="reloj-hora" id="relojHora"></span>
+            <span class="reloj-punto reloj-punto--ciudad" aria-hidden="true"></span>
+            <span class="reloj-ciudad" id="relojCiudad"></span>
+            <span class="reloj-codigo" id="relojCodigo" aria-hidden="true"></span>
+        </button>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- CONTROLES DE LA ESQUINA: idioma, tema y perfil                 -->
+    <!-- Van en una barra en vez de tres elementos fijos con su propio  -->
+    <!-- cálculo de `right`: así añadir uno no descoloca a los demás y  -->
+    <!-- en un teléfono se encogen juntos.                              -->
+    <!-- ============================================================= -->
+    <div class="barra-esquina">
+        <!-- Notificaciones: sólo con sesión abierta y permiso para ver RFQs;
+             js/components/notificaciones.js lo enseña y lo esconde. -->
+        <div class="notif" id="notificaciones" hidden>
+            <button type="button" class="notif-boton" id="btnNotificaciones"
+                    aria-haspopup="dialog" aria-expanded="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                <span class="notif-globo" id="notifGlobo" hidden></span>
+            </button>
+            <!-- El velo sólo pinta en el teléfono, donde el panel es un
+                 cajón; en computadora se queda fuera de juego. -->
+            <div class="notif-velo" id="notifVelo"></div>
+            <div class="notif-panel" id="notifPanel" role="dialog"
+                 aria-modal="false" aria-labelledby="notifTitulo"></div>
+        </div>
+
+        <div class="idioma" id="idioma">
+            <button type="button" class="idioma-boton" id="btnIdioma"
+                    aria-haspopup="listbox" aria-expanded="false"
+                    data-i18n-titulo="idioma.boton">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
+                <span class="idioma-corto" id="idiomaCorto">EN</span>
+            </button>
+            <ul class="idioma-lista" id="idiomaLista" role="listbox" hidden></ul>
+        </div>
+
+        <button type="button" class="tema-toggle" id="btnTema"
+                title="Switch theme" aria-label="Switch theme">
+            <svg class="icono-sol" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+            </svg>
+            <svg class="icono-luna" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+        </button>
+
+        <!-- Perfil: sólo dentro de la aplicación. En la portada y el login no
+             hay sesión que enseñar. -->
+        <div class="perfil-menu" id="perfilMenu" hidden>
+            <button type="button" class="perfil-menu-boton" id="btnPerfilMenu"
+                    aria-haspopup="menu" aria-expanded="false"
+                    data-i18n-titulo="menu.abrir"></button>
+            <div class="perfil-menu-panel" id="perfilMenuPanel" role="menu" hidden></div>
+        </div>
+    </div>
+
+    <!-- Mobile hamburger -->
+    <button class="mobile-toggle" id="mobileToggle" data-i18n-titulo="nav.menu"
+            aria-controls="sidebar" aria-expanded="false" hidden>
+        <svg class="icono-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+        <svg class="icono-cerrar-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+    </button>
+
+    <!-- ============================================================= -->
+    <!-- HOME + SIGN IN                                                -->
+    <!-- ============================================================= -->
+    <div class="home-screen" id="homeScreen" hidden></div>
+
+    <div class="login-screen" id="loginScreen" hidden></div>
+
+    <div class="app-layout" hidden>
+
+        <!-- El velo va DENTRO de .app-layout, en el mismo contexto de
+             apilamiento que la barra lateral: si no, la tapa. -->
+        <div class="mobile-overlay" id="mobileOverlay"></div>
+
+        <!-- ============================================================= -->
+        <!-- SIDEBAR                                                       -->
+        <!-- ============================================================= -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button type="button" class="logo-boton" id="logoSidebar"
+                        title="Go to Dashboard" aria-label="Go to Dashboard">
+                    <span class="logo-lockup">
+                        <img src="/assets/isc-logo.png" alt="ISC" class="logo-lockup__isc">
+                        <img src="/assets/logo.png" alt="CGR" class="logo-lockup__cgr">
+                    </span>
+                </button>
+                <div class="sidebar-brand">
+                    <span class="sidebar-brand-name">Pohua</span>
+                    <span class="sidebar-brand-sub">RFQ Quoter</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="sidebar-section-label" data-i18n="nav.main">Main</div>
+
+                <!-- PRIMERO. El Resumen es la pantalla de mando: quien entra
+                     ve de golpe cómo va todo, y a partir de ahí decide dónde
+                     meterse. Para admin se va al final —y sube el Monitor— con
+                     la clase .sidebar-nav--admin; el orden lo pone el CSS, no
+                     un reacomodo del DOM, para que el marcado siga siendo uno
+                     solo y el foco del teclado no cambie de sitio a mitad de
+                     sesión.
+                     La comprobación de verdad la hace el servidor
+                     (`resumen:ver`); esto es para no enseñar una puerta
+                     cerrada. -->
+                <button class="nav-item active" data-page="resumen" data-permiso="resumen:ver">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+                        <line x1="6" y1="20" x2="6" y2="14"/>
+                    </svg>
+                    <span data-i18n="nav.resumen">Overview</span>
+                </button>
+
+                <button class="nav-item" data-page="mail">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    <span data-i18n="nav.mail">Mail</span>
+                </button>
+
+                <button class="nav-item" data-page="quoting">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                    </svg>
+                    <span data-i18n="nav.quoting">Quoting</span>
+                </button>
+
+                <!-- El Monitor es material de administración: el registro lleva
+                     rutas del servidor, correos de clientes y errores con
+                     detalles internos. La comprobación de verdad la hace el
+                     servidor (`monitor:ver`); esto es para no enseñar una
+                     puerta cerrada. -->
+                <button class="nav-item" data-page="monitor" data-permiso="monitor:ver">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    <span data-i18n="nav.monitor">Monitor</span>
+                </button>
+
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-status">
+                    <span class="status-dot" id="workerDot"></span>
+                    <span id="workerLabel" data-i18n="barra.servicioParado">Service stopped</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ============================================================= -->
+        <!-- MAIN CONTENT                                                  -->
+        <!-- ============================================================= -->
+        <main class="main-content">
+
+            <!-- Page Header -->
+            <header class="page-header">
+                <div>
+                    <h1 class="page-title" id="pageTitle">Dashboard</h1>
+                    <p class="page-subtitle" id="pageSubtitle">System overview</p>
+                </div>
+            </header>
+
+            <!-- Page Body with all views -->
+            <div class="page-body">
+
+                <!-- MAIL -->
+                <div class="page-view" id="page-mail"></div>
+
+                <!-- QUOTING -->
+                <div class="page-view active" id="page-quoting">
+                    <div class="quoting-layout">
+                        <div class="quoting-column" id="col-rfqs">
+                            <div class="quoting-column-header">
+                                <h2>RFQs</h2>
+                            </div>
+                            <div class="quoting-column-content">
+                                <!-- List goes here -->
+                            </div>
+                        </div>
+                        <div class="quoting-column" id="col-rfqs-completos">
+                            <div class="quoting-column-header">
+                                <h2>Completed RFQs</h2>
+                            </div>
+                            <div class="quoting-column-content">
+                                <!-- List goes here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DETALLE RFQ -->
+                <div class="page-view" id="page-rfq-detail"></div>
+
+                <!-- COTIZACIÓN -->
+                <div class="page-view" id="page-quote-review"></div>
+
+                <!-- MONITOR -->
+                <div class="page-view" id="page-resumen"></div>
+
+                <div class="page-view" id="page-monitor"></div>
+
+                <!-- SETTINGS -->
+                <div class="page-view" id="page-perfil"></div>
+
+            </div>
+
+            <!-- Asistente: barra fija, la misma en todas las pantallas. -->
+            <div class="assistant-dock" id="assistantDock"></div>
+        </main>
+
+    </div>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="/js/i18n.js"></script>
+    <script src="/js/tema.js"></script>
+    <script src="/js/idioma.js"></script>
+    <script src="/js/reloj.js"></script>
+    <script src="/js/starfield.js"></script>
+    <script src="/js/hero.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/components/toast.js"></script>
+    <script src="/js/components/confirmar.js"></script>
+    <script src="/js/components/assistant.js"></script>
+    <script src="/js/components/avatar.js"></script>
+    <script src="/js/components/password.js"></script>
+    <script src="/js/components/perfil-menu.js"></script>
+    <script src="/js/components/notificaciones.js"></script>
+    <script src="/js/components/revision.js"></script>
+    <script src="/js/components/push.js"></script>
+    <script src="/js/components/instalar.js"></script>
+    <script src="/js/components/status-card.js"></script>
+    <script src="/js/components/rfq-table.js"></script>
+    <script src="/js/pages/home.js"></script>
+    <script src="/js/pages/login.js"></script>
+    <script src="/js/pages/dashboard.js"></script>
+    <script src="/js/pages/rfq-list.js"></script>
+    <script src="/js/pages/quoting.js"></script>
+    <script src="/js/pages/rfq-detail.js"></script>
+    <script src="/js/pages/quote-review.js"></script>
+    <script src="/js/pages/resumen.js"></script>
+    <script src="/js/pages/monitor.js"></script>
+    <script src="/js/pages/perfil.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+[project]
+name = "cotizador"
+version = "0.2.0"
+description = "Sistema de cotización automatizado para resortes industriales"
+requires-python = ">=3.10"
+
+[project.scripts]
+cotizador = "app.main:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+# Faltaban api, pricing, pdf y scripts, así que ruff los trataba como paquetes
+# de terceros y ordenaba sus imports mezclados con los de fastapi.
+src = ["app", "api", "pricing", "pdf", "scripts", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "api", "pricing", "pdf", "scripts", "tests"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pyright]
+include = ["app", "api", "pricing", "tests"]

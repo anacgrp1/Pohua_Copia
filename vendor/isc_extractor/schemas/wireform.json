@@ -1,0 +1,449 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Wire form / alambre conformado - Schema v4 (fusion ISC)",
+  "type": "object",
+  "properties": {
+    "tipo_resorte": {
+      "type": "string",
+      "const": "wireform"
+    },
+    "tipo_detectado": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "compresion",
+        "tension",
+        "torsion",
+        "wireform",
+        null
+      ],
+      "description": "Tipo que TU ves en el plano. Normalmente coincide con el que se te indico; ponlo distinto solo si el plano te contradice claramente."
+    },
+    "identificacion": {
+      "type": "object"
+    },
+    "material": {
+      "type": "object"
+    },
+    "dimensiones_mm": {
+      "type": "object",
+      "properties": {
+        "diametro_alambre": {
+          "$ref": "#/definitions/cota"
+        },
+        "longitud_desarrollada": {
+          "$ref": "#/definitions/cota",
+          "description": "Developed / straight / total wire length. Si el plano no la declara, sumar los segmentos de linea central y marcar es_referencia=false pero explicarlo en metadatos."
+        },
+        "longitud_total": {
+          "$ref": "#/definitions/cota"
+        },
+        "ancho_total": {
+          "$ref": "#/definitions/cota"
+        },
+        "altura_total": {
+          "$ref": "#/definitions/cota"
+        },
+        "espesor_material": {
+          "$ref": "#/definitions/cota",
+          "description": "Solo si el material es fleje/plano en vez de alambre redondo."
+        },
+        "ancho_material": {
+          "$ref": "#/definitions/cota"
+        }
+      },
+      "additionalProperties": false
+    },
+    "segmentos": {
+      "type": "array",
+      "description": "Tramos de la linea central, en orden. Sirven para reconstruir la longitud desarrollada.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "orden": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "tipo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "recto",
+              "arco",
+              "espira",
+              null
+            ]
+          },
+          "longitud_mm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "radio_mm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "angulo_grados": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "descripcion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "texto_original": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "doblados": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "etiqueta": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "angulo_grados": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "tolerancia_angulo_grados": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "radio_interior_mm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "plano": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "texto_original": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "espiras": {
+      "type": "object",
+      "description": "Solo si el wire form incorpora una porcion enrollada.",
+      "properties": {
+        "numero_espiras_totales": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "diametro_medio_mm": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sentido_enrollado": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "derecho",
+            "izquierdo",
+            null
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "cargas": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/carga_lineal"
+      },
+      "description": "Solo si el plano especifica ensayo de carga/deflexion."
+    },
+    "tolerancias_geometricas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "caracteristica": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "valor_mm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "datum": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "texto_original": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "condiciones_operacion": {
+      "type": "object"
+    },
+    "caracteristicas_clasificadas": {
+      "type": "array"
+    },
+    "notas_generales": {
+      "type": "array"
+    },
+    "historial_revisiones": {
+      "type": "array"
+    },
+    "metadatos_extraccion": {
+      "type": "object"
+    },
+    "normas_aplicables": {
+      "type": "array",
+      "description": "Lista consolidada de todas las normas mencionadas en el plano, con tipo (enum), descripcion y origen (donde aparece en el plano).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "norma": {
+            "type": "string",
+            "description": "Nombre o codigo de la norma tal como aparece en el plano (ej. \"DIN 50938 Fe//A/T4\")."
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "material",
+              "acabado",
+              "tolerancia",
+              "dibujo",
+              "ensayo",
+              "calidad",
+              "interno",
+              "roscas"
+            ],
+            "description": "Categoria de la norma."
+          },
+          "descripcion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Que cubre la norma en lenguaje natural breve."
+          },
+          "origen": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "De que parte del plano viene (ej. \"Nota 3\", \"Cajetin / material\", \"Tabla especificaciones fila 114\", \"Bloque de revisiones\")."
+          }
+        },
+        "required": [
+          "norma",
+          "tipo"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "localizacion": {
+      "type": "array",
+      "description": "Ubicacion en el plano de los datos clave, para recortes de verificacion. Solo campos que el cotizador usa + los items de feasibility.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "campo": {
+            "type": "string",
+            "description": "Ruta JSON del dato, ej. 'dimensiones_mm.diametro_alambre' o 'cargas[0]'."
+          },
+          "pagina": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Indice de pagina base 0."
+          },
+          "word_indices": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "nbox": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 4,
+            "maxItems": 4
+          }
+        },
+        "required": [
+          "campo"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "tipo_resorte"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "cota": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "nominal": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "tolerancia_mas": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "MAGNITUD positiva de la tolerancia superior. El limite alto es nominal + tolerancia_mas. Nunca negativa."
+            },
+            "tolerancia_menos": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "MAGNITUD positiva de la tolerancia inferior. El limite bajo es nominal - tolerancia_menos. NUNCA se escribe con signo negativo."
+            },
+            "valor_maximo": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "valor_minimo": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "es_referencia": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "texto_original": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "carga_lineal": {
+      "type": "object",
+      "properties": {
+        "etiqueta": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "longitud_mm": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "fuerza_N": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unidad_fuerza_original": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deflexion_mm": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "tolerancia_fuerza_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "tolerancia_fuerza_absoluta_N": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "condiciones_medicion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

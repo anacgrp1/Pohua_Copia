@@ -1,0 +1,405 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Resorte de torsion - Schema v4 (fusion ISC)",
+  "type": "object",
+  "properties": {
+    "tipo_resorte": {
+      "type": "string",
+      "const": "torsion"
+    },
+    "tipo_detectado": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "compresion",
+        "tension",
+        "torsion",
+        "wireform",
+        null
+      ],
+      "description": "Tipo que TU ves en el plano. Normalmente coincide con el que se te indico; ponlo distinto solo si el plano te contradice claramente."
+    },
+    "identificacion": {
+      "type": "object"
+    },
+    "material": {
+      "type": "object"
+    },
+    "dimensiones_mm": {
+      "type": "object",
+      "properties": {
+        "diametro_exterior": {
+          "$ref": "#/definitions/cota"
+        },
+        "diametro_interior": {
+          "$ref": "#/definitions/cota"
+        },
+        "diametro_medio": {
+          "$ref": "#/definitions/cota",
+          "description": "Diametro medio de espira (mean coil diameter)."
+        },
+        "diametro_alambre": {
+          "$ref": "#/definitions/cota"
+        },
+        "diametro_stud_montaje": {
+          "$ref": "#/definitions/cota",
+          "description": "Diametro del stud/eje sobre el que se monta el resorte."
+        },
+        "altura_paquete_espiras": {
+          "$ref": "#/definitions/cota",
+          "description": "Altura del paquete de espiras enrolladas."
+        }
+      },
+      "additionalProperties": false
+    },
+    "espiras": {
+      "type": "object",
+      "properties": {
+        "numero_espiras_posicion_inicial": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Numero de espiras en initial position (clave para torsion)."
+        },
+        "numero_espiras_totales": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sentido_enrollado": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "derecho",
+            "izquierdo",
+            null
+          ],
+          "description": "OJO convencion: 'right hand spring' = 'left hand wound'."
+        },
+        "mano_resorte": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "derecho",
+            "izquierdo",
+            null
+          ],
+          "description": "Hand of the spring segun aplicacion (puede ser opuesto al sentido de enrollado fisico)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "brazos": {
+      "type": "object",
+      "properties": {
+        "longitud_brazo_1_mm": {
+          "$ref": "#/definitions/cota"
+        },
+        "longitud_brazo_2_mm": {
+          "$ref": "#/definitions/cota"
+        },
+        "angulo_entre_brazos_libre_grados": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Angulo entre brazos en posicion libre."
+        },
+        "configuracion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Descripcion textual de la geometria de los brazos."
+        }
+      },
+      "additionalProperties": false
+    },
+    "cargas": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/carga_torsional"
+      }
+    },
+    "rigidez_angular_N_mm_por_grado": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "Constante de torsion: torque por unidad de angulo. Equivalente angular de la rigidez lineal."
+    },
+    "posiciones_angulares": {
+      "type": "object",
+      "description": "Posiciones angulares clave del resorte.",
+      "properties": {
+        "posicion_libre_grados": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "posicion_inicial_grados": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "posicion_final_grados": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "windup_grados": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Angulo de carga total (windup) del resorte."
+        },
+        "rango_trabajo_grados": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Rango angular de trabajo (working range)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "condiciones_operacion": {
+      "type": "object"
+    },
+    "caracteristicas_clasificadas": {
+      "type": "array"
+    },
+    "notas_generales": {
+      "type": "array"
+    },
+    "historial_revisiones": {
+      "type": "array"
+    },
+    "metadatos_extraccion": {
+      "type": "object"
+    },
+    "normas_aplicables": {
+      "type": "array",
+      "description": "Lista consolidada de todas las normas mencionadas en el plano, con tipo (enum), descripcion y origen (donde aparece en el plano).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "norma": {
+            "type": "string",
+            "description": "Nombre o codigo de la norma tal como aparece en el plano (ej. \"DIN 50938 Fe//A/T4\")."
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "material",
+              "acabado",
+              "tolerancia",
+              "dibujo",
+              "ensayo",
+              "calidad",
+              "interno",
+              "roscas"
+            ],
+            "description": "Categoria de la norma."
+          },
+          "descripcion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Que cubre la norma en lenguaje natural breve."
+          },
+          "origen": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "De que parte del plano viene (ej. \"Nota 3\", \"Cajetin / material\", \"Tabla especificaciones fila 114\", \"Bloque de revisiones\")."
+          }
+        },
+        "required": [
+          "norma",
+          "tipo"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "localizacion": {
+      "type": "array",
+      "description": "Ubicacion en el plano de los datos clave, para recortes de verificacion. Solo campos que el cotizador usa + los items de feasibility.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "campo": {
+            "type": "string",
+            "description": "Ruta JSON del dato, ej. 'dimensiones_mm.diametro_alambre' o 'cargas[0]'."
+          },
+          "pagina": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Indice de pagina base 0."
+          },
+          "word_indices": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "nbox": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 4,
+            "maxItems": 4
+          }
+        },
+        "required": [
+          "campo"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "tipo_resorte"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "cota": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "nominal": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "tolerancia_mas": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "MAGNITUD positiva de la tolerancia superior. El limite alto es nominal + tolerancia_mas. Nunca negativa."
+            },
+            "tolerancia_menos": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "MAGNITUD positiva de la tolerancia inferior. El limite bajo es nominal - tolerancia_menos. NUNCA se escribe con signo negativo."
+            },
+            "valor_maximo": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "valor_minimo": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "es_referencia": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "texto_original": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "carga_torsional": {
+      "type": "object",
+      "properties": {
+        "etiqueta": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Ej. 'initial', 'final', 'free', 'windup'."
+        },
+        "angulo_grados": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Posicion angular en este punto."
+        },
+        "torque_N_mm": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Torque nominal en N.mm."
+        },
+        "torque_min_N_mm": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "torque_max_N_mm": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unidad_torque_original": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Unidad como aparece en el plano (N.mm, N.m, kgf.cm, lb.in, etc.)."
+        },
+        "tolerancia_torque_pct": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "tolerancia_torque_absoluta_Nmm": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "condiciones_medicion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

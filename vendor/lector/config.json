@@ -1,0 +1,18 @@
+{
+  "demo_mode": false,
+  "port": 8765,
+  "model_router": "claude-sonnet-5",
+  "model_router_escalado": "claude-opus-5",
+  "effort_router": "low",
+  "model_extractor": "claude-opus-5",
+  "effort": "high",
+  "max_tokens": 16000,
+  "reintentos_validacion": 1,
+  "reintento_si_tipo_discrepa": true,
+  "dpi": 200,
+  "max_pages": 4,
+  "guardar_spec": true,
+  "prompt_cache": "5m",
+  "retencion_dias": 7,
+  "carpeta_compartida": ""
+}

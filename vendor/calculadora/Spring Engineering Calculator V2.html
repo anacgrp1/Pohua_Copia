@@ -1,0 +1,2424 @@
+<!DOCTYPE html>
+<html data-nube-tema="1" lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spring Engineering Calculator</title>
+<style>
+:root{
+  --bg:#ffffff; --panel:#ffffff; --ink:#1a2230; --ink-soft:#5a6577;
+  --line:#e2e6ec; --line-strong:#cdd4de;
+  --accent:#1f5fa8; --accent-soft:#eaf1f9; --accent-deep:#143a66;
+  --ok:#1f8a4c; --ok-bg:#e9f6ee;
+  --warn:#b9770e; --warn-bg:#fdf3e0;
+  --crit:#c0392b; --crit-bg:#fdeceb;
+  --info:#1f5fa8; --info-bg:#eaf1f9;
+  --shadow:0 1px 2px rgba(20,40,70,.06),0 2px 8px rgba(20,40,70,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:var(--bg);color:var(--ink);
+  font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45;}
+.wrap{max-width:1340px;margin:0 auto;padding:0 18px 60px;}
+
+/* ---- header ---- */
+header{border-bottom:1px solid var(--line);background:var(--n-papel);position:sticky;top:0;z-index:20;}
+.hbar{max-width:1340px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;
+  justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.brand{display:flex;align-items:center;gap:11px;}
+.logo{width:38px;height:38px;border-radius:7px;background:var(--accent);
+  display:flex;align-items:center;justify-content:center;flex:none;}
+.brand h1{font-size:17px;font-weight:700;letter-spacing:-.2px;}
+.brand p{font-size:11.5px;color:var(--ink-soft);font-weight:500;}
+.hright{display:flex;align-items:center;gap:14px;}
+.unit-toggle{display:flex;border:1px solid var(--line-strong);border-radius:7px;overflow:hidden;}
+.unit-toggle button{border:none;background:var(--n-papel);padding:7px 14px;font-size:12.5px;font-weight:600;
+  cursor:pointer;color:var(--ink-soft);}
+.unit-toggle button.on{background:var(--accent);color:#fff;}
+.ulbl{font-size:11px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+
+/* ---- tabs ---- */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);background:var(--n-papel);
+  max-width:1340px;margin:0 auto;padding:0 18px;}
+.tabs button{border:none;background:none;padding:13px 18px;font-size:13.5px;font-weight:600;
+  cursor:pointer;color:var(--ink-soft);border-bottom:3px solid transparent;margin-bottom:-1px;}
+.tabs button:hover{color:var(--ink);}
+.tabs button.on{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* ---- layout ---- */
+.layout{display:grid;grid-template-columns:370px 1fr;gap:20px;margin-top:20px;align-items:start;}
+@media(max-width:980px){.layout{grid-template-columns:1fr;}}
+
+/* ---- cards ---- */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  box-shadow:var(--shadow);margin-bottom:16px;}
+.card-h{padding:11px 15px;border-bottom:1px solid var(--line);font-weight:700;font-size:12.5px;
+  text-transform:uppercase;letter-spacing:.6px;color:var(--n-marca-tinta);display:flex;
+  align-items:center;justify-content:space-between;}
+.card-b{padding:14px 15px;}
+
+/* ---- inputs ---- */
+.grp-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;
+  color:var(--ink-soft);margin:14px 0 8px;padding-bottom:5px;border-bottom:1px dashed var(--line);}
+.grp-title:first-child{margin-top:0;}
+.field{margin-bottom:9px;}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:3px;}
+.field .u{color:var(--accent);font-weight:700;}
+.field input,.field select{width:100%;padding:7px 9px;border:1px solid var(--line-strong);
+  border-radius:6px;font-size:13px;font-family:inherit;color:var(--ink);background:var(--n-papel);}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft);}
+.field input.derived{background:var(--n-papel);color:var(--n-marca-tinta);font-weight:600;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.hint{font-size:10.5px;color:var(--ink-soft);margin-top:2px;}
+
+/* ---- results summary ---- */
+.sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+  border-radius:8px;overflow:hidden;border:1px solid var(--line);}
+@media(max-width:560px){.sum-grid{grid-template-columns:repeat(2,1fr);}}
+.sum-cell{background:var(--n-papel);padding:11px 12px;}
+.sum-cell .k{font-size:10.5px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;
+  letter-spacing:.4px;}
+.sum-cell .v{font-size:18px;font-weight:700;color:var(--ink);margin-top:2px;}
+.sum-cell .v small{font-size:11px;color:var(--ink-soft);font-weight:600;}
+
+/* ---- detail table ---- */
+table.det{width:100%;border-collapse:collapse;}
+table.det td{padding:7px 12px;border-bottom:1px solid var(--line);font-size:12.5px;}
+table.det tr:last-child td{border-bottom:none;}
+table.det td.lbl{color:var(--ink-soft);font-weight:600;}
+table.det td.val{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;}
+table.det td.val small{color:var(--ink-soft);font-weight:600;font-size:10.5px;}
+.pill{display:inline-block;padding:1px 8px;border-radius:20px;font-size:10.5px;font-weight:700;}
+.pill.ok{background:var(--ok-bg);color:var(--ok);}
+.pill.warn{background:var(--n-avi-fondo);color:var(--n-avi-tinta);}
+.pill.crit{background:var(--crit-bg);color:var(--crit);}
+
+/* ---- score card ---- */
+.score-card{display:flex;gap:16px;align-items:center;}
+.score-dial{flex:none;}
+.score-meta{flex:1;}
+.score-band{font-size:15px;font-weight:800;margin-bottom:3px;}
+.score-desc{font-size:12px;color:var(--ink-soft);}
+.score-bar{height:8px;border-radius:5px;background:var(--line);margin-top:9px;overflow:hidden;}
+.score-bar i{display:block;height:100%;border-radius:5px;}
+
+/* ---- flags ---- */
+.flag{display:flex;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:8px;
+  border:1px solid var(--line);}
+.flag:last-child{margin-bottom:0;}
+.flag.crit{background:var(--crit-bg);border-color:var(--n-mal-linea);}
+.flag.warn{background:var(--n-avi-fondo);border-color:var(--n-avi-linea);}
+.flag.info{background:var(--info-bg);border-color:var(--n-info-linea);}
+.flag.ok{background:var(--ok-bg);border-color:var(--n-ok-linea);}
+.flag .ic{flex:none;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:12px;font-weight:800;color:#fff;}
+.flag.crit .ic{background:var(--crit);}
+.flag.warn .ic{background:var(--n-avi-fondo);}
+.flag.info .ic{background:var(--info);}
+.flag.ok .ic{background:var(--ok);}
+.flag .ft{font-size:12.5px;}
+.flag .ft b{display:block;margin-bottom:1px;font-size:12.5px;}
+.flag .ft .rec{color:var(--ink-soft);font-size:11.5px;margin-top:3px;}
+.flag .ft .rec::before{content:"\21B3  Recommendation: ";font-weight:700;color:var(--accent);}
+
+/* ---- machine card ---- */
+.mch{border:1px solid var(--line);border-radius:8px;padding:11px 12px;margin-bottom:9px;}
+.mch.best{border-color:var(--ok);background:var(--ok-bg);}
+.mch.alt{border-color:var(--accent);background:var(--accent-soft);}
+.mch.no{border-color:var(--crit);background:var(--crit-bg);}
+.mch-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.mch-h b{font-size:13.5px;}
+.mch-h .tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
+  padding:2px 8px;border-radius:20px;}
+.mch.best .tag{background:var(--ok);color:#fff;}
+.mch.alt .tag{background:var(--accent);color:#fff;}
+.mch.no .tag{background:var(--crit);color:#fff;}
+.mch-d{font-size:11.5px;color:var(--ink-soft);}
+.mch-d span{display:inline-block;margin-right:12px;}
+
+/* ---- diagram ---- */
+.diagram{text-align:center;}
+.diagram svg{max-width:100%;height:auto;}
+
+/* ---- databases ---- */
+.dbtable-wrap{overflow-x:auto;}
+table.db{width:100%;border-collapse:collapse;font-size:12px;}
+table.db th{background:var(--accent-soft);color:var(--n-marca-tinta);font-size:10.5px;
+  text-transform:uppercase;letter-spacing:.4px;padding:8px 7px;text-align:left;
+  border-bottom:2px solid var(--line-strong);white-space:nowrap;}
+table.db td{padding:4px 6px;border-bottom:1px solid var(--line);}
+table.db td.name{font-weight:700;white-space:nowrap;}
+table.db input{width:74px;padding:4px 6px;border:1px solid var(--line-strong);border-radius:5px;
+  font-size:11.5px;font-family:inherit;text-align:right;}
+table.db input.wide{width:150px;text-align:left;}
+table.db input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft);}
+table.db .chk{display:flex;gap:5px;}
+table.db .chk label{font-size:10.5px;font-weight:600;display:flex;align-items:center;gap:2px;}
+.btn{border:1px solid var(--line-strong);background:var(--n-papel);padding:7px 13px;border-radius:7px;
+  font-size:12px;font-weight:600;cursor:pointer;color:var(--ink);}
+.btn:hover{background:var(--n-papel);}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.note-box{background:var(--n-avi-fondo);border:1px solid var(--n-avi-linea);border-radius:8px;padding:10px 12px;
+  font-size:11.5px;color:var(--n-avi-tinta);margin-bottom:14px;}
+.note-box b{color:var(--n-avi-tinta);}
+.foot{text-align:center;font-size:11px;color:var(--ink-soft);margin-top:26px;
+  padding-top:16px;border-top:1px solid var(--line);}
+.legend{font-size:11px;color:var(--ink-soft);margin-top:10px;line-height:1.7;}
+.legend b{color:var(--ink);}
+.subtab{display:flex;gap:6px;margin-bottom:14px;}
+.subtab button{border:1px solid var(--line-strong);background:var(--n-papel);padding:6px 14px;border-radius:7px;
+  font-size:12px;font-weight:600;cursor:pointer;color:var(--ink-soft);}
+.subtab button.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+.wq-row{display:flex;align-items:center;gap:14px;justify-content:space-between;flex-wrap:wrap;}
+.wq-left{flex:1;min-width:170px;}
+.wq-v{font-size:20px;font-weight:800;color:var(--n-marca-tinta);}
+.wq-note{font-size:11px;color:var(--ink-soft);margin-top:3px;line-height:1.5;}
+.wq-btn{flex:none;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:11px 17px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+.wq-btn:hover{background:var(--accent-deep);}
+.wq-btn:disabled{background:var(--ok);cursor:default;}
+.feas-card .legend{margin:0 0 10px;}
+.fitem{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;margin-bottom:7px;cursor:pointer;}
+.fitem:hover{background:var(--accent-soft);}
+.fitem .fl{flex:1;font-size:12.5px;color:var(--ink);}
+.fitem.s-ok{border-color:var(--ok);background:var(--ok-bg);}
+.fitem.s-no{border-color:var(--crit);background:var(--crit-bg);}
+.fbtns{display:flex;gap:4px;flex:none;}
+.fbtn{border:1px solid var(--line-strong);background:var(--n-papel);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;color:var(--ink-soft);font-family:inherit;}
+.fbtn.ok.on{background:var(--ok);border-color:var(--ok);color:#fff;}
+.fbtn.no.on{background:var(--crit);border-color:var(--crit);color:#fff;}
+.crop-ov{display:none;position:fixed;inset:0;background:rgba(20,28,52,.6);z-index:5000;align-items:center;justify-content:center;padding:20px;}
+.crop-ov.on{display:flex;}
+.crop-box{background:var(--n-papel);border-radius:10px;max-width:680px;width:100%;overflow:hidden;box-shadow:0 12px 44px rgba(0,0,0,.32);}
+.crop-h{padding:11px 15px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;display:flex;justify-content:space-between;align-items:center;}
+.crop-h button{background:none;border:0;color:#fff;font-size:21px;cursor:pointer;line-height:1;}
+.crop-b{padding:15px;}
+.crop-b img{max-width:100%;border:1px solid var(--line);border-radius:6px;display:block;background:var(--n-papel);}
+.crop-meta{margin-top:11px;font-size:12.5px;color:var(--ink);}
+
+/* ===================== DATASHEET REDESIGN ===================== */
+html,body{height:100%;overflow:hidden;background:var(--n-sutil);font-size:12px;}
+body{display:flex;flex-direction:column;}
+header{position:static;top:auto;height:46px;flex:none;display:flex;align-items:center;
+  justify-content:space-between;padding:0 13px;gap:12px;border-bottom:2px solid var(--accent);}
+.ds-brand{display:flex;align-items:center;gap:9px;}
+.ds-brand .logo{width:30px;height:30px;border-radius:6px;background:var(--accent);
+  display:flex;align-items:center;justify-content:center;flex:none;}
+.ds-brand h1{font-size:14px;font-weight:800;letter-spacing:-.2px;line-height:1.05;}
+.ds-brand p{font-size:9px;color:var(--ink-soft);font-weight:600;}
+.ds-tabs{display:flex;gap:3px;}
+.ds-tabs button{border:1px solid var(--line-strong);background:var(--n-papel);padding:6px 13px;
+  font-size:11.5px;font-weight:700;cursor:pointer;color:var(--ink-soft);border-radius:5px;
+  font-family:inherit;}
+.ds-tabs button:hover{color:var(--ink);}
+.ds-tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+.ds-units{display:flex;align-items:center;gap:7px;}
+
+#appwrap{flex:1;min-height:0;overflow:auto;padding:7px;}
+
+/* ---- the datasheet ---- */
+.sheet{height:calc(100vh - 60px);background:var(--n-papel);border:1px solid var(--line-strong);
+  border-radius:5px;display:grid;grid-template-columns:minmax(0,1.04fr) minmax(0,0.96fr);
+  grid-template-rows:auto minmax(0,1fr);overflow:hidden;
+  box-shadow:0 2px 10px rgba(20,40,70,.10);}
+
+/* part-info strip */
+.ds-info{grid-column:1/-1;display:flex;flex-wrap:wrap;background:var(--n-papel);
+  border-bottom:1px solid var(--line-strong);}
+.fcell{flex:1 1 14%;min-width:118px;padding:4px 9px;border-right:1px solid var(--line);
+  border-bottom:1px solid var(--line);}
+.fcell .k{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--ink-soft);}
+.fcell .v{font-size:12px;font-weight:800;color:var(--n-marca-tinta);margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fcell input,.fcell select{width:100%;border:1px solid var(--line-strong);border-radius:4px;
+  padding:2px 4px;font-size:11.5px;font-family:inherit;font-weight:700;color:var(--ink);
+  background:var(--n-papel);margin-top:1px;}
+.fcell input:focus,.fcell select:focus{outline:none;border-color:var(--accent);
+  box-shadow:0 0 0 2px var(--accent-soft);}
+.fcell .wbtn{margin-top:3px;width:100%;border:0;background:var(--accent);color:#fff;
+  border-radius:4px;padding:3px;font-size:9.5px;font-weight:800;cursor:pointer;font-family:inherit;}
+.fcell .wbtn:hover{background:var(--accent-deep);}
+.fcell .wbtn:disabled{background:var(--ok);}
+
+/* columns */
+.ds-left{border-right:1px solid var(--line-strong);display:flex;flex-direction:column;
+  min-height:0;overflow:hidden;}
+.ds-right{display:flex;flex-direction:column;min-height:0;overflow:hidden;}
+.ds-sech{background:var(--accent);color:#fff;font-size:9px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.8px;padding:4px 9px;flex:none;
+  display:flex;justify-content:space-between;align-items:center;}
+
+/* dimensions table */
+.ds-tblwrap{flex:1;min-height:0;overflow:auto;}
+table.dst{width:100%;border-collapse:collapse;}
+table.dst th{position:sticky;top:0;background:var(--accent-soft);color:var(--n-marca-tinta);
+  font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;padding:4px 7px;
+  text-align:right;border-bottom:1px solid var(--line-strong);}
+table.dst th:first-child{text-align:left;}
+table.dst td{padding:0 7px;border-bottom:1px solid var(--line);font-size:11px;height:21px;
+  text-align:right;font-variant-numeric:tabular-nums;}
+table.dst td.p{text-align:left;color:var(--ink-soft);font-weight:600;white-space:nowrap;}
+table.dst td.p b{color:var(--ink);font-weight:700;}
+table.dst td.p span.sym{color:var(--accent);font-weight:700;font-size:9.5px;}
+table.dst td.cv i{color:var(--ink-soft);font-style:normal;font-size:8.5px;font-weight:600;}
+table.dst td.tol{text-align:center;color:var(--ink-soft);font-size:9px;}
+table.dst tr.calc td{background:var(--n-papel);}
+table.dst tr.calc td.cv{font-weight:800;color:var(--n-marca-tinta);}
+table.dst tr.in td.cv{font-weight:700;}
+table.dst tr.hd td{background:var(--n-papel);color:var(--n-marca-tinta);font-weight:800;font-size:8px;
+  text-transform:uppercase;letter-spacing:.5px;text-align:left;height:18px;}
+table.dst input{width:100%;border:1px solid var(--accent);border-radius:3px;padding:1px 4px;
+  font-size:11px;font-family:inherit;font-weight:800;text-align:right;color:var(--n-marca-tinta);
+  background:var(--n-avi-fondo);}
+table.dst input:focus{outline:none;box-shadow:0 0 0 2px var(--accent-soft);}
+
+/* right column */
+.ds-rtop{flex:none;display:grid;grid-template-columns:1fr 1fr;
+  border-bottom:1px solid var(--line-strong);height:206px;}
+.ds-diag{border-right:1px solid var(--line);padding:3px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;overflow:hidden;}
+.ds-diag svg{max-width:100%;max-height:198px;height:auto;}
+.ds-graph{padding:3px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.ds-graph svg{max-width:100%;max-height:198px;height:auto;}
+.ds-ph{color:var(--ink-soft);font-size:10.5px;text-align:center;padding:14px;}
+
+.ds-checks{flex:none;border-bottom:1px solid var(--line-strong);padding:6px 9px;
+  display:flex;gap:11px;align-items:center;}
+.ds-score{flex:none;text-align:center;width:74px;}
+.ds-score .band{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;
+  margin-top:1px;line-height:1.15;}
+.ds-kgrid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;}
+.ds-kc{display:flex;justify-content:space-between;font-size:10.5px;border-bottom:1px dotted var(--line);
+  padding-bottom:1px;}
+.ds-kc .kk{color:var(--ink-soft);font-weight:600;}
+.ds-kc .kv{font-weight:800;font-variant-numeric:tabular-nums;}
+.ds-kc .kv.ok{color:var(--ok);}.ds-kc .kv.warn{color:var(--n-avi-tinta);}.ds-kc .kv.crit{color:var(--crit);}
+
+.ds-panel{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
+.ds-panel+.ds-panel{border-top:1px solid var(--line-strong);}
+.ds-panel-b{flex:1;min-height:0;overflow:auto;padding:6px 8px;}
+.dsf{display:flex;gap:6px;font-size:10px;padding:4px 6px;border-radius:5px;margin-bottom:4px;
+  border:1px solid var(--line);}
+.dsf:last-child{margin-bottom:0;}
+.dsf.crit{background:var(--crit-bg);border-color:var(--n-mal-linea);}
+.dsf.warn{background:var(--n-avi-fondo);border-color:var(--n-avi-linea);}
+.dsf.info{background:var(--info-bg);border-color:var(--n-info-linea);}
+.dsf.ok{background:var(--ok-bg);border-color:var(--n-ok-linea);}
+.dsf .di{flex:none;width:14px;height:14px;border-radius:50%;color:#fff;font-size:9px;
+  font-weight:800;display:flex;align-items:center;justify-content:center;}
+.dsf.crit .di{background:var(--crit);}.dsf.warn .di{background:var(--n-avi-fondo);}
+.dsf.info .di{background:var(--info);}.dsf.ok .di{background:var(--ok);}
+.dsf b{display:block;font-size:10px;}
+.dsf .dr{color:var(--ink-soft);font-size:9.5px;margin-top:1px;}
+.ds-feas-item{display:flex;align-items:center;gap:8px;padding:5px 7px;border:1px solid var(--line);
+  border-radius:6px;margin-bottom:5px;cursor:pointer;}
+.ds-feas-item:hover{background:var(--accent-soft);}
+.ds-feas-item.s-ok{border-color:var(--ok);background:var(--ok-bg);}
+.ds-feas-item.s-no{border-color:var(--crit);background:var(--crit-bg);}
+.ds-feas-item .fl{flex:1;font-size:10.5px;}
+.ds-feas-item .fbtns{display:flex;gap:3px;flex:none;}
+.ds-feas-item .fbtn{border:1px solid var(--line-strong);background:var(--n-papel);border-radius:5px;
+  padding:3px 8px;font-size:9.5px;font-weight:800;cursor:pointer;color:var(--ink-soft);
+  font-family:inherit;}
+.ds-feas-item .fbtn.ok.on{background:var(--ok);border-color:var(--ok);color:#fff;}
+.ds-feas-item .fbtn.no.on{background:var(--crit);border-color:var(--crit);color:#fff;}
+.ds-muted{color:var(--ink-soft);font-size:10px;padding:8px;text-align:center;}
+
+  /* El veredicto de factibilidad, encima del Engineering Review. */
+  .vdt{display:flex;align-items:flex-start;gap:10px;border-radius:8px;
+       padding:9px 12px;margin-bottom:9px;border:1px solid;font-size:12.5px;
+       line-height:1.45}
+  .vdt .tg{font-size:11px;font-weight:800;letter-spacing:.05em;padding:3px 9px;
+       border-radius:5px;white-space:nowrap;flex:0 0 auto}
+  .vdt.go{background:var(--n-ok-fondo);border-color:var(--n-ok-linea);color:var(--n-ok-tinta)}
+  .vdt.go .tg{background:#2f7d3f;color:#fff}
+  .vdt.rv{background:var(--n-avi-fondo);border-color:var(--n-avi-linea);color:var(--n-avi-tinta)}
+  .vdt.rv .tg{background:#b8860b;color:#fff}
+  .vdt ul{margin:3px 0 0;padding-left:16px}
+  .vdt li{margin:1px 0}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="ds-brand">
+    <div class="logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 3h14M5 21h14M7 3c0 3 10 3 10 6s-10 3-10 6 10 3 10 6"/>
+      </svg>
+    </div>
+    <div>
+      <h1>ISC Spring Engineering Datasheet</h1>
+      <p>Engineering calculator &amp; manufacturability review</p>
+    </div>
+  </div>
+  <div class="ds-tabs" id="tabs">
+    <button data-t="compression">Compression</button>
+    <button data-t="extension">Extension</button>
+    <button data-t="torsion">Torsion</button>
+    <button data-t="databases">Databases</button>
+  </div>
+  <div class="ds-units">
+    <span class="ulbl">Units</span>
+    <div class="unit-toggle" id="unitToggle">
+      <button data-u="in">Inch</button>
+      <button data-u="mm">Metric</button>
+    </div>
+  </div>
+</header>
+
+<div id="appwrap"><div id="app"></div></div>
+
+
+<script>
+"use strict";
+/* ============================================================================
+   SPRING ENGINEERING CALCULATOR
+   Self-contained, dependency-free. All internal calculation in SI base units:
+   length = mm | force = N | stress = MPa (N/mm^2) | modulus = MPa | moment = N.mm
+   Display layer converts to the user-selected unit system.
+   ============================================================================ */
+
+/* ===== REGLAS DEL TALLER: generado desde nucleo/motor/reglas.js — no editar aqui ===== */
+/* Las reglas del taller de ISC.
+
+   Qué máquina hace esta pieza, qué operaciones secundarias lleva, en qué caja
+   va, a qué servicio de recubrimiento corresponde su acabado, y a qué cliente
+   se parece un nombre escrito de otra forma.
+
+   LA FRONTERA, QUE NO ES ARBITRARIA
+     Aquí vive lo que las reglas DICEN. No vive si se escribe o no: eso depende
+     de si una persona ya puso ese valor a mano, que es estado de una
+     cotización abierta y no una regla del taller. Por eso `sugerirRuta`
+     devuelve la ruta y es la aplicación quien decide si la aplica.
+
+   NADA DE ESTO LEE UNA BASE DE DATOS NI UNA PANTALLA
+     Las tablas entran por argumento -- `maquinas`, `embalajes`,
+     `subcontratistas`, `clientes` --. Lo hace así para que el Cotizador pueda
+     llamarlas con las filas que saca de Postgres y la calculadora con las que
+     tiene en el navegador, sin que ninguno de los dos tenga su propia copia de
+     la regla.
+
+   Fuente única: este fichero. El HTML lo lleva incrustado (`construir.py`).
+*/
+
+/* ------------------------------------------------------------------ tipos */
+
+/* Antes había una tabla de CARRILES por diámetro que elegía bobinadora sin
+   mirar el tipo de resorte: mandaba compresión de 0,16" a la NUCOIL HX-60 --
+   que no hace compresión -- y llegaba a 0,590" con la AIM 3000, que para en
+   0,375". Ahora se filtra por tipo y por alambre, y gana la preferida. */
+const SG_TIPO = { 'Compression Spring': 'compression', 'Tension Spring': 'extension',
+                  'Torsion Spring': 'torsion', 'Wire Form': 'wireform' };
+const SG_CAP = { compression: 'capC', extension: 'capE', torsion: 'capT', wireform: 'capW' };
+
+/* El orden de preferencia lo dio Miguel Rodea (2026-09-03): entre las máquinas
+   capaces, gana la que él pondría primero. */
+const SG_ORDEN = {
+  compression: ["SIMPLEX MC 50", "TORIN W11A", "AIM 3000", "TORIN W10A", "ZX250",
+    "TORIN W125", "TORIN W115A", "TORIN FZ-11", "SHINKO TF-45", "TORIN W11T",
+    "TORIN W12T", "KMH-508", "SHINKO TF-23", "KMH-516"],
+  extension: ["TORIN W11A", "AIM 3000", "TORIN W125", "TORIN W115A", "TORIN FZ-11",
+    "SHINKO TF-45", "NUCOIL HX-60", "NUCOIL CSF-200", "NUCOIL CSF-400", "SHINKO TF-23"],
+  torsion: ["AIM 3000", "ZX250", "TORIN W125", "TORIN FZ-11", "SHINKO TF-45",
+    "NUCOIL HX-60", "TORIN W11T", "NUCOIL CSF-200", "NUCOIL CSF-400", "TORIN W12T",
+    "SHINKO TF-23"],
+  wireform: ["AIM 3000", "ZX250", "NUCOIL HX-60", "NUCOIL CSF-200", "NUCOIL CSF-400",
+    "AIM AFM-3D2-T"]
+};
+
+const _num = s => (typeof s === 'number' ? s
+  : (!s ? null : (isNaN(parseFloat(String(s).replace(/[$,\s]/g, ''))) ? null
+                  : parseFloat(String(s).replace(/[$,\s]/g, '')))));
+const _norm = t => String(t).toUpperCase().replace(/\(FENN\)/, '').replace(/[^A-Z0-9]/g, '');
+
+/* --------------------------------------------------------------- máquinas */
+
+/* El tope por material: hay materiales que una máquina sólo dobla hasta un
+   diámetro menor que el suyo. Devuelve por qué NO puede, o null.
+
+   Rodea lo contestó en su columna «Material caps (if max dia drops)», y sólo
+   para una: la SIMPLEX MC 50 con temple en aceite, que le baja de .198" a
+   .165". Vive aquí, y no dentro de quien elige, porque lo aplican los dos
+   lados -- el dictamen del Spring Calculator y la ruta automática de la
+   cotización -- y es la misma regla: tiene que ser el mismo código.
+
+   `material` es la fila del catálogo, no un identificador: se compara
+   `capMaterial` con su nombre, así que un tope nuevo se añade como dato y esto
+   no se toca. */
+function topeDeMaterial(maquina, material, dmm) {
+  if (!maquina || !material || !maquina.capWireMaxMm) return null;
+  const suyo = String(maquina.capMaterial || '').trim().toLowerCase();
+  if (!suyo || suyo !== String(material.name || '').trim().toLowerCase()) return null;
+  if (!(dmm > maquina.capWireMaxMm)) return null;
+  return suyo + ' above ' + maquina.capWireMaxMm + ' mm on this machine';
+}
+
+/* La bobinadora: entre las capaces para ese tipo y ese alambre, la que el
+   taller prefiere. Sin tipo no se elige nada -- una descripción que no es un
+   resorte no se convierte en el resorte más parecido.
+
+   `material` es la fila del catálogo y es opcional. Sin él no se aplica el
+   tope: con temple en aceite de .177" esto devolvía la SIMPLEX MC 50, que no
+   puede correrlo, y la pieza se cotizaba a un cuarto de lo que cuesta en la
+   máquina que sí. Quien llame debería pasarlo siempre que lo tenga. */
+function bobinadora(descripcion, diaIn, maquinas, material) {
+  const tipo = SG_TIPO[descripcion];
+  if (!tipo) return null;
+  const cap = SG_CAP[tipo], orden = SG_ORDEN[tipo] || [];
+  const dmm = diaIn * 25.4;
+  const capaces = (maquinas || []).filter(m =>
+    m.family === 'COILER' && !m.excluded && m[cap] &&
+    m.wireMinMm && m.wireMaxMm && dmm >= m.wireMinMm && dmm <= m.wireMaxMm &&
+    !topeDeMaterial(m, material, dmm));
+  if (!capaces.length) return null;
+  const puesto = m => {
+    const i = orden.findIndex(n => _norm(n) === _norm(m.name));
+    return i < 0 ? 99 : i;
+  };
+  return capaces.sort((a, b) => puesto(a) - puesto(b))[0];
+}
+
+function porNombre(nombre, maquinas) {
+  return (maquinas || []).find(m => m.name === nombre) || null;
+}
+
+/* Las secundarias salen del plano, no de una lista por defecto.
+
+   El horno va por material o porque el plano pida tratamiento térmico. NO por
+   el acabado: un "Zinc Clear & Bake" lleva un horneado que hace el recubridor
+   -- es literalmente uno de los servicios subcontratados -- no el horno de
+   ISC. Buscar "bake" en el acabado metía el horno en casi todas las piezas de
+   zinc, que son casi todas.
+
+   Queda fuera el otro caso de Rodea, "resortes muy grandes": no dio umbral,
+   así que no hay forma de decidirlo sin inventárselo. Lo añade una persona. */
+function secundarias(descripcion, plano, materialCode) {
+  const dw = plano || {}, ops = [];
+  const campo = k => {
+    const f = (dw.fields || []).find(x => x.key === k);
+    return f ? String(f.value || '').toLowerCase() : '';
+  };
+  if (descripcion === 'Compression Spring') {
+    if (/ground/.test(campo('endType')))
+      ops.push({ m: 'Grinder A', why: 'the drawing calls for ground ends' });
+  } else if (descripcion === 'Tension Spring') {
+    ops.push({ m: 'Looping / Hooks', why: 'extension spring: hook forming' });
+  } else {
+    ops.push({ m: 'Bending / Kick', why: 'leg bending' });
+  }
+  const revision = (dw.feasibility || []).map(x => String(x.label || '').toLowerCase()).join(' | ');
+  if (materialCode === 'SS177')
+    ops.push({ m: 'Stationary Oven', why: '17-7 PH needs ageing' });
+  else if (/heat treatment|stress relie|anneal/.test(revision))
+    ops.push({ m: 'Stationary Oven', why: 'the drawing calls for heat treatment' });
+  return ops;
+}
+
+/* --------------------------------------------------------------- embalaje */
+
+/* La caja se elige por el peso TOTAL del tramo, así que otra cantidad puede
+   significar otra caja -- o barriles. */
+function embalaje(pesoLb, descripcion, cantidad, embalajes) {
+  const wt = _num(pesoLb), qty = _num(cantidad);
+  if (!wt || wt <= 0 || !qty || qty <= 0) return null;
+  const tierWt = wt * qty;
+  let id, objetivo;
+  if (tierWt >= 400) { id = 'barrels no lids'; objetivo = 130; }
+  else if (descripcion === 'Wire Form' && tierWt >= 30) { id = 'CHP12012'; objetivo = 15; }
+  else if (tierWt >= 200) { id = 'COR121212U'; objetivo = 17; }
+  else if (tierWt >= 60) { id = 'COR100803'; objetivo = 13; }
+  else { id = 'COR11050'; objetivo = 11; }
+  const lista = embalajes || [];
+  if (!lista.some(x => x.id === id)) id = (lista[0] || {}).id || '';
+  let ppb = Math.max(1, Math.round(objetivo / wt));
+  const redondas = [1, 2, 5, 10, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500,
+                    5000, 10000, 25000, 50000];
+  let mejor = redondas[0];
+  redondas.forEach(n => { if (Math.abs(n - ppb) < Math.abs(mejor - ppb)) mejor = n; });
+  ppb = Math.min(mejor, qty);
+  return { id: id, ppb: ppb, boxWt: ppb * wt, tierWt: tierWt };
+}
+
+/* --------------------------------------------------------------- acabados */
+
+function normAcabado(t) {
+  return String(t || '').toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]/g, '');
+}
+
+/* El acabado del plano, traducido a servicio de recubrimiento.
+
+   `tabla` son las grafías del historial de cotizaciones que tradujo Rodea. Un
+   acabado que no esté NO se convierte en el más parecido: adivinar aquí es
+   elegir a qué proveedor va la pieza y a qué precio.
+
+   Segunda pasada: que el plano nombre EL SERVICIO tal cual. La tabla traduce
+   lo que ISC tecleó en el pasado, y el plano habla otro idioma -- dice
+   "PASSIVATED" donde el servicio se llama "Passivate". Eso no es adivinar: es
+   la misma palabra. Lo que sí sería adivinar es un "ZINC" a secas. */
+function servicioDelTexto(texto, tabla, subcontratistas) {
+  const txt = String(texto || '');
+  if (!txt) return null;
+  const k = normAcabado(txt);
+  const m = (tabla || {})[k];
+  if (m) return Object.assign({ texto: txt }, m);
+  const sinD = k.replace(/d$/, '');
+  const serv = (subcontratistas || []).reduce((a, s) => a.concat(s.services || []), [])
+    .find(x => { const n = normAcabado(x.service); return n === k || n === sinD; });
+  if (serv) return { texto: txt, canonical: serv.service, service: serv.service, delPlano: true };
+  return { texto: txt, desconocido: true };
+}
+
+/* --------------------------------------------------------------- clientes */
+
+/* Primero exacto por nombre o por código; después por contención, que es lo
+   que salva los "Inc." y los "& Co." de más o de menos. Devuelve null cuando
+   no encuentra: quien llama decide si lo dice o lo calla. */
+function buscarCliente(nombre, clientes) {
+  const txt = String(nombre || '').trim();
+  if (!txt) return null;
+  const n = s => String(s).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const cn = n(txt), lista = clientes || [];
+  return lista.find(c => n(c.name) === cn || n(c.code) === cn) ||
+         lista.find(c => cn && (n(c.name).includes(cn) || cn.includes(n(c.name)))) ||
+         null;
+}
+
+/* ------------------------------------------------------------------ ruta */
+
+/* La firma de una ruta: qué máquinas, a qué cadencia y con qué puesta a punto.
+   Sirve para saber si lo que hay lo escribió la máquina o una persona. */
+function firmaRuta(tramo) {
+  return ((tramo && tramo.routing) || []).filter(o => o.machine)
+    .map(o => o.machine + '@' + (o.pph || '') + '/' + (o.setupH || '')).join(' > ');
+}
+
+/* La ruta completa: bobinadora más secundarias.
+
+   `maquinaElegida` es la del Spring Calculator cuando ya corrió: allí está
+   además la geometría, así que aplica también el aviso de OD.
+
+   `material` es la fila del catálogo, y con ella el tope por material se
+   aplica aquí igual que allí. Antes no llegaba, y no era teórico: con temple en
+   aceite de .177" esto ponía la SIMPLEX MC 50 -- el tope de Rodea son 4,2 mm --
+   en vez de la AIM 3000. La MC 50 no puede correr ese alambre, y cuesta la
+   cuarta parte por pieza: la oferta salía un 75 % por debajo de lo que cuesta
+   hacerla. El aviso de "abre el Spring Calculator" protegía sólo a quien lo
+   leyera. */
+function sugerirRuta(pieza, maquinas, maquinaElegida, material) {
+  const dia = _num(pieza.material && pieza.material.diaIn);
+  if (!dia || dia <= 0)
+    return { err: 'Enter the wire ø first (Material card) — the coiler choice depends on it.' };
+  const fam = pieza.desc || 'Compression Spring';
+  if (!SG_TIPO[fam])
+    return { err: '“' + fam + '” is not a spring type, so there is no automatic ' +
+                  'routing for it — add the operations by hand.' };
+  const elegida = maquinaElegida ? porNombre(maquinaElegida, maquinas) : null;
+  const cm = elegida || bobinadora(fam, dia, maquinas, material);
+  if (!cm) return { err: 'No machine in the shop can coil ' + dia + '" wire for a ' + fam +
+                         (material ? ' in ' + material.name : '') +
+                         '. Above 0.375" there is no coiler at all: flag it for manual ' +
+                         'routing instead of pricing it.' };
+  /* El motivo no es adorno: dice con qué se decidió, y por tanto qué NO se
+     comprobó. Sin material sigue avisando, porque entonces sigue siendo verdad. */
+  const ops = [{ m: cm, pph: cm.pph,
+    why: elegida ? 'chosen by the Spring Calculator (type, wire, OD and material)'
+      : material ? 'preferred coiler that fits the wire and the material'
+                 : 'preferred coiler that fits the wire — open the Spring ' +
+                   'Calculator so the material cap is applied too' }];
+  secundarias(fam, pieza.drawing, pieza.material && pieza.material.code).forEach(s => {
+    const m = porNombre(s.m, maquinas);
+    if (m) ops.push({ m: m, pph: m.pph, why: s.why });
+  });
+  return { fam: fam, ops: ops };
+}
+
+/* ------------------------------------------------------------ el veredicto */
+
+/* Lo que impide aprobar, en una lista. Se calcula para poder enseñarlo ANTES
+   del clic, no descubrirlo pulsando. */
+function faltaParaAprobar(cotizacion) {
+  const falta = [];
+  if (!cotizacion) return ['no quote open'];
+  if (!cotizacion.header || !cotizacion.header.customerCode) falta.push('the customer');
+  const pns = cotizacion.pns || [];
+  if (!pns.some(p => String(p.pn || '').trim())) falta.push('the part number');
+  if (!pns.some(p => (p.tiers || []).some(t => _num(t.qty) > 0))) falta.push('at least one quantity');
+  if (!pns.some(p => _num(p.material.weightLb) > 0)) falta.push('the weight per piece');
+  if (!pns.some(p => (p.tiers || []).some(t => (t.routing || []).some(o => o.machine))))
+    falta.push('a routing');
+  return falta;
+}
+
+const REGLAS = { SG_TIPO, SG_CAP, SG_ORDEN, topeDeMaterial, bobinadora,
+                 porNombre, secundarias,
+                 embalaje, normAcabado, servicioDelTexto, buscarCliente,
+                 firmaRuta, sugerirRuta, faltaParaAprobar };
+
+/* Para Node. En el navegador `module` no existe y esto no hace nada. */
+if (typeof module !== 'undefined' && module.exports) { module.exports = REGLAS; }
+/* ===== fin de las reglas del taller ===== */
+
+/* ===== RESORTES: generado desde nucleo/motor/resortes.js — no editar aqui ===== */
+/* El calculo del resorte de ISC.
+
+   Dado un resorte -- material, alambre, diametro, espiras, longitud libre --
+   dice que fuerza da, si es fabricable, con que reservas, y en que bobinadora
+   del taller sale. Es lo que decide el dictamen de factibilidad que la
+   calculadora de precios necesita antes de dejar aprobar una oferta.
+
+   POR QUE ESTA AQUI Y NO DENTRO DEL HTML
+     Vivia dentro del Spring Engineering Calculator, y una copia hecha a mano
+     vivia ademas en analisis/herramientas/motor.js, que llevaba tiempo rota
+     sin que nadie lo notara. Dos copias del mismo calculo acaban dando dos
+     dictamenes distintos para la misma pieza.
+
+   LAS TABLAS NO ESTAN AQUI
+     `MATERIALS`, `MACHINES` y `ORDEN_TALLER` salen del catalogo del nucleo, y
+     `STATE` es de quien llame: en el navegador es el estado de la pantalla, y
+     desde Node lo pone la herramienta. Se declaran vacios y se rellenan con
+     `configurar()`; en el navegador los pisa directamente el HTML, que es lo
+     que ya hacia cuando todo esto estaba dentro de el.
+
+   Fuente unica: este fichero. El HTML lo lleva incrustado (`construir.py`).
+   ========================================================================= */
+
+/* Vacios a proposito: una llamada antes de tiempo falla donde se ve, y no con
+   los datos de otra pieza. */
+var MATERIALS = [];
+var MACHINES = [];
+var ORDEN_TALLER = {};
+var STATE = { unit: 'in', comp: {}, ext: {}, tors: {} };
+
+/* Las tablas del catalogo del nucleo, en la forma que usa este fichero.
+
+   Vive aqui, en JavaScript, y no en el generador del HTML, porque hacen falta
+   en los dos sitios: al construir la calculadora y al correr las herramientas
+   desde Node. Escrito dos veces volveria a ser el problema que se acaba de
+   quitar. */
+function desdeCatalogo(cat) {
+  const materiales = cat.matReference.map(r => ({
+    id: r.id, name: r.name, astm: r.astm,
+    G: r.G, E: r.E, density: r.densityKgM3, A: r.A, m: r.m,
+    dMin: r.dMinMm, dMax: r.dMaxMm, tempMax: r.tempMaxC,
+    shearFac: r.shearFac, bendFac: r.bendFac, costFac: r.costFac,
+    fatigue: r.fatigue, note: r.note,
+    codigo: r.codigo, alias: r.alias,
+  }));
+
+  /* Solo las de la hoja de Rodea: sin rango de alambre no hay forma de decidir
+     si la pieza cabe. El resto del catalogo son centros de trabajo de
+     operaciones secundarias, que esta aplicacion no elige. */
+  const coil = cat.machines
+    .filter(m => m.family === 'COILER' && m.wireMinMm)
+    .sort((a, b) => a.rank - b.rank);
+
+  const maquinas = coil.map(m => {
+    /* "(FENN)" es como lo llama la contabilidad; en el taller es un TORIN.
+       `_norm` de reglas.js hace que los dos nombres busquen la misma fila. */
+    const name = m.name.replace('(FENN) ', '');
+    /* La clase de setup es una lectura de las horas, no un dato aparte: se
+       calcula para que no pueda contradecir a las horas con las que se cotiza. */
+    const setup = m.setupH <= 2 ? 'Low' : (m.setupH <= 5 ? 'Medium' : 'High');
+    /* Un tope por material bloquea la maquina, asi que manda sobre lo demas.
+       Que no haya OD en la hoja no es un riesgo: es un dato que falta, y se
+       dice tal cual para que nadie lo lea como "no tiene limite". */
+    const risk = m.caps ? m.caps
+      : (m.compSecondary ? 'compression needs a secondary operation'
+        : (!m.odMaxMm ? 'no OD limit on record' : 'none on record'));
+    return {
+      id: name.toLowerCase().replace(/[^a-z0-9]/g, ''), name,
+      wireMin: m.wireMinMm, wireMax: m.wireMaxMm,
+      odMax: m.odMaxMm, odMin: m.odMinMm,
+      compression: m.capC, extension: m.capE, torsion: m.capT, wireform: m.capW,
+      compSecondary: m.compSecondary, rank: m.rank,
+      pph: m.pph, setupH: m.setupH, rateH: m.costRateH, laborH: m.laborH,
+      caps: m.caps, capMaterial: m.capMaterial, capWireMaxMm: m.capWireMaxMm,
+      axes: m.uses, setup: setup,
+      uses: m.uses + '. Usage rank ' + m.rank + ' of ' + coil.length + ' in 2026.',
+      risk: risk,
+    };
+  });
+
+  return { materiales, maquinas };
+}
+
+/* Las dos formas de nombrar un material.
+
+   La cotizacion usa el codigo con el que se compra el alambre -- MW, OT,
+   SS177 -- y el calculo del resorte usa el id de la constante de ingenieria --
+   music, otemp, ss177. Un plano puede traer cualquiera de las dos, o el nombre
+   escrito de otra forma.
+
+   Estaba escrito dos veces, en direcciones opuestas: `SPRING_MAT` en la
+   calculadora de precios y `_mm` en el Spring Calculator. Los alias salen
+   ahora del catalogo, asi que anadir uno se hace en un sitio. */
+function materialDelTexto(texto) {
+  const t = String(texto || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!t) return null;
+  const m = MATERIALS.find(x => (x.alias || []).indexOf(t) >= 0);
+  return m ? m.id : null;
+}
+
+/* El codigo de compra de un material, para pedir su $/lb. */
+function codigoDeMaterial(id) {
+  const m = MATERIALS.find(x => x.id === id);
+  return m ? m.codigo : null;
+}
+
+/* Las reglas del taller, para cuando hagan falta aquí.
+
+   Hoy sólo el tope por material, que decide si una máquina puede correr un
+   alambre de ese material. Vive en `reglas.js` porque la aplica también la ruta
+   automática de la cotización, y una regla en dos ficheros son dos reglas.
+
+   Se busca al usarla, no al cargar: en el navegador los dos van incrustados en
+   la misma página y el orden lo decide `construir.py`; desde Node se pide. */
+function _reglas() {
+  if (typeof REGLAS !== 'undefined') return REGLAS;
+  if (typeof require !== 'undefined') return require('./reglas.js');
+  return null;
+}
+
+function configurar(o) {
+  if (o.materiales) MATERIALS = o.materiales;
+  if (o.maquinas) MACHINES = o.maquinas;
+  if (o.orden) ORDEN_TALLER = o.orden;
+  if (o.estado) STATE = o.estado;
+}
+
+/* ---------- 1. UNIT CONVERSION ---------------------------------------------- */
+var CONV = {
+  len:   {in:1/25.4,        mm:1},          // mm -> display
+  force: {in:1/4.4482216,   mm:1},          // N  -> display
+  stress:{in:0.14503774/1,  mm:1},          // MPa-> display (ksi in inch mode)
+  rate:  {in:5.7101471,     mm:1},          // N/mm -> display
+  moment:{in:0.0088507458,  mm:1}           // N.mm -> display
+};
+var ULBL = {
+  in:{len:'in',force:'lbf',stress:'ksi',rate:'lbf/in',moment:'lbf·in',freq:'Hz'},
+  mm:{len:'mm',force:'N',  stress:'MPa', rate:'N/mm',  moment:'N·mm', freq:'Hz'}
+};
+function toDisp(siVal,kind,u){ return siVal*CONV[kind][u]; }
+function toSI(dispVal,kind,u){ return dispVal/CONV[kind][u]; }
+function ul(kind){ return ULBL[STATE.unit][kind]; }
+
+/* ---------- 4. END-CONDITION TABLE (compression) ---------------------------- */
+var END_TYPES = {
+  plain:        {label:'Plain',             endCoils:0, ground:false},
+  plain_ground: {label:'Plain & Ground',    endCoils:1, ground:true },
+  closed:       {label:'Squared (Closed)',  endCoils:2, ground:false},
+  closed_ground:{label:'Squared & Ground',  endCoils:2, ground:true }
+};
+
+/* ---------- 6. HELPERS ----------------------------------------------------- */
+var PI = Math.PI;
+function getMat(id){ for(var i=0;i<MATERIALS.length;i++) if(MATERIALS[i].id===id) return MATERIALS[i];
+  return MATERIALS[0]; }
+function num(v){ v=parseFloat(v); return isFinite(v)?v:0; }
+function f(v,d){ if(d===undefined)d=2;
+  if(v===null||v===undefined||!isFinite(v)) return '—';
+  return v.toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:0}); }
+function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
+function esc(s){ return String(s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+/* tensile strength (MPa) from diameter (mm) using Sut = A / d^m */
+function tensile(mat,d_mm){
+  var dd=clamp(d_mm,0.05,30);
+  return mat.A/Math.pow(dd,mat.m);
+}
+/* Wahl correction factor */
+function wahl(C){ return (4*C-1)/(4*C-4) + 0.615/C; }
+/* Bergstrasser correction factor */
+function bergs(C){ return (4*C+2)/(4*C-3); }
+/* curvature correction for bending (inner fibre) - torsion springs / hooks */
+function kBendInner(C){ return (4*C*C-C-1)/(4*C*(C-1)); }
+
+/* resolve mean diameter from a diameter value + mode + wire dia */
+function resolveDia(mode,dia,d){
+  if(mode==='OD')   return {D:dia-d,   OD:dia,     ID:dia-2*d};
+  if(mode==='ID')   return {D:dia+d,   OD:dia+2*d, ID:dia};
+  return {D:dia, OD:dia+d, ID:dia-d};               /* mean */
+}
+
+/* =====================================================================
+   7. CALCULATION ENGINE
+   ===================================================================== */
+
+/* ---- 7a. COMPRESSION ------------------------------------------------- */
+function calcCompression(I){
+  var mat=getMat(I.matId), d=I.d, g=resolveDia(I.odMode,I.dia,d);
+  var D=g.D, C=D/d, Na=I.Na, Nt=I.Nt, et=END_TYPES[I.endType];
+  var Kw=wahl(C), Kb=bergs(C);
+  var k = (mat.G*Math.pow(d,4))/(8*Math.pow(D,3)*Na);          /* N/mm */
+  /* solid height */
+  var Ls = et.ground ? d*Nt : d*(Nt+1);
+  var L0=I.L0;
+  /* pitch */
+  var p;
+  if(I.endType==='plain')        p=(L0-d)/Na;
+  else if(I.endType==='plain_ground') p=L0/(Na+1);
+  else if(I.endType==='closed')  p=(L0-3*d)/Na;
+  else                           p=(L0-2*d)/Na;
+  var helix = Math.atan(p/(PI*D))*180/PI;
+  /* deflections & loads */
+  var fSolid = L0-Ls;
+  var Fsolid = k*fSolid;
+  var defl   = L0-I.h;                       /* deflection at working height */
+  var Fwork  = k*defl;
+  var Sut=tensile(mat,d);
+  var tauAllow = mat.shearFac*Sut;
+  var tauWork  = Kw*8*Fwork*D /(PI*Math.pow(d,3));
+  var tauSolid = Kw*8*Fsolid*D/(PI*Math.pow(d,3));
+  var SFwork = tauAllow/tauWork;
+  var SFsolid= tauAllow/tauSolid;
+  var stressPctSolid = tauSolid/Sut*100;
+  /* natural frequency (both ends fixed) fn = 0.5*sqrt(k/m) */
+  var wireLen = PI*D*Na;                                  /* mm */
+  var vol = (PI*d*d/4)*wireLen;                           /* mm^3 */
+  var mass = vol*1e-9*mat.density;                        /* kg */
+  var fn = 0.5*Math.sqrt((k*1000)/mass);                  /* Hz */
+  /* buckling - critical deflection */
+  var alpha = et.ground?0.5:0.707;
+  var lamEff = alpha*L0/D;
+  var C1 = mat.E/(2*(mat.E-mat.G));
+  var C2 = 2*PI*PI*(mat.E-mat.G)/(2*mat.G+mat.E);
+  var inside = 1 - C2/(lamEff*lamEff);
+  var yCrit, absStable=false;
+  if(inside<=0){ yCrit=Infinity; absStable=true; }          /* never buckles */
+  else { yCrit = L0*C1*(1-Math.sqrt(inside)); }
+  var bucklePct = absStable?0:(defl/yCrit*100);
+  var slender = L0/D;
+  var wireLenTot=PI*D*Nt/Math.cos(helix*PI/180);
+  var partWeightKg=(PI*d*d/4)*wireLenTot*1e-9*mat.density;
+  return {mat:mat,d:d,D:D,OD:g.OD,ID:g.ID,C:C,Na:Na,Nt:Nt,Kw:Kw,Kb:Kb,k:k,
+    Ls:Ls,L0:L0,p:p,helix:helix,fSolid:fSolid,Fsolid:Fsolid,defl:defl,Fwork:Fwork,
+    Sut:Sut,tauAllow:tauAllow,tauWork:tauWork,tauSolid:tauSolid,
+    SFwork:SFwork,SFsolid:SFsolid,stressPctSolid:stressPctSolid,
+    fn:fn,mass:mass,yCrit:yCrit,absStable:absStable,bucklePct:bucklePct,
+    slender:slender,alpha:alpha,h:I.h,partWeightKg:partWeightKg,wireLenTot:wireLenTot};
+}
+
+/* ---- 7b. EXTENSION --------------------------------------------------- */
+function calcExtension(I){
+  var mat=getMat(I.matId), d=I.d, g=resolveDia(I.odMode,I.dia,d);
+  var D=g.D, C=D/d, Na=I.Na, Kw=wahl(C);
+  var k=(mat.G*Math.pow(d,4))/(8*Math.pow(D,3)*Na);          /* N/mm */
+  var Fi=I.Fi, x=I.x;
+  var F=Fi+k*x;
+  var Sut=tensile(mat,d);
+  var tauAllow=mat.shearFac*Sut;
+  var sigAllow=mat.bendFac*Sut;
+  /* body stress */
+  var tauBody=Kw*8*F*D/(PI*Math.pow(d,3));
+  /* uncorrected initial-tension stress */
+  var tauI=8*Fi*D/(PI*Math.pow(d,3));
+  /* preferred initial-tension torsional-stress band (SMI), psi -> MPa */
+  var tauIprefPsi = 33500/Math.exp(0.105*C);
+  var bandPsi = 1000*(4-(C-3)/6.5); if(bandPsi<0) bandPsi=0;
+  var tauIpref   = tauIprefPsi*0.00689476;
+  var tauIbandLo = (tauIprefPsi-bandPsi)*0.00689476;
+  var tauIbandHi = (tauIprefPsi+bandPsi)*0.00689476;
+  /* hook stresses */
+  var r1=I.r1>0?I.r1:D/2, r2=I.r2>0?I.r2:D/2;
+  var C1h=2*r1/d, C2h=2*r2/d;
+  var K1 = C1h>1.05 ? (4*C1h*C1h-C1h-1)/(4*C1h*(C1h-1)) : 1.25;
+  var K2 = C2h>1.05 ? (4*C2h-1)/(4*C2h-4) : 1.25;
+  var sigHookA = F*( K1*16*D/(PI*Math.pow(d,3)) + 4/(PI*d*d) );  /* bending at body-to-hook */
+  var tauHookB = K2*8*F*D/(PI*Math.pow(d,3));                    /* torsion at hook bend */
+  /* safety factors */
+  var SFbody = tauAllow/tauBody;
+  var SFhookA= sigAllow/sigHookA;
+  var SFhookB= tauAllow/tauHookB;
+  /* max safe extension - governed by lowest-capacity location */
+  var Fbody  = tauAllow*PI*Math.pow(d,3)/(Kw*8*D);
+  var FhookB = tauAllow*PI*Math.pow(d,3)/(K2*8*D);
+  var FhookA = sigAllow/( K1*16*D/(PI*Math.pow(d,3)) + 4/(PI*d*d) );
+  var Fcap=Math.min(Fbody,FhookA,FhookB);
+  var govName = Fcap===Fbody?'spring body':(Fcap===FhookA?'hook bend (point A)':'hook bend (point B)');
+  var xMax=(Fcap-Fi)/k;
+  /* hook developed length: loop of mean radius r1, turns set by hook style */
+  var hookTurns=({machine_full:1.0,machine_half:0.55,crossover:1.15,side:1.05,extended:1.7,special:1.2})[I.hookType]||1.0;
+  var hookDevLen=hookTurns*2*PI*r1;
+  var wireLenTot=PI*D*Na+2*hookDevLen;
+  var partWeightKg=(PI*d*d/4)*wireLenTot*1e-9*mat.density;
+  return {mat:mat,d:d,D:D,OD:g.OD,ID:g.ID,C:C,Na:Na,Kw:Kw,k:k,Fi:Fi,x:x,F:F,
+    Sut:Sut,tauAllow:tauAllow,sigAllow:sigAllow,tauBody:tauBody,tauI:tauI,
+    tauIpref:tauIpref,tauIbandLo:tauIbandLo,tauIbandHi:tauIbandHi,
+    r1:r1,r2:r2,K1:K1,K2:K2,sigHookA:sigHookA,tauHookB:tauHookB,
+    SFbody:SFbody,SFhookA:SFhookA,SFhookB:SFhookB,
+    xMax:xMax,Fcap:Fcap,govName:govName,bodyLen:I.bodyLen,hookType:I.hookType,partWeightKg:partWeightKg,wireLenTot:wireLenTot};
+}
+
+/* ---- 7c. TORSION ----------------------------------------------------- */
+function calcTorsion(I){
+  var mat=getMat(I.matId), d=I.d, g=resolveDia(I.odMode,I.dia,d);
+  var D=g.D, C=D/d, Nb=I.Nb;
+  /* active coils incl. leg contribution (two legs of equal length assumed) */
+  var Ne=(2*I.legLen)/(3*PI*D);
+  var Na=Nb+Ne;
+  var Ki=kBendInner(C);
+  /* angular rate: moment per revolution (10.8 empirical incl. friction) */
+  var kRev=(mat.E*Math.pow(d,4))/(10.8*D*Na);     /* N.mm / rev */
+  var kDeg=kRev/360;                              /* N.mm / deg */
+  var ang=I.angle;
+  var M=kDeg*ang;                                 /* N.mm at given angle */
+  var Sut=tensile(mat,d);
+  var sigAllow=mat.bendFac*Sut;
+  var sigma=Ki*32*M/(PI*Math.pow(d,3));           /* bending stress, inner fibre */
+  var SF=sigAllow/sigma;
+  /* safe angular deflection */
+  var sigPerDeg=Ki*32*kDeg/(PI*Math.pow(d,3));
+  var angSafe=sigAllow/sigPerDeg;
+  /* diameter change under load */
+  var angRev=ang/360;
+  var Dload, idLoad;
+  if(I.loadDir==='closing'){ Dload=D*Nb/(Nb+angRev); }
+  else                     { Dload=D*Nb/Math.max(Nb-angRev,0.01); }
+  idLoad=Dload-d;
+  var mandrelClear=idLoad-I.mandrel;
+  var mandrelRec=0.90*idLoad;
+  /* body length */
+  var bodyLen=d*(Nb+1);
+  var wireLenTot=PI*D*Nb+2*I.legLen;
+  var partWeightKg=(PI*d*d/4)*wireLenTot*1e-9*mat.density;
+  return {mat:mat,d:d,D:D,OD:g.OD,ID:g.ID,C:C,Nb:Nb,Ne:Ne,Na:Na,Ki:Ki,
+    kRev:kRev,kDeg:kDeg,angle:ang,M:M,Sut:Sut,sigAllow:sigAllow,sigma:sigma,SF:SF,
+    angSafe:angSafe,Dload:Dload,idLoad:idLoad,mandrel:I.mandrel,
+    mandrelClear:mandrelClear,mandrelRec:mandrelRec,bodyLen:bodyLen,
+    windDir:I.windDir,loadDir:I.loadDir,legLen:I.legLen,partWeightKg:partWeightKg,wireLenTot:wireLenTot};
+}
+
+/* =====================================================================
+   8. MANUFACTURABILITY SCORING  -> {score, flags:[{level,title,rec}]}
+   level: crit | warn | info | ok
+   ===================================================================== */
+function scoreCommon(flags,d,mat){
+  var pen=0;
+  if(d<mat.dMin||d>mat.dMax){
+    pen+=15;
+    flags.push({level:'warn',title:'Wire diameter outside material data range',
+      rec:'Wire ø '+f(toDisp(d,'len',STATE.unit),3)+' '+ul('len')+
+      ' is outside the validated range for '+mat.name+
+      ' ('+f(toDisp(mat.dMin,'len',STATE.unit),3)+'–'+
+      f(toDisp(mat.dMax,'len',STATE.unit),3)+' '+ul('len')+
+      '). Tensile-strength estimate is extrapolated — confirm with the wire supplier.'});
+  }
+  return pen;
+}
+function bandFromScore(s){
+  if(s>=90) return {band:'Easy to manufacture',  color:'#1f8a4c',
+    desc:'Design sits well inside normal shop limits.'};
+  if(s>=70) return {band:'Manufacturable',       color:'#3f9e57',
+    desc:'Producible with normal process controls.'};
+  if(s>=50) return {band:'Engineering review',   color:'#b9770e',
+    desc:'Requires engineering review before quoting / release.'};
+  if(s>=30) return {band:'High manufacturing risk',color:'#d35400',
+    desc:'Significant risk — expect yield loss and added cost.'};
+  return {band:'Not recommended',color:'#c0392b',
+    desc:'Design is at or beyond practical limits — redesign advised.'};
+}
+
+function scoreCompression(R){
+  var flags=[], pen=0, mat=R.mat;
+  /* Un 100 sin punto de trabajo no es un resorte impecable: es un resorte
+     que nadie ha podido evaluar. Se dice antes que nada. */
+  if(!(R.h>0)) flags.push({level:'info',
+    title:'Working stress, buckling and set not evaluated',
+    rec:'The drawing gives no working point, so there is no deflection to evaluate. The score below covers geometry and coilability only \u2014 not how the spring behaves in service.'});
+  /* spring index */
+  if(R.C<4){ pen+=26; flags.push({level:'crit',title:'Spring index too low (C = '+f(R.C,2)+')',
+    rec:'C below 4 is very hard to coil, causes high coiling stress and tool wear. Increase mean diameter or reduce wire diameter to bring C into 5–12.'}); }
+  else if(R.C<5){ pen+=10; flags.push({level:'warn',title:'Spring index low (C = '+f(R.C,2)+')',
+    rec:'C of 4–5 is coilable but stresses tooling. Aim for 5–12 where practical.'}); }
+  else if(R.C>15){ pen+=20; flags.push({level:'crit',title:'Spring index too high (C = '+f(R.C,2)+')',
+    rec:'C above 15 gives a slack, tangle-prone coil with inconsistent free length. Reduce mean diameter or increase wire diameter.'}); }
+  else if(R.C>12){ pen+=8; flags.push({level:'warn',title:'Spring index high (C = '+f(R.C,2)+')',
+    rec:'C of 12–15 risks tangling and free-length scatter. Tighten toward 5–12 if the envelope allows.'}); }
+  else flags.push({level:'ok',title:'Spring index in ideal range (C = '+f(R.C,2)+')',rec:''});
+  /* wire vs material range */
+  pen+=scoreCommon(flags,R.d,mat);
+  /* geometry consistency */
+  if(R.ID<=0){ pen+=40; flags.push({level:'crit',title:'OD / ID conflict',
+    rec:'Inside diameter computes to zero or negative. Check wire diameter and the entered diameter / mode.'}); }
+  if(R.L0<=R.Ls){ pen+=40; flags.push({level:'crit',title:'Free length ≤ solid height',
+    rec:'Free length must exceed solid height ('+f(toDisp(R.Ls,'len',STATE.unit),3)+' '+ul('len')+'). The spring has no working travel — revise free length or coil count.'}); }
+  else if(R.h>0&&R.h<R.Ls){ pen+=22; flags.push({level:'crit',title:'Working height below solid height',
+    rec:'Working height '+f(toDisp(R.h,'len',STATE.unit),3)+' '+ul('len')+' is below solid height. The spring is over-travelled — it will be forced past solid.'}); }
+  /* stress / safety - working load is the primary check.
+     Sin altura de trabajo no hay deflexion, y sin deflexion la tension no
+     significa nada: se salta en vez de penalizar sobre un supuesto. */
+  if(R.h>0&&R.SFwork<1){ pen+=36; flags.push({level:'crit',title:'Overstressed at working load (SF = '+f(R.SFwork,2)+')',
+    rec:'Operating stress exceeds the allowable shear stress — the spring yields in normal use. Increase wire diameter, raise the spring index, or add active coils.'}); }
+  else if(R.h>0&&R.SFwork<1.2){ pen+=18; flags.push({level:'warn',title:'Low safety factor at working load (SF = '+f(R.SFwork,2)+')',
+    rec:'Operating stress is close to the allowable. Target SF ≥ 1.2 static, higher for cyclic / fatigue duty.'}); }
+  else if(R.h>0&&R.SFwork<1.5){ pen+=6; flags.push({level:'info',title:'Moderate working safety factor (SF = '+f(R.SFwork,2)+')',
+    rec:'Adequate for static duty. For cyclic or fatigue loading aim for SF ≥ 1.5.'}); }
+  /* solid-stress check - secondary: many springs are not designed to go solid */
+  if(R.SFsolid<1){ pen+=12; flags.push({level:'warn',title:'Spring takes a set if compressed solid (SF = '+f(R.SFsolid,2)+')',
+    rec:'Solid stress exceeds the allowable. Acceptable only if the spring is never compressed fully solid in service; otherwise preset (cold-set) the spring or add capacity.'}); }
+  /* buckling: tambien va con la deflexion de trabajo */
+  if(R.h>0&&!R.absStable){
+    if(R.bucklePct>=100){ pen+=24; flags.push({level:'crit',title:'Buckling expected at working deflection',
+      rec:'Working deflection exceeds the critical buckling deflection. Use a guide rod or bore, reduce free length, or increase mean diameter.'}); }
+    else if(R.bucklePct>=70){ pen+=12; flags.push({level:'warn',title:'Buckling risk ('+f(R.bucklePct,0)+'% of critical deflection)',
+      rec:'Approaching the buckling limit. Consider a guide rod / bore or a shorter, larger-diameter spring.'}); }
+  }
+  if(R.slender>5.3){ flags.push({level:'info',title:'Slender spring (L0 / D = '+f(R.slender,1)+')',
+    rec:'Slenderness above ~5 makes buckling sensitive to end conditions. Squared & ground ends and a guide are advisable.'}); }
+  /* pitch / helix */
+  if(R.helix>12){ pen+=10; flags.push({level:'warn',title:'Helix angle high ('+f(R.helix,1)+'°)',
+    rec:'Helix angle above ~12° reduces coiling accuracy and the rate formula loses precision. Add coils or reduce free length.'}); }
+  if(R.p<=R.d){ pen+=8; flags.push({level:'warn',title:'Pitch at or below wire diameter',
+    rec:'Coils touch or overlap at free length. Increase free length or reduce coil count.'}); }
+  /* coil count */
+  if(R.Na<3){ pen+=10; flags.push({level:'warn',title:'Few active coils (Na = '+f(R.Na,1)+')',
+    rec:'Below ~3 active coils the rate is hard to hold and end effects dominate. Add coils if the envelope allows.'}); }
+  /* grinding feasibility */
+  if(END_TYPES[STATE.comp.endType].ground){
+    if(R.C>13){ pen+=6; flags.push({level:'warn',title:'Grinding feasibility risk',
+      rec:'High index + ground ends: slender coils can deflect during grinding, hurting squareness and load tolerance.'}); }
+    else flags.push({level:'info',title:'Ends are ground — secondary grinding operation required',
+      rec:'Include end-grinding in routing and cost. Verify squareness and parallelism tolerances are achievable.'});
+  }
+  var score=clamp(Math.round(100-pen),0,100);
+  return {score:score,flags:flags};
+}
+
+function scoreExtension(R){
+  var flags=[],pen=0,mat=R.mat;
+  if(R.C<4){ pen+=24; flags.push({level:'crit',title:'Spring index too low (C = '+f(R.C,2)+')',
+    rec:'Low index is hard to coil and over-stresses tooling. Increase mean diameter or reduce wire diameter.'}); }
+  else if(R.C<5){ pen+=9; flags.push({level:'warn',title:'Spring index low (C = '+f(R.C,2)+')',
+    rec:'Coilable but hard on tooling. Aim for 5–12.'}); }
+  else if(R.C>15){ pen+=18; flags.push({level:'crit',title:'Spring index too high (C = '+f(R.C,2)+')',
+    rec:'Very high index gives an unstable, tangle-prone coil. Reduce mean diameter or increase wire diameter.'}); }
+  else if(R.C>12){ pen+=7; flags.push({level:'warn',title:'Spring index high (C = '+f(R.C,2)+')',
+    rec:'Tighten toward 5–12 to improve consistency.'}); }
+  else flags.push({level:'ok',title:'Spring index in ideal range (C = '+f(R.C,2)+')',rec:''});
+  pen+=scoreCommon(flags,R.d,mat);
+  /* initial tension band */
+  if(R.tauI<R.tauIbandLo){ pen+=10; flags.push({level:'warn',title:'Initial tension below preferred band',
+    rec:'Coiled-in stress '+f(toDisp(R.tauI,'stress',STATE.unit),1)+' '+ul('stress')+
+    ' is under the preferred range ('+f(toDisp(R.tauIbandLo,'stress',STATE.unit),1)+'–'+
+    f(toDisp(R.tauIbandHi,'stress',STATE.unit),1)+' '+ul('stress')+'). Low initial tension is hard to hold consistently in production.'}); }
+  else if(R.tauI>R.tauIbandHi){ pen+=14; flags.push({level:'warn',title:'Initial tension above preferred band',
+    rec:'Coiled-in stress exceeds the preferred range. High initial tension is difficult to coil and may relax in service. Reduce it or accept tighter process control.'}); }
+  else flags.push({level:'ok',title:'Initial tension within preferred band',rec:''});
+  /* hook stresses - extension springs usually fail at the hook */
+  var SFhook=Math.min(R.SFhookA,R.SFhookB);
+  if(SFhook<1){ pen+=32; flags.push({level:'crit',title:'Hook overstressed (SF = '+f(SFhook,2)+')',
+    rec:'Stress at the hook exceeds the allowable — hooks are the usual failure point. Increase the hook bend radius, reduce load, or use a heavier wire.'}); }
+  else if(SFhook<1.5){ pen+=16; flags.push({level:'warn',title:'Low hook safety factor (SF = '+f(SFhook,2)+')',
+    rec:'Hooks carry a stress concentration. Target SF ≥ 1.5 static and well above that for cyclic duty. Increase the bend radius.'}); }
+  if(R.sigHookA>R.tauBody*1.25 || R.tauHookB>R.tauBody*1.25){
+    flags.push({level:'info',title:'Hook is the limiting feature',
+    rec:'Hook stress exceeds body stress — fatigue cracks will start at the hook. Generous bend radii and stress-relief help.'}); }
+  if(R.SFbody<1.2 && R.SFbody>=0){ pen+=14; flags.push({level:'warn',title:'Low body safety factor (SF = '+f(R.SFbody,2)+')',
+    rec:'Body operating stress is high. Target SF ≥ 1.2 static.'}); }
+  /* hook-forming complexity */
+  var hookPen={machine_full:0,machine_half:0,crossover:5,side:4,extended:8,special:12};
+  var hp=hookPen[R.hookType]||0;
+  if(hp>0){ pen+=hp; flags.push({level:'warn',title:'Hook type adds forming complexity',
+    rec:'The selected hook style needs extra forming / secondary operations. Standard machine loops are the most economical and repeatable.'}); }
+  /* set removal not possible */
+  flags.push({level:'info',title:'Close-wound body — set cannot be removed',
+    rec:'Extension springs are coiled solid, so cold-set / preset is not available. Keep body stress conservative.'});
+  var score=clamp(Math.round(100-pen),0,100);
+  return {score:score,flags:flags};
+}
+
+function scoreTorsion(R){
+  var flags=[],pen=0,mat=R.mat;
+  if(R.C<4){ pen+=24; flags.push({level:'crit',title:'Spring index too low (C = '+f(R.C,2)+')',
+    rec:'Low index over-stresses coiling tooling and raises bending stress. Increase mean diameter or reduce wire diameter.'}); }
+  else if(R.C<5){ pen+=9; flags.push({level:'warn',title:'Spring index low (C = '+f(R.C,2)+')',
+    rec:'Coilable but hard on tooling. Aim for 5–12.'}); }
+  else if(R.C>15){ pen+=18; flags.push({level:'crit',title:'Spring index too high (C = '+f(R.C,2)+')',
+    rec:'High index gives a loose, unstable coil. Reduce mean diameter or increase wire diameter.'}); }
+  else if(R.C>12){ pen+=7; flags.push({level:'warn',title:'Spring index high (C = '+f(R.C,2)+')',
+    rec:'Tighten toward 5–12 for consistency.'}); }
+  else flags.push({level:'ok',title:'Spring index in ideal range (C = '+f(R.C,2)+')',rec:''});
+  pen+=scoreCommon(flags,R.d,mat);
+  /* direction of wind / load */
+  if(R.loadDir==='opening'){ pen+=22; flags.push({level:'crit',title:'Load unwinds the spring',
+    rec:'Torsion springs must be loaded in the direction that winds them tighter (closing). Loading in the opening direction over-stresses the wire and loosens the coil over the mandrel. Reverse the wind direction or the load direction.'}); }
+  else flags.push({level:'ok',title:'Load winds the spring closed (correct direction)',rec:''});
+  /* stress / safety */
+  if(R.SF<1){ pen+=34; flags.push({level:'crit',title:'Bending stress exceeds allowable (SF = '+f(R.SF,2)+')',
+    rec:'The wire yields at the working angle. Increase wire diameter, raise index, or reduce the angle of rotation.'}); }
+  else if(R.SF<1.2){ pen+=15; flags.push({level:'warn',title:'Low safety factor (SF = '+f(R.SF,2)+')',
+    rec:'Operating bending stress is close to the allowable. Target SF ≥ 1.2 static, higher for cyclic duty.'}); }
+  if(R.angle>R.angSafe){ pen+=20; flags.push({level:'crit',title:'Angle of rotation exceeds safe deflection',
+    rec:'Working angle '+f(R.angle,0)+'° is beyond the safe '+f(R.angSafe,0)+'°. Reduce the angle or increase capacity.'}); }
+  /* mandrel clearance */
+  if(R.idLoad<=0){ pen+=20; flags.push({level:'crit',title:'Coil closes onto itself under load',
+    rec:'Inside diameter under load computes to zero. Coil count or angle is excessive.'}); }
+  else if(R.mandrelClear<0){ pen+=24; flags.push({level:'crit',title:'Mandrel interference under load',
+    rec:'The coil ID shrinks to '+f(toDisp(R.idLoad,'len',STATE.unit),3)+' '+ul('len')+
+    ' under load — smaller than the '+f(toDisp(R.mandrel,'len',STATE.unit),3)+' '+ul('len')+
+    ' mandrel. The spring binds. Use a mandrel ≤ '+f(toDisp(R.mandrelRec,'len',STATE.unit),3)+' '+ul('len')+'.'}); }
+  else if(R.mandrel>R.mandrelRec){ pen+=10; flags.push({level:'warn',title:'Tight mandrel clearance',
+    rec:'Mandrel is above the recommended 90% of loaded ID. Drop to ≤ '+
+    f(toDisp(R.mandrelRec,'len',STATE.unit),3)+' '+ul('len')+' to avoid binding and friction.'}); }
+  else flags.push({level:'ok',title:'Mandrel clearance adequate',rec:''});
+  /* leg manufacturability */
+  if(R.legLen>2.5*R.D){ pen+=6; flags.push({level:'warn',title:'Long legs',
+    rec:'Legs longer than ~2.5× mean diameter deflect under load and may need support or a heavier section. Confirm leg geometry with the customer.'}); }
+  if(R.Nb<3){ pen+=8; flags.push({level:'warn',title:'Few body coils (Nb = '+f(R.Nb,1)+')',
+    rec:'Below ~3 body coils the rate is dominated by the legs and is hard to hold. Add coils if possible.'}); }
+  flags.push({level:'info',title:'Leg forming is a secondary operation',
+    rec:'Account for leg bending / end forming in routing and cost. Sharp leg bends concentrate stress — use generous radii.'});
+  var score=clamp(Math.round(100-pen),0,100);
+  return {score:score,flags:flags};
+}
+
+/* =====================================================================
+   9. MACHINE SELECTION
+   ===================================================================== */
+function selectMachine(type,d,OD,matId){
+  /* Los seis pasos de la hoja de Rodea, en su orden. Antes esto puntuaba con un
+     criterio propio -- posicion del alambre en el rango, clase de setup -- y no
+     miraba siquiera si la maquina hace ese tipo de resorte. De ahi salia que la
+     Nucoil CSF-200, que solo hace tension, torsion y wire form, se recomendara
+     para resortes de compresion. */
+  var orden = ORDEN_TALLER[type==='extension'?'extension':type] || [];
+  var puesto = function(nombre){
+    var i = orden.indexOf(nombre);
+    return i<0 ? 99 : i;              /* fuera de la lista: al final */
+  };
+  var cand=[], near=[];
+  for(var i=0;i<MACHINES.length;i++){
+    var m=MACHINES[i];
+    if(!m[type]) continue;                       /* 1. tipo permitido */
+    var notas=[], falla=[];
+    /* 2. diametro de alambre: esto SI bloquea */
+    if(d<m.wireMin) falla.push('wire \u00f8 below min ('+f(toDisp(m.wireMin,'len',STATE.unit),3)+' '+ul('len')+')');
+    if(d>m.wireMax) falla.push('wire \u00f8 above max ('+f(toDisp(m.wireMax,'len',STATE.unit),3)+' '+ul('len')+')');
+    /* 3. el OD maximo AVISA, no bloquea -- y un OD sin declarar no restringe.
+       Once de las 18 no lo tienen; compararlo contra null las descartaba todas. */
+    if(m.odMax && OD>m.odMax)
+      notas.push('OD above the machine maximum ('+f(toDisp(m.odMax,'len',STATE.unit),2)+' '+ul('len')+')');
+    else if(m.odMax && OD>m.odMax*0.85) notas.push('OD near machine maximum');
+    if(m.odMin && OD<m.odMin)
+      notas.push('OD below the machine minimum ('+f(toDisp(m.odMin,'len',STATE.unit),2)+' '+ul('len')+')');
+    /* 4. tope por material: hoy solo la MC 50 con temple en aceite.
+       Sale de `capMaterial` y `capWireMaxMm`, no de leer la frase de Rodea con
+       una expresion regular: la misma regla la aplica `bobinadora()` en la ruta
+       de la cotizacion, y una frase leida en dos sitios se lee distinto. */
+    var _r = _reglas();
+    var _tope = _r ? _r.topeDeMaterial(m, getMat(matId), d) : null;
+    if(_tope) falla.push(_tope);
+    if(d<m.wireMin*1.15||d>m.wireMax*0.85) notas.push('wire \u00f8 near a machine limit');
+    if(m.compSecondary && type==='compression')
+      notas.push('compression on this machine needs a secondary operation');
+    if(falla.length){ near.push({m:m,why:falla}); continue; }
+    cand.push({m:m,score:100-puesto(m.name),notes:notas,pos:puesto(m.name)});
+  }
+  /* 5. gana la preferida del taller entre las que pasan */
+  cand.sort(function(a,b){return a.pos-b.pos;});
+  /* 6. si ninguna pasa, `feasible:false` y `near` dice por que. No se adivina. */
+  return {feasible:cand.length>0,best:cand[0]||null,alt:cand[1]||null,all:cand,near:near};
+}
+
+
+const RESORTES = { configurar, desdeCatalogo, materialDelTexto, codigoDeMaterial, CONV, ULBL, END_TYPES, toDisp, toSI, ul,
+                   getMat, num, f, clamp, esc, tensile, wahl, bergs,
+                   kBendInner, resolveDia,
+                   calcCompression, calcExtension, calcTorsion,
+                   scoreCompression, scoreExtension, scoreTorsion,
+                   selectMachine,
+                   /* Con getter, no copiados: `configurar` los reemplaza, y una
+                      copia se habria quedado apuntando al resorte anterior. */
+                   get STATE() { return STATE; }, set STATE(v) { STATE = v; },
+                   get MATERIALS() { return MATERIALS; },
+                   get MACHINES() { return MACHINES; },
+                   get ORDEN_TALLER() { return ORDEN_TALLER; } };
+
+/* Para Node. En el navegador `module` no existe y esto no hace nada. */
+if (typeof module !== 'undefined' && module.exports) { module.exports = RESORTES; }
+/* ===== fin del calculo del resorte ===== */
+
+/* ---------- 2. MATERIAL DATABASE -------------------------------------------
+   Tensile strength model:  Sut = A / d^m   (d in mm, A in MPa.mm^m)
+   G,E = MPa | density = kg/m^3 | tempMax = deg C
+   shearFac  = allowable torsional stress / Sut  (compression & extension body)
+   bendFac   = allowable bending stress / Sut    (torsion springs & ext. hooks)
+   costFac   = relative material cost (music wire = 1.0)                       */
+/* ===== MATERIALES: generado desde nucleo/datos/catalogo.json — no editar aqui ===== */
+var MAT_DEFAULTS = [
+ {id:"music", name:"Music Wire", astm:"ASTM A228", G:81000, E:203400, density:7860, A:2211, m:0.145, dMin:0.1, dMax:6.5, tempMax:120, shearFac:0.45, bendFac:0.78, costFac:1, fatigue:"Excellent", note:"Highest-quality high-carbon wire. Best fatigue life of the carbon steels; preferred for dynamic / high-cycle service.", codigo:"MW", alias:["MW", "MUSIC", "MUSICWIRE"]},
+ {id:"crsi", name:"Chrome Silicon", astm:"ASTM A401", G:77200, E:203400, density:7860, A:1974, m:0.108, dMin:0.8, dMax:12, tempMax:245, shearFac:0.5, bendFac:0.87, costFac:2.5, fatigue:"Excellent", note:"Alloy steel for shock, impact and elevated-temperature duty. High allowable stress; common for engine / valve springs.", codigo:"CSI", alias:["CSI", "CRSI", "CHROMESILICON"]},
+ {id:"ss302", name:"Stainless 302/304", astm:"ASTM A313", G:69000, E:193000, density:7920, A:1867, m:0.146, dMin:0.1, dMax:10, tempMax:290, shearFac:0.35, bendFac:0.61, costFac:4, fatigue:"Moderate", note:"Austenitic stainless. Good general corrosion resistance; lower allowable stress and modulus than carbon steel.", codigo:"SS", alias:["SS", "SS302", "SS304", "302", "304", "STAINLESS"]},
+ {id:"ss177", name:"17-7 PH Stainless", astm:"ASTM A313 (631)", G:75800, E:203400, density:7800, A:2065, m:0.127, dMin:0.2, dMax:6, tempMax:340, shearFac:0.45, bendFac:0.75, costFac:6, fatigue:"Good", note:"Precipitation-hardening stainless. Heat-treated after forming for high strength + corrosion + moderate elevated-temperature service.", codigo:"SS177", alias:["SS177", "177"]},
+ {id:"otemp", name:"Oil Tempered", astm:"ASTM A229", G:77200, E:196500, density:7860, A:1855, m:0.187, dMin:0.5, dMax:16, tempMax:150, shearFac:0.5, bendFac:0.87, costFac:0.7, fatigue:"Moderate", note:"General-purpose pre-tempered carbon steel. Economical for static and moderate-cycle loads; not for high-cycle fatigue or shock.", codigo:"OT", alias:["OT", "OTEMP", "OILTEMPERED"]},
+ {id:"harddr", name:"Hard Drawn", astm:"ASTM A227", G:78600, E:196500, density:7860, A:1783, m:0.19, dMin:0.7, dMax:12, tempMax:120, shearFac:0.45, bendFac:0.75, costFac:0.5, fatigue:"Low", note:"Lowest-cost spring wire. Suited to static / low-cycle, non-critical applications. Avoid fatigue, shock and tight tolerances.", codigo:"HD", alias:["HD", "HARDDRAWN"]},
+ {id:"inconel", name:"Inconel X-750", astm:"AMS 5698/5699", G:79000, E:214000, density:8250, A:1400, m:0.1, dMin:0.4, dMax:8, tempMax:370, shearFac:0.35, bendFac:0.61, costFac:15, fatigue:"Good", note:"Nickel-chromium superalloy for high-temperature and corrosive environments. Expensive; specify only when service conditions require it.", codigo:"HAST", alias:["HAST", "INCONEL", "NICKEL"]},
+ {id:"phosb", name:"Phosphor Bronze", astm:"ASTM B159", G:41400, E:103000, density:8860, A:1000, m:0.028, dMin:0.1, dMax:7.5, tempMax:95, shearFac:0.35, bendFac:0.61, costFac:5, fatigue:"Low", note:"Copper alloy with good electrical conductivity and corrosion resistance. Low modulus and modest strength; used for contacts / electrical springs.", codigo:"PHOSB", alias:["PHOSB", "PHOSPHORBRONZE"]}
+];
+/* ===== fin de los materiales ===== */
+
+/* ---------- 3. MACHINE DATABASE --------------------------------------------
+   Las 18 bobinadoras de la hoja "Machine Selection Rules", validada por
+   Miguel Rodea el 2026-09-02 y devuelta rellena el 2026-09-03. Ya NO son
+   datos estimados. wireMin/wireMax/odMax/odMin en mm; rank = frecuencia de
+   uso en 2026, 1 = la mas usada.
+   Salen del catalogo del nucleo, que es de donde salen tambien las horas y
+   los ratios con los que se cotiza esa misma maquina. */
+/* ===== MAQUINAS: generado desde nucleo/datos/catalogo.json — no editar aqui ===== */
+var MCH_DEFAULTS = [
+ {id:"simplexmc50", name:"SIMPLEX MC 50", wireMin:1.016, wireMax:5.029, odMax:76.2, odMin:null, compression:true, extension:false, torsion:false, wireform:false, compSecondary:false, rank:1, pph:950, setupH:5, rateH:60, laborH:40, caps:"Oil tempered: max dia drops to .165 in (4.2 mm)", capMaterial:"Oil Tempered", capWireMaxMm:4.2, axes:"Compression ONLY", setup:"Medium", uses:"Compression ONLY. Usage rank 1 of 18 in 2026.", risk:"Oil tempered: max dia drops to .165 in (4.2 mm)"},
+ {id:"torinw11a", name:"TORIN W11A", wireMin:0.381, wireMax:1.829, odMax:39.67, odMin:2.36, compression:true, extension:true, torsion:false, wireform:false, compSecondary:false, rank:2, pph:1500, setupH:3, rateH:15, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Compression, Tension", setup:"Medium", uses:"Compression, Tension. Usage rank 2 of 18 in 2026.", risk:"none on record"},
+ {id:"aim3000", name:"AIM 3000", wireMin:3.607, wireMax:9.525, odMax:null, odMin:null, compression:true, extension:true, torsion:true, wireform:true, compSecondary:false, rank:3, pph:250, setupH:6, rateH:80, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"All types + wire forms", setup:"High", uses:"All types + wire forms. Usage rank 3 of 18 in 2026.", risk:"no OD limit on record"},
+ {id:"torinw10a", name:"TORIN W10A", wireMin:0.203, wireMax:0.711, odMax:22.22, odMin:1.57, compression:true, extension:false, torsion:false, wireform:false, compSecondary:false, rank:4, pph:5000, setupH:3, rateH:15, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Compression ONLY", setup:"Medium", uses:"Compression ONLY. Usage rank 4 of 18 in 2026.", risk:"none on record"},
+ {id:"zx250", name:"ZX250", wireMin:0.508, wireMax:2.489, odMax:null, odMin:null, compression:true, extension:false, torsion:true, wireform:true, compSecondary:false, rank:5, pph:500, setupH:6, rateH:25, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Compression, Torsion, Wire form", setup:"High", uses:"Compression, Torsion, Wire form. Usage rank 5 of 18 in 2026.", risk:"no OD limit on record"},
+ {id:"torinw125", name:"TORIN W125", wireMin:2.032, wireMax:5.258, odMax:95.25, odMin:9.52, compression:true, extension:true, torsion:true, wireform:false, compSecondary:false, rank:6, pph:300, setupH:3, rateH:15, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Compression, Tension, Torsion", setup:"Medium", uses:"Compression, Tension, Torsion. Usage rank 6 of 18 in 2026.", risk:"none on record"},
+ {id:"torinw115a", name:"TORIN W115A", wireMin:0.813, wireMax:2.845, odMax:53.97, odMin:3.96, compression:true, extension:true, torsion:false, wireform:false, compSecondary:false, rank:7, pph:400, setupH:3, rateH:15, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Compression, Tension", setup:"Medium", uses:"Compression, Tension. Usage rank 7 of 18 in 2026.", risk:"none on record"},
+ {id:"torinfz11", name:"TORIN FZ-11", wireMin:0.508, wireMax:2.159, odMax:null, odMin:null, compression:true, extension:true, torsion:true, wireform:false, compSecondary:false, rank:8, pph:4900, setupH:3, rateH:20, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Compression, Tension, Torsion", setup:"Medium", uses:"Compression, Tension, Torsion. Usage rank 8 of 18 in 2026.", risk:"no OD limit on record"},
+ {id:"shinkotf45", name:"SHINKO TF-45", wireMin:2.007, wireMax:4.496, odMax:null, odMin:null, compression:true, extension:true, torsion:true, wireform:false, compSecondary:false, rank:9, pph:450, setupH:10, rateH:50, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Compression, Tension, Torsion", setup:"High", uses:"Compression, Tension, Torsion. Usage rank 9 of 18 in 2026.", risk:"no OD limit on record"},
+ {id:"nucoilhx60", name:"NUCOIL HX-60", wireMin:2.997, wireMax:5.969, odMax:null, odMin:null, compression:false, extension:true, torsion:true, wireform:true, compSecondary:false, rank:10, pph:334, setupH:10, rateH:40, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Tension, Torsion, Wire form", setup:"High", uses:"Tension, Torsion, Wire form. Usage rank 10 of 18 in 2026.", risk:"no OD limit on record"},
+ {id:"torinw11t", name:"TORIN W11T", wireMin:0.381, wireMax:1.854, odMax:39.7, odMin:2.36, compression:true, extension:false, torsion:true, wireform:false, compSecondary:true, rank:11, pph:500, setupH:3, rateH:15, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Torsion (+Compression)", setup:"Medium", uses:"Torsion (+Compression). Usage rank 11 of 18 in 2026.", risk:"compression needs a secondary operation"},
+ {id:"nucoilcsf200", name:"NUCOIL CSF-200", wireMin:0.457, wireMax:2.032, odMax:null, odMin:null, compression:false, extension:true, torsion:true, wireform:true, compSecondary:false, rank:12, pph:400, setupH:6, rateH:20, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Tension, Torsion, Wire form", setup:"High", uses:"Tension, Torsion, Wire form. Usage rank 12 of 18 in 2026.", risk:"no OD limit on record"},
+ {id:"nucoilcsf400", name:"NUCOIL CSF-400", wireMin:1.829, wireMax:4.064, odMax:null, odMin:null, compression:false, extension:true, torsion:true, wireform:true, compSecondary:false, rank:13, pph:650, setupH:6, rateH:30, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Tension, Torsion, Wire form", setup:"High", uses:"Tension, Torsion, Wire form. Usage rank 13 of 18 in 2026.", risk:"no OD limit on record"},
+ {id:"torinw12t", name:"TORIN W12T", wireMin:1.194, wireMax:3.759, odMax:69.85, odMin:6.35, compression:true, extension:false, torsion:true, wireform:false, compSecondary:true, rank:14, pph:350, setupH:3, rateH:15, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Torsion (+Compression)", setup:"Medium", uses:"Torsion (+Compression). Usage rank 14 of 18 in 2026.", risk:"compression needs a secondary operation"},
+ {id:"aimafm3d2t", name:"AIM AFM-3D2-T", wireMin:3.175, wireMax:11.1, odMax:null, odMin:null, compression:false, extension:false, torsion:false, wireform:true, compSecondary:false, rank:15, pph:500, setupH:2, rateH:25, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Wire form ONLY", setup:"Low", uses:"Wire form ONLY. Usage rank 15 of 18 in 2026.", risk:"no OD limit on record"},
+ {id:"kmh508", name:"KMH-508", wireMin:0.305, wireMax:0.787, odMax:null, odMin:null, compression:true, extension:false, torsion:false, wireform:false, compSecondary:false, rank:16, pph:5000, setupH:5, rateH:20, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Compression ONLY", setup:"Medium", uses:"Compression ONLY. Usage rank 16 of 18 in 2026.", risk:"no OD limit on record"},
+ {id:"shinkotf23", name:"SHINKO TF-23", wireMin:0.203, wireMax:2.311, odMax:null, odMin:null, compression:true, extension:true, torsion:true, wireform:false, compSecondary:false, rank:17, pph:327, setupH:10, rateH:40, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Compression, Tension, Torsion", setup:"High", uses:"Compression, Tension, Torsion. Usage rank 17 of 18 in 2026.", risk:"no OD limit on record"},
+ {id:"kmh516", name:"KMH-516", wireMin:0.787, wireMax:1.6, odMax:null, odMin:null, compression:true, extension:false, torsion:false, wireform:false, compSecondary:false, rank:18, pph:7500, setupH:5, rateH:20, laborH:40, caps:null, capMaterial:null, capWireMaxMm:null, axes:"Compression", setup:"Medium", uses:"Compression. Usage rank 18 of 18 in 2026.", risk:"no OD limit on record"}
+];
+/* ===== fin de las maquinas ===== */
+
+/* ---------- 5. APPLICATION STATE ------------------------------------------- */
+
+/* El orden de preferencia del taller, por tipo de producto: frecuencia de uso
+   en 2026 entre las maquinas capaces de ese tipo. Es el paso 5 de la hoja de
+   Rodea. Los filtros de alambre y OD se aplican ANTES que este orden. */
+/* ===== ORDEN DEL TALLER: generado desde nucleo/motor/reglas.js — no editar aqui ===== */
+var ORDEN_TALLER = SG_ORDEN;
+/* ===== fin del orden del taller ===== */
+
+var MATERIALS = JSON.parse(JSON.stringify(MAT_DEFAULTS));
+var MACHINES  = JSON.parse(JSON.stringify(MCH_DEFAULTS));
+
+var STATE = {
+  unit:'in',
+  tab:'compression',
+  dbtab:'materials',
+  meta:{partName:'', partNo:'', finish:'none'},
+  /* all dimensional values stored in SI: mm / N */
+  comp:{matId:'music', d:0, odMode:'OD', dia:0, L0:0, Nt:0,
+        endType:'closed_ground', Na:0, Ls:0, h:0},
+  ext:{ matId:'music', d:0, odMode:'OD', dia:0, bodyLen:0, Na:0, Fi:0,
+        r1:0, r2:0, x:0, hookType:'machine_full'},
+  tors:{matId:'music', d:0, odMode:'mean', dia:0, legLen:0, Nb:0, angle:0,
+        windDir:'right', loadDir:'closing', mandrel:0}
+};
+
+/* Los valores de arranque, congelados antes de que nada los toque. Es lo que
+   se restaura cuando llega OTRO resorte: lo que el plano nuevo no diga tiene
+   que quedar vacio, no heredado del anterior. */
+var LIMPIO = JSON.stringify({meta:STATE.meta, comp:STATE.comp,
+                             ext:STATE.ext, tors:STATE.tors});
+/* Con que resorte se lleno la pizarra. null = todavia con ninguno. */
+var ULTIMO_PLANO = null;
+
+/* =====================================================================
+   10. SVG SPRING DIAGRAMS
+   ===================================================================== */
+function svgComp(R){
+  var W=260,H=320,cx=130,top=46,bot=274;
+  var half=clamp(28+ R.C*2.2,30,70);
+  var n=clamp(Math.round(R.Nt),4,13), seg=(bot-top)/(n);
+  var pts='M '+cx+' '+top;
+  for(var i=0;i<n;i++){
+    var y1=top+seg*(i+0.5), y2=top+seg*(i+1);
+    pts+=' L '+(cx-half)+' '+y1+' L '+(cx+half)+' '+y2.toFixed(1);
+  }
+  pts+=' L '+cx+' '+bot;
+  return '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'+
+    '<rect x="'+(cx-half-22)+'" y="'+(top-12)+'" width="'+(2*half+44)+'" height="9" rx="2" fill="#1f5fa8"/>'+
+    '<rect x="'+(cx-half-22)+'" y="'+(bot+3)+'" width="'+(2*half+44)+'" height="9" rx="2" fill="#1f5fa8"/>'+
+    '<path d="'+pts+'" fill="none" stroke="#143a66" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"/>'+
+    '<line x1="'+cx+'" y1="20" x2="'+cx+'" y2="300" stroke="#cdd4de" stroke-width="1" stroke-dasharray="3 3"/>'+
+    '<line x1="'+(cx+half+38)+'" y1="'+(top-8)+'" x2="'+(cx+half+38)+'" y2="'+(bot+8)+'" stroke="#5a6577" stroke-width="1"/>'+
+    '<path d="M '+(cx+half+34)+' '+(top-4)+' l 4 -4 l 4 4 M '+(cx+half+34)+' '+(bot+4)+' l 4 4 l 4 -4" fill="none" stroke="#5a6577" stroke-width="1"/>'+
+    '<text x="'+(cx+half+44)+'" y="'+((top+bot)/2)+'" font-size="11" fill="#5a6577" transform="rotate(90 '+(cx+half+44)+' '+((top+bot)/2)+')" text-anchor="middle">Free length L0</text>'+
+    '<line x1="'+(cx-half)+'" y1="'+(bot+26)+'" x2="'+(cx+half)+'" y2="'+(bot+26)+'" stroke="#5a6577" stroke-width="1"/>'+
+    '<text x="'+cx+'" y="'+(bot+40)+'" font-size="11" fill="#5a6577" text-anchor="middle">Outside ø (OD)</text>'+
+    '<text x="'+cx+'" y="26" font-size="10.5" fill="#1f5fa8" text-anchor="middle" font-weight="700">COMPRESSION</text>'+
+    '</svg>';
+}
+function svgExt(R){
+  var W=260,H=330,cx=130,top=70,bot=260;
+  var half=clamp(24+R.C*2.0,26,58);
+  var n=clamp(Math.round(R.Na),5,15), seg=(bot-top)/n;
+  var pts='M '+cx+' '+top;
+  for(var i=0;i<n;i++){
+    var y1=top+seg*(i+0.5), y2=top+seg*(i+1);
+    pts+=' L '+(cx-half)+' '+y1.toFixed(1)+' L '+(cx+half)+' '+y2.toFixed(1);
+  }
+  pts+=' L '+cx+' '+bot;
+  var r=18;
+  return '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'+
+    '<path d="M '+cx+' '+top+' L '+cx+' '+(top-14)+
+      ' A '+r+' '+r+' 0 1 1 '+(cx-2)+' '+(top-14-2*r)+'" fill="none" stroke="#143a66" stroke-width="3.4" stroke-linecap="round"/>'+
+    '<path d="M '+cx+' '+bot+' L '+cx+' '+(bot+14)+
+      ' A '+r+' '+r+' 0 1 0 '+(cx-2)+' '+(bot+14+2*r)+'" fill="none" stroke="#143a66" stroke-width="3.4" stroke-linecap="round"/>'+
+    '<path d="'+pts+'" fill="none" stroke="#143a66" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"/>'+
+    '<line x1="'+cx+'" y1="14" x2="'+cx+'" y2="316" stroke="#cdd4de" stroke-width="1" stroke-dasharray="3 3"/>'+
+    '<line x1="'+(cx+half+30)+'" y1="'+top+'" x2="'+(cx+half+30)+'" y2="'+bot+'" stroke="#5a6577" stroke-width="1"/>'+
+    '<text x="'+(cx+half+40)+'" y="'+((top+bot)/2)+'" font-size="11" fill="#5a6577" transform="rotate(90 '+(cx+half+40)+' '+((top+bot)/2)+')" text-anchor="middle">Body length</text>'+
+    '<text x="'+cx+'" y="20" font-size="10.5" fill="#1f5fa8" text-anchor="middle" font-weight="700">EXTENSION</text>'+
+    '<text x="'+cx+'" y="324" font-size="10" fill="#5a6577" text-anchor="middle">hooks at both ends</text>'+
+    '</svg>';
+}
+function svgTors(R){
+  var W=260,H=260,cx=118,cy=130;
+  var n=clamp(Math.round(R.Nb),3,9);
+  var rOut=clamp(20+R.C*3.0,40,86), rIn=22;
+  var circ='';
+  for(var i=0;i<n;i++){
+    var rr=rIn+(rOut-rIn)*(i/(n-1||1));
+    circ+='<circle cx="'+cx+'" cy="'+cy+'" r="'+rr.toFixed(1)+'" fill="none" stroke="#143a66" stroke-width="2.6"/>';
+  }
+  var rm=clamp(rIn*0.6,8,18);
+  var legLen=70;
+  var a1=-20*PI/180, a2= 70*PI/180;
+  var lx1=cx+rOut*Math.cos(a1), ly1=cy+rOut*Math.sin(a1);
+  var lx2=cx+rOut*Math.cos(a2), ly2=cy+rOut*Math.sin(a2);
+  var leg1='M '+lx1+' '+ly1+' L '+(lx1+legLen)+' '+(ly1-30);
+  var leg2='M '+lx2+' '+ly2+' L '+(lx2+34)+' '+(ly2+legLen*0.7);
+  return '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'+
+    '<circle cx="'+cx+'" cy="'+cy+'" r="'+rm+'" fill="#eaf1f9" stroke="#1f5fa8" stroke-width="1.4" stroke-dasharray="3 2"/>'+
+    '<text x="'+cx+'" y="'+(cy+3)+'" font-size="8.5" fill="#1f5fa8" text-anchor="middle">mandrel</text>'+
+    circ+
+    '<path d="'+leg1+'" fill="none" stroke="#143a66" stroke-width="3.4" stroke-linecap="round"/>'+
+    '<path d="'+leg2+'" fill="none" stroke="#143a66" stroke-width="3.4" stroke-linecap="round"/>'+
+    '<path d="M 200 36 a 16 16 0 1 1 -3 -11" fill="none" stroke="#1f8a4c" stroke-width="2.2"/>'+
+    '<path d="M 197 25 l 6 -1 l -1 7 z" fill="#1f8a4c"/>'+
+    '<text x="206" y="60" font-size="9.5" fill="#1f8a4c">load</text>'+
+    '<text x="'+cx+'" y="18" font-size="10.5" fill="#1f5fa8" text-anchor="middle" font-weight="700">TORSION</text>'+
+    '<text x="'+cx+'" y="248" font-size="10" fill="#5a6577" text-anchor="middle">'+n+' coils shown · two legs</text>'+
+    '</svg>';
+}
+
+/* =====================================================================
+   11. RENDERING HELPERS
+   ===================================================================== */
+var app=document.getElementById('app');
+
+function lgraph(title,xLab,yLab,xEnd,yEnd,xw,yw,xStart,yStart){
+  xStart=xStart||0; yStart=yStart||0;
+  if(!isFinite(xEnd))xEnd=0; if(!isFinite(yEnd))yEnd=0;
+  if(!isFinite(xw))xw=0; if(!isFinite(yw))yw=0; if(!isFinite(yStart))yStart=0;
+  var W=340,H=216,mL=54,mR=16,mT=26,mB=34;
+  var pw=W-mL-mR, ph=H-mT-mB;
+  var xmax=Math.max(xEnd,xw,0.0001)*1.06;
+  var ymax=Math.max(yEnd,yw,yStart,0.0001)*1.10;
+  function X(x){ return mL+(x/xmax)*pw; }
+  function Y(y){ return mT+ph-(y/ymax)*ph; }
+  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
+  s+='<text x="'+(W/2)+'" y="14" font-size="11" font-weight="700" fill="#1f5fa8" text-anchor="middle">'+title+'</text>';
+  s+='<rect x="'+mL+'" y="'+mT+'" width="'+pw+'" height="'+ph+'" fill="#f7f9fb" stroke="#cdd4de"/>';
+  for(var g=1;g<4;g++){
+    var gy=mT+ph*g/4, gx=mL+pw*g/4;
+    s+='<line x1="'+mL+'" y1="'+gy+'" x2="'+(mL+pw)+'" y2="'+gy+'" stroke="#e8ebef"/>';
+    s+='<line x1="'+gx+'" y1="'+mT+'" x2="'+gx+'" y2="'+(mT+ph)+'" stroke="#e8ebef"/>';
+  }
+  s+='<line x1="'+X(xStart)+'" y1="'+Y(yStart)+'" x2="'+X(xEnd)+'" y2="'+Y(yEnd)+'" stroke="#1f5fa8" stroke-width="2.6" stroke-linecap="round"/>';
+  s+='<line x1="'+X(xw)+'" y1="'+Y(0)+'" x2="'+X(xw)+'" y2="'+Y(yw)+'" stroke="#d67c2f" stroke-width="1" stroke-dasharray="3 2"/>';
+  s+='<line x1="'+X(0)+'" y1="'+Y(yw)+'" x2="'+X(xw)+'" y2="'+Y(yw)+'" stroke="#d67c2f" stroke-width="1" stroke-dasharray="3 2"/>';
+  s+='<circle cx="'+X(xw)+'" cy="'+Y(yw)+'" r="4.5" fill="#d67c2f"/>';
+  s+='<text x="'+(X(xw)+6)+'" y="'+(Y(yw)-6)+'" font-size="9" fill="#b9770e" font-weight="700">operating point</text>';
+  s+='<text x="'+(mL+pw/2)+'" y="'+(H-5)+'" font-size="9" fill="#5a6577" text-anchor="middle">'+xLab+'</text>';
+  s+='<text x="11" y="'+(mT+ph/2)+'" font-size="9" fill="#5a6577" text-anchor="middle" transform="rotate(-90 11 '+(mT+ph/2)+')">'+yLab+'</text>';
+  s+='<text x="'+mL+'" y="'+(mT+ph+12)+'" font-size="8" fill="#5a6577" text-anchor="middle">0</text>';
+  s+='<text x="'+(mL+pw)+'" y="'+(mT+ph+12)+'" font-size="8" fill="#5a6577" text-anchor="end">'+f(xmax,2)+'</text>';
+  s+='<text x="'+(mL-5)+'" y="'+(mT+ph+3)+'" font-size="8" fill="#5a6577" text-anchor="end">0</text>';
+  s+='<text x="'+(mL-5)+'" y="'+(mT+7)+'" font-size="8" fill="#5a6577" text-anchor="end">'+f(ymax,1)+'</text>';
+  s+='</svg>';
+  return s;
+}
+function loadGraph(R,type){
+  var u=STATE.unit;
+  if(type==='compression')
+    return lgraph('Load vs. Deflection','Deflection, '+ul('len'),'Load, '+ul('force'),
+      toDisp(R.fSolid,'len',u),toDisp(R.Fsolid,'force',u),
+      toDisp(R.defl,'len',u),toDisp(R.Fwork,'force',u),0,0);
+  if(type==='extension')
+    return lgraph('Force vs. Extension','Extension, '+ul('len'),'Force, '+ul('force'),
+      toDisp(R.xMax,'len',u),toDisp(R.Fcap,'force',u),
+      toDisp(R.x,'len',u),toDisp(R.F,'force',u),0,toDisp(R.Fi,'force',u));
+  return lgraph('Torque vs. Angle','Angle, deg','Torque, '+ul('moment'),
+    R.angSafe,toDisp(R.kDeg*R.angSafe,'moment',u),
+    R.angle,toDisp(R.M,'moment',u),0,0);
+}
+function dial(score,color){
+  var r=34,c=2*PI*r,off=c*(1-score/100);
+  return '<svg width="86" height="86" viewBox="0 0 86 86">'+
+    '<circle cx="43" cy="43" r="'+r+'" fill="none" stroke="#e2e6ec" stroke-width="9"/>'+
+    '<circle cx="43" cy="43" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="9"'+
+    ' stroke-linecap="round" stroke-dasharray="'+c.toFixed(1)+'"'+
+    ' stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 43 43)"/>'+
+    '<text x="43" y="40" font-size="21" font-weight="800" fill="#1a2230" text-anchor="middle">'+score+'</text>'+
+    '<text x="43" y="55" font-size="9" fill="#5a6577" text-anchor="middle">/ 100</text>'+
+    '</svg>';
+}
+function flagsHTML(flags){
+  var ic={crit:'!',warn:'!',info:'i',ok:'✓'};
+  var order={crit:0,warn:1,info:2,ok:3};
+  flags=flags.slice().sort(function(a,b){return order[a.level]-order[b.level];});
+  var h='';
+  for(var i=0;i<flags.length;i++){
+    var fl=flags[i];
+    h+='<div class="flag '+fl.level+'"><div class="ic">'+ic[fl.level]+'</div>'+
+       '<div class="ft"><b>'+esc(fl.title)+'</b>'+
+       (fl.rec?'<div class="rec">'+esc(fl.rec)+'</div>':'')+'</div></div>';
+  }
+  return h;
+}
+function machineHTML(sel){
+  if(!sel.feasible){
+    var h='<div class="mch no"><div class="mch-h"><b>No machine fits this design</b>'+
+      '<span class="tag">Not feasible</span></div>'+
+      '<div class="mch-d">No machine in the database can coil this combination of wire diameter, OD and spring type.</div></div>';
+    if(sel.near.length){
+      h+='<div class="legend" style="margin-top:8px;">Closest machines and why they fall short:<br>';
+      for(var i=0;i<sel.near.length;i++)
+        h+='&bull; <b>'+esc(sel.near[i].m.name)+'</b> — '+esc(sel.near[i].why.join('; '))+'<br>';
+      h+='</div>';
+    }
+    return h;
+  }
+  function blk(cand,kind){
+    var m=cand.m;
+    var tag=kind==='best'?'Recommended':'Alternative';
+    return '<div class="mch '+kind+'"><div class="mch-h"><b>'+esc(m.name)+'</b>'+
+      '<span class="tag">'+tag+'</span></div>'+
+      '<div class="mch-d">'+
+      '<span>Wire '+f(toDisp(m.wireMin,'len',STATE.unit),2)+'–'+
+        f(toDisp(m.wireMax,'len',STATE.unit),2)+' '+ul('len')+'</span>'+
+      '<span>OD ≤ '+f(toDisp(m.odMax,'len',STATE.unit),1)+' '+ul('len')+'</span>'+
+      '<span>Setup: '+m.setup+'</span></div>'+
+      '<div class="mch-d" style="margin-top:4px;">'+esc(m.uses)+'</div>'+
+      (cand.notes.length?'<div class="mch-d" style="margin-top:4px;color:var(--n-mal-tinta);">⚠ '+
+        esc(cand.notes.join('; '))+'</div>':'')+
+      '</div>';
+  }
+  var out=blk(sel.best,'best');
+  if(sel.alt) out+=blk(sel.alt,'alt');
+  else out+='<div class="legend">No alternative machine available — only one machine in the database fits.</div>';
+  return out;
+}
+function sumc(k,v,u){
+  return '<div class="sum-cell"><div class="k">'+k+'</div>'+
+    '<div class="v">'+v+(u?' <small>'+u+'</small>':'')+'</div></div>';
+}
+function row(k,v,u){
+  return '<tr><td class="lbl">'+k+'</td><td class="val">'+v+
+    (u?' <small>'+u+'</small>':'')+'</td></tr>';
+}
+function rowPill(k,v,cls){
+  return '<tr><td class="lbl">'+k+'</td><td class="val">'+
+    '<span class="pill '+cls+'">'+v+'</span></td></tr>';
+}
+function fld(label,unitKind,id,val,opts){
+  opts=opts||{};
+  var disp = unitKind ? toDisp(val,unitKind,STATE.unit) : val;
+  var u = unitKind?(' <span class="u">'+ul(unitKind)+'</span>'):'';
+  return '<div class="field"><label>'+label+u+'</label>'+
+    '<input type="number" step="any" id="'+id+'" value="'+
+    (isFinite(disp)?(+disp.toFixed(6)):'')+'"'+
+    (opts.cls?' class="'+opts.cls+'"':'')+'>'+
+    (opts.hint?'<div class="hint">'+opts.hint+'</div>':'')+'</div>';
+}
+function sel(label,id,val,options){
+  var o='';
+  for(var i=0;i<options.length;i++)
+    o+='<option value="'+options[i][0]+'"'+(options[i][0]===val?' selected':'')+'>'+
+       options[i][1]+'</option>';
+  return '<div class="field"><label>'+label+'</label>'+
+    '<select id="'+id+'">'+o+'</select></div>';
+}
+function matOptions(){
+  return MATERIALS.map(function(m){return [m.id,m.name];});
+}
+
+/* =====================================================================
+   12. TAB RENDERERS
+   ===================================================================== */
+function render(){
+  var ut=document.getElementById('unitToggle').children;
+  for(var i=0;i<ut.length;i++) ut[i].classList.toggle('on',ut[i].dataset.u===STATE.unit);
+  var tb=document.getElementById('tabs').children;
+  for(var j=0;j<tb.length;j++) tb[j].classList.toggle('on',tb[j].dataset.t===STATE.tab);
+  if(STATE.tab==='compression') renderComp();
+  else if(STATE.tab==='extension') renderExt();
+  else if(STATE.tab==='torsion') renderTors();
+  else renderDB();
+}
+
+/* =====================================================================
+   12. DATASHEET RENDERERS  (single-page, Acxess-style)
+   ===================================================================== */
+var DS_EMPTY=false;
+var FINISH_OPTS=[['none','None'],['zinc','Zinc Plated'],['boxide','Black Oxide'],
+  ['passiv','Passivated'],['powder','Powder Coat'],['ecoat','E-Coat'],['nickel','Nickel Plated']];
+
+/* repaint #app while preserving focus on the input being edited */
+function paint(html){
+  var ae=document.activeElement, id=ae&&ae.id?ae.id:null, ss=null;
+  try{ ss=ae?ae.selectionStart:null; }catch(e){}
+  app.innerHTML=html;
+  if(id){ var el=document.getElementById(id);
+    if(el){ try{ el.focus(); }catch(e){}
+      try{ if(ss!=null) el.setSelectionRange(ss,ss); }catch(e){} } }
+}
+
+/* ---- cell + row helpers ---- */
+function dsInp(id,si,kind){
+  var disp = kind ? toDisp(si,kind,STATE.unit) : si;
+  var v = (si && isFinite(disp)) ? (+disp.toFixed(6)) : '';
+  return '<input type="number" step="any" id="'+id+'" value="'+v+'">';
+}
+function cellInp(id,si,kind){ return '<td class="cv ed">'+dsInp(id,si,kind)+'</td>'; }
+function cellMir(si,kind,sys,dec){
+  var s=(DS_EMPTY||!si||!isFinite(si))?'':(f(toDisp(si,kind,sys),dec)+' <i>'+ULBL[sys][kind]+'</i>');
+  return '<td class="cv">'+s+'</td>';
+}
+function cellCalc(si,kind,sys,dec){
+  var s=DS_EMPTY?'':(!isFinite(si)?'&mdash;':f(toDisp(si,kind,sys),dec)+' <i>'+ULBL[sys][kind]+'</i>');
+  return '<td class="cv">'+s+'</td>';
+}
+function rowWrap(cls,label,sym,c1,c2,tol){
+  return '<tr class="'+cls+'"><td class="p"><b>'+label+'</b>'+
+    (sym?' <span class="sym">'+sym+'</span>':'')+'</td>'+c1+c2+
+    '<td class="tol">'+(tol||'')+'</td></tr>';
+}
+/* editable length/force row */
+function rowEd(label,sym,id,si,kind,dec,tol){
+  var imp,met;
+  if(STATE.unit==='in'){ imp=cellInp(id,si,kind); met=cellMir(si,kind,'mm',dec); }
+  else { met=cellInp(id,si,kind); imp=cellMir(si,kind,'in',dec); }
+  return rowWrap('in',label,sym,imp,met,tol);
+}
+/* editable unitless row (input spans both unit columns) */
+function rowEdN(label,sym,id,val,tol){
+  var v=(val&&isFinite(val))?(+(+val).toFixed(4)):'';
+  return '<tr class="in"><td class="p"><b>'+label+'</b>'+
+    (sym?' <span class="sym">'+sym+'</span>':'')+'</td>'+
+    '<td class="cv ed" colspan="2"><input type="number" step="any" id="'+id+'" value="'+v+'"></td>'+
+    '<td class="tol">'+(tol||'')+'</td></tr>';
+}
+/* computed length/force/stress/rate/moment row */
+function rowCalc(label,sym,si,kind,dec,tol){
+  return rowWrap('calc',label,sym,cellCalc(si,kind,'in',dec),cellCalc(si,kind,'mm',dec),tol);
+}
+/* computed unitless row */
+function rowCalcN(label,sym,val,dec,tol){
+  var s=DS_EMPTY?'':(!isFinite(val)?'&mdash;':f(val,dec));
+  return '<tr class="calc"><td class="p"><b>'+label+'</b>'+
+    (sym?' <span class="sym">'+sym+'</span>':'')+'</td>'+
+    '<td class="cv" colspan="2" style="text-align:center">'+s+'</td>'+
+    '<td class="tol">'+(tol||'')+'</td></tr>';
+}
+/* computed row with a ready-made string */
+function rowCalcS(label,sym,str,tol){
+  return '<tr class="calc"><td class="p"><b>'+label+'</b>'+
+    (sym?' <span class="sym">'+sym+'</span>':'')+'</td>'+
+    '<td class="cv" colspan="2" style="text-align:center">'+(DS_EMPTY?'':str)+'</td>'+
+    '<td class="tol">'+(tol||'')+'</td></tr>';
+}
+function subh(t){ return '<tr class="hd"><td colspan="4">'+t+'</td></tr>'; }
+/* diameter row: editable when its mode is selected, else computed */
+function diaRow(label,sym,modeKey,curMode,id,iVal,calcSi){
+  if(curMode===modeKey) return rowEd(label,sym,id,iVal,'len',3,'');
+  return rowCalc(label,sym,calcSi,'len',3,'');
+}
+
+/* ---- part-info strip helpers ---- */
+function infoTxt(k,v){
+  return '<div class="fcell"><div class="k">'+k+'</div><div class="v">'+(v||'&mdash;')+'</div></div>';
+}
+function infoInput(k,id,val){
+  return '<div class="fcell"><div class="k">'+k+'</div>'+
+    '<input type="text" id="'+id+'" value="'+esc(val||'')+'" placeholder="&mdash;"></div>';
+}
+function infoSel(k,id,val,opts){
+  var o='';
+  for(var i=0;i<opts.length;i++)
+    o+='<option value="'+opts[i][0]+'"'+(opts[i][0]===val?' selected':'')+'>'+opts[i][1]+'</option>';
+  return '<div class="fcell"><div class="k">'+k+'</div><select id="'+id+'">'+o+'</select></div>';
+}
+function infoWeight(R){
+  var kg=R?R.partWeightKg:NaN, has=!DS_EMPTY&&isFinite(kg)&&kg>0;
+  var disp=has?(STATE.unit==='in'?f(kg*2.2046226,5)+' lb':f(kg*1000,2)+' g'):'&mdash;';
+  var btn=(has&&EMBEDDED)?'<button class="wbtn" onclick="sendWeight('+kg+',this)">&#8594; Use weight in quote</button>':'';
+  return '<div class="fcell"><div class="k">Weight / Part</div><div class="v">'+disp+'</div>'+btn+'</div>';
+}
+function dsDate(){ try{ return new Date().toLocaleDateString(); }catch(e){ return ''; } }
+
+/* ---- key-check chip ---- */
+function dskc(k,v,cls){
+  return '<div class="ds-kc"><span class="kk">'+k+'</span>'+
+    '<span class="kv '+(cls||'')+'">'+v+'</span></div>';
+}
+
+/* ---- design-flag list ---- */
+function dsFlags(flags){
+  var ic={crit:'!',warn:'!',info:'i',ok:'✓'},order={crit:0,warn:1,info:2,ok:3};
+  var fs=flags.slice().sort(function(a,b){return order[a.level]-order[b.level];});
+  var h='';
+  for(var i=0;i<fs.length;i++){ var fl=fs[i];
+    h+='<div class="dsf '+fl.level+'"><div class="di">'+ic[fl.level]+'</div>'+
+       '<div><b>'+esc(fl.title)+'</b>'+(fl.rec?'<div class="dr">'+esc(fl.rec)+'</div>':'')+'</div></div>';
+  }
+  return h||'<div class="ds-muted">No checks.</div>';
+}
+
+/* ---- drawing feasibility checklist ---- */
+function dsFeasHTML(){
+  if(!DRAWING||!DRAWING.feasibility||!DRAWING.feasibility.length)
+    return '<div class="ds-muted">No customer drawing parsed yet.<br>'+
+      'Upload a drawing in the price calculator to load the feasibility checklist.</div>';
+  var h='';
+  for(var i=0;i<DRAWING.feasibility.length;i++){
+    var it=DRAWING.feasibility[i], st=FEAS[it.id]||'';
+    h+='<div class="ds-feas-item '+(st==='ok'?'s-ok':st==='no'?'s-no':'')+'" onclick="viewCrop('+i+')">'+
+      '<div class="fl">'+esc(it.label)+'</div>'+
+      '<div class="fbtns" onclick="event.stopPropagation()">'+
+      '<button class="fbtn ok '+(st==='ok'?'on':'')+'" onclick="setFeas(&quot;'+it.id+'&quot;,&quot;ok&quot;)">OK</button>'+
+      '<button class="fbtn no '+(st==='no'?'on':'')+'" onclick="setFeas(&quot;'+it.id+'&quot;,&quot;no&quot;)">Not OK</button>'+
+      '</div></div>';
+  }
+  return h;
+}
+
+/* ---- right column ---- */
+function dsRight(diag,graph,S,kcHTML){
+  /* El veredicto va lo primero de la columna derecha, encima del Engineering
+     Review: son dos preguntas distintas y verlas juntas evita confundirlas. */
+  var vdtHTML=verdictoHTML();
+  var diagHTML=diag||'<div class="ds-ph">Enter the wire diameter &amp; dimensions,<br>or upload a customer drawing,<br>to generate the spring diagram.</div>';
+  var graphHTML=graph||'<div class="ds-ph">The load curve appears<br>once the spring is dimensioned.</div>';
+  var checks;
+  if(DS_EMPTY){
+    checks='<div class="ds-checks"><div class="ds-muted" style="flex:1">'+
+      'The manufacturability review runs once the spring is dimensioned.</div></div>';
+  } else {
+    var bd=bandFromScore(S.score);
+    /* Si no se pudo evaluar el servicio, la nota solo cubre geometria y
+       enrollado. Dejar 'Easy to manufacture' sobre eso enganaria mas que
+       el veredicto falso que habia antes: aquel al menos llamaba la
+       atencion. La nota se queda; la etiqueta dice de que va. */
+    var parcial=(S.flags||[]).some(function(x){
+      return x && /not evaluated/.test(x.title||''); });
+    if(parcial){ bd={band:'Geometry only \u2014 service not evaluated',
+                     color:'#8a6d1f'}; }
+    checks='<div class="ds-checks"><div class="ds-score">'+
+      '<div style="font-size:25px;font-weight:800;line-height:1;color:'+bd.color+'">'+S.score+'</div>'+
+      '<div class="band" style="color:'+bd.color+'">'+bd.band+'</div></div>'+
+      '<div class="ds-kgrid">'+kcHTML+'</div></div>';
+  }
+  var flags=DS_EMPTY?'<div class="ds-muted">Design checks run once the spring is dimensioned.</div>'
+    :dsFlags(S.flags);
+  return '<div class="ds-right">'+
+    '<div class="ds-rtop"><div class="ds-diag">'+diagHTML+'</div>'+
+      '<div class="ds-graph">'+graphHTML+'</div></div>'+
+    vdtHTML+
+    checks+
+    '<div class="ds-panel"><div class="ds-sech">Design Checks &amp; Risk Flags</div>'+
+      '<div class="ds-panel-b">'+flags+'</div></div>'+
+    '<div class="ds-panel"><div class="ds-sech">Drawing Feasibility Checklist</div>'+
+      '<div class="ds-panel-b">'+dsFeasHTML()+'</div></div>'+
+    '</div>';
+}
+function dsSheet(info,table,right){
+  return '<div class="sheet"><div class="ds-info">'+info+'</div>'+
+    '<div class="ds-left"><div class="ds-sech">Physical Dimensions</div>'+
+      '<div class="ds-tblwrap"><table class="dst"><thead><tr><th>Parameter</th>'+
+      '<th>Imperial</th><th>Metric</th><th>Tol</th></tr></thead><tbody>'+
+      table+'</tbody></table></div></div>'+right+'</div>';
+}
+function bindMeta(){
+  var pn=document.getElementById('ds_partName');
+  if(pn) pn.addEventListener('input',function(){ STATE.meta.partName=pn.value; });
+  var no=document.getElementById('ds_partNo');
+  if(no) no.addEventListener('input',function(){ STATE.meta.partNo=no.value; });
+  var fi=document.getElementById('ds_finish');
+  if(fi) fi.addEventListener('change',function(){ STATE.meta.finish=fi.value; });
+}
+function cSF(sf){ return sf<1?'crit':(sf<1.2?'warn':'ok'); }
+
+/* ===================== COMPRESSION ===================== */
+function maquinaActual(){
+  /* La maquina que corresponde a la pestana abierta. Se calcula al vuelo para
+     que la etiqueta no dependa de que ya se haya enviado el mensaje. */
+  try{
+    var I=(STATE.tab==='compression')?STATE.comp:
+          (STATE.tab==='extension')?STATE.ext:STATE.tors;
+    if(!(I.d>0&&I.dia>0)) return null;
+    var g=resolveDia(I.odMode,I.dia,I.d);
+    var sel=selectMachine(STATE.tab,I.d,g.OD,I.matId);
+    return {feasible:!!sel.feasible,
+            best:(sel.best&&sel.best.m)?sel.best.m.name:(sel.best?sel.best.name:null),
+            why:(!sel.feasible&&sel.near&&sel.near[0])?sel.near[0].why.join(', '):''};
+  }catch(e){ return null; }
+}
+
+function verdictoHTML(){
+  var maq=maquinaActual();
+  var V=verdictoFinal(maq);
+  if(!V) return '';
+  var rev=V.verdict!=='FEASIBLE';
+  var h='<div class="vdt '+(rev?'rv':'go')+'">'+
+        '<span class="tg">'+V.verdict+'</span><div>';
+  if(rev){
+    h+='<b>Quote it after someone checks:</b><ul>';
+    for(var i=0;i<V.reasons.length;i++) h+='<li>'+esc(V.reasons[i])+'</li>';
+    h+='</ul>';
+  } else {
+    /* La misma frase que el cotizador: no se afirma que el plano este
+       completo -- puede faltar la altura de trabajo y aun asi cotizarse --
+       sino que esta lo que hace falta para cotizar, que es lo comprobado. */
+    h+='<b>Everything needed to quote is on the drawing and consistent'+
+       (maq&&maq.best?', and '+esc(maq.best)+' can make it':'')+'.</b> '+
+       'Engineering findings below are remarks, not blockers.';
+  }
+  return h+'</div></div>';
+}
+
+function verdictoFinal(maq){
+  /* Cierra el veredicto. Este es el unico sitio del sistema con las seis
+     condiciones: las cinco del lector llegan en el mensaje y la maquina se
+     calcula aqui, contra la base que el usuario edita en Databases.
+     De aqui sale la notificacion al plant manager, asi que no puede ser un
+     valor provisional. */
+  if(!VERDICT) return null;
+  var motivos=(VERDICT.reasons||[]).slice();
+  if(maq && maq.feasible===false){
+    motivos.push('no machine in the shop takes this wire and outside diameter'+
+                 (maq.why?' ('+maq.why+')':''));
+  }
+  return {verdict: motivos.length?'REQUIRES REVIEW':'FEASIBLE',
+          reasons: motivos,
+          machineChecked: !!maq};
+}
+
+function postFeasibility(S){
+  if(!EMBEDDED) return;
+  var checklist=[];
+  if(DRAWING&&DRAWING.feasibility){
+    for(var i=0;i<DRAWING.feasibility.length;i++){
+      var it=DRAWING.feasibility[i];
+      checklist.push({label:it.label, status:FEAS[it.id]||'unmarked'});
+    }
+  }
+  var flags=[];
+  if(S&&S.flags){
+    for(var j=0;j<S.flags.length;j++)
+      flags.push({level:S.flags[j].level, title:S.flags[j].title});
+  }
+  var bd=S?bandFromScore(S.score):null;
+  /* La pantalla ya matiza la banda cuando no hubo punto de trabajo; este
+     mensaje no lo hacia y mandaba "Manufacturable" con el mismo 70 que
+     aqui se ensena como solo geometria. De las dos versiones viajaba
+     justo la que promete mas. */
+  if(bd && S && (S.flags||[]).some(function(x){
+        return x && /not evaluated/.test(x.title||''); }))
+    bd={band:'Geometry only \u2014 service not evaluated', color:'#8a6d1f'};
+  /* La maquina es la sexta condicion de factibilidad y solo se puede comprobar
+     aqui: la base vive en esta pantalla y el usuario la edita en Databases. */
+  var maq=null;
+  try{
+    var I=(STATE.tab==='compression')?STATE.comp:
+          (STATE.tab==='extension')?STATE.ext:STATE.tors;
+    var g=resolveDia(I.odMode,I.dia,I.d);
+    var sel=selectMachine(STATE.tab,I.d,g.OD,I.matId);
+    maq={feasible:!!sel.feasible,
+         count:(sel.all||[]).length,
+         best:(sel.best&&sel.best.m)?sel.best.m.name:(sel.best?sel.best.name:null),
+         why:(!sel.feasible&&sel.near&&sel.near[0])?sel.near[0].why.join(', '):''};
+  }catch(e){}
+  try{ window.parent.postMessage({source:'spring-calculator',type:'springFeasibility',
+    payload:{springType:STATE.tab, score:(S?S.score:null), band:(bd?bd.band:''),
+      flags:flags, checklist:checklist, machine:maq,
+      verdict:verdictoFinal(maq)}},'*'); }catch(e){}
+}
+
+function renderComp(){
+  var I=STATE.comp, M=STATE.meta;
+  DS_EMPTY=!(I.d>0&&I.dia>0&&I.L0>0&&I.Nt>0);
+  var R=calcCompression(I), S=DS_EMPTY?null:scoreCompression(R);
+  /* Lo que sale de esta pantalla va ANTES de pintarla: ni el peso ni el
+     veredicto necesitan el DOM, y asi siguen saliendo aunque el dibujo
+     falle -- por ejemplo con la pantalla oculta, donde todas las medidas
+     de layout son cero. */
+  pesoAutomatico(R); postFeasibility(S);
+  var info=
+    infoInput('Part Name','ds_partName',M.partName)+
+    infoInput('Part Number','ds_partNo',M.partNo)+
+    infoTxt('Spring Type','Compression')+
+    infoSel('Material','c_mat',I.matId,matOptions())+
+    infoSel('End Type','c_endType',I.endType,[['closed_ground','Squared &amp; Ground'],
+      ['closed','Squared (Closed)'],['plain_ground','Plain &amp; Ground'],['plain','Plain']])+
+    infoSel('&Oslash; Specified By','c_odMode',I.odMode,[['OD','Outer &Oslash;'],
+      ['mean','Mean &Oslash;'],['ID','Inner &Oslash;']])+
+    infoSel('Finish','ds_finish',M.finish,FINISH_OPTS)+
+    infoTxt('Date',dsDate())+
+    infoTxt('Spring Index C',DS_EMPTY?'&mdash;':f(R.C,2))+
+    infoWeight(R);
+  var t=
+    subh('Wire &amp; Diameters')+
+    rowEd('Wire Diameter','WD','c_d',I.d,'len',4,'')+
+    diaRow('Outer Diameter','OD','OD',I.odMode,'c_dia',I.dia,R.OD)+
+    diaRow('Mean Diameter','MD','mean',I.odMode,'c_dia',I.dia,R.D)+
+    diaRow('Inner Diameter','ID','ID',I.odMode,'c_dia',I.dia,R.ID)+
+    rowCalcN('Spring Index','C',R.C,2,'')+
+    subh('Coils &amp; Lengths')+
+    rowEd('Free Length','L0','c_L0',I.L0,'len',3,'')+
+    rowCalc('Solid Height','LS',R.Ls,'len',3,'')+
+    rowEd('Working Height','L1','c_h',I.h,'len',3,'')+
+    rowEdN('Total Coils','Nt','c_Nt',I.Nt,'±5%')+
+    rowCalcN('Active Coils','Na',R.Na,2,'')+
+    rowCalc('Pitch','p',R.p,'len',3,'')+
+    rowCalcS('Helix Angle','',f(R.helix,1)+' &deg;','')+
+    subh('Rate, Load &amp; Stress')+
+    rowCalc('Spring Rate','k',R.k,'rate',3,'')+
+    rowCalc('Load @ Working Height','P1',R.Fwork,'force',2,'')+
+    rowCalc('Load @ Solid','PS',R.Fsolid,'force',2,'')+
+    rowCalc('Stress @ Load','&tau;',R.tauWork,'stress',1,'')+
+    rowCalc('Allowable Stress','&tau;a',R.tauAllow,'stress',1,'')+
+    rowCalcN('Safety Factor (work)','SF',R.SFwork,2,'')+
+    rowCalcS('Natural Frequency','fn',f(R.fn,0)+' Hz','')+
+    subh('Material')+
+    rowCalc('Tensile Strength','Sut',R.Sut,'stress',0,'')+
+    rowCalc('Shear Modulus','G',I.d>0?getMat(I.matId).G:NaN,'stress',0,'')+
+    rowCalcN('Wahl Factor','Kw',R.Kw,3,'');
+  var kcH='',diag=null,graph=null;
+  if(!DS_EMPTY){
+    var sm=selectMachine('compression',R.d,R.OD);
+    var sinWP=!(I.h>0);   /* el plano no dio punto de trabajo */
+    kcH=dskc('Spring Index C',f(R.C,2),(R.C>=4&&R.C<=12)?'ok':'warn')+
+        dskc('Safety Factor',sinWP?'\u2014':f(R.SFwork,2),sinWP?'':cSF(R.SFwork))+
+        dskc('Stress / Allowable',sinWP?'\u2014':f(R.tauWork/R.tauAllow*100,0)+'%',sinWP?'':cSF(R.tauAllow/R.tauWork))+
+        dskc('Buckling',sinWP?'\u2014':(R.absStable?'Stable':f(R.bucklePct,0)+'%'),sinWP?'':(R.absStable?'ok':(R.bucklePct>=100?'crit':R.bucklePct>=70?'warn':'ok')))+
+        dskc('Natural Freq.',f(R.fn,0)+' Hz','')+
+        dskc('Machine',sm.feasible?esc(sm.best.m.name):'None fits',sm.feasible?'ok':'crit');
+    diag=svgComp(R); graph=loadGraph(R,'compression');
+  }
+  paint(dsSheet(info,t,dsRight(diag,graph,S,kcH)));
+  bindComp(); bindMeta();
+}
+
+/* ===================== EXTENSION ===================== */
+function renderExt(){
+  var I=STATE.ext, M=STATE.meta;
+  DS_EMPTY=!(I.d>0&&I.dia>0&&I.Na>0&&I.bodyLen>0);
+  var R=calcExtension(I), S=DS_EMPTY?null:scoreExtension(R);
+  /* Lo que sale de esta pantalla va ANTES de pintarla: ni el peso ni el
+     veredicto necesitan el DOM, y asi siguen saliendo aunque el dibujo
+     falle -- por ejemplo con la pantalla oculta, donde todas las medidas
+     de layout son cero. */
+  pesoAutomatico(R); postFeasibility(S);
+  var SFhook=Math.min(R.SFhookA,R.SFhookB);
+  var info=
+    infoInput('Part Name','ds_partName',M.partName)+
+    infoInput('Part Number','ds_partNo',M.partNo)+
+    infoTxt('Spring Type','Extension')+
+    infoSel('Material','e_mat',I.matId,matOptions())+
+    infoSel('Hook / End Type','e_hookType',I.hookType,[['machine_full','Machine Full Loop'],
+      ['machine_half','Machine Half Loop'],['crossover','Crossover Loop'],['side','Side Loop'],
+      ['extended','Extended Hook'],['special','Special / Custom']])+
+    infoSel('&Oslash; Specified By','e_odMode',I.odMode,[['OD','Outer &Oslash;'],
+      ['mean','Mean &Oslash;'],['ID','Inner &Oslash;']])+
+    infoSel('Finish','ds_finish',M.finish,FINISH_OPTS)+
+    infoTxt('Date',dsDate())+
+    infoTxt('Spring Index C',DS_EMPTY?'&mdash;':f(R.C,2))+
+    infoWeight(R);
+  var t=
+    subh('Wire &amp; Diameters')+
+    rowEd('Wire Diameter','WD','e_d',I.d,'len',4,'')+
+    diaRow('Outer Diameter','OD','OD',I.odMode,'e_dia',I.dia,R.OD)+
+    diaRow('Mean Diameter','MD','mean',I.odMode,'e_dia',I.dia,R.D)+
+    diaRow('Inner Diameter','ID','ID',I.odMode,'e_dia',I.dia,R.ID)+
+    rowCalcN('Spring Index','C',R.C,2,'')+
+    subh('Body, Coils &amp; Hooks')+
+    rowEd('Body Length','LB','e_bodyLen',I.bodyLen,'len',3,'')+
+    rowEdN('Active Coils','Na','e_Na',I.Na,'±5%')+
+    rowEd('Hook Bend Radius','r1','e_r1',I.r1,'len',3,'')+
+    rowEd('Hook Side Radius','r2','e_r2',I.r2,'len',3,'')+
+    subh('Loading &amp; Rate')+
+    rowEd('Initial Tension','Fi','e_Fi',I.Fi,'force',2,'')+
+    rowEd('Working Extension','x','e_x',I.x,'len',3,'')+
+    rowCalc('Spring Rate','k',R.k,'rate',3,'')+
+    rowCalc('Force @ Extension','F',R.F,'force',2,'')+
+    rowCalc('Max Safe Extension','xMax',R.xMax,'len',3,'')+
+    rowCalc('Max Load','Fcap',R.Fcap,'force',2,'')+
+    subh('Stress &amp; Safety')+
+    rowCalc('Body Stress','&tau;b',R.tauBody,'stress',1,'')+
+    rowCalc('Hook Bend Stress','&sigma;A',R.sigHookA,'stress',1,'')+
+    rowCalc('Allowable Stress','&tau;a',R.tauAllow,'stress',1,'')+
+    rowCalcN('Body Safety Factor','SFb',R.SFbody,2,'')+
+    rowCalcN('Hook Safety Factor','SFh',SFhook,2,'')+
+    rowCalc('Tensile Strength','Sut',R.Sut,'stress',0,'')+
+    rowCalcN('Wahl Factor','Kw',R.Kw,3,'');
+  var kcH='',diag=null,graph=null;
+  if(!DS_EMPTY){
+    var sm=selectMachine('extension',R.d,R.OD);
+    var tiCls=(R.tauI<R.tauIbandLo||R.tauI>R.tauIbandHi)?'warn':'ok';
+    kcH=dskc('Spring Index C',f(R.C,2),(R.C>=4&&R.C<=12)?'ok':'warn')+
+        dskc('Hook Safety Factor',f(SFhook,2),cSF(SFhook))+
+        dskc('Body Safety Factor',f(R.SFbody,2),cSF(R.SFbody))+
+        dskc('Initial Tension',tiCls==='ok'?'In band':'Out of band',tiCls)+
+        dskc('Governing',esc(R.govName),'')+
+        dskc('Machine',sm.feasible?esc(sm.best.m.name):'None fits',sm.feasible?'ok':'crit');
+    diag=svgExt(R); graph=loadGraph(R,'extension');
+  }
+  paint(dsSheet(info,t,dsRight(diag,graph,S,kcH)));
+  bindExt(); bindMeta();
+}
+
+/* ===================== TORSION ===================== */
+function renderTors(){
+  var I=STATE.tors, M=STATE.meta;
+  DS_EMPTY=!(I.d>0&&I.dia>0&&I.Nb>0);
+  var R=calcTorsion(I), S=DS_EMPTY?null:scoreTorsion(R);
+  /* Lo que sale de esta pantalla va ANTES de pintarla: ni el peso ni el
+     veredicto necesitan el DOM, y asi siguen saliendo aunque el dibujo
+     falle -- por ejemplo con la pantalla oculta, donde todas las medidas
+     de layout son cero. */
+  pesoAutomatico(R); postFeasibility(S);
+  var info=
+    infoInput('Part Name','ds_partName',M.partName)+
+    infoInput('Part Number','ds_partNo',M.partNo)+
+    infoTxt('Spring Type','Torsion')+
+    infoSel('Material','t_mat',I.matId,matOptions())+
+    infoSel('Direction of Wind','t_windDir',I.windDir,[['right','Right Hand'],['left','Left Hand']])+
+    infoSel('Load Direction','t_loadDir',I.loadDir,[['closing','Closing (winds tighter)'],
+      ['opening','Opening (unwinds)']])+
+    infoSel('&Oslash; Specified By','t_odMode',I.odMode,[['mean','Mean &Oslash;'],
+      ['OD','Outer &Oslash;'],['ID','Inner &Oslash;']])+
+    infoSel('Finish','ds_finish',M.finish,FINISH_OPTS)+
+    infoTxt('Spring Index C',DS_EMPTY?'&mdash;':f(R.C,2))+
+    infoWeight(R);
+  var t=
+    subh('Wire &amp; Diameters')+
+    rowEd('Wire Diameter','WD','t_d',I.d,'len',4,'')+
+    diaRow('Outer Diameter','OD','OD',I.odMode,'t_dia',I.dia,R.OD)+
+    diaRow('Mean Diameter','MD','mean',I.odMode,'t_dia',I.dia,R.D)+
+    diaRow('Inner Diameter','ID','ID',I.odMode,'t_dia',I.dia,R.ID)+
+    rowCalcN('Spring Index','C',R.C,2,'')+
+    subh('Coils &amp; Legs')+
+    rowEdN('Body Coils','Nb','t_Nb',I.Nb,'±5%')+
+    rowCalcN('Equivalent Active Coils','Na',R.Na,2,'')+
+    rowEd('Leg Length','L','t_legLen',I.legLen,'len',3,'')+
+    rowEd('Mandrel Diameter','dm','t_mandrel',I.mandrel,'len',3,'')+
+    rowCalc('Body Length','LB',R.bodyLen,'len',3,'')+
+    rowCalc('ID Under Load','IDl',R.idLoad,'len',3,'')+
+    rowCalc('Mandrel Clearance','c',R.mandrelClear,'len',3,'')+
+    subh('Loading &amp; Rate')+
+    rowEdN('Angle of Rotation','&theta;','t_angle',I.angle,'')+
+    rowCalc('Torque @ Angle','M',R.M,'moment',3,'')+
+    rowCalc('Rate per Degree','k&theta;',R.kDeg,'moment',4,'')+
+    rowCalcS('Safe Angle','&theta;max',f(R.angSafe,0)+' &deg;','')+
+    subh('Stress &amp; Safety')+
+    rowCalc('Bending Stress','&sigma;',R.sigma,'stress',1,'')+
+    rowCalc('Allowable Stress','&sigma;a',R.sigAllow,'stress',1,'')+
+    rowCalcN('Safety Factor','SF',R.SF,2,'')+
+    rowCalc('Tensile Strength','Sut',R.Sut,'stress',0,'')+
+    rowCalcN('Curvature Factor','Ki',R.Ki,3,'');
+  var kcH='',diag=null,graph=null;
+  if(!DS_EMPTY){
+    var sm=selectMachine('torsion',R.d,R.OD);
+    var mCls=R.mandrelClear<0?'crit':(R.mandrel>R.mandrelRec?'warn':'ok');
+    kcH=dskc('Spring Index C',f(R.C,2),(R.C>=4&&R.C<=12)?'ok':'warn')+
+        dskc('Safety Factor',f(R.SF,2),cSF(R.SF))+
+        dskc('Angle vs Safe',f(R.angle,0)+'° / '+f(R.angSafe,0)+'°',R.angle>R.angSafe?'crit':'ok')+
+        dskc('Mandrel Clearance',mCls==='crit'?'Interference':(mCls==='warn'?'Tight':'OK'),mCls)+
+        dskc('Load Direction',R.loadDir==='closing'?'Closing':'Opening',R.loadDir==='closing'?'ok':'crit')+
+        dskc('Machine',sm.feasible?esc(sm.best.m.name):'None fits',sm.feasible?'ok':'crit');
+    diag=svgTors(R); graph=loadGraph(R,'torsion');
+  }
+  paint(dsSheet(info,t,dsRight(diag,graph,S,kcH)));
+  bindTors(); bindMeta();
+}
+
+function renderDB(){
+  var h='<div class="card"><div class="card-b">'+
+    '<div class="subtab">'+
+      '<button data-d="materials"'+(STATE.dbtab==='materials'?' class="on"':'')+'>Material Database</button>'+
+      '<button data-d="machines"'+(STATE.dbtab==='machines'?' class="on"':'')+'>Machine Database</button>'+
+    '</div>';
+  if(STATE.dbtab==='materials') h+=matTable();
+  else h+=mchTable();
+  h+='<div style="margin-top:14px;"><button class="btn" id="dbReset">Restore default values</button></div>';
+  h+='</div></div>';
+  app.innerHTML=h;
+  bindDB();
+}
+function matTable(){
+  var h='<div class="note-box"><b>Editable defaults.</b> Modulus, density and tensile-model '+
+    'constants are standard published values for spring wire. Allowable-stress factors, temperature '+
+    'limits and cost factors are typical engineering estimates — adjust them to your own shop '+
+    'data and supplier certificates. Tensile strength uses the model '+
+    'Sut = A / d<sup>m</sup> (d in mm, A in MPa·mm<sup>m</sup>).</div>'+
+    '<div class="dbtable-wrap"><table class="db"><thead><tr>'+
+    '<th>Material</th><th>G<br>(MPa)</th><th>E<br>(MPa)</th><th>Density<br>(kg/m³)</th>'+
+    '<th>A<br>(MPa·mmᵐ)</th><th>m</th><th>ø min<br>(mm)</th><th>ø max<br>(mm)</th>'+
+    '<th>Shear<br>factor</th><th>Bend<br>factor</th><th>Temp max<br>(°C)</th><th>Cost<br>factor</th>'+
+    '</tr></thead><tbody>';
+  for(var i=0;i<MATERIALS.length;i++){
+    var m=MATERIALS[i];
+    h+='<tr><td class="name">'+esc(m.name)+'<br><span style="font-weight:400;color:var(--n-apagado);font-size:10px;">'+
+       esc(m.astm)+'</span></td>'+
+       mc(i,'G',m.G)+mc(i,'E',m.E)+mc(i,'density',m.density)+
+       mc(i,'A',m.A)+mc(i,'m',m.m)+mc(i,'dMin',m.dMin)+mc(i,'dMax',m.dMax)+
+       mc(i,'shearFac',m.shearFac)+mc(i,'bendFac',m.bendFac)+
+       mc(i,'tempMax',m.tempMax)+mc(i,'costFac',m.costFac)+'</tr>';
+  }
+  h+='</tbody></table></div>';
+  return h;
+}
+function mc(i,k,v){
+  return '<td><input type="number" step="any" data-mi="'+i+'" data-mk="'+k+'" value="'+v+'"></td>';
+}
+function mchTable(){
+  var h='<div class="note-box"><b>Estimated machine capability data.</b> The wire-diameter and '+
+    'OD limits below are reasonable industry estimates so the tool runs out of the box. '+
+    'Replace them with the real capability specs of your CGR / ISC machines before using machine '+
+    'recommendations for production decisions.</div>'+
+    '<div class="dbtable-wrap"><table class="db"><thead><tr>'+
+    '<th>Machine</th><th>Wire min<br>(mm)</th><th>Wire max<br>(mm)</th><th>OD max<br>(mm)</th>'+
+    '<th>Spring types</th><th>Setup</th></tr></thead><tbody>';
+  for(var i=0;i<MACHINES.length;i++){
+    var m=MACHINES[i];
+    h+='<tr><td class="name">'+esc(m.name)+'</td>'+
+       kc(i,'wireMin',m.wireMin)+kc(i,'wireMax',m.wireMax)+kc(i,'odMax',m.odMax)+
+       '<td><div class="chk">'+
+         tck(i,'compression',m.compression,'Comp')+
+         tck(i,'extension',m.extension,'Ext')+
+         tck(i,'torsion',m.torsion,'Tors')+
+       '</div></td>'+
+       '<td><select data-ki="'+i+'" data-kk="setup">'+
+         ['Low','Medium','High'].map(function(s){
+           return '<option'+(s===m.setup?' selected':'')+'>'+s+'</option>';}).join('')+
+       '</select></td></tr>';
+  }
+  h+='</tbody></table></div>';
+  return h;
+}
+function kc(i,k,v){
+  return '<td><input type="number" step="any" data-ki="'+i+'" data-kk="'+k+'" value="'+v+'"></td>';
+}
+function tck(i,k,v,lbl){
+  return '<label><input type="checkbox" data-ki="'+i+'" data-kk="'+k+'"'+
+    (v?' checked':'')+'> '+lbl+'</label>';
+}
+
+/* =====================================================================
+   14. EVENT BINDING
+   ===================================================================== */
+function bindGeneric(map,recompute){
+  Object.keys(map).forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    var cfg=map[id];
+    el.addEventListener(cfg.event||'input',function(){
+      var v=el.value;
+      if(cfg.kind) v=toSI(num(v),cfg.kind,STATE.unit);
+      else if(cfg.numeric!==false && el.type==='number') v=num(v);
+      cfg.set(v);
+      recompute();
+    });
+  });
+}
+function bindComp(){
+  var I=STATE.comp;
+  var m={
+    c_mat:{event:'change',numeric:false,set:function(v){I.matId=v;MAT_MANUAL=true;}},
+    c_d:{kind:'len',set:function(v){I.d=v;}},
+    c_odMode:{event:'change',numeric:false,set:function(v){I.odMode=v;}},
+    c_dia:{kind:'len',set:function(v){I.dia=v;}},
+    c_L0:{kind:'len',set:function(v){I.L0=v;}},
+    c_endType:{event:'change',numeric:false,set:function(v){
+      I.endType=v; I.Na=I.Nt-END_TYPES[v].endCoils;}},
+    c_Nt:{set:function(v){I.Nt=v; I.Na=v-END_TYPES[I.endType].endCoils;}},
+    c_Na:{set:function(v){I.Na=v;}},
+    c_h:{kind:'len',set:function(v){I.h=v;}}
+  };
+  bindGeneric(m,renderComp);
+}
+function bindExt(){
+  var I=STATE.ext;
+  var m={
+    e_mat:{event:'change',numeric:false,set:function(v){I.matId=v;MAT_MANUAL=true;}},
+    e_d:{kind:'len',set:function(v){I.d=v;}},
+    e_odMode:{event:'change',numeric:false,set:function(v){I.odMode=v;}},
+    e_dia:{kind:'len',set:function(v){I.dia=v;}},
+    e_bodyLen:{kind:'len',set:function(v){I.bodyLen=v;}},
+    e_Na:{set:function(v){I.Na=v;}},
+    e_hookType:{event:'change',numeric:false,set:function(v){I.hookType=v;}},
+    e_r1:{kind:'len',set:function(v){I.r1=v;}},
+    e_r2:{kind:'len',set:function(v){I.r2=v;}},
+    e_Fi:{kind:'force',set:function(v){I.Fi=v;}},
+    e_x:{kind:'len',set:function(v){I.x=v;}}
+  };
+  bindGeneric(m,renderExt);
+}
+function bindTors(){
+  var I=STATE.tors;
+  var m={
+    t_mat:{event:'change',numeric:false,set:function(v){I.matId=v;MAT_MANUAL=true;}},
+    t_d:{kind:'len',set:function(v){I.d=v;}},
+    t_odMode:{event:'change',numeric:false,set:function(v){I.odMode=v;}},
+    t_dia:{kind:'len',set:function(v){I.dia=v;}},
+    t_Nb:{set:function(v){I.Nb=v;}},
+    t_legLen:{kind:'len',set:function(v){I.legLen=v;}},
+    t_mandrel:{kind:'len',set:function(v){I.mandrel=v;}},
+    t_angle:{set:function(v){I.angle=v;}},
+    t_windDir:{event:'change',numeric:false,set:function(v){I.windDir=v;}},
+    t_loadDir:{event:'change',numeric:false,set:function(v){I.loadDir=v;}}
+  };
+  bindGeneric(m,renderTors);
+}
+function bindDB(){
+  var sub=document.querySelectorAll('.subtab button');
+  sub.forEach(function(b){ b.addEventListener('click',function(){
+    STATE.dbtab=b.dataset.d; renderDB(); }); });
+  document.querySelectorAll('input[data-mi]').forEach(function(el){
+    el.addEventListener('input',function(){
+      var i=+el.dataset.mi,k=el.dataset.mk;
+      MATERIALS[i][k]=num(el.value);
+    });
+  });
+  document.querySelectorAll('input[data-ki],select[data-ki]').forEach(function(el){
+    el.addEventListener(el.tagName==='SELECT'?'change':'input',function(){
+      var i=+el.dataset.ki,k=el.dataset.kk;
+      if(el.type==='checkbox') MACHINES[i][k]=el.checked;
+      else if(el.tagName==='SELECT') MACHINES[i][k]=el.value;
+      else MACHINES[i][k]=num(el.value);
+    });
+  });
+  var rb=document.getElementById('dbReset');
+  if(rb) rb.addEventListener('click',function(){
+    MATERIALS=JSON.parse(JSON.stringify(MAT_DEFAULTS));
+    MACHINES =JSON.parse(JSON.stringify(MCH_DEFAULTS));
+    renderDB();
+  });
+}
+
+/* ---- weight-per-part hand-off to the price calculator ---- */
+var EMBEDDED = (window.parent && window.parent!==window);
+function weightBar(R){
+  var kg=R.partWeightKg||0, lb=kg*2.2046226, g=kg*1000;
+  var wlDisp=f(toDisp(R.wireLenTot||0,'len',STATE.unit),STATE.unit==='in'?3:1)+' '+ul('len');
+  var disp = STATE.unit==='in'
+    ? f(lb,5)+' lb &middot; '+f(lb*16,3)+' oz'
+    : f(g,3)+' g &middot; '+f(kg,5)+' kg';
+  var btn = EMBEDDED
+    ? '<button class="wq-btn" onclick="sendWeight('+kg+',this)">Use this weight in the quote &#8594;</button>'
+    : '<div class="wq-note">Open this tool from the price calculator to send the weight into a quote.</div>';
+  return '<div class="card"><div class="card-h">Weight per Part</div><div class="card-b">'+
+    '<div class="wq-row"><div class="wq-left"><div class="wq-v">'+disp+'</div>'+
+    '<div class="wq-note" style="margin-top:2px;">Developed wire length &asymp; '+wlDisp+'</div>'+
+    '<div class="wq-note">Estimated finished-part weight &mdash; developed wire volume &times; material density. Verify against a sample before quoting.</div>'+
+    '</div>'+btn+'</div></div></div>';
+}
+/* El ultimo peso enviado, para no repetirlo. El render se dispara con cada
+   tecla y no tiene sentido mandar treinta veces el mismo numero. */
+var PESO_ENVIADO=null;
+
+/* Manda el peso en cuanto se calcula. No hace falta pulsar nada: el numero ya
+   existe, y un dato que existe y no llega vale lo mismo que no tenerlo -- el
+   peso multiplica el $/lb, asi que sin el el material sale $0.00.
+   Un resorte a medio definir da 0 o NaN: eso NO viaja, porque borraria el peso
+   bueno que hubiera puesto antes. */
+function pesoAutomatico(R){
+  if(!EMBEDDED) return;
+  var kg=R?R.partWeightKg:NaN;
+  if(!isFinite(kg)||kg<=0) return;
+  if(PESO_ENVIADO!==null&&Math.abs(kg-PESO_ENVIADO)<1e-12) return;
+  PESO_ENVIADO=kg;
+  sendWeight(kg,null,true);
+}
+
+function sendWeight(kg,btn,automatico){
+  var lb=kg*2.2046226;
+  /* El peso viaja con el material que lo produjo. Si alguien cambio el
+     desplegable, el cotizador tiene que enterarse: su $/lb sigue siendo el
+     del codigo que mando el lector. */
+  var _mid=(STATE.tab==='compression')?STATE.comp.matId:
+           (STATE.tab==='extension')?STATE.ext.matId:STATE.tors.matId;
+  var _mnm=(getMat(_mid)||{}).name||'';
+  try{ window.parent.postMessage({source:'spring-calculator',type:'springWeight',
+    weightLb:lb,springType:STATE.tab,matId:_mid, matName:_mnm,
+    /* Quien lo mando: a mano manda sobre lo automatico, y el cotizador
+       necesita saberlo para no pisar lo que escribio una persona. */
+    automatico:!!automatico},'*'); }catch(e){}
+  if(btn){ btn.textContent='Sent to quote \u2713'; btn.disabled=true;
+    setTimeout(function(){ btn.disabled=false;
+      btn.innerHTML='Use this weight in the quote &#8594;'; },2000); }
+}
+
+/* ---- drawing-derived feasibility checklist (from the price calculator) ---- */
+var DRAWING=null, FEAS={};
+/* Puesto en cuanto alguien toca el desplegable de material. El payload del
+   lector se reenvia cada vez que se abre el panel, y sin esto reimpondria su
+   codigo encima de la eleccion de la persona -- ya con el peso mandado al
+   cotizador, que es cuando mas duele. Cambiar de plano recarga el iframe y
+   la bandera vuelve a false sola. */
+var MAT_MANUAL=false;
+/* El veredicto del lector: las cinco condiciones sobre el dato. Aqui se le
+   suma la sexta -- que haya maquina -- y se cierra. */
+var VERDICT=null;
+window.addEventListener('message',function(e){
+  var d=e.data||{};
+  if(d.source!=='price-calc'||d.type!=='drawingData') return;
+  /* Un resorte distinto estrena pizarra. Sin esto, lo que el plano nuevo no
+     mencione se queda del anterior -- y con MAT_MANUAL puesto, hasta el
+     material, que es lo que ese flag protege a proposito cuando se trata del
+     MISMO resorte. Reabrir el mismo no borra nada: para eso se compara. */
+  var _quien=(d.pn||'')+'|'+(d.partName||'');
+  if(ULTIMO_PLANO!==null && _quien!==ULTIMO_PLANO){
+    var _L=JSON.parse(LIMPIO);
+    STATE.meta=_L.meta; STATE.comp=_L.comp; STATE.ext=_L.ext; STATE.tors=_L.tors;
+    MAT_MANUAL=false;
+  }
+  ULTIMO_PLANO=_quien;
+  DRAWING=d; FEAS={}; VERDICT=d.verdict||null;
+  if(d.springType&&(d.springType==='compression'||d.springType==='extension'||d.springType==='torsion'))
+    STATE.tab=d.springType;
+  try{ applyDrawingDims(d); }catch(_){}
+  render();
+});
+function dField(d,key){
+  if(!d||!d.fields) return null;
+  for(var i=0;i<d.fields.length;i++) if(d.fields[i].key===key){
+    var v=parseFloat(d.fields[i].value); if(!isFinite(v)) return null;
+    return {v:v,unit:(d.fields[i].unit||'').toLowerCase()};
+  }
+  return null;
+}
+function dMM(d,key){ var f=dField(d,key); if(!f) return null;
+  return (f.unit==='in'||f.unit==='inch')? f.v*25.4 : f.v; }
+/* dField parsea a numero y descarta lo demas, asi que los campos de texto como
+   el sentido de enrollado necesitan su propio accesor. */
+function dRaw(d,key){
+  if(!d||!d.fields) return null;
+  for(var i=0;i<d.fields.length;i++) if(d.fields[i].key===key)
+    return String(d.fields[i].value||'').trim().toLowerCase();
+  return null;
+}
+function applyDrawingDims(d){
+  var t=d.springType;
+  /* Identidad de la pieza. Antes esta casilla se quedaba vacia y habia que
+     teclear el numero de parte otra vez, aunque el lector ya lo hubiera sacado
+     del cajetin. Solo se pisa si viene algo: no se borra lo que escribio nadie. */
+  if(d.pn){ STATE.meta.partNo=String(d.pn); }
+  if(d.partName){ STATE.meta.partName=String(d.partName); }
+  var wd=dMM(d,'wireDia'),od=dMM(d,'od'),id=dMM(d,'id'),md=dMM(d,'meanDia'),
+      fl=dMM(d,'freeLength'),bl=dMM(d,'bodyLength'),nt=dField(d,'coils');
+  if(t==='compression'){ var I=STATE.comp;
+    if(wd)I.d=wd;
+    if(od){I.odMode='OD';I.dia=od;}else if(id){I.odMode='ID';I.dia=id;}else if(md){I.odMode='mean';I.dia=md;}
+    if(fl)I.L0=fl;
+    /* El tipo de extremo lo dice el plano ("CLOSED AND GROUND", "SQUARED AND
+       GROUND"...). Hasta ahora se elegia a mano y se quedaba en el valor por
+       defecto: sobre los planos ISC ese defecto acertaba, pero en silencio.
+       Va ANTES de derivar Na, porque endCoils sale de aqui. */
+    var _et=dRaw(d,'endType');
+    if(_et&&END_TYPES[_et]) I.endType=_et;
+    if(nt){I.Nt=nt.v;I.Na=I.Nt-END_TYPES[I.endType].endCoils;}
+    /* La altura de trabajo manda la deflexion, y con ella carga, tension y
+       factor de seguridad. Vacia, salian todos cero. */
+    var wh=dMM(d,'workingHeight'); if(wh)I.h=wh;
+  }else if(t==='extension'){ var E=STATE.ext;
+    if(wd)E.d=wd;
+    if(od){E.odMode='OD';E.dia=od;}else if(id){E.odMode='ID';E.dia=id;}else if(md){E.odMode='mean';E.dia=md;}
+    if(bl)E.bodyLen=bl; if(nt)E.Na=nt.v;
+    var fi=dField(d,'initialTension'); if(fi&&fi.v)E.Fi=fi.v;
+  }else if(t==='torsion'){ var T=STATE.tors;
+    if(wd)T.d=wd;
+    if(md){T.odMode='mean';T.dia=md;}else if(od){T.odMode='OD';T.dia=od;}else if(id){T.odMode='ID';T.dia=id;}
+    if(nt)T.Nb=nt.v;
+    /* Brazos y angulo tambien vienen del plano. Sin angulo no hay par, ni
+       tension, ni factor de seguridad: salian cero, que se lee como "sin
+       riesgo" cuando en realidad significa "sin datos". */
+    var lg=dMM(d,'legLength'); if(lg)T.legLen=lg;
+    var an=dField(d,'angle');  if(an&&an.v)T.angle=an.v;
+    var wdir=dRaw(d,'windDir');
+    if(wdir==='right'||wdir==='left')T.windDir=wdir;
+  }
+  /* El lector manda DOS cosas en el campo de material: `value` es el texto tal
+     cual del plano ("EN 10270-1 SH/DH", "ASTM A313 302", "SWP-B") y `code` es el
+     codigo ISC ya resuelto ("MW", "SS"). La tabla _mm de abajo esta hecha para
+     recibir el CODIGO, pero se leia el TEXTO -- y como la busqueda es por
+     coincidencia exacta, ninguna designacion real casaba: sobre 7 textos de
+     planos reales el material se quedaba siempre en el de por defecto, y con el
+     la densidad, la resistencia y el factor de seguridad. */
+  /* El acabado no entra en el calculo del resorte, pero si en la ruta de
+     coste, y sale del plano igual que lo demas. */
+  var _fin=dRaw(d,'finish');
+  if(_fin) STATE.meta.finish=_fin;
+
+  var _mc='';
+  for(var _k=0;_k<(d.fields||[]).length;_k++){
+    if(d.fields[_k].key==='material'){ var _f=d.fields[_k];
+      _mc=String(_f.code||_f.value||'').toUpperCase().replace(/[^A-Z0-9]/g,''); break; }
+  }
+  /* Los alias salen del catalogo del nucleo: anadir una forma de
+     escribir un material se hace en un sitio, no en dos ficheros. */
+  var _mid=materialDelTexto(_mc);
+  if(_mid && !MAT_MANUAL){ STATE.comp.matId=_mid; STATE.ext.matId=_mid;
+                           STATE.tors.matId=_mid; }
+}
+function feasCard(){
+  if(!DRAWING||!DRAWING.feasibility||!DRAWING.feasibility.length) return '';
+  var h='<div class="card feas-card"><div class="card-h">Drawing Feasibility Checklist</div>'+
+    '<div class="card-b"><div class="legend">Items read from the customer drawing. '+
+    'Click a row to see the exact drawing region, then mark it OK or Not OK.</div>';
+  for(var i=0;i<DRAWING.feasibility.length;i++){
+    var it=DRAWING.feasibility[i], st=FEAS[it.id]||'';
+    h+='<div class="fitem '+(st==='ok'?'s-ok':st==='no'?'s-no':'')+'" onclick="viewCrop('+i+')">'+
+      '<div class="fl">'+esc(it.label)+'</div>'+
+      '<div class="fbtns" onclick="event.stopPropagation()">'+
+      '<button class="fbtn ok '+(st==='ok'?'on':'')+'" onclick="setFeas(&quot;'+it.id+'&quot;,&quot;ok&quot;)">OK</button>'+
+      '<button class="fbtn no '+(st==='no'?'on':'')+'" onclick="setFeas(&quot;'+it.id+'&quot;,&quot;no&quot;)">Not OK</button>'+
+      '</div></div>';
+  }
+  h+='</div></div>';
+  return h;
+}
+function setFeas(id,st){ FEAS[id]=(FEAS[id]===st?'':st); render(); }
+function viewCrop(i){
+  var it=DRAWING&&DRAWING.feasibility?DRAWING.feasibility[i]:null; if(!it) return;
+  document.getElementById('cropTitle').textContent='Drawing region';
+  document.getElementById('cropImg').src=it.crop||'';
+  document.getElementById('cropMeta').innerHTML='<b>'+esc(it.label)+'</b>';
+  document.getElementById('cropOv').classList.add('on');
+}
+function closeCrop(){ document.getElementById('cropOv').classList.remove('on'); }
+
+/* ---- header / tab binding (once) ---- */
+document.getElementById('unitToggle').addEventListener('click',function(e){
+  var b=e.target.closest('button'); if(!b) return;
+  STATE.unit=b.dataset.u; render();
+});
+document.getElementById('tabs').addEventListener('click',function(e){
+  var b=e.target.closest('button'); if(!b) return;
+  STATE.tab=b.dataset.t; render();
+});
+
+/* ---- initial paint ---- */
+render();
+</script>
+<div class="crop-ov" id="cropOv" onclick="if(event.target===this)closeCrop()">
+  <div class="crop-box">
+    <div class="crop-h"><span id="cropTitle">Drawing region</span><button onclick="closeCrop()" title="Close">&times;</button></div>
+    <div class="crop-b"><img id="cropImg" alt="drawing region"><div class="crop-meta" id="cropMeta"></div></div>
+  </div>
+</div>
+</body>
+</html>

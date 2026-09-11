@@ -1,0 +1,32 @@
+name: Deploy Schema to Neon DB
+
+on:
+  push:
+    branches:
+      - main
+      - master # En caso de que tu rama principal se llame master
+    paths:
+      - 'sql/schema.sql' # Solo se ejecuta si hay cambios en este archivo
+  workflow_dispatch: # Permite ejecutar la acción manualmente desde GitHub
+
+jobs:
+  update-db:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Traer el código del repositorio
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+        
+      # 2. Instalar el cliente de PostgreSQL para poder usar el comando "psql"
+      - name: Instalar cliente PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+        
+      # 3. Conectarse a Neon y ejecutar el archivo sql/schema.sql
+      - name: Ejecutar schema.sql en Neon
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          echo "Iniciando la actualización del esquema de la base de datos..."
+          psql "$DATABASE_URL" -f sql/schema.sql
+          echo "¡Actualización completada!"

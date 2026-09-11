@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Resorte v3 - Base comun para los tres tipos",
+  "description": "Estructura comun heredada por compresion.json, tension.json y torsion.json. NO usar directamente para validacion; los schemas tipo-especificos extienden este.",
+  "type": "object",
+  "properties": {
+    "tipo_resorte": {
+      "type": "string",
+      "enum": ["compresion", "tension", "torsion"]
+    },
+    "identificacion": {
+      "type": "object",
+      "properties": {
+        "numero_parte":        { "type": ["string", "null"] },
+        "nombre_parte":        { "type": ["string", "null"] },
+        "numero_plano":        { "type": ["string", "null"] },
+        "revision":            { "type": ["string", "null"] },
+        "fecha_revision":      { "type": ["string", "null"] },
+        "cliente":             { "type": ["string", "null"] },
+        "estandar_dibujo":     { "type": ["string", "null"] },
+        "escala":              { "type": ["string", "null"] },
+        "unidad_dimensional":  { "type": ["string", "null"] },
+        "masa":                { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "material": {
+      "type": "object",
+      "properties": {
+        "designacion":                 { "type": ["string", "null"] },
+        "alternativas":                { "type": "array", "items": { "type": "string" }, "description": "Materiales alternativos cuando el plano acepta varios (ej. 'AISI 302 o AISI 304')." },
+        "norma":                       { "type": ["string", "null"] },
+        "tipo_o_grado":                { "type": ["string", "null"] },
+        "tratamiento_termico":         { "type": ["string", "null"] },
+        "acabado_superficial":         { "type": ["string", "null"] },
+        "referencia_documento_externo":{ "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "condiciones_operacion": {
+      "type": "object",
+      "properties": {
+        "temperatura_min_C":      { "type": ["number", "null"] },
+        "temperatura_max_C":      { "type": ["number", "null"] },
+        "frecuencia_ciclos":      { "type": ["number", "null"] },
+        "resistencia_corrosion":  { "type": ["string", "null"] },
+        "conductividad_electrica":{ "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "caracteristicas_clasificadas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "dim_no":                { "type": ["string", "null"] },
+          "designacion":           { "type": ["string", "null"] },
+          "valor":                 { "type": ["string", "null"] },
+          "clasificacion":         { "type": ["string", "null"], "description": "Marca del plano: CC, SC (Autoliv ASM), S/C, F/F (ASME Y14.5 KPC), o cualquier otra terminologia del fabricante." },
+          "sistema_clasificacion": { "type": ["string", "null"], "description": "Sistema usado: 'Autoliv ASM', 'ASME Y14.5 KPC', etc." }
+        },
+        "additionalProperties": false
+      }
+    },
+    "notas_generales": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "historial_revisiones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "rev":         { "type": ["string", "null"] },
+          "fecha":       { "type": ["string", "null"] },
+          "autor":       { "type": ["string", "null"] },
+          "descripcion": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "metadatos_extraccion": {
+      "type": "object",
+      "properties": {
+        "campos_no_visibles": { "type": "array", "items": { "type": "string" } },
+        "confianza_general":  { "type": ["string", "null"], "enum": ["alta", "media", "baja", null] },
+        "comentarios":        { "type": ["string", "null"] },
+        "version_schema":     { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "cota": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "properties": {
+            "nominal":          { "type": ["number", "null"] },
+            "tolerancia_mas":   { "type": ["number", "null"] },
+            "tolerancia_menos": { "type": ["number", "null"] },
+            "valor_maximo":     { "type": ["number", "null"] },
+            "valor_minimo":     { "type": ["number", "null"] },
+            "es_referencia":    { "type": ["boolean", "null"] },
+            "texto_original":   { "type": ["string", "null"] }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,453 @@
+"""Rutas del asistente de la barra inferior.
+
+Cuatro endpoints, y la diferencia entre ellos importa:
+
+    GET  /api/assistant/pipeline    → SQL puro
+    GET  /api/assistant/summary     → SQL puro
+    GET  /api/assistant/attention   → SQL puro
+    GET  /api/assistant/export      → SQL puro, devuelto como CSV
+    POST /api/assistant/ask         → ÚNICO que llama al modelo de Anthropic
+
+Los tres primeros son agregados de la base de datos: no cuestan API, no
+inventan nada y responden igual sin clave de Anthropic configurada. Sólo el
+chat gasta tokens, y sólo cuando alguien escribe una pregunta.
+
+Todo va detrás de ``rfq:leer``: quien no puede ver las RFQs tampoco puede
+preguntar por ellas ni exportarlas.
+"""
+
+from __future__ import annotations
+
+import csv
+import io
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+
+import app.core.config as config
+from api.dependencies import get_db
+from api.models.schemas import (
+    AssistantAnswer,
+    AssistantAttention,
+    AssistantQuestion,
+    AssistantSummary,
+    PipelineFlow,
+    PipelineStage,
+)
+from api.security import exige
+from app.auth.tokens import UsuarioSesion
+
+log = logging.getLogger("cotizador.api.assistant")
+
+router = APIRouter(prefix="/api/assistant", tags=["assistant"])
+
+# Cuántas RFQs se le enseñan al modelo. Cada fila son ~30 tokens; 60 filas es
+# contexto de sobra para una pregunta y mantiene la llamada barata y rápida.
+_MAX_FILAS_CONTEXTO = 60
+
+# Tope de la pregunta. Sin él, un pegado accidental de medio correo se
+# convierte en una llamada cara sin que nadie se dé cuenta.
+_MAX_CARACTERES_PREGUNTA = 1000
+
+
+# --------------------------------------------------------------------------- #
+# Agregados (sin IA)
+# --------------------------------------------------------------------------- #
+
+def _resumen() -> dict:
+    """Cuenta lo que hay en la base. Ni un número calculado fuera de SQL."""
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT COUNT(*),
+                       COUNT(*) FILTER (WHERE fecha_registro >= NOW() - INTERVAL '7 days'),
+                       COUNT(*) FILTER (WHERE fecha_registro >= NOW() - INTERVAL '30 days'),
+                       COUNT(DISTINCT cliente_id) FILTER (WHERE cliente_id IS NOT NULL)
+                FROM rfqs;
+            """)
+            total, semana, mes, clientes = cur.fetchone()
+
+            cur.execute("""
+                SELECT estado, COUNT(*)
+                FROM rfqs GROUP BY estado ORDER BY COUNT(*) DESC;
+            """)
+            por_estado = [{"estado": e, "total": n} for e, n in cur.fetchall()]
+
+            cur.execute("""
+                SELECT material, COUNT(*)
+                FROM rfqs
+                WHERE material IS NOT NULL AND material <> ''
+                GROUP BY material ORDER BY COUNT(*) DESC LIMIT 5;
+            """)
+            materiales = [{"material": m, "total": n} for m, n in cur.fetchall()]
+
+            cur.execute("SELECT MAX(fecha_registro)::text FROM rfqs;")
+            ultima = cur.fetchone()[0]
+
+            # Los clientes estrella (COT-71): el Top 12 que hace ~la mitad de
+            # las ventas de ISC. La marca vive en `clientes.es_estrella`, no en
+            # una lista dentro del código: si mañana entra o sale uno, se
+            # cambia en la base y esta pantalla se entera sola.
+            #
+            # `LEFT JOIN` y no `JOIN`: un cliente estrella sin ninguna RFQ
+            # todavía es exactamente lo que el Plant Manager quiere ver —una
+            # cuenta grande que lleva tiempo sin pedir—, y con `JOIN`
+            # desaparecería justo ése.
+            cur.execute("""
+                SELECT c.cliente_id, c.razon_social, c.payment_terms,
+                       COUNT(r.id) AS rfqs,
+                       MAX(r.fecha_registro)::text AS ultima,
+                       FLOOR(EXTRACT(EPOCH FROM (NOW() - MAX(r.fecha_registro)))
+                             / 86400)::int AS dias
+                FROM clientes c
+                LEFT JOIN rfqs r ON r.cliente_id = c.cliente_id
+                WHERE c.es_estrella
+                GROUP BY c.cliente_id, c.razon_social, c.payment_terms
+                -- Primero los que han escrito hace menos, y los que no han
+                -- escrito nunca al final. Es el orden que responde a la
+                -- pregunta del Plant Manager: ¿a quién le toca una llamada?
+                ORDER BY MAX(r.fecha_registro) DESC NULLS LAST, c.razon_social
+                LIMIT 12;
+            """)
+            estrella = [
+                {"cliente_id": cid, "razon_social": nombre,
+                 "payment_terms": terminos, "total": int(n or 0),
+                 "ultima": ult, "dias": None if dias is None else int(dias)}
+                for cid, nombre, terminos, n, ult, dias in cur.fetchall()
+            ]
+
+            # Cuánto del trabajo viene de esas cuentas. Es la cifra que hace
+            # informativo el panel: el Top 12 es ~la mitad de las VENTAS, y
+            # aquí se puede comprobar si también lo es de las solicitudes.
+            #
+            # Se cuenta en SQL contra la marca de la base, no dividiendo en el
+            # navegador la lista de arriba: esa lista está recortada a 12 y
+            # daría un porcentaje distinto en cuanto haya un estrella número 13.
+            cur.execute("""
+                SELECT COUNT(*) FILTER (
+                           WHERE cliente_id IN (SELECT cliente_id FROM clientes
+                                                WHERE es_estrella))
+                FROM rfqs;
+            """)
+            rfqs_estrella = int(cur.fetchone()[0] or 0)
+
+    return {
+        "total": total,
+        "ultimos_7_dias": semana,
+        "ultimos_30_dias": mes,
+        "clientes": clientes,
+        "por_estado": por_estado,
+        "materiales": materiales,
+        "ultima_rfq": ultima,
+        "estrella": estrella,
+        "rfqs_estrella": rfqs_estrella,
+    }
+
+
+def _atencion(limite: int = 20) -> dict:
+    """RFQs que esperan a una persona, con los días que llevan esperando.
+
+    No es un modelo de riesgo: es lo que la base sabe decir con certeza —quién
+    está parado en revisión, quién tiene banderas críticas y desde cuándo—.
+    Llamarlo de otra forma sería vender una predicción que no existe.
+    """
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT r.rfq_id, r.version, r.cliente_id, r.part_number,
+                       r.estado, r.score,
+                       FLOOR(EXTRACT(EPOCH FROM (NOW() - r.fecha_registro)) / 86400)::int,
+                       COUNT(*) FILTER (WHERE b.nivel = 'crit'),
+                       COUNT(*) FILTER (WHERE b.nivel = 'warn'),
+                       COALESCE(
+                           (ARRAY_AGG(b.titulo ORDER BY
+                                CASE b.nivel WHEN 'crit' THEN 0 ELSE 1 END)
+                            FILTER (WHERE b.nivel IN ('crit', 'warn')))[1],
+                           '')
+                FROM rfqs r
+                LEFT JOIN rfq_banderas b ON b.rfq_version_id = r.id
+                WHERE r.estado NOT IN ('Approved', 'Declined')
+                GROUP BY r.id, r.rfq_id, r.version, r.cliente_id, r.part_number,
+                         r.estado, r.score, r.fecha_registro
+                HAVING r.estado = 'RequiresReview'
+                    OR COUNT(*) FILTER (WHERE b.nivel IN ('crit', 'warn')) > 0
+                ORDER BY COUNT(*) FILTER (WHERE b.nivel = 'crit') DESC,
+                         r.fecha_registro ASC
+                LIMIT %s;
+            """, (limite,))
+            filas = cur.fetchall()
+
+    columnas = ("rfq_id", "version", "cliente_id", "part_number", "estado",
+                "score", "dias_esperando", "criticas", "avisos", "bandera")
+    pendientes = [dict(zip(columnas, f)) for f in filas]
+
+    return {
+        "pendientes": pendientes,
+        "total": len(pendientes),
+        "criticas": sum(1 for p in pendientes if p["criticas"]),
+    }
+
+
+@router.get("/summary", response_model=AssistantSummary)
+def resumen(usuario: UsuarioSesion = Depends(exige("rfq:leer"))):
+    """Cifras de la base: totales, estados, materiales más pedidos."""
+    return AssistantSummary(**_resumen())
+
+
+@router.get("/attention", response_model=AssistantAttention)
+def atencion(
+    limit: int = Query(20, ge=1, le=100),
+    usuario: UsuarioSesion = Depends(exige("rfq:leer")),
+):
+    """RFQs paradas o con banderas, ordenadas por gravedad y antigüedad."""
+    return AssistantAttention(**_atencion(limit))
+
+
+@router.get("/export")
+def exportar(
+    limit: int = Query(1000, ge=1, le=5000),
+    usuario: UsuarioSesion = Depends(exige("rfq:leer")),
+):
+    """La lista de RFQs en CSV, para abrirla en Excel."""
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT r.rfq_id, r.version, r.cliente_id, r.nombre_proyecto,
+                       r.part_number, r.volumen, r.material, r.estado,
+                       r.veredicto_sistema, r.veredicto_final, r.score,
+                       r.fecha_registro::text
+                FROM rfqs r
+                ORDER BY r.fecha_registro DESC
+                LIMIT %s;
+            """, (limit,))
+            filas = cur.fetchall()
+
+    buffer = io.StringIO()
+    # Excel en Windows espera CRLF; con \n solo mete todo en una fila.
+    escritor = csv.writer(buffer, lineterminator="\r\n")
+    escritor.writerow([
+        "RFQ", "Version", "Customer", "Project", "Part number", "Volume",
+        "Material", "State", "System verdict", "Final verdict", "Score",
+        "Registered",
+    ])
+    escritor.writerows(filas)
+
+    # El BOM es lo que hace que Excel abra el CSV en UTF-8; sin él, un nombre
+    # con acento llega roto.
+    datos = "﻿" + buffer.getvalue()
+    return StreamingResponse(
+        io.BytesIO(datos.encode("utf-8")),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="rfqs.csv"'},
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Chat (única llamada al modelo)
+# --------------------------------------------------------------------------- #
+
+_SISTEMA = """Eres el asistente del cotizador de resortes industriales de ISC
+(CGR International). Respondes preguntas del equipo sobre las RFQs registradas.
+
+Reglas:
+- Respondes ÚNICAMENTE con los datos del contexto. Si el contexto no alcanza
+  para responder, dilo con claridad y di qué dato faltaría.
+- No inventas cifras, clientes, materiales ni fechas.
+- No propones precios ni decisiones de negocio: eso lo dictamina una persona.
+- Respondes en el mismo idioma de la pregunta, en tres frases o menos, sin
+  encabezados ni listas salvo que la pregunta pida un listado."""
+
+
+def _contexto() -> str:
+    """Lo que el modelo puede ver: agregados y las últimas RFQs, en texto."""
+    resumen = _resumen()
+    lineas = [
+        "CIFRAS GENERALES",
+        f"- Total de RFQs: {resumen['total']}",
+        f"- Últimos 7 días: {resumen['ultimos_7_dias']}",
+        f"- Últimos 30 días: {resumen['ultimos_30_dias']}",
+        f"- Clientes distintos: {resumen['clientes']}",
+        f"- Última RFQ registrada: {resumen['ultima_rfq'] or 'ninguna'}",
+        "",
+        "POR ESTADO",
+    ]
+    lineas += [f"- {e['estado']}: {e['total']}" for e in resumen["por_estado"]] or ["- (sin datos)"]
+
+    if resumen["materiales"]:
+        lineas += ["", "MATERIALES MÁS PEDIDOS"]
+        lineas += [f"- {m['material']}: {m['total']}" for m in resumen["materiales"]]
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT rfq_id, version, cliente_id, part_number, material,
+                       volumen, estado, score, fecha_registro::date::text
+                FROM rfqs
+                ORDER BY fecha_registro DESC
+                LIMIT %s;
+            """, (_MAX_FILAS_CONTEXTO,))
+            filas = cur.fetchall()
+
+    if filas:
+        lineas += ["", f"ÚLTIMAS {len(filas)} RFQs",
+                   "rfq | v | cliente | part number | material | volumen | estado | score | fecha"]
+        for f in filas:
+            lineas.append(" | ".join("" if v is None else str(v) for v in f))
+
+    return "\n".join(lineas)
+
+
+@router.post("/ask", response_model=AssistantAnswer)
+def preguntar(
+    peticion: AssistantQuestion,
+    usuario: UsuarioSesion = Depends(exige("rfq:leer")),
+):
+    """Responde una pregunta sobre las RFQs con el modelo de Anthropic."""
+    pregunta = (peticion.pregunta or "").strip()
+    if not pregunta:
+        raise HTTPException(status_code=400, detail="La pregunta está vacía.")
+    if len(pregunta) > _MAX_CARACTERES_PREGUNTA:
+        raise HTTPException(
+            status_code=400,
+            detail=f"La pregunta no puede pasar de {_MAX_CARACTERES_PREGUNTA} caracteres.",
+        )
+
+    # Se comprueba antes de montar el contexto: si no hay clave, no tiene
+    # sentido consultar la base para nada.
+    if not getattr(config, "ANTHROPIC_API_KEY", ""):
+        raise HTTPException(
+            status_code=503,
+            detail="El chat del asistente necesita ANTHROPIC_API_KEY. "
+                   "Los botones de resumen, atención y exportar funcionan sin ella.",
+        )
+
+    try:
+        import anthropic
+    except ImportError:
+        raise HTTPException(status_code=503,
+                            detail="El paquete 'anthropic' no está instalado en el servidor.")
+
+    modelo = getattr(config, "LLM_MODEL", "") or config.VISION_MODEL
+    contexto = _contexto()
+
+    log.info("Consulta del asistente de %s (%d caracteres).", usuario.correo, len(pregunta))
+
+    try:
+        cliente = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+        respuesta = cliente.messages.create(
+            model=modelo,
+            max_tokens=600,
+            temperature=0.0,   # datos, no redacción creativa
+            system=_SISTEMA,
+            messages=[{
+                "role": "user",
+                # El contexto va delimitado y antes de la pregunta: si un
+                # correo trajera texto con pinta de instrucción, queda dentro
+                # de los datos y no se lee como orden.
+                "content": (f"<datos>\n{contexto}\n</datos>\n\n"
+                            f"Pregunta del equipo: {pregunta}"),
+            }],
+        )
+    except Exception as err:
+        # El mensaje de la librería puede llevar detalles de la cuenta: se
+        # registra entero y al navegador va sólo lo justo.
+        log.exception("Fallo al consultar el modelo.")
+        raise HTTPException(status_code=502,
+                            detail="No se pudo consultar el modelo. Inténtalo de nuevo.") from err
+
+    partes = [b.text for b in respuesta.content if getattr(b, "text", None)]
+    uso = getattr(respuesta, "usage", None)
+
+    return AssistantAnswer(
+        respuesta="\n".join(partes).strip() or "El modelo no devolvió texto.",
+        modelo=modelo,
+        tokens_entrada=getattr(uso, "input_tokens", None),
+        tokens_salida=getattr(uso, "output_tokens", None),
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Recorrido del correo (sin IA)
+# --------------------------------------------------------------------------- #
+
+@router.get("/pipeline", response_model=PipelineFlow)
+def recorrido(usuario: UsuarioSesion = Depends(exige("rfq:leer"))):
+    """Cuántos correos y RFQs hay en cada etapa del recorrido.
+
+    Las etapas son las que el sistema recorre de verdad, no una metáfora:
+
+        1. El cliente escribe        → correos_procesados
+        2. Se extraen los datos      → rfqs registradas
+        3. Revisión de una persona   → estado RequiresReview
+        4. Dictamen                  → Approved / Declined
+        5. Sales                     → las aprobadas, listas para cotizar
+
+    `espera=True` marca las etapas donde el trabajo se queda parado esperando a
+    alguien. Son las que el frontend pinta distinto: es el dato que importa
+    cuando alguien mira esta pantalla para saber dónde se atasca la cosa.
+    """
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT COUNT(*),
+                       COUNT(*) FILTER (WHERE fecha_registro >= NOW() - INTERVAL '7 days')
+                FROM correos_procesados;
+            """)
+            correos, correos_semana = cur.fetchone()
+
+            cur.execute("""
+                SELECT COUNT(*),
+                       COUNT(*) FILTER (WHERE estado = 'RequiresReview'),
+                       COUNT(*) FILTER (WHERE estado = 'New'),
+                       COUNT(*) FILTER (WHERE estado = 'Approved'),
+                       COUNT(*) FILTER (WHERE estado = 'Declined'),
+                       COUNT(*) FILTER (WHERE estado = 'Incomplete'),
+                       COUNT(*) FILTER (WHERE estado = 'Approved'
+                                        AND datos_json->'oferta'->>'enviada' = 'true')
+                FROM rfqs;
+            """)
+            (total, revision, nuevas, aprobadas,
+             declinadas, incompletas, ofertadas) = cur.fetchone()
+
+    etapas = [
+        PipelineStage(clave="cliente", etiqueta="Customer email",
+                      total=correos,
+                      detalle=f"{correos_semana} in the last 7 days"),
+        PipelineStage(clave="extraccion", etiqueta="Data extracted",
+                      total=total,
+                      detalle="RFQs registered from those emails"),
+        # Los que entraron pero se quedaron sin datos (COT-76). Se cuentan aquí
+        # porque si no, el embudo mentía: "Data extracted" los incluye en el
+        # total y luego no aparecían en ninguna etapa.
+        PipelineStage(clave="incompletas", etiqueta="Waiting on customer",
+                      total=incompletas, espera=False,
+                      detalle="Missing data: we asked the buyer"),
+        PipelineStage(clave="revision", etiqueta="Needs review",
+                      total=revision, espera=revision > 0,
+                      detalle="Low-confidence extraction: a person checks it"),
+        PipelineStage(clave="dictamen", etiqueta="Awaiting decision",
+                      total=nuevas, espera=nuevas > 0,
+                      detalle="Waiting for approve or decline"),
+        # Aprobadas que todavía no se han ofertado: el PM tiene que mandar la
+        # cotización (pantalla Quote). Es la última parada donde algo espera.
+        PipelineStage(clave="sales", etiqueta="Ready for Sales",
+                      total=aprobadas - ofertadas, espera=(aprobadas - ofertadas) > 0,
+                      detalle=f"{declinadas} declined"),
+        PipelineStage(clave="oferta", etiqueta="Quote sent",
+                      total=ofertadas,
+                      detalle="Offer PDF emailed to the customer"),
+    ]
+
+    # El estado del worker vive en api.routes.status; se lee de allí para no
+    # tener dos versiones de la misma verdad.
+    from api.routes import status as estado_mod
+    try:
+        estado = estado_mod._snapshot()
+        corriendo = bool(estado.get("running"))
+        ultimo = estado.get("last_cycle")
+    except Exception:
+        log.debug("No se pudo leer el estado del worker.", exc_info=True)
+        corriendo, ultimo = False, None
+
+    return PipelineFlow(etapas=etapas, corriendo=corriendo, ultimo_ciclo=ultimo)

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cotización {{ rfq.rfq_id }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+            @bottom-center {
+                content: "Página " counter(page) " de " counter(pages);
+                font-family: sans-serif;
+                font-size: 9pt;
+                color: #6B7280;
+            }
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #1F2937;
+            font-size: 10pt;
+            line-height: 1.5;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #2563EB;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .logo { max-height: 50px; }
+        .quote-title {
+            text-align: right;
+        }
+        .quote-title h1 {
+            color: #2563EB;
+            margin: 0 0 5px 0;
+            font-size: 24pt;
+        }
+        .quote-title p { margin: 0; color: #6B7280; }
+        
+        .info-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        .info-col {
+            display: table-cell;
+            width: 50%;
+        }
+        h3 {
+            color: #1D4ED8;
+            border-bottom: 1px solid #E5E7EB;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+            font-size: 12pt;
+        }
+        table.pricing {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        table.pricing th {
+            background-color: #F3F4F6;
+            color: #374151;
+            padding: 10px;
+            text-align: left;
+            border-bottom: 2px solid #D1D5DB;
+        }
+        table.pricing td {
+            padding: 10px;
+            border-bottom: 1px solid #E5E7EB;
+        }
+        .text-right { text-align: right !important; }
+        .notes {
+            background-color: #F9FAFB;
+            padding: 15px;
+            border-left: 4px solid #2563EB;
+            margin-bottom: 30px;
+        }
+        .footer {
+            margin-top: 50px;
+            font-size: 8pt;
+            color: #6B7280;
+            text-align: justify;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>
+            {% if logo_uri %}
+            <img src="{{ logo_uri }}" class="logo" alt="CGR Logo">
+            {% else %}
+            <h2 style="color: #2563EB; margin: 0;">CGR International</h2>
+            {% endif %}
+        </div>
+        <div class="quote-title">
+            <h1>COTIZACIÓN</h1>
+            <p>Ref: {{ rfq.rfq_id }}</p>
+            <p>Fecha: {{ rfq.fecha_registro }}</p>
+        </div>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-col">
+            <h3>Preparado Para</h3>
+            <p><strong>Cliente:</strong> {{ rfq.cliente_id }}</p>
+            <p><strong>Proyecto:</strong> {{ rfq.nombre_proyecto or 'N/A' }}</p>
+            <p><strong>Part Number:</strong> {{ rfq.part_number }}</p>
+        </div>
+        <div class="info-col">
+            <h3>Condiciones</h3>
+            {# El plazo no lo calcula el motor de costeo: lo fija Planeación. Si no
+   viene, se dice, en vez de imprimir "None Semanas" en un documento que
+   va al cliente. #}
+            <p><strong>Lead Time:</strong>
+              {% if precio.lead_time_weeks %}{{ precio.lead_time_weeks }} Semanas
+              {% else %}Por confirmar{% endif %}</p>
+            <p><strong>Moneda:</strong> {{ precio.moneda }}</p>
+        </div>
+    </div>
+
+    <table class="pricing">
+        <thead>
+            <tr>
+                <th>Descripción</th>
+                <th class="text-right">Volumen</th>
+                <th class="text-right">Precio Unitario</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ rfq.desc or 'Resorte' }} (Material: {{ rfq.material }})</td>
+                <td class="text-right">{{ rfq.volumen }}</td>
+                {# format() sobre None lanza UndefinedError y tumba la generación entera. #}
+                <td class="text-right">
+                  {% if precio.precio_unitario_usd is not none %}${{ "%.4f"|format(precio.precio_unitario_usd) }}{% else %}Por determinar{% endif %}</td>
+            </tr>
+            <tr>
+                <td>Tooling / Setup (NRE)</td>
+                <td class="text-right">1 lote</td>
+                                <td class="text-right">
+                  {% if precio.tooling_usd is not none %}${{ "%.2f"|format(precio.tooling_usd) }}{% else %}Sin herramental{% endif %}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="notes">
+        <strong>Notas:</strong>
+        <p style="white-space: pre-line; margin-bottom: 0;">{{ precio.notas or 'Sin notas adicionales.' }}</p>
+    </div>
+
+    <div class="footer">
+        <p>Esta cotización es válida por 30 días a partir de su fecha de emisión. 
+        Cantidades de envío pueden variar ±10% según estándar de la industria. 
+        Cualquier cambio en las especificaciones del plano o requisitos de empaque 
+        invalidará esta cotización y requerirá una revisión.</p>
+    </div>
+
+</body>
+</html>
