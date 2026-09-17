@@ -131,23 +131,47 @@ const PerfilMenu = (() => {
      * La pestaña se pasa por el estado de la ruta en vez de por la URL: es una
      * preferencia de navegación, no una dirección que alguien vaya a compartir.
      */
-    function irAPerfil(seccion) {
+    function irAPerfil(seccion, destino) {
         cerrar();
         APP.navigate('perfil');
         if (!seccion) return;
         // La página se monta de forma asíncrona: se espera a que exista.
         const intentar = (quedan) => {
             const tab = document.querySelector(`.perfil-tab[data-seccion="${seccion}"]`);
-            if (tab) { tab.click(); return; }
+            // Sin pestañas (quien no administra sólo tiene "Mi perfil") la
+            // sección ya está a la vista: basta con que exista el cuerpo.
+            const listo = tab || (seccion === 'perfil' && document.getElementById('perfilCuerpo'));
+            if (listo) {
+                if (tab && !tab.classList.contains('active')) tab.click();
+                if (destino) setTimeout(() => enfocar(destino), 30);
+                return;
+            }
             if (quedan > 0) setTimeout(() => intentar(quedan - 1), 60);
         };
         setTimeout(() => intentar(20), 60);
     }
 
+    /**
+     * "Editar perfil" y "Cambiar contraseña" son dos fichas de la misma
+     * sección: cada entrada lleva a la suya, la trae a la vista, la resalta
+     * un momento y deja el cursor en su primer campo. Antes las dos
+     * aterrizaban arriba del todo, y "Cambiar contraseña" no llevaba a la
+     * contraseña.
+     */
+    function enfocar(destino) {
+        const campo = document.getElementById(destino === 'password' ? 'pwActual' : 'perfilNombre');
+        if (!campo) return;
+        const ficha = campo.closest('.panel') || campo;
+        ficha.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        ficha.classList.add('panel--resaltado');
+        setTimeout(() => ficha.classList.remove('panel--resaltado'), 1600);
+        setTimeout(() => campo.focus({ preventScroll: true }), 350);
+    }
+
     function alPulsarItem(accion) {
         switch (accion) {
-            case 'editar':   return irAPerfil('perfil');
-            case 'password': return irAPerfil('perfil');
+            case 'editar':   return irAPerfil('perfil', 'editar');
+            case 'password': return irAPerfil('perfil', 'password');
             case 'usuarios': return irAPerfil('usuarios');
             case 'sistema':  return irAPerfil('sistema');
             case 'salir':    cerrar(); return APP.cerrarSesion();

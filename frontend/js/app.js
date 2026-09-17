@@ -198,9 +198,22 @@ const APP = {
             this.updateStatus();
             this.iniciarSondeo();
             this.handleRoute();
+            this.exigirPasswordPropia();
         } else {
             this.arrancar();
         }
+    },
+
+    /**
+     * Quien entra con la contraseña temporal que le puso quien administra
+     * pone la suya antes de nada (js/components/password.js). Se espera un
+     * instante a que la vista esté montada: el diálogo se abre encima de la
+     * aplicación, no encima del login.
+     */
+    exigirPasswordPropia() {
+        const yo = API.getUsuario();
+        if (!yo || !yo.debe_cambiar_password || typeof Password === 'undefined') return;
+        setTimeout(() => Password.pedirCambioInicial(), 300);
     },
 
     /** Reacciona a un 401: limpia la sesión y regresa al login. */
@@ -229,6 +242,7 @@ const APP = {
         if (actual && typeof actual.detener === 'function') actual.detener();
         Assistant.limpiar();
         PerfilMenu.limpiar();
+        if (typeof Password !== 'undefined') Password.quitarAviso();
         Notificaciones.limpiar();
         Revision.cerrar();
         if (typeof Push !== 'undefined') Push.limpiar();
@@ -328,6 +342,7 @@ const APP = {
         this.pintarUsuario();
         this.aplicarPermisos();
         this.conectarLogo();
+        this.exigirPasswordPropia();
 
         if (this.arrancada) {
             this.updateStatus();

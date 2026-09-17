@@ -51,6 +51,33 @@ def validar_politica(password: str) -> None:
         raise PasswordInvalida("La contraseña tiene muy poca variedad de caracteres.")
 
 
+# Alfabeto de las contraseñas temporales: sin 0/O, 1/l/I ni 5/S, que dictadas
+# por teléfono o leídas de una notificación se confunden. Mayúsculas,
+# minúsculas y cifras para que salga variada aunque sea corta.
+_ALFABETO_TEMPORAL = "ABCDEFGHJKMNPQRTUVWXYZabcdefghjkmnpqrtuvwxyz23467892346789"
+_GRUPOS_TEMPORAL = 3
+_LARGO_GRUPO = 4
+
+
+def generar_temporal() -> str:
+    """Una contraseña provisional legible, del tipo ``Kf7m-Qw3p-Zt9h``.
+
+    Tres grupos de cuatro separados por guiones: catorce caracteres, que
+    cumplen la política (largo y variedad) y se copian de una notificación o
+    se dictan sin equivocarse. Se genera en el servidor para que nadie tenga
+    que inventarse una: las que se inventan deprisa son siempre las mismas.
+    """
+    while True:
+        grupos = ["".join(secrets.choice(_ALFABETO_TEMPORAL) for _ in range(_LARGO_GRUPO))
+                  for _ in range(_GRUPOS_TEMPORAL)]
+        candidata = "-".join(grupos)
+        try:
+            validar_politica(candidata)
+        except PasswordInvalida:   # por variedad, rarísimo: se vuelve a tirar
+            continue
+        return candidata
+
+
 def _derivar(password: str, salt: bytes, iteraciones: int) -> bytes:
     return hashlib.pbkdf2_hmac(
         "sha256", password.encode("utf-8"), salt, iteraciones, dklen=TAM_HASH

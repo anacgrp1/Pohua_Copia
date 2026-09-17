@@ -243,11 +243,138 @@ const Password = (() => {
         }).observe(document.documentElement, { childList: true, subtree: true });
     }
 
+    // ------------------------------------------------- el primer acceso
+
+    let dialogoInicial = null;   // para no abrir dos a la vez
+
+    /**
+     * La persona entró con la contraseña temporal que le puso quien
+     * administra (alta o restablecimiento): se le pide la suya antes de
+     * seguir. Lo llama app.js al arrancar con sesión cuando el servidor dice
+     * `debe_cambiar_password`.
+     *
+     * Se puede dejar para luego —a alguien que entra desde el teléfono en
+     * medio de otra cosa no se le puede secuestrar la pantalla—, pero mientras
+     * no la cambie queda un aviso fijo arriba de la aplicación, y el diálogo
+     * vuelve a salir en el siguiente arranque. En el servidor, la temporal
+     * sigue valiendo hasta que la sustituya: el aviso es insistencia, no
+     * cierre.
+     */
+    function pedirCambioInicial() {
+        const yo = API.getUsuario();
+        if (!yo || !yo.debe_cambiar_password) { quitarAviso(); return; }
+        if (dialogoInicial) return;
+        // El anterior, si aún se está desvaneciendo, fuera ya: dos formularios
+        // con los mismos ids en la página confunden a quien rellene el nuevo.
+        document.querySelectorAll('#pwInicialForm').forEach(f => f.closest('.dialogo-fondo')?.remove());
+        ponerAviso();
+
+        const fondo = document.createElement('div');
+        fondo.className = 'dialogo-fondo';
+        fondo.innerHTML = `
+            <div class="dialogo dialogo--formulario" role="dialog" aria-modal="true" aria-labelledby="pwInicialTitulo">
+                <div class="dialogo-cabecera">
+                    <span class="dialogo-icono">${ICONO_OJO}</span>
+                    <h2 class="dialogo-titulo" id="pwInicialTitulo">${esc(I18N.t('pw.inicial.titulo'))}</h2>
+                </div>
+                <p class="dialogo-mensaje">${esc(I18N.t('pw.inicial.mensaje', { nombre: yo.nombre || '' }))}</p>
+                <form class="dialogo-form" id="pwInicialForm" autocomplete="off">
+                    <div class="form-group">
+                        <label class="form-label" for="pwInicialActual">${esc(I18N.t('pw.inicial.temporal'))}</label>
+                        <input class="form-input" id="pwInicialActual" type="password" autocomplete="current-password" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="pwInicialNueva">${esc(I18N.t('perfil.pwNueva'))}</label>
+                        <input class="form-input" id="pwInicialNueva" type="password" autocomplete="new-password" minlength="12" required data-reglas>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="pwInicialRepetir">${esc(I18N.t('perfil.pwRepetir'))}</label>
+                        <input class="form-input" id="pwInicialRepetir" type="password" autocomplete="new-password" required data-reglas data-igual-que="pwInicialNueva">
+                    </div>
+                    <p class="login-error" id="pwInicialError" hidden></p>
+                </form>
+                <div class="dialogo-acciones">
+                    <button type="button" class="btn btn-ghost" data-accion="luego">${esc(I18N.t('pw.inicial.luego'))}</button>
+                    <button type="button" class="btn btn-primary" data-accion="cambiar">${esc(I18N.t('perfil.cambiarPw'))}</button>
+                </div>
+            </div>`;
+        document.body.appendChild(fondo);
+        dialogoInicial = fondo;
+
+        const error = fondo.querySelector('#pwInicialError');
+        const btnCambiar = fondo.querySelector('[data-accion="cambiar"]');
+        const mostrarError = (texto) => { error.textContent = texto || ''; error.hidden = !texto; };
+
+        function cerrar() {
+            document.removeEventListener('keydown', alTecla, true);
+            fondo.classList.add('cerrando');
+            setTimeout(() => fondo.remove(), 150);
+            dialogoInicial = null;
+        }
+        function alTecla(ev) {
+            if (ev.key === 'Escape') { ev.preventDefault(); cerrar(); }
+            else if (ev.key === 'Enter' && ev.target.tagName !== 'BUTTON') { ev.preventDefault(); cambiar(); }
+        }
+
+        async function cambiar() {
+            const actual = fondo.querySelector('#pwInicialActual').value;
+            const nueva = fondo.querySelector('#pwInicialNueva').value;
+            const repetir = fondo.querySelector('#pwInicialRepetir').value;
+            if (!actual || !nueva || !repetir) { mostrarError(I18N.t('login.faltan')); return; }
+            if (nueva !== repetir) { mostrarError(I18N.t('aviso.pwNoCoinciden')); return; }
+            if (nueva === actual)  { mostrarError(I18N.t('aviso.pwIgual')); return; }
+            if (!valida(nueva))    { mostrarError(I18N.t('pw.inicial.noCumple')); return; }
+            btnCambiar.disabled = true;
+            try {
+                await API.cambiarPassword(actual, nueva);
+                yo.debe_cambiar_password = false;
+                API.guardarUsuario(yo);
+                quitarAviso();
+                cerrar();
+                Toast.success(I18N.t('aviso.pwCambiada'));
+            } catch (err) {
+                btnCambiar.disabled = false;
+                if (err && err.sesionExpirada) return;
+                mostrarError(err.message);
+            }
+        }
+
+        btnCambiar.addEventListener('click', cambiar);
+        fondo.querySelector('[data-accion="luego"]').addEventListener('click', () => {
+            cerrar();
+            Toast.warning(I18N.t('pw.inicial.recordatorio'));
+        });
+        document.addEventListener('keydown', alTecla, true);
+        requestAnimationFrame(() => fondo.querySelector('#pwInicialActual')?.focus({ preventScroll: true }));
+    }
+
+    /** La franja fija de "cámbiala" mientras siga con la temporal. */
+    function ponerAviso() {
+        if (document.getElementById('pwAviso')) return;
+        const contenido = document.querySelector('.main-content') || document.querySelector('.app-layout') || document.body;
+        // Debajo de la cabecera de la página, no encima: en el teléfono el
+        // botón del menú vive en la esquina de esa cabecera.
+        const cabecera = contenido.querySelector(':scope > .page-header');
+        const franja = document.createElement('div');
+        franja.id = 'pwAviso';
+        franja.className = 'pw-aviso';
+        franja.setAttribute('role', 'status');
+        franja.innerHTML = `<span>${esc(I18N.t('pw.inicial.franja'))}</span>
+            <button type="button" class="btn btn-sm btn-primary" id="pwAvisoBoton">${esc(I18N.t('pw.inicial.ahora'))}</button>`;
+        if (cabecera) cabecera.insertAdjacentElement('afterend', franja);
+        else contenido.insertBefore(franja, contenido.firstChild);
+        franja.querySelector('#pwAvisoBoton').addEventListener('click', pedirCambioInicial);
+    }
+
+    function quitarAviso() {
+        document.getElementById('pwAviso')?.remove();
+    }
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', vigilar, { once: true });
     } else {
         vigilar();
     }
 
-    return { conectar, valida, LONGITUD_MINIMA, VARIEDAD_MINIMA, COMUNES };
+    return { conectar, valida, pedirCambioInicial, quitarAviso, LONGITUD_MINIMA, VARIEDAD_MINIMA, COMUNES };
 })();

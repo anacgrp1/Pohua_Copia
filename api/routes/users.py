@@ -23,8 +23,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from api.models.schemas import (
+    PasswordRestablecida,
     RolPublico,
     UsuarioAdmin,
+    UsuarioCreado,
     UsuarioListado,
 )
 from api.security import exige, usuario_actual
@@ -57,11 +59,27 @@ class FotoSubida(BaseModel):
 
 
 class UsuarioNuevo(BaseModel):
+    """El alta: correo, nombre y apellido, rol. Sin contraseña a propósito.
+
+    La contraseña inicial la genera el servidor y se devuelve UNA vez en la
+    respuesta: así nadie tiene que inventarse una, y la persona la cambia en
+    su primer inicio de sesión.
+    """
     correo: str = Field(min_length=3, max_length=200)
-    nombre: str = Field(min_length=1, max_length=120)
+    nombre: str = Field(min_length=1, max_length=80)
+    apellido: str = Field(default="", max_length=80)
     rol: str
-    password: str
     externo: bool = False
+
+
+class Restablecimiento(BaseModel):
+    """Opciones del restablecimiento: si además se manda al teléfono."""
+    notificar: bool = False
+
+
+class PasswordANotificar(BaseModel):
+    """Mandar por notificación la temporal que el administrador ya tiene a la vista."""
+    password_temporal: str
 
 
 class UsuarioCambio(BaseModel):
@@ -168,16 +186,18 @@ def listar(usuario: UsuarioSesion = Depends(exige("usuario:gestionar"))):
     return [UsuarioAdmin(**u) for u in repository.listar_usuarios()]
 
 
-@router.post("/api/users", response_model=UsuarioAdmin, status_code=201)
+@router.post("/api/users", response_model=UsuarioCreado, status_code=201)
 def crear(
     nuevo: UsuarioNuevo,
     usuario: UsuarioSesion = Depends(exige("usuario:gestionar")),
 ):
-    """Da de alta un usuario.
+    """Da de alta un usuario y devuelve su contraseña temporal, una sola vez.
 
-    La contraseña la escribe quien administra y se la pasa a la persona; ella
-    la cambia desde su perfil. No se manda por correo: este sistema ya envía
-    correos a clientes y una credencial en el mismo buzón es mala idea.
+    La contraseña la genera el servidor: quien administra la ve en pantalla y
+    se la hace llegar a la persona (copiándola, o por notificación al
+    teléfono si ya tenía Pohua). No se manda por correo: este sistema ya
+    envía correos a clientes y una credencial en el mismo buzón es mala idea.
+    La persona tiene que cambiarla en cuanto entre.
     """
     correo = nuevo.correo.strip().lower()
     if "@" not in correo:
@@ -189,25 +209,23 @@ def crear(
             status_code=409,
             detail=f"Ya existe un usuario con el correo {correo}.")
 
+    # Nombre y apellido se guardan juntos: es el nombre con el que la persona
+    # firma sus decisiones en la bitácora y el que sale en el avatar.
+    nombre = " ".join(p for p in (nuevo.nombre.strip(), nuevo.apellido.strip()) if p)
+    if not nombre:
+        raise HTTPException(status_code=400, detail="El nombre no puede quedar vacío.")
+
     try:
-        repository.crear_usuario(correo, nuevo.nombre, nuevo.password, nuevo.rol)
-        if nuevo.externo:
-            # En un segundo paso a propósito: `crear_usuario` es el camino que
-            # usan también el arranque y los scripts, y no se le añade un
-            # parámetro que sólo interesa al alta desde la pantalla.
-            creado_id = repository.obtener_por_correo(correo)
-            if creado_id:
-                repository.actualizar_usuario(creado_id["id"], externo=True)
+        _, temporal = repository.crear_usuario_temporal(
+            correo, nombre, nuevo.rol, externo=nuevo.externo)
     except ValueError as err:
-        # PasswordInvalida hereda de ValueError, así que esto cubre tanto la
-        # política de contraseñas como un rol inexistente.
         raise HTTPException(status_code=400, detail=str(err)) from err
 
     log.info("Usuario %s dado de alta por %s.", correo, usuario.correo)
     creado = next((u for u in repository.listar_usuarios() if u["correo"] == correo), None)
     if not creado:
         raise HTTPException(status_code=500, detail="El usuario no se pudo leer tras crearlo.")
-    return UsuarioAdmin(**creado)
+    return UsuarioCreado(**creado, password_temporal=temporal)
 
 
 @router.patch("/api/users/{usuario_id}", response_model=UsuarioAdmin)
@@ -242,32 +260,104 @@ def cambiar(
 
 
 @router.post("/api/users/{usuario_id}/password", status_code=204)
-def resetear_password(
+def poner_password(
     usuario_id: int,
     cuerpo: PasswordAjena,
     usuario: UsuarioSesion = Depends(exige("usuario:gestionar")),
 ):
-    """Asigna una contraseña temporal a otro usuario.
+    """Asigna una contraseña temporal elegida por quien administra.
+
+    Queda por compatibilidad (scripts y pruebas): la pantalla usa
+    ``/password/reset``, que la genera sola. En los dos casos la persona
+    tiene que cambiarla al entrar.
+    """
+    _comprobar_ajeno(usuario_id, usuario)
+    try:
+        repository.cambiar_password(usuario_id, cuerpo.password_nueva, temporal=True)
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=str(err)) from err
+    log.warning("Contraseña del usuario %s restablecida por %s.", usuario_id, usuario.correo)
+    return Response(status_code=204)
+
+
+@router.post("/api/users/{usuario_id}/password/reset", response_model=PasswordRestablecida)
+def restablecer_password(
+    usuario_id: int,
+    cuerpo: Optional[Restablecimiento] = None,
+    usuario: UsuarioSesion = Depends(exige("usuario:gestionar")),
+):
+    """Restablece la contraseña de otra persona: el servidor genera una temporal.
 
     Quien administra nunca ve la anterior —sólo se guarda su hash—, así que
-    esto no es "recuperar" una contraseña sino sustituirla. Queda en el
-    registro quién lo hizo y sobre quién.
+    esto no es "recuperar" una contraseña sino sustituirla. La nueva se
+    devuelve UNA vez para que la copie o, con ``notificar``, se manda además
+    a los dispositivos de la persona (Web Push, cifrado de punta a punta: el
+    servicio de push no la lee). Queda en el registro quién lo hizo y sobre
+    quién, nunca la contraseña.
     """
+    _comprobar_ajeno(usuario_id, usuario)
+    temporal = repository.restablecer_password(usuario_id)
+    log.warning("Contraseña del usuario %s restablecida por %s.", usuario_id, usuario.correo)
+
+    respuesta = PasswordRestablecida(password_temporal=temporal)
+    if cuerpo and cuerpo.notificar:
+        envio = _notificar_temporal(usuario_id, temporal)
+        respuesta.notificada = True
+        respuesta.dispositivos = envio["dispositivos"]
+        respuesta.entregados = envio["entregados"]
+    return respuesta
+
+
+@router.post("/api/users/{usuario_id}/password/notificar", response_model=PasswordRestablecida)
+def notificar_password(
+    usuario_id: int,
+    cuerpo: PasswordANotificar,
+    usuario: UsuarioSesion = Depends(exige("usuario:gestionar")),
+):
+    """Manda al teléfono de la persona la temporal que el administrador tiene a la vista.
+
+    Sólo se manda si es EXACTAMENTE la temporal vigente (se comprueba contra
+    el hash y contra la marca de "debe cambiarla"): este endpoint no sirve
+    para empujar un texto cualquiera a los dispositivos de nadie.
+    """
+    _comprobar_ajeno(usuario_id, usuario)
+    fila = repository.obtener_por_id(usuario_id)
+    if not fila:
+        raise HTTPException(status_code=404, detail="Ese usuario no existe.")
+    from app.auth import passwords
+    if not fila.get("debe_cambiar_password") or not passwords.verificar(
+            cuerpo.password_temporal, fila.get("password_hash")):
+        raise HTTPException(
+            status_code=409,
+            detail="Esa ya no es la contraseña temporal vigente. Restablécela de nuevo.")
+
+    envio = _notificar_temporal(usuario_id, cuerpo.password_temporal)
+    return PasswordRestablecida(password_temporal=cuerpo.password_temporal, notificada=True,
+                                dispositivos=envio["dispositivos"],
+                                entregados=envio["entregados"])
+
+
+def _comprobar_ajeno(usuario_id: int, usuario: UsuarioSesion) -> None:
     if usuario_id == usuario.id:
         raise HTTPException(
             status_code=400,
             detail="Para cambiar tu propia contraseña usa el perfil: pide la actual.")
-
     if not repository.obtener_por_id(usuario_id):
         raise HTTPException(status_code=404, detail="Ese usuario no existe.")
 
-    try:
-        repository.cambiar_password(usuario_id, cuerpo.password_nueva)
-    except ValueError as err:
-        raise HTTPException(status_code=400, detail=str(err)) from err
 
-    log.warning("Contraseña del usuario %s restablecida por %s.", usuario_id, usuario.correo)
-    return Response(status_code=204)
+def _notificar_temporal(usuario_id: int, temporal: str) -> dict:
+    """La temporal, al teléfono de la persona. Devuelve dispositivos/entregados."""
+    import app.notifications.push as push
+    try:
+        return push.enviar_a_persona(
+            usuario_id,
+            "Pohua · Temporary password",
+            f"Your temporary password is {temporal}. Sign in and set your own.",
+            url="/", tag="pohua-password", nivel="warn")
+    except Exception as err:   # el envío nunca deshace el restablecimiento
+        log.warning("No se pudo mandar la temporal al usuario %s: %s", usuario_id, err)
+        return {"dispositivos": 0, "entregados": 0}
 
 
 # --------------------------------------------------------------------------- #

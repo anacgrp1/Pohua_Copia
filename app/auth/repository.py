@@ -36,7 +36,8 @@ def _conexion(conexion=None):
 
 _SELECT_USUARIO = """
     SELECT u.id, u.correo, u.nombre, u.password_hash, u.activo,
-           COALESCE(r.codigo, '') AS rol, COALESCE(u.externo, false)
+           COALESCE(r.codigo, '') AS rol, COALESCE(u.externo, false),
+           COALESCE(u.debe_cambiar_password, false)
     FROM usuarios u
     LEFT JOIN roles r ON r.id = u.rol_id
     WHERE {filtro}
@@ -65,6 +66,9 @@ def _fila_a_dict(fila) -> Dict[str, Any]:
         # permisos —eso lo decide el rol—, pero sí cambia cómo se lee la lista
         # de usuarios.
         "externo": bool(fila[6]),
+        # Entró (o va a entrar) con una contraseña temporal que puso el
+        # administrador: la aplicación le pide la suya nada más iniciar sesión.
+        "debe_cambiar_password": bool(fila[7]) if len(fila) > 7 else False,
     }
 
 
@@ -147,26 +151,60 @@ def autenticar(correo: str, password: str, conexion=None) -> Optional[UsuarioSes
         )
 
 
-def cambiar_password(usuario_id: int, password_nueva: str, conexion=None) -> None:
-    """Cambia la contraseña. Valida la política antes de escribir."""
+def cambiar_password(usuario_id: int, password_nueva: str, *,
+                     temporal: bool = False, conexion=None) -> None:
+    """Cambia la contraseña. Valida la política antes de escribir.
+
+    ``temporal=True`` es la del administrador (alta o restablecimiento): la
+    persona tendrá que sustituirla al entrar. Sin él es la persona poniendo
+    la suya, y la marca se apaga.
+    """
     passwords.validar_politica(password_nueva)
     nuevo_hash = passwords.hashear(password_nueva)
     with _conexion(conexion) as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "UPDATE usuarios SET password_hash = %s WHERE id = %s;",
-                (nuevo_hash, usuario_id),
+                "UPDATE usuarios SET password_hash = %s, debe_cambiar_password = %s "
+                "WHERE id = %s;",
+                (nuevo_hash, bool(temporal), usuario_id),
             )
-    log.info("Contraseña actualizada para el usuario %s.", usuario_id)
+    log.info("Contraseña %s para el usuario %s.",
+             "temporal puesta" if temporal else "actualizada", usuario_id)
 
 
-def crear_usuario(correo: str, nombre: str, password: str, rol_codigo: str,
-                  conexion=None) -> int:
+def restablecer_password(usuario_id: int, conexion=None) -> str:
+    """El administrador restablece: genera una temporal, la guarda y la devuelve.
+
+    Es la única vez que una contraseña existe en claro fuera del navegador:
+    sale de aquí, se le enseña al administrador y no se guarda en ningún
+    sitio más que como hash. Quien la recibe tiene que cambiarla al entrar.
+    """
+    provisional = passwords.generar_temporal()
+    cambiar_password(usuario_id, provisional, temporal=True, conexion=conexion)
+    return provisional
+
+
+def debe_cambiar_password(usuario_id: int, conexion=None) -> bool:
+    """¿Sigue con la contraseña temporal? Lo consultan login y /me."""
+    with _conexion(conexion) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COALESCE(debe_cambiar_password, false) FROM usuarios WHERE id = %s;",
+                        (usuario_id,))
+            fila = cur.fetchone()
+    return bool(fila and fila[0])
+
+
+def crear_usuario(correo: str, nombre: str, password: Optional[str], rol_codigo: str,
+                  *, temporal: bool = False, conexion=None) -> int:
     """Da de alta un usuario y devuelve su id.
 
-    La usa ``scripts/crear_usuario.py``; no se expone por HTTP para no
-    convertir el alta en algo que pueda hacer cualquiera con una sesión.
+    Con ``password=None`` el servidor genera una temporal (``temporal`` queda
+    en True se pida o no): quien llama la recupera con ``restablecer_password``
+    o, mejor, usa ``crear_usuario_temporal`` que devuelve las dos cosas.
     """
+    if password is None:
+        password = passwords.generar_temporal()
+        temporal = True
     passwords.validar_politica(password)
     hash_pw = passwords.hashear(password)
 
@@ -183,18 +221,36 @@ def crear_usuario(correo: str, nombre: str, password: str, rol_codigo: str,
 
             cur.execute(
                 """
-                INSERT INTO usuarios (correo, nombre, rol_id, password_hash, activo)
-                VALUES (%s, %s, %s, %s, true)
+                INSERT INTO usuarios (correo, nombre, rol_id, password_hash, activo,
+                                      debe_cambiar_password)
+                VALUES (%s, %s, %s, %s, true, %s)
                 ON CONFLICT (correo) DO UPDATE
                     SET nombre = EXCLUDED.nombre,
                         rol_id = EXCLUDED.rol_id,
                         password_hash = EXCLUDED.password_hash,
-                        activo = true
+                        activo = true,
+                        debe_cambiar_password = EXCLUDED.debe_cambiar_password
                 RETURNING id;
                 """,
-                (correo.strip().lower(), nombre.strip(), rol_id, hash_pw),
+                (correo.strip().lower(), nombre.strip(), rol_id, hash_pw, bool(temporal)),
             )
             return cur.fetchone()[0]
+
+
+def crear_usuario_temporal(correo: str, nombre: str, rol_codigo: str, *,
+                           externo: bool = False, conexion=None) -> tuple[int, str]:
+    """El alta desde la pantalla: sin contraseña elegida.
+
+    Devuelve ``(id, contraseña temporal)``. La temporal se enseña una sola vez
+    a quien administra; la persona la cambia en su primer inicio de sesión.
+    """
+    provisional = passwords.generar_temporal()
+    with _conexion(conexion) as conn:
+        nuevo_id = crear_usuario(correo, nombre, provisional, rol_codigo,
+                                 temporal=True, conexion=conn)
+        if externo:
+            actualizar_usuario(nuevo_id, externo=True, conexion=conn)
+    return nuevo_id, provisional
 
 
 # --------------------------------------------------------------------------- #
@@ -221,13 +277,14 @@ def listar_usuarios(conexion=None) -> List[Dict[str, Any]]:
                        COALESCE(u.externo, false) AS externo,
                        u.activo, u.ultimo_acceso::text, u.creado_en::text,
                        u.foto IS NOT NULL AS tiene_foto,
-                       u.foto_actualizada::text
+                       u.foto_actualizada::text,
+                       COALESCE(u.debe_cambiar_password, false)
                 FROM usuarios u
                 LEFT JOIN roles r ON r.id = u.rol_id
                 ORDER BY u.activo DESC, lower(u.nombre);
             """)
             columnas = ("id", "correo", "nombre", "rol", "externo", "activo", "ultimo_acceso",
-                        "creado_en", "tiene_foto", "foto_actualizada")
+                        "creado_en", "tiene_foto", "foto_actualizada", "debe_cambiar_password")
             return [dict(zip(columnas, f)) for f in cur.fetchall()]
 
 

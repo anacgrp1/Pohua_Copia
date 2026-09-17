@@ -32,6 +32,9 @@ class UsuarioPublico(BaseModel):
     # que se pide en cada arranque de la aplicación.
     tiene_foto: bool = False
     foto_actualizada: Optional[str] = None
+    # Entró con una contraseña temporal (alta o restablecimiento del
+    # administrador): la aplicación le pide la suya nada más entrar.
+    debe_cambiar_password: bool = False
 
 
 class LoginResponse(BaseModel):
@@ -259,6 +262,30 @@ class UsuarioAdmin(UsuarioListado):
     creado_en: Optional[str] = None
     tiene_foto: bool = False
     foto_actualizada: Optional[str] = None
+    # Sigue con la temporal que le puso el administrador: en la lista se ve
+    # quién no ha entrado todavía (o no ha cambiado la suya).
+    debe_cambiar_password: bool = False
+
+
+class UsuarioCreado(UsuarioAdmin):
+    """La respuesta del alta: el usuario y, UNA sola vez, su contraseña temporal.
+
+    No se vuelve a poder leer: el servidor sólo guarda el hash. Quien
+    administra la copia o la manda al teléfono de la persona desde la misma
+    pantalla.
+    """
+    password_temporal: str
+
+
+class PasswordRestablecida(BaseModel):
+    """Lo que devuelve el restablecimiento por el administrador."""
+    password_temporal: str
+    # Si se pidió mandarla por notificación: a cuántos dispositivos de la
+    # persona llegó. 0 dispositivos = no tiene los avisos activados en ningún
+    # teléfono; hay que dársela en persona.
+    notificada: bool = False
+    dispositivos: int = 0
+    entregados: int = 0
 
 
 class OfertaRequest(BaseModel):

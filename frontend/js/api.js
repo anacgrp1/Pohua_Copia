@@ -317,8 +317,13 @@ const API = {
     listarRoles()    { return this.request('GET', '/api/roles'); },
     crearUsuario(datos) { return this.request('POST', '/api/users', datos); },
     cambiarUsuario(id, cambios) { return this.request('PATCH', `/api/users/${id}`, cambios); },
-    resetearPassword(id, passwordNueva) {
-        return this.request('POST', `/api/users/${id}/password`, { password_nueva: passwordNueva });
+    /** El servidor genera la temporal y la devuelve una vez ({password_temporal, dispositivos…}). */
+    restablecerPassword(id, notificar = false) {
+        return this.request('POST', `/api/users/${id}/password/reset`, { notificar: !!notificar });
+    },
+    /** Manda al teléfono de la persona la temporal que el administrador tiene a la vista. */
+    notificarPassword(id, passwordTemporal) {
+        return this.request('POST', `/api/users/${id}/password/notificar`, { password_temporal: passwordTemporal });
     },
 
     configuracionSistema() { return this.request('GET', '/api/system/config'); },

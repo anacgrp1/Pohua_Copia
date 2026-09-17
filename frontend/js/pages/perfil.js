@@ -291,22 +291,51 @@ const PerfilPage = (() => {
     // ====================================================================
     // Sección: usuarios (admin)
     // ====================================================================
+    //
+    // Cómo se gestiona una contraseña aquí, de principio a fin:
+    //
+    //   Alta          se piden correo, nombre y apellido, y rol. La contraseña
+    //                 NO se pide: la genera el servidor y se enseña UNA vez en
+    //                 un diálogo con "Copiar". Quien administra se la hace
+    //                 llegar a la persona.
+    //   Primer acceso la persona entra con la temporal y Pohua le pide la
+    //                 suya antes de nada (js/components/password.js). Hasta
+    //                 que la cambie, en esta lista sale con "Temporary".
+    //   Olvido        sólo el administrador restablece: el servidor genera
+    //                 otra temporal, se la enseña y, si la persona tiene los
+    //                 avisos activados en el teléfono, se la manda ahí con un
+    //                 botón. Nadie más ve nunca una contraseña de nadie.
+    //
+    // Las acciones de cada fila (restablecer, externo, baja) viven en un menú
+    // "⋯" y no en tres botones a la vista: tres enlaces de texto por fila se
+    // leían como columnas y en el teléfono se comían la ficha.
+
+    const ICONO = {
+        puntos: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
+        llave:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>',
+        globo:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+        baja:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>',
+        alta:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>',
+        copiar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+        movil:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+        ok:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>',
+    };
 
     function filaUsuario(u) {
         const yo = API.getUsuario() || {};
         const soyYo = u.id === yo.id;
         return `
-        <tr class="${u.activo ? '' : 'usuario--baja'}">
+        <tr class="${u.activo ? '' : 'usuario--baja'}" data-usuario="${u.id}">
             <td>
                 <div class="usuario-celda">
                     ${Avatar.render(u, { tamano: 'sm' })}
-                    <div>
-                        <strong>${esc(u.nombre)}</strong>${u.externo
-                            ? ` <span class="badge badge-externo"
-                                      title="${esc(I18N.t('usuarios.externoAyuda'))}"
-                                >${esc(I18N.t('usuarios.externo'))}</span>`
-                            : ''}
+                    <div class="usuario-nombre">
+                        <strong>${esc(u.nombre)}${soyYo ? ` <span class="usuario-yo">${esc(I18N.t('usuarios.tu'))}</span>` : ''}</strong>
                         <span class="usuario-correo">${esc(u.correo)}</span>
+                        <span class="usuario-marcas">
+                            ${u.externo ? `<span class="badge badge-externo" title="${esc(I18N.t('usuarios.externoAyuda'))}">${esc(I18N.t('usuarios.externo'))}</span>` : ''}
+                            ${u.debe_cambiar_password ? `<span class="badge badge-temporal" title="${esc(I18N.t('usuarios.temporalAyuda'))}">${esc(I18N.t('usuarios.temporal'))}</span>` : ''}
+                        </span>
                     </div>
                 </div>
             </td>
@@ -317,24 +346,17 @@ const PerfilPage = (() => {
                         ${r.codigo === u.rol ? 'selected' : ''}>${esc(r.nombre)}</option>`).join('')}
                 </select>
             </td>
-            <td data-etiqueta="${esc(I18N.t('usuarios.col.acceso'))}">${u.ultimo_acceso ? esc(u.ultimo_acceso.slice(0, 16)) : '—'}</td>
+            <td data-etiqueta="${esc(I18N.t('usuarios.col.acceso'))}">${u.ultimo_acceso ? esc(u.ultimo_acceso.slice(0, 16)) : `<span class="usuario-nunca">${esc(I18N.t('usuarios.nunca'))}</span>`}</td>
             <td data-etiqueta="${esc(I18N.t('usuarios.col.estado'))}">
                 <span class="badge ${u.activo ? 'badge-ok' : 'badge-baja'}">
                     ${esc(u.activo ? I18N.t('usuarios.activo') : I18N.t('usuarios.baja'))}
                 </span>
             </td>
             <td class="usuario-acciones">
-                <button type="button" class="btn btn-ghost btn-sm" data-accion="password" data-id="${u.id}"
-                        ${soyYo ? `disabled title="${esc(I18N.t('usuarios.noTuPw'))}"` : ''}>
-                    ${esc(I18N.t('usuarios.resetear'))}
-                </button>
-                <button type="button" class="btn btn-ghost btn-sm" data-accion="externo" data-id="${u.id}"
-                        title="${esc(I18N.t('usuarios.externoAyuda'))}">
-                    ${esc(u.externo ? I18N.t('usuarios.quitarExterno') : I18N.t('usuarios.marcarExterno'))}
-                </button>
-                <button type="button" class="btn btn-ghost btn-sm" data-accion="baja" data-id="${u.id}"
-                        ${soyYo ? `disabled title="${esc(I18N.t('usuarios.noTuBaja'))}"` : ''}>
-                    ${esc(u.activo ? I18N.t('usuarios.darBaja') : I18N.t('usuarios.darAlta'))}
+                <button type="button" class="btn-icono usuario-menu-boton" data-menu="${u.id}"
+                        aria-haspopup="menu" aria-expanded="false"
+                        title="${esc(I18N.t('usuarios.acciones'))}" aria-label="${esc(I18N.t('usuarios.accionesDe', { nombre: u.nombre }))}">
+                    ${ICONO.puntos}
                 </button>
             </td>
         </tr>`;
@@ -350,6 +372,7 @@ const PerfilPage = (() => {
                 <h3 class="panel-titulo">${esc(I18N.t('usuarios.titulo'))}</h3>
                 <button type="button" class="btn btn-primary btn-sm" id="btnNuevoUsuario">${esc(I18N.t('usuarios.alta'))}</button>
             </div>
+            <p class="perfil-nota usuarios-nota">${esc(I18N.t('usuarios.nota'))}</p>
             <div class="tabla-caja">
                 <table class="tabla-usuarios">
                     <thead>
@@ -364,6 +387,118 @@ const PerfilPage = (() => {
         </section>`;
     }
 
+    // ------------------------------------------------------------ el menú ⋯
+
+    let menuAbierto = null;   // { menu, boton } o null
+
+    function cerrarMenu() {
+        if (!menuAbierto) return;
+        menuAbierto.menu.remove();
+        menuAbierto.boton.setAttribute('aria-expanded', 'false');
+        menuAbierto = null;
+        document.removeEventListener('mousedown', alPulsarFuera, true);
+        document.removeEventListener('keydown', alTeclaMenu, true);
+        window.removeEventListener('resize', cerrarMenu);
+        window.removeEventListener('scroll', seguirMenu, true);
+    }
+
+    /** Al desplazar la página el menú sigue a su botón (se recoloca, no se cierra:
+     *  en el teléfono la propia llegada al botón desplaza suavemente). */
+    function seguirMenu() {
+        if (menuAbierto) colocarMenu(menuAbierto.menu, menuAbierto.boton);
+    }
+
+    function alPulsarFuera(ev) {
+        if (!menuAbierto) return;
+        if (menuAbierto.menu.contains(ev.target) || menuAbierto.boton.contains(ev.target)) return;
+        cerrarMenu();
+    }
+
+    function alTeclaMenu(ev) {
+        if (!menuAbierto) return;
+        const items = [...menuAbierto.menu.querySelectorAll('[role="menuitem"]:not([disabled])')];
+        const i = items.indexOf(document.activeElement);
+        if (ev.key === 'Escape') { ev.preventDefault(); const b = menuAbierto.boton; cerrarMenu(); b.focus(); }
+        else if (ev.key === 'ArrowDown') { ev.preventDefault(); (items[i + 1] || items[0])?.focus(); }
+        else if (ev.key === 'ArrowUp') { ev.preventDefault(); (items[i - 1] || items[items.length - 1])?.focus(); }
+        else if (ev.key === 'Tab') { cerrarMenu(); }
+    }
+
+    /**
+     * El menú de una fila. Se cuelga del <body> y se coloca con `fixed`
+     * junto al botón: dentro de la tabla lo recortaría el `overflow` de la
+     * caja que la hace deslizable en pantallas estrechas.
+     */
+    function abrirMenu(boton) {
+        const id = Number(boton.dataset.menu);
+        const u = usuarios.find(x => x.id === id);
+        if (!u) return;
+        if (menuAbierto && menuAbierto.boton === boton) { cerrarMenu(); return; }
+        cerrarMenu();
+
+        const yo = API.getUsuario() || {};
+        const soyYo = u.id === yo.id;
+        const item = (accion, icono, texto, { peligro = false, deshabilitado = '', nota = '' } = {}) => `
+            <button type="button" role="menuitem" class="acciones-item ${peligro ? 'acciones-item--peligro' : ''}"
+                    data-accion="${accion}" data-id="${u.id}"
+                    ${deshabilitado ? `disabled title="${esc(deshabilitado)}"` : ''}>
+                <span class="acciones-icono">${icono}</span>
+                <span class="acciones-texto">${esc(texto)}${nota ? `<small>${esc(nota)}</small>` : ''}</span>
+            </button>`;
+
+        const menu = document.createElement('div');
+        menu.className = 'acciones-menu';
+        menu.setAttribute('role', 'menu');
+        menu.innerHTML = `
+            <div class="acciones-cabecera">${esc(u.nombre)}</div>
+            ${item('password', ICONO.llave, I18N.t('usuarios.resetear'), {
+                deshabilitado: soyYo ? I18N.t('usuarios.noTuPw') : '',
+                nota: I18N.t('usuarios.resetearNota') })}
+            ${item('externo', ICONO.globo,
+                u.externo ? I18N.t('usuarios.quitarExterno') : I18N.t('usuarios.marcarExterno'),
+                { nota: I18N.t('usuarios.externoNota') })}
+            <div class="acciones-separador"></div>
+            ${item('baja', u.activo ? ICONO.baja : ICONO.alta,
+                u.activo ? I18N.t('usuarios.darBaja') : I18N.t('usuarios.darAlta'),
+                { peligro: u.activo, deshabilitado: soyYo ? I18N.t('usuarios.noTuBaja') : '',
+                  nota: I18N.t(u.activo ? 'usuarios.darBajaNota' : 'usuarios.darAltaNota') })}`;
+
+        menu.addEventListener('click', (ev) => {
+            const b = ev.target.closest('[data-accion]');
+            if (!b || b.disabled) return;
+            const accion = b.dataset.accion;
+            cerrarMenu();
+            if (accion === 'baja') alternarBaja(id);
+            else if (accion === 'password') resetear(id);
+            else if (accion === 'externo') alternarExterno(id);
+        });
+
+        document.body.appendChild(menu);
+        colocarMenu(menu, boton);
+        boton.setAttribute('aria-expanded', 'true');
+        menuAbierto = { menu, boton };
+        document.addEventListener('mousedown', alPulsarFuera, true);
+        document.addEventListener('keydown', alTeclaMenu, true);
+        window.addEventListener('resize', cerrarMenu);
+        window.addEventListener('scroll', seguirMenu, true);
+        requestAnimationFrame(() => menu.querySelector('[role="menuitem"]:not([disabled])')?.focus({ preventScroll: true }));
+    }
+
+    function colocarMenu(menu, boton) {
+        const r = boton.getBoundingClientRect();
+        const ancho = menu.offsetWidth, alto = menu.offsetHeight;
+        const margen = 8;
+        // Alineado al borde derecho del botón; si no cabe abajo, arriba.
+        let x = Math.min(r.right - ancho, window.innerWidth - ancho - margen);
+        x = Math.max(margen, x);
+        let y = r.bottom + 6;
+        if (y + alto > window.innerHeight - margen) y = Math.max(margen, r.top - alto - 6);
+        menu.style.left = `${Math.round(x)}px`;
+        menu.style.top = `${Math.round(y)}px`;
+    }
+
+    // ------------------------------------------------------------ alta
+
     async function nuevoUsuario() {
         const opciones = roles.map(r =>
             `<option value="${esc(r.codigo)}">${esc(r.nombre)}</option>`).join('');
@@ -372,26 +507,27 @@ const PerfilPage = (() => {
             mensaje: I18N.t('dlg.alta.mensaje'),
             aceptar: I18N.t('dlg.alta.si'),
             campos: [
-                { id: 'correo',   etiqueta: I18N.t('perfil.correo'), tipo: 'email', requerido: true },
-                { id: 'nombre',   etiqueta: I18N.t('perfil.nombre'), tipo: 'text',  requerido: true },
-                { id: 'rol',      etiqueta: I18N.t('perfil.rol'),    tipo: 'select', opciones },
-                { id: 'password', etiqueta: I18N.t('dlg.alta.pwTemp'), tipo: 'password',
-                  requerido: true, reglas: true },
-                { id: 'externo', etiqueta: I18N.t('usuarios.externoCasilla'), tipo: 'checkbox',
+                { id: 'correo',   etiqueta: I18N.t('perfil.correo'),   tipo: 'email', requerido: true },
+                { id: 'nombre',   etiqueta: I18N.t('dlg.alta.nombre'),  tipo: 'text',  requerido: true },
+                { id: 'apellido', etiqueta: I18N.t('dlg.alta.apellido'), tipo: 'text', requerido: true },
+                { id: 'rol',      etiqueta: I18N.t('perfil.rol'),      tipo: 'select', opciones },
+                { id: 'externo',  etiqueta: I18N.t('usuarios.externoCasilla'), tipo: 'checkbox',
                   nota: I18N.t('usuarios.externoAyuda') },
             ],
         });
         if (!datos) return;
 
         try {
-            await API.crearUsuario(datos);
-            Toast.success(I18N.t('aviso.usuarioAlta', { nombre: datos.nombre }));
+            const creado = await API.crearUsuario(datos);
             await cargar();
+            dialogoTemporal(creado, creado.password_temporal, null);
         } catch (err) {
             if (err && err.sesionExpirada) return;
             Toast.error(err.message);
         }
     }
+
+    // ------------------------------------------------------------ cambios
 
     async function cambiarRol(select) {
         const id = Number(select.dataset.id);
@@ -463,34 +599,133 @@ const PerfilPage = (() => {
         }
     }
 
+    // ------------------------------------------------------------ contraseña
+
+    /**
+     * Restablecer: se confirma (la actual deja de valer), el servidor genera
+     * la temporal y se enseña en el diálogo de abajo, con "Copiar" y "Mandar
+     * al teléfono". La casilla del diálogo de confirmación la manda ya en el
+     * mismo viaje.
+     */
     async function resetear(id) {
         const usuario = usuarios.find(u => u.id === id);
         if (!usuario) return;
 
-        const nueva = await Confirmar.pedirTexto({
+        const datos = await Formulario.pedir({
             titulo: I18N.t('dlg.reset.titulo'),
             mensaje: I18N.t('dlg.reset.mensaje', { nombre: usuario.nombre }),
-            etiqueta: I18N.t('dlg.reset.campo'),
-            marcador: I18N.t('dlg.reset.ejemplo'),
-            obligatorio: true,
-            // Campo de contraseña, no de texto: sale con su ojo y con la lista
-            // de requisitos, igual que el alta. Antes era un cuadro de texto a
-            // la vista y sin decir qué hacía falta, así que el primer intento
-            // se lo rechazaba el servidor.
-            tipo: 'password',
-            reglas: true,
-            aceptar: I18N.t('dlg.reset.titulo'),
-            peligro: true,
+            aceptar: I18N.t('dlg.reset.si'),
+            campos: [
+                { id: 'notificar', etiqueta: I18N.t('dlg.reset.notificar', { nombre: usuario.nombre }),
+                  tipo: 'checkbox', valor: true, nota: I18N.t('dlg.reset.notificarNota') },
+            ],
         });
-        if (nueva === null) return;
+        if (!datos) return;
 
         try {
-            await API.resetearPassword(id, nueva);
-            Toast.success(I18N.t('aviso.pwReseteada', { nombre: usuario.nombre }));
+            const r = await API.restablecerPassword(id, datos.notificar);
+            await cargar();
+            dialogoTemporal(usuario, r.password_temporal, r.notificada ? r : null);
         } catch (err) {
             if (err && err.sesionExpirada) return;
             Toast.error(err.message);
         }
+    }
+
+    async function copiar(texto) {
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(texto);
+            } else {
+                const t = document.createElement('textarea');
+                t.value = texto; t.setAttribute('readonly', '');
+                t.style.position = 'fixed'; t.style.opacity = '0';
+                document.body.appendChild(t); t.select();
+                document.execCommand('copy'); t.remove();
+            }
+            return true;
+        } catch (_) { return false; }
+    }
+
+    /**
+     * La contraseña temporal, a la vista una sola vez.
+     *
+     * `envio` es el resultado de mandarla al teléfono, si ya se mandó al
+     * restablecer; si no, el diálogo ofrece mandarla. Se cierra sólo con el
+     * botón: un clic fuera no debe llevarse una contraseña que todavía no se
+     * ha copiado.
+     */
+    function dialogoTemporal(usuario, password, envio) {
+        const fondo = document.createElement('div');
+        fondo.className = 'dialogo-fondo';
+        const idTitulo = 'dlg-pw-' + Date.now();
+        fondo.innerHTML = `
+            <div class="dialogo dialogo--temporal" role="dialog" aria-modal="true" aria-labelledby="${idTitulo}">
+                <div class="dialogo-cabecera">
+                    <span class="dialogo-icono">${ICONO.llave}</span>
+                    <h2 class="dialogo-titulo" id="${idTitulo}">${esc(I18N.t('dlg.temporal.titulo', { nombre: usuario.nombre }))}</h2>
+                </div>
+                <p class="dialogo-mensaje">${esc(I18N.t('dlg.temporal.mensaje', { nombre: usuario.nombre }))}</p>
+                <div class="pw-temporal">
+                    <code class="pw-temporal-valor" id="pwTemporalValor">${esc(password)}</code>
+                    <button type="button" class="btn btn-secondary btn-sm" data-pw="copiar">${ICONO.copiar}<span>${esc(I18N.t('dlg.temporal.copiar'))}</span></button>
+                </div>
+                <div class="pw-temporal-envio" id="pwTemporalEnvio"></div>
+                <div class="dialogo-acciones">
+                    <button type="button" class="btn btn-ghost" data-pw="notificar">${ICONO.movil}<span>${esc(I18N.t('dlg.temporal.notificar'))}</span></button>
+                    <button type="button" class="btn btn-primary" data-pw="cerrar">${esc(I18N.t('dlg.temporal.listo'))}</button>
+                </div>
+            </div>`;
+        document.body.appendChild(fondo);
+
+        const estado = fondo.querySelector('#pwTemporalEnvio');
+        const btnNotificar = fondo.querySelector('[data-pw="notificar"]');
+        const btnCopiar = fondo.querySelector('[data-pw="copiar"]');
+        const focoPrevio = document.activeElement;
+
+        function pintarEnvio(r) {
+            if (!r) { estado.innerHTML = `<p class="dialogo-nota">${esc(I18N.t('dlg.temporal.enPersona'))}</p>`; return; }
+            if (r.dispositivos === 0) {
+                estado.innerHTML = `<p class="dialogo-nota pw-temporal-aviso">${esc(I18N.t('dlg.temporal.sinDispositivos', { nombre: usuario.nombre }))}</p>`;
+                btnNotificar.disabled = true;
+                return;
+            }
+            const ok = r.entregados > 0;
+            estado.innerHTML = `<p class="dialogo-nota ${ok ? 'pw-temporal-ok' : 'pw-temporal-aviso'}">${ok ? ICONO.ok : ''} ${
+                esc(I18N.t(ok ? 'dlg.temporal.enviada' : 'dlg.temporal.noLlego', { n: r.entregados, total: r.dispositivos }))}</p>`;
+            if (ok) btnNotificar.disabled = true;
+        }
+        pintarEnvio(envio);
+
+        function cerrar() {
+            document.removeEventListener('keydown', alTecla, true);
+            fondo.classList.add('cerrando');
+            setTimeout(() => fondo.remove(), 150);
+            if (focoPrevio && focoPrevio.focus) focoPrevio.focus({ preventScroll: true });
+        }
+        function alTecla(ev) {
+            if (ev.key === 'Escape') { ev.preventDefault(); cerrar(); }
+        }
+
+        btnCopiar.addEventListener('click', async () => {
+            const ok = await copiar(password);
+            Toast[ok ? 'success' : 'warning'](I18N.t(ok ? 'dlg.temporal.copiada' : 'dlg.temporal.noCopiada'));
+        });
+        btnNotificar.addEventListener('click', async () => {
+            btnNotificar.disabled = true;
+            try {
+                const r = await API.notificarPassword(usuario.id, password);
+                pintarEnvio(r);
+                if (r.dispositivos > 0 && r.entregados === 0) btnNotificar.disabled = false;
+            } catch (err) {
+                if (err && err.sesionExpirada) return;
+                Toast.error(err.message);
+                btnNotificar.disabled = false;
+            }
+        });
+        fondo.querySelector('[data-pw="cerrar"]').addEventListener('click', cerrar);
+        document.addEventListener('keydown', alTecla, true);
+        requestAnimationFrame(() => btnCopiar.focus({ preventScroll: true }));
     }
 
     // ====================================================================
@@ -568,6 +803,7 @@ const PerfilPage = (() => {
     function pintar() {
         const cuerpo = document.getElementById('perfilCuerpo');
         if (!cuerpo) return;
+        cerrarMenu();
         const tabs = document.getElementById('perfilTabs');
         if (tabs) tabs.outerHTML = `<div id="perfilTabs">${pestanas()}</div>`;
 
@@ -624,6 +860,13 @@ const PerfilPage = (() => {
 
         // Delegación desde el contenedor: las secciones se repintan enteras, así
         // que enganchar a cada botón obligaría a reenganchar en cada repintado.
+        //
+        // UNA sola vez por contenedor: render() vuelve a llamarse cada vez que
+        // se entra en la página (desde el menú de arriba, por ejemplo), y
+        // colgar un segundo oyente hacía que cada clic se atendiera dos veces:
+        // el menú "⋯" se abría y se cerraba en el mismo clic.
+        if (contenedor.dataset.perfilOyentes) { pintar(); cargar(); cargarConfiguracion(); return; }
+        contenedor.dataset.perfilOyentes = '1';
         contenedor.addEventListener('click', async (ev) => {
             const tab = ev.target.closest('.perfil-tab');
             if (tab) {
@@ -635,12 +878,8 @@ const PerfilPage = (() => {
             }
             if (ev.target.closest('#btnNuevoUsuario')) return nuevoUsuario();
 
-            const boton = ev.target.closest('[data-accion]');
-            if (!boton) return;
-            const id = Number(boton.dataset.id);
-            if (boton.dataset.accion === 'baja') return alternarBaja(id);
-            if (boton.dataset.accion === 'password') return resetear(id);
-            if (boton.dataset.accion === 'externo') return alternarExterno(id);
+            const menu = ev.target.closest('[data-menu]');
+            if (menu) { ev.preventDefault(); return abrirMenu(menu); }
         });
 
         contenedor.addEventListener('change', (ev) => {
@@ -654,5 +893,8 @@ const PerfilPage = (() => {
         cargarConfiguracion();
     }
 
-    return { render };
+    /** Al salir de la página no puede quedar un menú colgado del <body>. */
+    function detener() { cerrarMenu(); }
+
+    return { render, detener };
 })();

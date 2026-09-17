@@ -255,6 +255,16 @@ const I18N = (() => {
         'pw.regla.variedad':   { en: 'At least {n} different characters', es: 'Al menos {n} caracteres distintos', fr: 'Au moins {n} caractères différents' },
         'pw.regla.comun':      { en: 'Not a common password', es: 'Que no sea una contraseña común', fr: 'Pas un mot de passe courant' },
         'pw.regla.igual':      { en: 'Both entries match', es: 'Que las dos coincidan', fr: 'Les deux saisies concordent' },
+
+        // --- Primer acceso con contraseña temporal ------------------------
+        'pw.inicial.titulo':   { en: 'Set your own password', es: 'Pon tu propia contraseña', fr: 'Définissez votre mot de passe' },
+        'pw.inicial.mensaje':  { en: 'Hi {nombre}. You signed in with a temporary password. Choose your own now: nobody else will know it, and it is the one you will use from here on.', es: 'Hola, {nombre}. Entraste con una contraseña temporal. Pon ahora la tuya: nadie más la sabrá, y es la que usarás a partir de ahora.', fr: 'Bonjour {nombre}. Vous vous êtes connecté avec un mot de passe temporaire. Choisissez le vôtre maintenant : personne d\'autre ne le connaîtra, et c\'est celui que vous utiliserez désormais.' },
+        'pw.inicial.temporal': { en: 'Temporary password (the one you just used)', es: 'Contraseña temporal (con la que acabas de entrar)', fr: 'Mot de passe temporaire (celui que vous venez d\'utiliser)' },
+        'pw.inicial.luego':    { en: 'Later', es: 'Luego', fr: 'Plus tard' },
+        'pw.inicial.noCumple': { en: 'The new password does not meet the requirements below.', es: 'La contraseña nueva no cumple los requisitos de abajo.', fr: 'Le nouveau mot de passe ne respecte pas les exigences ci-dessous.' },
+        'pw.inicial.recordatorio': { en: 'You are still on a temporary password. Change it from the banner or from your profile.', es: 'Sigues con una contraseña temporal. Cámbiala desde la franja de arriba o desde tu perfil.', fr: 'Vous utilisez encore un mot de passe temporaire. Changez-le depuis le bandeau ou votre profil.' },
+        'pw.inicial.franja':   { en: 'You are using a temporary password. Set your own to keep your account yours.', es: 'Estás usando una contraseña temporal. Pon la tuya para que la cuenta sea sólo tuya.', fr: 'Vous utilisez un mot de passe temporaire. Définissez le vôtre pour que le compte reste le vôtre.' },
+        'pw.inicial.ahora':    { en: 'Change it now', es: 'Cambiarla ahora', fr: 'Le changer maintenant' },
         'perfil.cambiarPw':    { en: 'Change password', es: 'Cambiar contraseña', fr: 'Changer le mot de passe' },
 
         'usuarios.titulo':     { en: 'Users', es: 'Usuarios', fr: 'Utilisateurs' },
@@ -272,6 +282,17 @@ const I18N = (() => {
         'usuarios.noTuRol':     { en: 'You cannot change your own role.', es: 'No puedes cambiarte el rol a ti mismo.', fr: 'Vous ne pouvez pas modifier votre propre rôle.' },
         'usuarios.noTuBaja':    { en: 'You cannot disable yourself.', es: 'No puedes darte de baja a ti mismo.', fr: 'Vous ne pouvez pas vous désactiver.' },
         'usuarios.noTuPw':      { en: 'Change your own password in Details.', es: 'Tu contraseña se cambia en Datos.', fr: 'Changez votre mot de passe dans Informations.' },
+        'usuarios.nota':        { en: 'Passwords are never visible: new users get a generated one, shown once, and must change it on first sign-in. Only an admin can reset one.', es: 'Las contraseñas nunca se ven: al alta se genera una, se enseña una vez y hay que cambiarla al primer acceso. Sólo un administrador puede restablecerla.', fr: "Les mots de passe ne sont jamais visibles : à la création, l'un est généré et affiché une fois ; il faut le changer à la première connexion. Seul un administrateur peut le réinitialiser." },
+        'usuarios.tu':          { en: '(you)', es: '(tú)', fr: '(vous)' },
+        'usuarios.nunca':       { en: 'never', es: 'nunca', fr: 'jamais' },
+        'usuarios.acciones':    { en: 'Actions', es: 'Acciones', fr: 'Actions' },
+        'usuarios.accionesDe':  { en: 'Actions for {nombre}', es: 'Acciones de {nombre}', fr: 'Actions pour {nombre}' },
+        'usuarios.temporal':    { en: 'Temporary', es: 'Temporal', fr: 'Temporaire' },
+        'usuarios.temporalAyuda': { en: 'Still on the temporary password set by an admin: has not signed in yet, or has not set their own.', es: 'Sigue con la contraseña temporal que puso un administrador: no ha entrado todavía, o no ha puesto la suya.', fr: "Toujours sur le mot de passe temporaire défini par un administrateur : pas encore connecté, ou n'a pas défini le sien." },
+        'usuarios.resetearNota': { en: 'Generates a new one and shows it to you', es: 'Genera una nueva y te la enseña', fr: 'En génère un nouveau et vous le montre' },
+        'usuarios.externoNota': { en: 'Just a label: does not change permissions', es: 'Sólo una marca: no cambia permisos', fr: 'Simple étiquette : ne change pas les permissions' },
+        'usuarios.darBajaNota': { en: 'They cannot sign in; history is kept', es: 'No podrá entrar; su historial se conserva', fr: 'Ne pourra plus se connecter ; historique conservé' },
+        'usuarios.darAltaNota': { en: 'They can sign in again', es: 'Podrá volver a entrar', fr: 'Pourra se reconnecter' },
 
         'sistema.titulo':   { en: 'System configuration', es: 'Configuración del sistema', fr: 'Configuration du système' },
         'sistema.ajuste':   { en: 'Setting', es: 'Ajuste', fr: 'Paramètre' },
@@ -346,7 +367,6 @@ const I18N = (() => {
         'rev.tipo.extension':  { en: 'Extension spring', es: 'Resorte de extensión', fr: 'Ressort de traction' },
         'rev.tipo.torsion':    { en: 'Torsion spring', es: 'Resorte de torsión', fr: 'Ressort de torsion' },
         'rev.abrir':           { en: 'Review', es: 'Revisar', fr: 'Réviser' },
-        'rev.previewPdf':      { en: 'Preview PDF', es: 'Vista previa PDF', fr: 'Aperçu PDF' },
 
         // --- Los avisos en el teléfono (Web Push) ---------------------------
         'push.consultando':    { en: 'Checking this device…', es: 'Revisando este dispositivo…', fr: 'Vérification de cet appareil…' },
@@ -406,8 +426,10 @@ const I18N = (() => {
         'dlg.foto.si':      { en: 'Remove', es: 'Quitar', fr: 'Supprimer' },
 
         'dlg.alta.titulo':  { en: 'Add user', es: 'Añadir usuario', fr: 'Ajouter un utilisateur' },
-        'dlg.alta.mensaje': { en: 'The password is temporary: the person changes it from their own profile.', es: 'La contraseña es temporal: la persona la cambia desde su perfil.', fr: 'Le mot de passe est temporaire : la personne le change depuis son profil.' },
+        'dlg.alta.mensaje': { en: 'The initial password is generated for you and shown once after creating the user. The person changes it on their first sign-in.', es: 'La contraseña inicial se genera sola y se enseña una vez al crear el usuario. La persona la cambia en su primer inicio de sesión.', fr: 'Le mot de passe initial est généré automatiquement et affiché une fois à la création. La personne le change à sa première connexion.' },
         'dlg.alta.pwTemp':  { en: 'Temporary password', es: 'Contraseña temporal', fr: 'Mot de passe temporaire' },
+        'dlg.alta.nombre':  { en: 'First name', es: 'Nombre', fr: 'Prénom' },
+        'dlg.alta.apellido': { en: 'Last name', es: 'Apellido', fr: 'Nom' },
         'dlg.alta.si':      { en: 'Create user', es: 'Crear usuario', fr: "Créer l'utilisateur" },
 
         'dlg.rol.titulo':  { en: 'Change role', es: 'Cambiar rol', fr: 'Changer de rôle' },
@@ -420,9 +442,22 @@ const I18N = (() => {
         'dlg.alta2.mensaje': { en: '{nombre} will be able to sign in again.', es: '{nombre} podrá volver a entrar.', fr: '{nombre} pourra se reconnecter.' },
 
         'dlg.reset.titulo':  { en: 'Reset password', es: 'Restablecer contraseña', fr: 'Réinitialiser le mot de passe' },
-        'dlg.reset.mensaje': { en: 'Set a temporary password for {nombre}. You cannot see their current one — this replaces it. Give it to them in person; they change it from their profile.', es: 'Pon una contraseña temporal para {nombre}. No puedes ver la actual: esta la sustituye. Dásela en persona; la cambiará desde su perfil.', fr: 'Définissez un mot de passe temporaire pour {nombre}. Vous ne voyez pas l\'actuel : celui-ci le remplace. Remettez-le en personne ; la personne le changera depuis son profil.' },
-        'dlg.reset.campo':   { en: 'Temporary password (at least 12 characters)', es: 'Contraseña temporal (al menos 12 caracteres)', fr: 'Mot de passe temporaire (au moins 12 caractères)' },
-        'dlg.reset.ejemplo': { en: 'e.g. Muelle-Otono-2026', es: 'p. ej. Muelle-Otono-2026', fr: 'ex. Muelle-Otono-2026' },
+        'dlg.reset.mensaje': { en: 'A new temporary password will be generated for {nombre}; their current one stops working right away. You will see it once, to copy it or send it to their phone. They must change it when they sign in.', es: 'Se generará una contraseña temporal nueva para {nombre}; la actual deja de valer al momento. La verás una vez, para copiarla o mandársela al teléfono. Tendrá que cambiarla al entrar.', fr: 'Un nouveau mot de passe temporaire sera généré pour {nombre} ; l\'actuel cesse de fonctionner immédiatement. Vous le verrez une fois, pour le copier ou l\'envoyer sur son téléphone. La personne devra le changer à la connexion.' },
+        'dlg.reset.si':      { en: 'Generate new password', es: 'Generar contraseña nueva', fr: 'Générer un nouveau mot de passe' },
+        'dlg.reset.notificar': { en: "Also send it to {nombre}'s phone", es: 'Mandársela también al teléfono de {nombre}', fr: "L'envoyer aussi sur le téléphone de {nombre}" },
+        'dlg.reset.notificarNota': { en: 'As a Pohua notification, only on devices where they turned notifications on. Encrypted end to end.', es: 'Como notificación de Pohua, sólo en los dispositivos donde activó los avisos. Cifrada de punta a punta.', fr: 'En notification Pohua, uniquement sur les appareils où elle a activé les alertes. Chiffrée de bout en bout.' },
+
+        'dlg.temporal.titulo':  { en: 'Temporary password for {nombre}', es: 'Contraseña temporal de {nombre}', fr: 'Mot de passe temporaire de {nombre}' },
+        'dlg.temporal.mensaje': { en: 'This is the only time it is shown: it is not stored anywhere readable. {nombre} signs in with it and is asked to set their own right away.', es: 'Es la única vez que se enseña: no se guarda en ningún sitio legible. {nombre} entra con ella y se le pide poner la suya al momento.', fr: "C'est la seule fois où il s'affiche : il n'est stocké nulle part en clair. {nombre} se connecte avec et doit aussitôt définir le sien." },
+        'dlg.temporal.copiar':  { en: 'Copy', es: 'Copiar', fr: 'Copier' },
+        'dlg.temporal.copiada': { en: 'Password copied.', es: 'Contraseña copiada.', fr: 'Mot de passe copié.' },
+        'dlg.temporal.noCopiada': { en: 'Could not copy: select it and copy by hand.', es: 'No se pudo copiar: selecciónala y cópiala a mano.', fr: 'Impossible de copier : sélectionnez-le et copiez-le à la main.' },
+        'dlg.temporal.notificar': { en: 'Send to their phone', es: 'Mandar a su teléfono', fr: 'Envoyer sur son téléphone' },
+        'dlg.temporal.listo':   { en: 'Done', es: 'Listo', fr: 'Terminé' },
+        'dlg.temporal.enPersona': { en: 'Give it to them in person, or send it to their phone if they already turned Pohua notifications on there.', es: 'Dásela en persona, o mándasela al teléfono si ya activó ahí los avisos de Pohua.', fr: "Remettez-le en personne, ou envoyez-le sur son téléphone si les alertes Pohua y sont déjà activées." },
+        'dlg.temporal.sinDispositivos': { en: '{nombre} has no device with Pohua notifications turned on: give it to them in person.', es: '{nombre} no tiene ningún dispositivo con los avisos de Pohua activados: dásela en persona.', fr: "{nombre} n'a aucun appareil avec les alertes Pohua activées : remettez-le en personne." },
+        'dlg.temporal.enviada': { en: 'Sent to {n} of {total} device(s).', es: 'Enviada a {n} de {total} dispositivo(s).', fr: 'Envoyé à {n} appareil(s) sur {total}.' },
+        'dlg.temporal.noLlego': { en: 'Could not deliver it to any of their {total} device(s). Try again or give it in person.', es: 'No se pudo entregar en ninguno de sus {total} dispositivo(s). Vuelve a intentarlo o dásela en persona.', fr: "Impossible de la livrer sur ses {total} appareil(s). Réessayez ou remettez-le en personne." },
 
         // --- Avisos --------------------------------------------------------
         'aviso.bienvenida':     { en: 'Welcome, {nombre}.', es: 'Te damos la bienvenida, {nombre}.', fr: 'Bienvenue, {nombre}.' },
@@ -550,34 +585,6 @@ const I18N = (() => {
         'menu.sistema':     { en: 'System', es: 'Sistema', fr: 'Système' },
         'menu.salir':       { en: 'Sign out', es: 'Cerrar sesión', fr: 'Se déconnecter' },
         'menu.sinSesion':   { en: 'Not signed in', es: 'Sin sesión', fr: 'Non connecté' },
-
-        // --- Ventana de aprobación (Revision) --------------------------------
-        'rev.cerrar':           { en: 'Close', es: 'Cerrar', fr: 'Fermer' },
-        'rev.cargando':         { en: 'Loading...', es: 'Cargando...', fr: 'Chargement...' },
-        'rev.todosTramos':      { en: 'All tiers', es: 'Todos los tramos', fr: 'Tous les paliers' },
-        'rev.tramos':           { en: 'Tiers', es: 'Tramos', fr: 'Paliers' },
-        'rev.sinTramos':        { en: 'No costed tiers yet for quantities', es: 'Sin tramos costeados para las cantidades', fr: 'Aucun palier coûté pour les quantités' },
-        'rev.sinRuta':          { en: 'No route defined.', es: 'Sin ruta definida.', fr: 'Aucun itinéraire défini.' },
-        'rev.notas':            { en: 'Notes', es: 'Notas', fr: 'Notes' },
-        'rev.previewPdf':       { en: 'Preview PDF', es: 'Ver PDF', fr: 'Aperçu PDF' },
-        'rev.aprobar':          { en: 'Approve', es: 'Aprobar', fr: 'Approuver' },
-        'rev.devolver':         { en: 'Send back', es: 'Devolver', fr: 'Renvoyer' },
-        'rev.declinar':         { en: 'Decline', es: 'Declinar', fr: 'Décliner' },
-        'rev.abrirCompleta':    { en: 'Open full quote', es: 'Abrir cotización', fr: 'Ouvrir le devis' },
-        'rev.abrirOferta':      { en: 'View offer', es: 'Ver oferta', fr: 'Voir l\'offre' },
-        'rev.pieNota':          { en: 'Review all tiers before deciding.', es: 'Revisa todos los tramos antes de decidir.', fr: 'Vérifiez tous les paliers avant de décider.' },
-        'rev.pieCerrado':       { en: 'This RFQ is already closed.', es: 'Este RFQ ya está cerrado.', fr: 'Cette RFQ est déjà clôturée.' },
-        'rev.pieSoloLectura':   { en: 'Read-only view.', es: 'Vista de solo lectura.', fr: 'Vue en lecture seule.' },
-        'rev.aviso.errorCosteo':      { en: 'Costing error:', es: 'Error de costeo:', fr: 'Erreur de calcul :' },
-        'rev.aviso.incompleto':       { en: 'Costing incomplete — some catalog prices are missing.', es: 'Costeo incompleto — faltan precios en el catálogo.', fr: 'Calcul incomplet — certains prix du catalogue manquent.' },
-        'rev.aviso.bajoPiso':         { en: 'Price below floor.', es: 'Precio por debajo del piso.', fr: 'Prix inférieur au plancher.' },
-        'rev.aviso.bajoContribucion': { en: 'Margin below target.', es: 'Margen por debajo del objetivo.', fr: 'Marge inférieure à la cible.' },
-        'rev.aviso.scrap':            { en: 'High scrap rate.', es: 'Tasa de scrap elevada.', fr: 'Taux de rebut élevé.' },
-        'rev.aviso.moq':              { en: 'MOQ applies — buying more wire than needed.', es: 'Aplica MOQ — se compra más alambre del necesario.', fr: 'MOQ appliqué — fil acheté en excès.' },
-        'rev.aviso.campoFalta':       { en: 'Missing field: {campo}', es: 'Campo faltante: {campo}', fr: 'Champ manquant : {campo}' },
-        'rev.tipo.Compression':       { en: 'Compression spring', es: 'Resorte de compresión', fr: 'Ressort de compression' },
-        'rev.tipo.Extension':         { en: 'Extension spring', es: 'Resorte de extensión', fr: 'Ressort de traction' },
-        'rev.tipo.Torsion':           { en: 'Torsion spring', es: 'Resorte de torsión', fr: 'Ressort de torsion' },
     };
 
     let actual = POR_DEFECTO;

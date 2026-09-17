@@ -126,3 +126,58 @@ Qué llega: los mismos cuatro avisos de la campana —factibilidad a revisión,
 extracción con confianza baja, listo para aprobar y ofertar, devuelto por el
 PM— a todos los dispositivos de quienes tengan `notificaciones:ver`. Un
 dispositivo que el servicio de push da por muerto (404/410) se borra solo.
+
+## 6. Usuarios y contraseñas
+
+Las contraseñas nunca se ven: el servidor sólo guarda el hash. Lo que sí
+existe, y sólo una vez, es la **temporal** que genera el propio servidor
+(`Kf7m-Qw3p-Zt9h`: catorce caracteres sin 0/O ni 1/l).
+
+**Alta** (Perfil → Usuarios → Añadir usuario): correo, nombre, apellido y rol.
+Sin contraseña: al crear, sale un diálogo con la temporal y un botón
+**Copiar**. Se le da a la persona en mano, o **Mandar a su teléfono** si ya
+tenía Pohua con los avisos activados (Web Push, cifrado de punta a punta).
+
+**Primer acceso**: la persona entra con la temporal y Pohua le pide la suya
+antes de nada (temporal + nueva + repetir; la nueva cumple la política). Puede
+dejarlo para **Luego**: queda una franja arriba y el diálogo vuelve al
+siguiente arranque. Si tiene push activado, también le llega el recordatorio
+al teléfono. Mientras no la cambie, en la lista de usuarios sale la marca
+**Temporal**.
+
+**Olvido**: sólo el administrador. Fila del usuario → **⋯ → Restablecer
+contraseña**: se genera otra temporal, se enseña, y con la casilla marcada se
+manda al teléfono en el mismo paso (`POST /api/users/{id}/password/reset`).
+Si la persona no tiene ningún dispositivo con avisos, el diálogo lo dice y hay
+que dársela en persona. `POST /api/users/{id}/password/notificar` sólo manda
+la temporal vigente: no sirve para empujar otro texto.
+
+**Arranque con el equipo actual**: para poner a todos la misma provisional
+(`password123`, que la API rechaza por política) y obligarles a cambiarla:
+
+```bash
+python scripts/contrasena_temporal.py --todos          # pregunta antes
+python scripts/contrasena_temporal.py john@... sales@... --password "Otra-2026"
+```
+
+Se ejecuta desde la carpeta del proyecto con el `.env` (usa `DATABASE_URL`),
+DESPUÉS de que el servidor haya aplicado la migración 018 (arranca una vez).
+
+## 7. Aprobar desde la calculadora de precios
+
+**Approve** en la barra de abajo de la calculadora ya no aprueba en seco: abre
+la ventana de aprobación (`frontend/js/isc-aprobacion.js`), igual que la de
+revisión de RFQs: tramos, cascada de margen del tramo elegido (precio, AV,
+C/CV, C/CD, resultado contra el objetivo), material, ruta y totales, más las
+banderas del cálculo y lo que falte para aprobar.
+
+- **Preview PDF**: el mismo `previewPdf()` de la barra; no guarda ni archiva.
+- **Send back**: pide una nota; la cotización sigue en DRAFT con la nota a la
+  vista en la barra y en el diario (`q.sentBack`).
+- **Approve**: el flujo original de la calculadora (permiso, banderas
+  abiertas, bloqueo y PDF archivado).
+- **Open full quote**: cierra la ventana.
+
+En el teléfono va a pantalla completa con los botones fijos abajo. Los
+textos siguen el idioma de Pohua (diccionario en
+`scripts/isc_idioma_diccionario.py`).

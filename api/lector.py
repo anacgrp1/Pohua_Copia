@@ -92,6 +92,7 @@ _IDIOMA = "/js/isc-idioma.js"
 #                    de compresión en 3D, en la casilla del dibujo.
 _CONTRATO = "/js/isc-contrato.js"
 _VISOR = "/js/isc-visor3d.js"
+_APROBACION = "/js/isc-aprobacion.js"
 
 
 def carpeta() -> Optional[Path]:
@@ -199,7 +200,9 @@ class _InyectarParserURL:
                 "<script defer src=\"%s\"></script>"
                 "<script defer src=\"%s\"></script>"
                 "<script defer src=\"%s\"></script>"
-                % ("".join(partes), _TEMA, _ADAPTADOR, _IDIOMA, _CONTRATO, _VISOR)).encode("utf-8")
+                "<script defer src=\"%s\"></script>"
+                % ("".join(partes), _TEMA, _ADAPTADOR, _IDIOMA, _CONTRATO, _VISOR,
+                   _APROBACION)).encode("utf-8")
 
     def __call__(self, environ, start_response):
         captura: dict = {}

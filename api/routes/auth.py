@@ -66,7 +66,38 @@ def login(body: LoginRequest):
     # de dos maneras distintas; la de después contradecía a la de antes.
     respuesta = emitir(usuario)
     respuesta["usuario"].update(_estado_foto(usuario.id))
+    respuesta["usuario"]["debe_cambiar_password"] = _debe_cambiar(usuario.id)
+    if respuesta["usuario"]["debe_cambiar_password"]:
+        _recordar_cambio(usuario.id)
     return respuesta
+
+
+def _debe_cambiar(usuario_id: int) -> bool:
+    """¿Entró con la temporal del administrador? Si falla la consulta, no se
+    le molesta: la marca se vuelve a leer en el siguiente arranque."""
+    try:
+        return repository.debe_cambiar_password(usuario_id)
+    except Exception:
+        log.debug("No se pudo leer si debe cambiar la contraseña.", exc_info=True)
+        return False
+
+
+def _recordar_cambio(usuario_id: int) -> None:
+    """El aviso de "cámbiala" también al teléfono, si lo tiene suscrito.
+
+    En pantalla lo pide la aplicación nada más entrar; esto es por si la
+    persona entró en la compu y lo deja para luego: el recordatorio le queda
+    en el centro de notificaciones. En segundo plano: el login no espera.
+    """
+    try:
+        import app.notifications.push as push
+        push.enviar_a_todos(
+            "Pohua · Change your password",
+            "You signed in with a temporary password. Set your own in your profile.",
+            nivel="warn", usuario_id=usuario_id,
+            extra={"url": "/perfil", "tag": "pohua-password"})
+    except Exception:
+        log.debug("No se pudo mandar el recordatorio de contraseña.", exc_info=True)
 
 
 def _estado_foto(usuario_id: int) -> dict:
@@ -95,6 +126,7 @@ def yo(usuario: UsuarioSesion = Depends(usuario_actual)):
     return UsuarioPublico(
         id=usuario.id, correo=usuario.correo, nombre=usuario.nombre,
         rol=usuario.rol, permisos=usuario.permisos,
+        debe_cambiar_password=_debe_cambiar(usuario.id),
         **_estado_foto(usuario.id),
     )
 

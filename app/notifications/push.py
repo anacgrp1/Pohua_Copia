@@ -266,3 +266,25 @@ def enviar_a_todos(titulo: str, cuerpo: str = "", rfq_id: Optional[str] = None,
     else:
         _trabajo()
     return len(subs)
+
+
+def enviar_a_persona(usuario_id: int, titulo: str, cuerpo: str = "", *,
+                     url: str = "/", tag: str = "pohua",
+                     nivel: str = "info") -> Dict[str, int]:
+    """Un aviso a los dispositivos de UNA persona, esperando el resultado.
+
+    Devuelve ``{"dispositivos": n, "entregados": m}``: quien lo pide (el
+    administrador mandando una contraseña temporal) necesita saber si llegó
+    a algún sitio o si tiene que dársela en persona. Por eso va en el hilo
+    de la petición y no en segundo plano.
+    """
+    if not habilitado():
+        return {"dispositivos": 0, "entregados": 0}
+    subs = listar(usuario_id)
+    if not subs:
+        return {"dispositivos": 0, "entregados": 0}
+    carga = _carga(titulo, cuerpo, None, nivel, {"url": url, "tag": tag})
+    entregados = sum(1 for s in subs if _mandar_una(s, carga))
+    log.info("Push: %s de %s dispositivos de la persona %s recibieron «%s».",
+             entregados, len(subs), usuario_id, titulo)
+    return {"dispositivos": len(subs), "entregados": entregados}

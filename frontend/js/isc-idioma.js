@@ -356,9 +356,35 @@
         "Working height L1":["Altura de trabajo L1","Hauteur de travail L1"],
         "0 — coils in contact":["0 — espiras en contacto","0 — spires en contact"],
         "⤢ Enlarge":["⤢ Ampliar","⤢ Agrandir"],
-        "→ Use weight in quote":["→ Usar el peso en la cotización","→ Utiliser le poids dans le devis"]};
+        "→ Use weight in quote":["→ Usar el peso en la cotización","→ Utiliser le poids dans le devis"],
+        "All tiers":["Todos los tramos","Tous les paliers"],
+        "Margin waterfall · per piece":["Cascada de margen · por pieza","Cascade de marge · par pièce"],
+        "Selling price":["Precio de venta","Prix de vente"],
+        "Material this tier":["Material de este tramo","Matière de ce palier"],
+        "Wire to buy":["Alambre a comprar","Fil à acheter"],
+        "Components":["Componentes","Composants"],
+        "Subcontracting":["Subcontratación","Sous-traitance"],
+        "Tier totals":["Totales del tramo","Totaux du palier"],
+        "Revenue":["Ingresos","Chiffre d’affaires"],
+        "C/CV per h":["C/CV por h","C/CV par h"],
+        "ISC floor":["Piso ISC","Plancher ISC"],
+        "No operations.":["Sin operaciones.","Aucune opération."],
+        "No volume tiers entered.":["No hay tramos de volumen.","Aucun palier de volume saisi."],
+        "No quote open.":["No hay cotización abierta.","Aucun devis ouvert."],
+        "Preview PDF":["Ver PDF","Aperçu PDF"],
+        "Send back":["Devolver","Renvoyer"],
+        "Approve":["Aprobar","Approuver"],
+        "Open full quote":["Abrir la cotización completa","Ouvrir le devis complet"],
+        "Cancel":["Cancelar","Annuler"],
+        "Approve locks the quote and files the PDF. Send back keeps it as a draft with your note.":["Aprobar bloquea la cotización y archiva el PDF. Devolver la deja en borrador con tu nota.","Approuver verrouille le devis et classe le PDF. Renvoyer le garde en brouillon avec votre note."],
+        "What has to change before this can be approved?":["¿Qué tiene que cambiar para poder aprobarla?","Que faut-il changer avant de pouvoir l’approuver ?"],
+        "Sent back — the quote stays a draft with your note.":["Devuelta: la cotización sigue en borrador con tu nota.","Renvoyé : le devis reste un brouillon avec votre note."],
+        "no customer":["sin cliente","sans client"],
+        "— draft —":["— borrador —","— brouillon —"],
+        "$/pc":["$/pza","$/pc"]};
 
     const P = [
+        [/^Quote — draft — · (.+)$/, "Cotización — borrador — · $1", "Devis — brouillon — · $1"],
         [/^Working height (.+?) is below solid height (.+?)\. The spring is over-travelled — it will be forced past solid\.$/, "La altura de trabajo $1 queda por debajo de la altura sólida $2. El resorte está sobrerrecorrido: se forzará más allá de sólido.", "La hauteur de travail $1 est sous la hauteur à bloc $2. Le ressort est en surcourse : il sera forcé au-delà du bloc."],
         [/^Wire ø (.+?) is outside the validated range for (.+?)\s*(\(.*\))?$/, "El ø de alambre $1 está fuera del rango validado para $2 $3", "Le ø de fil $1 est hors de la plage validée pour $2 $3"],
         [/^Working angle (.+?)° is beyond the safe (.+?)°\. Reduce the angle or increase capacity\.$/, "El ángulo de trabajo $1° supera el seguro $2°. Reduce el ángulo o aumenta la capacidad.", "L’angle de travail $1° dépasse l’angle sûr $2°. Réduisez l’angle ou augmentez la capacité."],
@@ -385,7 +411,20 @@
         [/^Few body coils \(Nb = (.+)\)$/, "Pocas espiras de cuerpo (Nb = $1)", "Peu de spires de corps (Nb = $1)"],
         [/^Free length must exceed solid height \((.+?)\)\. The spring has no working travel — revise free length or coil count\.$/, "La longitud libre debe superar la altura sólida ($1). El resorte no tiene recorrido de trabajo: revisa la longitud libre o las espiras.", "La longueur libre doit dépasser la hauteur à bloc ($1). Le ressort n’a pas de course de travail : revoyez la longueur libre ou les spires."],
         [/^No machine in the shop can coil (.+)$/, "Ninguna máquina del taller puede enrollar $1", "Aucune machine de l’atelier ne peut enrouler $1"],
-        [/^Compressed (.+)$/, "Comprimido $1", "Comprimé $1"]
+        [/^Compressed (.+)$/, "Comprimido $1", "Comprimé $1"],
+        [/^Tier (\d+)( ★)? · (.+) pcs$/, "Tramo $1$2 · $3 pzas", "Palier $1$2 · $3 pcs"],
+        [/^Margin waterfall · per piece · (.+) pcs$/, "Cascada de margen · por pieza · $1 pzas", "Cascade de marge · par pièce · $1 pcs"],
+        [/^Route · (.+) machine h$/, "Ruta · $1 h máquina", "Gamme · $1 h machine"],
+        [/^Result · target (.+)$/, "Resultado · objetivo $1", "Résultat · cible $1"],
+        [/^Cannot approve yet — needs (.+)\.$/, "Todavía no se puede aprobar: falta $1.", "Pas encore approuvable : il manque $1."],
+        [/^Quote (.+) · (.+)$/, "Cotización $1 · $2", "Devis $1 · $2"],
+        [/^Sent back by (.+?): (.+)$/, "Devuelta por $1: $2", "Renvoyé par $1 : $2"],
+        [/^(\d[\d,\.]*) pc\/h$/, "$1 pzas/h", "$1 pcs/h"],
+        [/^· setup (.+) h$/, "· preparación $1 h", "· réglage $1 h"],
+        [/^(\d[\d,\.]*) lb\/pc$/, "$1 lb/pza", "$1 lb/pc"],
+        [/^Base (.+)\/lb$/, "Base $1/lb", "Base $1/lb"],
+        [/^Surcharge (.+)\/lb$/, "Recargo $1/lb", "Surcharge $1/lb"],
+        [/^(\$[\d,\.]+)\/pc$/, "$1/pza", "$1/pc"]
     ];
 
     /** La ventana de Pohua (la que tiene I18N), subiendo por los marcos: el

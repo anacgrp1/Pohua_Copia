@@ -118,6 +118,7 @@ window.ISCTema = (function () {
         var t = {
             fondo:   variable(raiz, '--bg-base', '#fff'),
             panel:   variable(raiz, '--bg-card', '#F5F7FA'),
+            panelVeil: variable(raiz, '--bg-card-veil', 'rgba(255,255,255,0.06)'),
             campo:   variable(raiz, '--bg-input', '#fff'),
             realce:  variable(raiz, '--bg-card-hover', '#EEF2F7'),
             linea:   variable(raiz, '--border-default', '#E2E8F0'),
@@ -251,7 +252,8 @@ window.ISCTema = (function () {
                siendo blancos escritos a mano, y darle esta tinta clara la deja
                ilegible: letra casi blanca sobre papel casi blanco. */
             !regen ? '' : [
-            '  --bg:', t.fondo, ';--panel:', t.panel, ';--line:', t.linea, ';',
+            '  --bg:transparent;',
+            '  --panel:', t.panel, ';--line:', t.linea, ';',
             '  --line-strong:', t.hilo, ';',
             '  --ink:', t.tinta, ';--muted:', t.secundaria, ';--ink-soft:', t.secundaria, ';'
             ].join(''),
@@ -259,62 +261,22 @@ window.ISCTema = (function () {
             '  --crit:', letra.mal, ';--crit-bg:', fondo(tono.mal, 14), ';',
             '  --info:', letra.info, ';--info-bg:', fondo(tono.info, 14), ';',
             '  --accent-soft:', fondo(tono.info, 14), ';',
-            /* --warn no aparece: no quiere decir lo mismo en las dos
-               calculadoras —rojo en la de precios, ámbar en la de resortes— y
-               aquí no se puede saber cuál es, porque este script corre en el
-               <head>, antes de que exista el <style> que lo declara. Lo deja
-               resuelto `vendorizar_nucleo.py`, que sí ve el :root. */
-            /* Los realces dorados: la misma familia del ámbar, más cargados,
-               porque son fondo de cabecera de regla, no de texto. */
             '  --gold:', fondo(tono.avi, 22), ';',
             '  --goldline:', fondo(tono.avi, 45), ';',
-            !regen ? '}' : ['  background:', t.fondo, ';color:', t.tinta, ';}'].join(''),
-            h, 'body{font-family:', t.letra, '}',
-            /* Todo lo que pinta PAPEL y TINTA va sólo si la calculadora está
-               regenerada. Sin regenerar, sus fondos siguen siendo blancos y
-               cremas escritos a mano, y ponerle esta tinta encima la deja
-               ilegible. */
+            !regen ? '}' : ['  background:transparent !important;color:', t.tinta, ';}'].join(''),
+            'html, html[', MARCA, ']{background:transparent !important}',
+            'body, html body{font-family:', t.letra, ';background:transparent !important;color:', t.tinta, '}',
+            'main, html main{background:transparent !important;max-width:none;margin:0;padding:0}',
             !regen ? '' : [
-            /* El suelo de la calculadora es TRANSPARENTE cuando cuelga directa
-               de Pohua: así se ve el cielo de Pohua —el resplandor y las
-               estrellas— detrás de las tarjetas, en claro igual que en
-               oscuro, y el marco deja de notarse como un rectángulo liso. El
-               Spring Calculator, que va dentro de la calculadora de precios,
-               conserva su suelo: detrás tiene el velo del modal, no el cielo. */
-            (saltosAPohua === 1 ? 'html[' + MARCA + ']{background:transparent}' : ''),
-            h, 'body{background:', (saltosAPohua === 1 ? 'transparent' : t.fondo), ';color:', t.tinta, '}',
-            h, '.card,', h, '#banner{background:', t.panel, ';border-color:', t.linea, '}',
+            h, '.card,', h, '#banner{background:', t.panelVeil, ' !important;border-color:', t.linea, ';',
+            '  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}',
             h, 'input,', h, 'select,', h, 'textarea{background:', t.campo, ';',
             '  color:', t.tinta, ';border-color:', t.linea, '}',
             h, 'input::placeholder,', h, 'textarea::placeholder{color:', t.apagado, '}',
-
-            /* Que no parezca una aplicación dentro de otra.
-               ----------------------------------------------------------
-               Dos cosas la delataban, y ninguna es el color:
-
-               1. `main{max-width:1560px;margin:0 auto;padding:16px 18px}`.
-                  La calculadora se maqueta como una PÁGINA, con su propio
-                  ancho máximo y su propio margen, dentro de la página de
-                  Pohua, que ya trae el suyo. Se veía el doble margen y el
-                  contenido centrado en una columna más estrecha que el resto
-                  de Pohua: la firma de algo empotrado. El marco ya está
-                  colocado donde toca, así que aquí sobra.
-
-               2. Sus tarjetas tenían otra carpintería: radio de 10 px contra
-                  los 16 de Pohua, y una sombra tintada de azul marino propia.
-                  Al lado de una tarjeta del Overview se notaba que eran de
-                  dos sitios distintos. Ahora comparten radio, sombra y borde,
-                  que es lo que hace que se lean como una sola aplicación. */
-            h, 'main{max-width:none;margin:0;padding:0}',
             h, '.card{border-radius:', t.radio, ';border:1px solid ', t.borde, ';',
             '  box-shadow:', t.sombra, '}',
-            /* Y la cabecera de color, redondeada por arriba para acompañarla.
-               Se redondea la CABECERA en vez de recortar la tarjeta con
-               `overflow:hidden`: ahí dentro hay ayudas y menús que se dibujan
-               fuera de su caja, y recortando desaparecerían. */
             h, '.card>header{border-radius:calc(', t.radio, ' - 1px) calc(',
             t.radio, ' - 1px) 0 0}',
-            /* Y por nombre, para lo que use --r o --sh directamente. */
             'html[', MARCA, ']{--r:', t.radio, ';--sh:', t.sombra, '}'
             ].join(''),
             /* th NO se toca: `th{background:var(--navy);color:#fff}` es una
@@ -340,28 +302,30 @@ window.ISCTema = (function () {
 
                Y el color no cambia con el tema: es un bloque de marca, como la
                cabecera navy. En claro y en oscuro es el mismo verde. */
-            /* La barra de arriba con estado de sincronización y sólo Quote / Spring Calc */
-            h, '#sharebar{background:', tono.avi, ';color:#0f172a;',
-            '  border:1px solid color-mix(in srgb,', tono.avi, ' 72%,#0f172a);',
-            '  padding:8px 14px;border-radius:8px;font-weight:600;font-size:.85rem;',
-            '  margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;',
-            '  gap:10px;flex-wrap:wrap}',
-            h, '#sharebar.ok{background:', tono.ok, ';',
-            '  border-color:color-mix(in srgb,', tono.ok, ' 72%,#0f172a)}',
-            h, '#sharebar-msg{color:#0f172a;font-weight:600;display:inline-block;flex:1 1 auto;min-width:0}',
-            h, '.nube-herramientas{display:flex;align-items:center;gap:6px;flex:0 0 auto;margin-left:auto}',
+            /* La barra de arriba: transparente, sin letrero verde, dejando sólo Quote y Spring Calc */
+            h, '#sharebar, #sharebar{background:transparent !important;border:none !important;padding:0 !important;box-shadow:none !important;',
+            '  justify-content:flex-start;margin-bottom:12px;display:flex;align-items:center;gap:10px}',
+            h, '#sharebar.ok, #sharebar.ok{background:transparent !important;border:none !important;box-shadow:none !important}',
+            h, '#sharebar-msg, #sharebar-msg{display:none !important}',
+            h, '#sharebar.nube-aviso #sharebar-msg{display:inline-block;flex:0 1 auto;',
+            '  min-width:0;background:', tono.avi, ';color:#0f172a;font-weight:600;',
+            '  font-size:.78rem;padding:5px 11px;border-radius:7px;',
+            '  border:1px solid color-mix(in srgb,', tono.avi, ' 72%,#0f172a)}',
+            h, '.nube-herramientas{display:flex;align-items:center;gap:6px;flex:0 0 auto}',
             h, '.nube-herramientas #viewtabs button,',
-            h, '.nube-herramientas .topbtn{background:rgba(255,255,255,.92);',
-            '  color:var(--navy);border:1px solid rgba(15,23,42,.18);',
+            h, '.nube-herramientas .topbtn{background:', t.panel, ';',
+            '  color:', t.tinta, ';border:1px solid ', t.linea, ';',
             '  padding:6px 14px;border-radius:7px;font-weight:700;font-size:.82rem;',
             '  cursor:pointer;line-height:1.4}',
             h, '.nube-herramientas #viewtabs button:hover,',
-            h, '.nube-herramientas .topbtn:hover{background:#fff}',
+            h, '.nube-herramientas .topbtn:hover{border-color:var(--cyan);color:', t.tinta, '}',
             h, '.nube-herramientas #viewtabs button.on{background:var(--navy);color:#fff;',
             '  border-color:var(--navy)}',
             h, '.nube-herramientas #viewtabs button:not([data-v="quote"]){display:none !important}',
             h, '#topbar #viewtabs button:not([data-v="quote"]){display:none !important}',
             h, '#topbar #clock, #topbar #btn-settings, #topbar #btn-help-global, #topbar #userchip{display:none !important}',
+            '#botbar,', h, '#botbar{display:none !important}',
+            'body,', h, 'body{padding-bottom:0 !important}',
 
             /* --- El teléfono y pantallas móviles (≤ 820px) ----------------
                Despejar todo el quoter para que no se vea amontonado:
@@ -416,19 +380,6 @@ window.ISCTema = (function () {
             '.dwwarn{padding:12px 14px !important;margin-bottom:12px !important;border-radius:8px !important}',
             '.dwwarn .wline{margin:5px 0 !important;line-height:1.45 !important;font-size:.82rem !important}',
             '.dwfeas .row{padding:6px 0 !important}',
-
-            /* Barra de acciones inferior (#botbar) */
-            h, '#botbar{display:flex !important;flex-wrap:wrap !important;row-gap:8px !important;column-gap:8px !important;',
-            '  padding:8px 12px calc(10px + env(safe-area-inset-bottom,0px)) !important;align-items:center !important}',
-            h, '#botbar .sp{display:none !important}',
-            h, '#bb-falta{width:100% !important;order:-2 !important;font-size:11px !important;line-height:1.35 !important;',
-            '  text-align:center !important;white-space:normal !important;margin:0 !important;',
-            '  padding:4px 8px !important;background:rgba(191,56,121,.15) !important;border-radius:6px !important}',
-            h, '#botbar .qnum{font-size:12px !important;flex:none !important}',
-            h, '#botbar .badge{font-size:10px !important;padding:2px 8px !important}',
-            h, '#botbar .bbtn{flex:1 1 auto !important;min-height:38px !important;padding:8px 10px !important;',
-            '  font-size:13px !important;border-radius:6px !important;white-space:nowrap !important}',
-            h, '#bb-approve{flex:1 1 100% !important;min-height:44px !important;font-size:15px !important;font-weight:700 !important;order:10 !important}',
 
             /* Anchuras y scroll */
             h, '.hrow>*,', h, '.grid>*,', h, '.card,', h, '.card>*{min-width:0}',
