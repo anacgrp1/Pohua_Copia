@@ -80,12 +80,15 @@ const QuotingPage = {
         const calc = this.diagnostico && this.diagnostico.piezas.calculadoras;
         if (!calc || !calc.ok) {
             // Sin calculadora no se enseña un marco vacío: parecería una
-            // avería. Se dice qué falta, que es información.
+            // avería. Se dice qué falta, que es información. Y si lo que
+            // falta es el PERMISO (el diagnóstico contestó 403), se dice eso:
+            // antes salía el aviso del HTML del núcleo, que no tenía que ver.
             marco.remove();
             const caja = this.contenedor.querySelector('#quotingAviso');
+            const sinPermiso = !API.puede('precio:calcular');
             if (caja) caja.innerHTML += `
                 <div class="quoting-pendiente">
-                    <p>${this.esc(I18N.t('quoting.pendiente.precio'))}</p>
+                    <p>${this.esc(I18N.t(sinPermiso ? 'quoting.sinPermiso' : 'quoting.pendiente.precio'))}</p>
                 </div>`;
             return;
         }

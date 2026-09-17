@@ -78,6 +78,20 @@ CABECERA_USUARIO = b"x-isc-user"
 #                Neon, y para eso ella ya tiene que existir.
 _TEMA = "/js/isc-tema.js"
 _ADAPTADOR = "/js/isc-nube.js"
+# El idioma de Pohua dentro de la calculadora (traduce lo que pinta), CON
+# defer: traduce lo que ya hay al cargar y vigila lo que se repinta después.
+_IDIOMA = "/js/isc-idioma.js"
+#
+#   isc-contrato.js  CON defer, DESPUÉS de que la calculadora exista: publica
+#                    `window.ISC_SC`, el contrato con los datos del resorte,
+#                    envolviendo su `render()`. Sólo hace algo en la de
+#                    resortes (la de precios no tiene `STATE.comp`).
+#
+#   isc-visor3d.js   CON defer y DETRÁS del contrato: comprueba `ISC_SC` nada
+#                    más cargar, así que el orden no es opcional. El resorte
+#                    de compresión en 3D, en la casilla del dibujo.
+_CONTRATO = "/js/isc-contrato.js"
+_VISOR = "/js/isc-visor3d.js"
 
 
 def carpeta() -> Optional[Path]:
@@ -182,7 +196,10 @@ class _InyectarParserURL:
         return ("<script>%s</script>"
                 "<script src=\"%s\"></script>"
                 "<script defer src=\"%s\"></script>"
-                % ("".join(partes), _TEMA, _ADAPTADOR)).encode("utf-8")
+                "<script defer src=\"%s\"></script>"
+                "<script defer src=\"%s\"></script>"
+                "<script defer src=\"%s\"></script>"
+                % ("".join(partes), _TEMA, _ADAPTADOR, _IDIOMA, _CONTRATO, _VISOR)).encode("utf-8")
 
     def __call__(self, environ, start_response):
         captura: dict = {}

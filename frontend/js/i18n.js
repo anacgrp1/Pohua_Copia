@@ -174,6 +174,9 @@ const I18N = (() => {
                                     fr: "Les plans se lisent depuis la calculatrice de prix : ouvrez cet onglet et utilisez son bouton de lecture." },
         'quoting.piezaFalta': { en: 'Not ready yet', es: 'Todavía no está lista', fr: "Pas encore prête" },
 
+        'quoting.sinPermiso': { en: 'Your role cannot use the calculators yet: it needs the "precio:calcular" permission. An administrator grants it from Profile → Users.',
+                                es: 'Tu rol todavía no puede usar las calculadoras: le falta el permiso "precio:calcular". Lo concede un administrador desde Perfil → Usuarios.',
+                                fr: 'Votre rôle ne peut pas encore utiliser les calculateurs : il lui manque la permission « precio:calcular ». Un administrateur l’accorde depuis Profil → Utilisateurs.' },
         'quoting.pendiente.precio':   { en: 'The calculator HTML is generated from the core with apps/calculadora/construir.py. Without it there is nothing to serve.',
                                         es: 'El HTML de la calculadora se genera desde el núcleo con apps/calculadora/construir.py. Sin él no hay nada que servir.',
                                         fr: "Le HTML de la calculatrice se génère depuis le noyau avec apps/calculadora/construir.py. Sans lui, rien à servir." },
@@ -343,6 +346,7 @@ const I18N = (() => {
         'rev.tipo.extension':  { en: 'Extension spring', es: 'Resorte de extensión', fr: 'Ressort de traction' },
         'rev.tipo.torsion':    { en: 'Torsion spring', es: 'Resorte de torsión', fr: 'Ressort de torsion' },
         'rev.abrir':           { en: 'Review', es: 'Revisar', fr: 'Réviser' },
+        'rev.previewPdf':      { en: 'Preview PDF', es: 'Vista previa PDF', fr: 'Aperçu PDF' },
 
         // --- Los avisos en el teléfono (Web Push) ---------------------------
         'push.consultando':    { en: 'Checking this device…', es: 'Revisando este dispositivo…', fr: 'Vérification de cet appareil…' },
@@ -546,6 +550,34 @@ const I18N = (() => {
         'menu.sistema':     { en: 'System', es: 'Sistema', fr: 'Système' },
         'menu.salir':       { en: 'Sign out', es: 'Cerrar sesión', fr: 'Se déconnecter' },
         'menu.sinSesion':   { en: 'Not signed in', es: 'Sin sesión', fr: 'Non connecté' },
+
+        // --- Ventana de aprobación (Revision) --------------------------------
+        'rev.cerrar':           { en: 'Close', es: 'Cerrar', fr: 'Fermer' },
+        'rev.cargando':         { en: 'Loading...', es: 'Cargando...', fr: 'Chargement...' },
+        'rev.todosTramos':      { en: 'All tiers', es: 'Todos los tramos', fr: 'Tous les paliers' },
+        'rev.tramos':           { en: 'Tiers', es: 'Tramos', fr: 'Paliers' },
+        'rev.sinTramos':        { en: 'No costed tiers yet for quantities', es: 'Sin tramos costeados para las cantidades', fr: 'Aucun palier coûté pour les quantités' },
+        'rev.sinRuta':          { en: 'No route defined.', es: 'Sin ruta definida.', fr: 'Aucun itinéraire défini.' },
+        'rev.notas':            { en: 'Notes', es: 'Notas', fr: 'Notes' },
+        'rev.previewPdf':       { en: 'Preview PDF', es: 'Ver PDF', fr: 'Aperçu PDF' },
+        'rev.aprobar':          { en: 'Approve', es: 'Aprobar', fr: 'Approuver' },
+        'rev.devolver':         { en: 'Send back', es: 'Devolver', fr: 'Renvoyer' },
+        'rev.declinar':         { en: 'Decline', es: 'Declinar', fr: 'Décliner' },
+        'rev.abrirCompleta':    { en: 'Open full quote', es: 'Abrir cotización', fr: 'Ouvrir le devis' },
+        'rev.abrirOferta':      { en: 'View offer', es: 'Ver oferta', fr: 'Voir l\'offre' },
+        'rev.pieNota':          { en: 'Review all tiers before deciding.', es: 'Revisa todos los tramos antes de decidir.', fr: 'Vérifiez tous les paliers avant de décider.' },
+        'rev.pieCerrado':       { en: 'This RFQ is already closed.', es: 'Este RFQ ya está cerrado.', fr: 'Cette RFQ est déjà clôturée.' },
+        'rev.pieSoloLectura':   { en: 'Read-only view.', es: 'Vista de solo lectura.', fr: 'Vue en lecture seule.' },
+        'rev.aviso.errorCosteo':      { en: 'Costing error:', es: 'Error de costeo:', fr: 'Erreur de calcul :' },
+        'rev.aviso.incompleto':       { en: 'Costing incomplete — some catalog prices are missing.', es: 'Costeo incompleto — faltan precios en el catálogo.', fr: 'Calcul incomplet — certains prix du catalogue manquent.' },
+        'rev.aviso.bajoPiso':         { en: 'Price below floor.', es: 'Precio por debajo del piso.', fr: 'Prix inférieur au plancher.' },
+        'rev.aviso.bajoContribucion': { en: 'Margin below target.', es: 'Margen por debajo del objetivo.', fr: 'Marge inférieure à la cible.' },
+        'rev.aviso.scrap':            { en: 'High scrap rate.', es: 'Tasa de scrap elevada.', fr: 'Taux de rebut élevé.' },
+        'rev.aviso.moq':              { en: 'MOQ applies — buying more wire than needed.', es: 'Aplica MOQ — se compra más alambre del necesario.', fr: 'MOQ appliqué — fil acheté en excès.' },
+        'rev.aviso.campoFalta':       { en: 'Missing field: {campo}', es: 'Campo faltante: {campo}', fr: 'Champ manquant : {campo}' },
+        'rev.tipo.Compression':       { en: 'Compression spring', es: 'Resorte de compresión', fr: 'Ressort de compression' },
+        'rev.tipo.Extension':         { en: 'Extension spring', es: 'Resorte de extensión', fr: 'Ressort de traction' },
+        'rev.tipo.Torsion':           { en: 'Torsion spring', es: 'Resorte de torsión', fr: 'Ressort de torsion' },
     };
 
     let actual = POR_DEFECTO;

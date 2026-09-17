@@ -311,7 +311,8 @@
             if (el) herramientas.appendChild(el);
         });
 
-        barra.appendChild(herramientas);
+        // A la izquierda, delante del letrero (que ya sólo sale si algo falló).
+        barra.insertBefore(herramientas, barra.firstChild);
         barra.dataset.fusionada = '1';
         topbar.style.display = 'none';   // lo que queda dentro ya sólo repetía
         repasarTema();
@@ -327,7 +328,7 @@
         css.id = 'nube-estilos';
         css.textContent = [
             '#sharebar{flex-wrap:wrap;gap:10px;align-items:center}',
-            '#sharebar-msg{flex:1 1 auto;min-width:240px}',
+            '#sharebar-msg{flex:0 1 auto;min-width:0}',
             '.nube-herramientas{display:flex;align-items:center;gap:6px;flex:0 0 auto}',
             '.nube-herramientas #viewtabs{display:flex;gap:2px}',
             '.nube-herramientas #viewtabs button:not([data-v="quote"]){display:none}',
@@ -366,15 +367,20 @@
         fusionarBarras();
         if (SFS.healthy === false) {
             barra.classList.remove('ok');
+            barra.classList.add('nube-aviso');
             msg.textContent = '⚠ El último guardado no llegó a Pohua. Tu trabajo ' +
                               'está en este navegador; vuelve a guardar.';
             return;
         }
+        // Guardado bien: el letrero verde ya no se enseña (se pidió quitarlo y
+        // dejar sólo Quote y Spring Calc). El dato se conserva en el título
+        // de la barra, por si alguien quiere saber cuándo y quién.
         barra.classList.add('ok');
+        barra.classList.remove('nube-aviso');
         var quien = String((shared && shared.savedBy) || '').split('@')[0] || '—';
         var cuando = (shared && shared.savedAt) || '—';
-        msg.textContent = '☁ Guardado en Pohua (Neon) — lo mismo para todos. ' +
-                          'Último guardado: ' + cuando + ' por ' + quien;
+        msg.textContent = '';
+        barra.title = 'Guardado en Pohua (Neon). Último guardado: ' + cuando + ' por ' + quien;
     }
 
     // ----------------------------------------- una sola barra de desplazamiento
@@ -417,6 +423,10 @@
             var el = document.getElementById(CAPAS[i]);
             if (el && getComputedStyle(el).display !== 'none') return true;
         }
+        // La vista ampliada del visor 3D (isc-visor3d.js) es otra capa
+        // `position:fixed; inset:0`, sin id: se reconoce por su clase.
+        var visor = document.querySelector('.v3d-ov');
+        if (visor && getComputedStyle(visor).display !== 'none') return true;
         return false;
     }
 

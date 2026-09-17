@@ -27,16 +27,36 @@ window.ISCTema = (function () {
 
     var MARCA = 'data-nube';
 
-    /** El documento de Pohua, o null si no nos ha empotrado nadie. */
+    /**
+     * El documento de Pohua, o null si no nos ha empotrado nadie.
+     *
+     * Se sube por la cadena de marcos hasta dar con el que lleva los tokens
+     * de Pohua (--cgr-primary), no sólo un nivel: el Spring Calculator se abre
+     * DENTRO de la calculadora de precios, en un segundo marco, y su padre
+     * inmediato es ella —que no tiene tokens—. Mirando sólo un nivel se
+     * quedaba en claro dentro de Pohua oscuro, con su inglés y sus cremas.
+     */
+    var saltosAPohua = 0;   // 1 = Pohua es el padre directo; 2 = hay otro marco en medio
+
     function padre() {
+        var w = window, salto = 0;
         try {
-            // Tocar una propiedad es lo que lanza cuando el origen no es el
-            // mismo; comprobar que el objeto existe no comprueba nada.
-            var d = window.parent && window.parent.document;
-            return (d && d !== document && d.documentElement) ? d : null;
+            while (w.parent && w.parent !== w && salto < 5) {
+                w = w.parent; salto++;
+                // Tocar una propiedad es lo que lanza cuando el origen no es
+                // el mismo; comprobar que el objeto existe no comprueba nada.
+                var d = w.document;
+                if (!d || d === document || !d.documentElement) continue;
+                var raiz = d.documentElement;
+                if (getComputedStyle(raiz).getPropertyValue('--cgr-primary').trim()) {
+                    saltosAPohua = salto;
+                    return d;
+                }
+            }
         } catch (e) {
             return null;
         }
+        return null;
     }
 
     function variable(raiz, nombre, respaldo) {
@@ -255,7 +275,14 @@ window.ISCTema = (function () {
                cremas escritos a mano, y ponerle esta tinta encima la deja
                ilegible. */
             !regen ? '' : [
-            h, 'body{background:', t.fondo, ';color:', t.tinta, '}',
+            /* El suelo de la calculadora es TRANSPARENTE cuando cuelga directa
+               de Pohua: así se ve el cielo de Pohua —el resplandor y las
+               estrellas— detrás de las tarjetas, en claro igual que en
+               oscuro, y el marco deja de notarse como un rectángulo liso. El
+               Spring Calculator, que va dentro de la calculadora de precios,
+               conserva su suelo: detrás tiene el velo del modal, no el cielo. */
+            (saltosAPohua === 1 ? 'html[' + MARCA + ']{background:transparent}' : ''),
+            h, 'body{background:', (saltosAPohua === 1 ? 'transparent' : t.fondo), ';color:', t.tinta, '}',
             h, '.card,', h, '#banner{background:', t.panel, ';border-color:', t.linea, '}',
             h, 'input,', h, 'select,', h, 'textarea{background:', t.campo, ';',
             '  color:', t.tinta, ';border-color:', t.linea, '}',
@@ -313,19 +340,25 @@ window.ISCTema = (function () {
 
                Y el color no cambia con el tema: es un bloque de marca, como la
                cabecera navy. En claro y en oscuro es el mismo verde. */
-            h, '#sharebar{background:', tono.avi, ';color:#0f172a;',
+            /* La barra de arriba ya NO es un bloque de color: se pidió quitar
+               el letrero "Guardado en Pohua…" y dejar sólo Quote y Spring
+               Calc, a la izquierda, sobre el cielo. El aviso de "el último
+               guardado no llegó" sí se enseña, como pastilla ámbar, sólo
+               cuando pasa (js/isc-nube.js le pone .nube-aviso). */
+            h, '#sharebar{background:transparent;border:0;padding:0;',
+            '  justify-content:flex-start;margin-bottom:10px}',
+            h, '#sharebar-msg{display:none}',
+            h, '#sharebar.nube-aviso #sharebar-msg{display:inline-block;flex:0 1 auto;',
+            '  min-width:0;background:', tono.avi, ';color:#0f172a;font-weight:600;',
+            '  font-size:.78rem;padding:5px 11px;border-radius:7px;',
             '  border:1px solid color-mix(in srgb,', tono.avi, ' 72%,#0f172a)}',
-            h, '#sharebar.ok{background:', tono.ok, ';',
-            '  border-color:color-mix(in srgb,', tono.ok, ' 72%,#0f172a)}',
-            h, '#sharebar-msg{color:#0f172a;font-weight:600}',
-            /* Los botones ya no están sobre el papel del tema sino sobre ese
-               bloque de color, así que se visten como los de la cabecera navy:
-               blancos con letra marino, y el activo al revés. */
+            /* Los botones, sobre el cielo de Pohua: papel del tema con la
+               tinta del tema, y el activo en el marino de marca. */
             h, '.nube-herramientas #viewtabs button,',
-            h, '.nube-herramientas .topbtn{background:rgba(255,255,255,.92);',
-            '  color:var(--navy);border:1px solid rgba(15,23,42,.18)}',
+            h, '.nube-herramientas .topbtn{background:', t.panel, ';',
+            '  color:', t.tinta, ';border:1px solid ', t.linea, '}',
             h, '.nube-herramientas #viewtabs button:hover,',
-            h, '.nube-herramientas .topbtn:hover{background:#fff}',
+            h, '.nube-herramientas .topbtn:hover{border-color:var(--cyan);color:', t.tinta, '}',
             h, '.nube-herramientas #viewtabs button.on{background:var(--navy);color:#fff;',
             '  border-color:var(--navy)}',
             /* --- El teléfono -------------------------------------------
@@ -363,12 +396,35 @@ window.ISCTema = (function () {
                pantalla de 328. Ahora se reparte en varias filas, el aviso de
                lo que falta ocupa una entera —es una frase, no una etiqueta— y
                los botones crecen hasta llenar la fila. */
-            h, '#botbar{flex-wrap:wrap;row-gap:8px;padding:10px 12px}',
+            /* Y ocupa lo menos posible: antes eran tres filas (número y
+               estado + Reset/Save, Preview/Approve, y el aviso de lo que
+               falta) —unos 180 px, un cuarto del teléfono— tapando lo que se
+               estaba escribiendo. Ahora el aviso es UNA línea arriba, con
+               puntos suspensivos (se lee entero al tocar Approve, que es cuando
+               importa), y los cuatro botones van en una fila. */
+            h, '#botbar{flex-wrap:wrap;row-gap:6px;column-gap:6px;padding:6px 8px}',
             h, '#botbar .sp{display:none}',
-            h, '#botbar .small{flex:1 0 100%;order:9;font-size:.72rem;',
-            '  line-height:1.3;white-space:normal}',
-            h, '#botbar .bbtn{flex:1 1 auto;padding:9px 12px;font-size:.85rem}',
-            h, '#botbar .qnum{font-size:.9rem}',
+            h, '#botbar .small{flex:1 0 100%;order:-1;font-size:.68rem;',
+            '  line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+            '  margin:0;opacity:.9}',
+            h, '#botbar .bbtn{flex:1 1 auto;min-width:0;padding:8px 6px;font-size:.78rem;',
+            '  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+            h, '#botbar .qnum{font-size:.78rem;max-width:34vw;overflow:hidden;',
+            '  text-overflow:ellipsis;white-space:nowrap}',
+
+            /* Nada se sale por la derecha. Las filas (.hrow) y las rejillas
+               son `display:grid`, y un hijo de rejilla nace con
+               `min-width:auto`: la tabla de rutas (656 px de contenido
+               mínimo) ensanchaba su columna, la columna a la tarjeta y la
+               tarjeta al documento, que quedaba a 690 px en una pantalla de
+               390. La calculadora se podía arrastrar de lado y a la derecha no
+               había nada. Con `min-width:0` la columna se queda en su sitio y
+               la tabla se desplaza dentro de su caja (.tbl-wrap / .nube-ancha),
+               que es lo que ya hacía en la compu. */
+            h, '.hrow>*,', h, '.grid>*,', h, '.card,', h, '.card>*{min-width:0}',
+            h, '.tbl-wrap,', h, '.nube-ancha{max-width:100%;min-width:0}',
+            h, 'html,', h, 'body{overflow-x:hidden;max-width:100%}',
+            h, 'main{padding:10px 10px}',
             '}',
 
             /* La caja que `isc-nube.js` pone alrededor de cada tabla. Va fuera

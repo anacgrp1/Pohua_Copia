@@ -488,6 +488,9 @@ const APP = {
         this.pintarTitulo();
 
         this.currentPage = page;
+        // Qué página está en pantalla, para el CSS que depende de ella (en el
+        // teléfono, la burbuja del asistente se esconde en Quoting).
+        document.body.dataset.pagina = page;
 
         // Renderizar la página
         try {

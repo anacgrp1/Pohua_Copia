@@ -1,0 +1,544 @@
+/**
+ * El idioma de la calculadora de ISC, siguiendo al de Pohua.
+ *
+ * La Spring Engineering Calculator está escrita en inglés y pinta casi toda
+ * su interfaz desde JavaScript (innerHTML en cada recálculo). No se toca su
+ * HTML —es la copia que hace scripts/vendorizar_nucleo.py y se regenera—:
+ * este script se inyecta al servirla (api/lector.py) y traduce lo que se ve.
+ *
+ * Cómo: un diccionario de textos exactos EN → ES/FR y unas plantillas (regex)
+ * para los mensajes que llevan cifras. Un MutationObserver traduce cada
+ * trozo que la calculadora vuelve a pintar; el original en inglés se guarda
+ * en el propio nodo de texto para poder volver a él al cambiar de idioma.
+ *
+ * El idioma se lee de Pohua (window.parent.I18N.idioma) y se sigue en vivo
+ * con parent.I18N.alCambiar; si la calculadora se abre sola, del localStorage
+ * que comparte con Pohua ('cgr-idioma'). Lo que no está en el diccionario se
+ * queda en inglés: cifras, nombres de máquinas y de materiales, sobre todo.
+ *
+ * GENERADO por scripts/generar_isc_idioma.py a partir de
+ * scripts/isc_idioma_diccionario.py. No se edita a mano.
+ */
+(function () {
+    'use strict';
+
+    const CLAVE = 'cgr-idioma';
+    const IDX = { es: 0, fr: 1 };
+
+    const D = {"Spring Engineering Calculator":["Calculadora de ingeniería de resortes","Calculateur d’ingénierie de ressorts"],
+        "ISC Spring Engineering Datasheet":["Hoja de ingeniería de resortes ISC","Fiche d’ingénierie de ressorts ISC"],
+        "Engineering calculator & manufacturability review":["Calculadora de ingeniería y revisión de fabricabilidad","Calculateur d’ingénierie et revue de fabricabilité"],
+        "Compression":["Compresión","Compression"],
+        "Extension":["Extensión","Traction"],
+        "Torsion":["Torsión","Torsion"],
+        "Databases":["Bases de datos","Bases de données"],
+        "Units":["Unidades","Unités"],
+        "Inch":["Pulgadas","Pouces"],
+        "Metric":["Métrico","Métrique"],
+        "Imperial":["Imperial","Impérial"],
+        "Close":["Cerrar","Fermer"],
+        "Part Name":["Nombre de la pieza","Nom de la pièce"],
+        "Part Number":["Número de parte","Numéro de pièce"],
+        "Spring Type":["Tipo de resorte","Type de ressort"],
+        "Material":["Material","Matière"],
+        "End Type":["Tipo de extremo","Type d’extrémité"],
+        "Squared & Ground":["Escuadrado y rectificado","Rapprochées et meulées"],
+        "Plain & Ground":["Plano y rectificado","Ouvertes et meulées"],
+        "Plain":["Plano","Ouvertes"],
+        "Ø Specified By":["Ø especificado por","Ø spécifié par"],
+        "Outer Ø":["Ø exterior","Ø extérieur"],
+        "Mean Ø":["Ø medio","Ø moyen"],
+        "Inner Ø":["Ø interior","Ø intérieur"],
+        "Finish":["Acabado","Finition"],
+        "Date":["Fecha","Date"],
+        "Spring Index C":["Índice del resorte C","Indice du ressort C"],
+        "Weight / Part":["Peso / pieza","Poids / pièce"],
+        "Compression Spring":["Resorte de compresión","Ressort de compression"],
+        "Tension Spring":["Resorte de extensión","Ressort de traction"],
+        "Wire Form":["Forma de alambre","Pièce en fil"],
+        "None":["Ninguno","Aucun"],
+        "Zinc Plated":["Zincado","Zingué"],
+        "Black Oxide":["Óxido negro","Oxyde noir"],
+        "Passivated":["Pasivado","Passivé"],
+        "Powder Coat":["Pintura en polvo","Peinture poudre"],
+        "E-Coat":["Electrodeposición","Cataphorèse"],
+        "Nickel Plated":["Niquelado","Nickelé"],
+        "Physical Dimensions":["Dimensiones físicas","Dimensions physiques"],
+        "Parameter":["Parámetro","Paramètre"],
+        "Tol":["Tol","Tol"],
+        "Wire & Diameters":["Alambre y diámetros","Fil et diamètres"],
+        "Wire Diameter":["Diámetro de alambre","Diamètre du fil"],
+        "Outer Diameter":["Diámetro exterior","Diamètre extérieur"],
+        "Mean Diameter":["Diámetro medio","Diamètre moyen"],
+        "Inner Diameter":["Diámetro interior","Diamètre intérieur"],
+        "Spring Index":["Índice del resorte","Indice du ressort"],
+        "Coils & Lengths":["Espiras y longitudes","Spires et longueurs"],
+        "Free Length":["Longitud libre","Longueur libre"],
+        "Solid Height":["Altura sólida","Hauteur à bloc"],
+        "Working Height":["Altura de trabajo","Hauteur de travail"],
+        "Total Coils":["Espiras totales","Spires totales"],
+        "Active Coils":["Espiras activas","Spires actives"],
+        "Pitch":["Paso","Pas"],
+        "Helix Angle":["Ángulo de hélice","Angle d’hélice"],
+        "Rate, Load & Stress":["Constante, carga y esfuerzo","Raideur, charge et contrainte"],
+        "Spring Rate":["Constante del resorte","Raideur"],
+        "Load @ Working Height":["Carga a altura de trabajo","Charge à la hauteur de travail"],
+        "Load @ Solid":["Carga a sólido","Charge à bloc"],
+        "Stress @ Load":["Esfuerzo a la carga","Contrainte sous charge"],
+        "Allowable Stress":["Esfuerzo admisible","Contrainte admissible"],
+        "Natural Frequency":["Frecuencia natural","Fréquence propre"],
+        "Natural Freq.":["Frec. natural","Fréq. propre"],
+        "Tensile Strength":["Resistencia a la tracción","Résistance à la traction"],
+        "Shear Modulus":["Módulo de corte","Module de cisaillement"],
+        "Wahl Factor":["Factor de Wahl","Facteur de Wahl"],
+        "Safety Factor":["Factor de seguridad","Coefficient de sécurité"],
+        "Stress / Allowable":["Esfuerzo / admisible","Contrainte / admissible"],
+        "Buckling":["Pandeo","Flambage"],
+        "Stable":["Estable","Stable"],
+        "Machine":["Máquina","Machine"],
+        "None fits":["Ninguna sirve","Aucune ne convient"],
+        "Hook / End Type":["Gancho / tipo de extremo","Crochet / type d’extrémité"],
+        "Machine Full Loop":["Lazo completo a máquina","Boucle complète machine"],
+        "Machine Half Loop":["Medio lazo a máquina","Demi-boucle machine"],
+        "Crossover Loop":["Lazo cruzado","Boucle croisée"],
+        "Side Loop":["Lazo lateral","Boucle latérale"],
+        "Extended Hook":["Gancho extendido","Crochet allongé"],
+        "Special / Custom":["Especial / a medida","Spécial / sur mesure"],
+        "Body, Coils & Hooks":["Cuerpo, espiras y ganchos","Corps, spires et crochets"],
+        "Body Length":["Longitud del cuerpo","Longueur du corps"],
+        "Hook Bend Radius":["Radio de doblez del gancho","Rayon de pliage du crochet"],
+        "Hook Side Radius":["Radio lateral del gancho","Rayon latéral du crochet"],
+        "Loading & Rate":["Carga y constante","Charge et raideur"],
+        "Initial Tension":["Tensión inicial","Tension initiale"],
+        "Working Extension":["Extensión de trabajo","Allongement de travail"],
+        "Force @ Extension":["Fuerza a la extensión","Force à l’allongement"],
+        "Max Safe Extension":["Extensión máx. segura","Allongement max. sûr"],
+        "Max Load":["Carga máxima","Charge maximale"],
+        "Stress & Safety":["Esfuerzo y seguridad","Contrainte et sécurité"],
+        "Body Stress":["Esfuerzo del cuerpo","Contrainte du corps"],
+        "Hook Bend Stress":["Esfuerzo en el doblez del gancho","Contrainte au pliage du crochet"],
+        "Body Safety Factor":["Factor de seguridad del cuerpo","Coef. de sécurité du corps"],
+        "Hook Safety Factor":["Factor de seguridad del gancho","Coef. de sécurité du crochet"],
+        "In band":["Dentro de banda","Dans la plage"],
+        "Out of band":["Fuera de banda","Hors plage"],
+        "Governing":["Determinante","Déterminant"],
+        "Direction of Wind":["Sentido de enrollado","Sens d’enroulement"],
+        "Right Hand":["Derecha","À droite"],
+        "Left Hand":["Izquierda","À gauche"],
+        "Load Direction":["Dirección de carga","Sens de la charge"],
+        "Coils & Legs":["Espiras y patas","Spires et branches"],
+        "Body Coils":["Espiras del cuerpo","Spires du corps"],
+        "Equivalent Active Coils":["Espiras activas equivalentes","Spires actives équivalentes"],
+        "Leg Length":["Longitud de pata","Longueur de branche"],
+        "Mandrel Diameter":["Diámetro del mandril","Diamètre du mandrin"],
+        "ID Under Load":["DI bajo carga","DI sous charge"],
+        "Mandrel Clearance":["Holgura del mandril","Jeu du mandrin"],
+        "Angle of Rotation":["Ángulo de rotación","Angle de rotation"],
+        "Torque @ Angle":["Par al ángulo","Couple à l’angle"],
+        "Rate per Degree":["Constante por grado","Raideur par degré"],
+        "Safe Angle":["Ángulo seguro","Angle sûr"],
+        "Bending Stress":["Esfuerzo de flexión","Contrainte de flexion"],
+        "Curvature Factor":["Factor de curvatura","Facteur de courbure"],
+        "Angle vs Safe":["Ángulo vs. seguro","Angle vs sûr"],
+        "Interference":["Interferencia","Interférence"],
+        "Tight":["Ajustado","Serré"],
+        "Closing":["Cierra","Fermeture"],
+        "Opening":["Abre","Ouverture"],
+        "Enter the wire diameter & dimensions,":["Captura el diámetro de alambre y las dimensiones,","Saisissez le diamètre du fil et les dimensions,"],
+        "or upload a customer drawing,":["o sube un plano del cliente,","ou chargez un plan client,"],
+        "to generate the spring diagram.":["para generar el diagrama del resorte.","pour générer le schéma du ressort."],
+        "The load curve appears":["La curva de carga aparece","La courbe de charge apparaît"],
+        "once the spring is dimensioned.":["cuando el resorte esté dimensionado.","une fois le ressort dimensionné."],
+        "The manufacturability review runs once the spring is dimensioned.":["La revisión de fabricabilidad corre cuando el resorte esté dimensionado.","La revue de fabricabilité s’exécute une fois le ressort dimensionné."],
+        "Design checks run once the spring is dimensioned.":["Las verificaciones de diseño corren cuando el resorte esté dimensionado.","Les vérifications s’exécutent une fois le ressort dimensionné."],
+        "Design Checks & Risk Flags":["Verificaciones de diseño y riesgos","Vérifications et signaux de risque"],
+        "Drawing Feasibility Checklist":["Lista de factibilidad del plano","Liste de faisabilité du plan"],
+        "No checks.":["Sin verificaciones.","Aucune vérification."],
+        "No customer drawing parsed yet.":["Todavía no se ha leído ningún plano del cliente.","Aucun plan client analysé pour l’instant."],
+        "Upload a drawing in the price calculator to load the feasibility checklist.":["Sube un plano en la calculadora de precios para cargar la lista de factibilidad.","Chargez un plan dans le calculateur de prix pour remplir la liste de faisabilité."],
+        "Items read from the customer drawing.":["Datos leídos del plano del cliente.","Éléments lus sur le plan client."],
+        "Click a row to see the exact drawing region, then mark it OK or Not OK.":["Toca una fila para ver la zona exacta del plano y márcala OK o No OK.","Cliquez une ligne pour voir la zone du plan, puis marquez OK ou Non OK."],
+        "Drawing region":["Zona del plano","Zone du plan"],
+        "OK":["OK","OK"],
+        "Not OK":["No OK","Non OK"],
+        "Geometry only — service not evaluated":["Sólo geometría: servicio no evaluado","Géométrie seule : service non évalué"],
+        "Working stress, buckling and set not evaluated":["Esfuerzo de trabajo, pandeo y asentamiento no evaluados","Contrainte de travail, flambage et tassement non évalués"],
+        "The drawing gives no working point, so there is no deflection to evaluate. The score below covers geometry and coilability only — not how the spring behaves in service.":["El plano no da punto de trabajo, así que no hay deflexión que evaluar. La nota de abajo cubre sólo geometría y enrollabilidad, no cómo se comporta el resorte en servicio.","Le plan ne donne pas de point de travail : aucune flèche à évaluer. La note ci-dessous couvre seulement la géométrie et l’enroulabilité, pas le comportement en service."],
+        "Easy to manufacture":["Fácil de fabricar","Facile à fabriquer"],
+        "Design sits well inside normal shop limits.":["El diseño queda holgado dentro de los límites normales del taller.","Le design reste bien dans les limites habituelles de l’atelier."],
+        "Manufacturable":["Fabricable","Fabricable"],
+        "Producible with normal process controls.":["Producible con los controles de proceso normales.","Réalisable avec les contrôles de procédé habituels."],
+        "Engineering review":["Revisión de ingeniería","Revue d’ingénierie"],
+        "Requires engineering review before quoting / release.":["Requiere revisión de ingeniería antes de cotizar / liberar.","Nécessite une revue d’ingénierie avant devis / lancement."],
+        "High manufacturing risk":["Alto riesgo de fabricación","Risque de fabrication élevé"],
+        "Significant risk — expect yield loss and added cost.":["Riesgo significativo: espera merma y costo adicional.","Risque important : prévoir des pertes et un surcoût."],
+        "Not recommended":["No recomendado","Déconseillé"],
+        "Design is at or beyond practical limits — redesign advised.":["El diseño está en el límite práctico o más allá: se recomienda rediseñar.","Le design est aux limites pratiques ou au-delà : reconception conseillée."],
+        "FEASIBLE":["FACTIBLE","FAISABLE"],
+        "REQUIRES REVIEW":["REQUIERE REVISIÓN","À RÉVISER"],
+        "Not feasible":["No factible","Non faisable"],
+        "Quote it after someone checks:":["Cotízalo después de que alguien revise:","À chiffrer après vérification de :"],
+        "Everything needed to quote is on the drawing and consistent":["Todo lo necesario para cotizar está en el plano y es consistente","Tout ce qu’il faut pour chiffrer est sur le plan et cohérent"],
+        "Engineering findings below are remarks, not blockers.":["Los hallazgos de ingeniería de abajo son observaciones, no bloqueos.","Les constats d’ingénierie ci-dessous sont des remarques, pas des blocages."],
+        "no machine in the shop takes this wire and outside diameter":["ninguna máquina del taller admite este alambre y diámetro exterior","aucune machine de l’atelier n’accepte ce fil et ce diamètre extérieur"],
+        "No machine fits this design":["Ninguna máquina sirve para este diseño","Aucune machine ne convient à ce design"],
+        "No machine in the database can coil this combination of wire diameter, OD and spring type.":["Ninguna máquina de la base puede enrollar esta combinación de diámetro de alambre, DE y tipo de resorte.","Aucune machine de la base ne peut enrouler cette combinaison de diamètre de fil, DE et type de ressort."],
+        "Closest machines and why they fall short:":["Las máquinas más cercanas y por qué no alcanzan:","Machines les plus proches et pourquoi elles ne suffisent pas :"],
+        "Recommended":["Recomendada","Recommandée"],
+        "Alternative":["Alternativa","Alternative"],
+        "No alternative machine available — only one machine in the database fits.":["No hay máquina alternativa: sólo una de la base sirve.","Pas de machine alternative : une seule machine de la base convient."],
+        "Wire":["Alambre","Fil"],
+        "Setup:":["Preparación:","Réglage :"],
+        "Setup":["Preparación","Réglage"],
+        "OD near machine maximum":["DE cerca del máximo de la máquina","DE proche du maximum machine"],
+        "wire ø near a machine limit":["ø de alambre cerca de un límite de máquina","ø du fil proche d’une limite machine"],
+        "compression on this machine needs a secondary operation":["la compresión en esta máquina necesita una operación secundaria","la compression sur cette machine demande une opération secondaire"],
+        "compression needs a secondary operation":["la compresión necesita una operación secundaria","la compression demande une opération secondaire"],
+        "Load vs. Deflection":["Carga vs. deflexión","Charge vs flèche"],
+        "Force vs. Extension":["Fuerza vs. extensión","Force vs allongement"],
+        "Torque vs. Angle":["Par vs. ángulo","Couple vs angle"],
+        "Deflection,":["Deflexión,","Flèche,"],
+        "Load,":["Carga,","Charge,"],
+        "Extension,":["Extensión,","Allongement,"],
+        "Force,":["Fuerza,","Force,"],
+        "Angle, deg":["Ángulo, grados","Angle, deg"],
+        "Torque,":["Par,","Couple,"],
+        "coils shown · two legs":["espiras mostradas · dos patas","spires affichées · deux branches"],
+        "Weight per Part":["Peso por pieza","Poids par pièce"],
+        "Developed wire length ≈":["Longitud desarrollada de alambre ≈","Longueur développée du fil ≈"],
+        "Estimated finished-part weight — developed wire volume × material density. Verify against a sample before quoting.":["Peso estimado de la pieza terminada: volumen de alambre desarrollado × densidad del material. Verifica contra una muestra antes de cotizar.","Poids estimé de la pièce finie : volume de fil développé × densité. À vérifier sur échantillon avant devis."],
+        "Use this weight in the quote →":["Usar este peso en la cotización →","Utiliser ce poids dans le devis →"],
+        "Sent to quote ✓":["Enviado a la cotización ✓","Envoyé au devis ✓"],
+        "Open this tool from the price calculator to send the weight into a quote.":["Abre esta herramienta desde la calculadora de precios para mandar el peso a una cotización.","Ouvrez cet outil depuis le calculateur de prix pour envoyer le poids dans un devis."],
+        "Material Database":["Base de materiales","Base des matières"],
+        "Machine Database":["Base de máquinas","Base des machines"],
+        "Restore default values":["Restaurar valores por defecto","Rétablir les valeurs par défaut"],
+        "Editable defaults.":["Valores por defecto editables.","Valeurs par défaut modifiables."],
+        "Density":["Densidad","Densité"],
+        "ø min":["ø mín","ø min"],
+        "ø max":["ø máx","ø max"],
+        "Shear":["Corte","Cisaillement"],
+        "Bend":["Flexión","Flexion"],
+        "Temp max":["Temp. máx","Temp. max"],
+        "Cost":["Costo","Coût"],
+        "Wire min":["Alambre mín","Fil min"],
+        "Wire max":["Alambre máx","Fil max"],
+        "OD max":["DE máx","DE max"],
+        "Spring types":["Tipos de resorte","Types de ressort"],
+        "Comp":["Comp","Comp"],
+        "Ext":["Ext","Trac"],
+        "Tors":["Tors","Tors"],
+        "Excellent":["Excelente","Excellent"],
+        "Good":["Bueno","Bon"],
+        "Moderate":["Moderado","Modéré"],
+        "Low":["Bajo","Faible"],
+        "Medium":["Medio","Moyen"],
+        "High":["Alto","Élevé"],
+        "Compression ONLY":["SÓLO compresión","Compression SEULEMENT"],
+        "Wire form ONLY":["SÓLO formas de alambre","Pièces en fil SEULEMENT"],
+        "All types + wire forms":["Todos los tipos + formas de alambre","Tous types + pièces en fil"],
+        "Compression, Tension":["Compresión, extensión","Compression, traction"],
+        "Compression, Tension, Torsion":["Compresión, extensión, torsión","Compression, traction, torsion"],
+        "Compression, Torsion, Wire form":["Compresión, torsión, forma de alambre","Compression, torsion, pièce en fil"],
+        "Tension, Torsion, Wire form":["Extensión, torsión, forma de alambre","Traction, torsion, pièce en fil"],
+        "no OD limit on record":["sin límite de DE registrado","pas de limite de DE enregistrée"],
+        "none on record":["sin registro","aucun enregistré"],
+        "Estimated machine capability data.":["Datos estimados de capacidad de máquina.","Données de capacité machine estimées."],
+        "OD / ID conflict":["Conflicto DE / DI","Conflit DE / DI"],
+        "Inside diameter computes to zero or negative. Check wire diameter and the entered diameter / mode.":["El diámetro interior sale cero o negativo. Revisa el diámetro de alambre y el diámetro / modo capturado.","Le diamètre intérieur ressort nul ou négatif. Vérifiez le diamètre du fil et le diamètre / mode saisi."],
+        "Free length ≤ solid height":["Longitud libre ≤ altura sólida","Longueur libre ≤ hauteur à bloc"],
+        "Working height below solid height":["Altura de trabajo por debajo de la altura sólida","Hauteur de travail sous la hauteur à bloc"],
+        "Operating stress exceeds the allowable shear stress — the spring yields in normal use. Increase wire diameter, raise the spring index, or add active coils.":["El esfuerzo de operación supera el esfuerzo de corte admisible: el resorte cede en uso normal. Aumenta el diámetro de alambre, sube el índice o añade espiras activas.","La contrainte de service dépasse la contrainte admissible : le ressort plastifie en usage normal. Augmentez le diamètre du fil, l’indice, ou ajoutez des spires actives."],
+        "Operating stress is close to the allowable. Target SF ≥ 1.2 static, higher for cyclic / fatigue duty.":["El esfuerzo de operación está cerca del admisible. Objetivo FS ≥ 1.2 estático, mayor en servicio cíclico / fatiga.","La contrainte de service est proche de l’admissible. Viser CS ≥ 1,2 en statique, plus en fatigue."],
+        "Adequate for static duty. For cyclic or fatigue loading aim for SF ≥ 1.5.":["Adecuado para servicio estático. Para carga cíclica o fatiga, objetivo FS ≥ 1.5.","Adéquat en statique. En charge cyclique ou fatigue, viser CS ≥ 1,5."],
+        "Buckling expected at working deflection":["Pandeo esperado a la deflexión de trabajo","Flambage attendu à la flèche de travail"],
+        "Working deflection exceeds the critical buckling deflection. Use a guide rod or bore, reduce free length, or increase mean diameter.":["La deflexión de trabajo supera la deflexión crítica de pandeo. Usa una guía o alojamiento, reduce la longitud libre o aumenta el diámetro medio.","La flèche de travail dépasse la flèche critique de flambage. Utilisez un guide ou un alésage, réduisez la longueur libre ou augmentez le diamètre moyen."],
+        "Approaching the buckling limit. Consider a guide rod / bore or a shorter, larger-diameter spring.":["Cerca del límite de pandeo. Considera una guía / alojamiento o un resorte más corto y de mayor diámetro.","Proche de la limite de flambage. Envisagez un guide / alésage ou un ressort plus court et plus large."],
+        "Slenderness above ~5 makes buckling sensitive to end conditions. Squared & ground ends and a guide are advisable.":["Con esbeltez mayor a ~5 el pandeo depende de las condiciones de extremo. Se recomiendan extremos escuadrados y rectificados y una guía.","Au-delà d’un élancement ~5 le flambage dépend des conditions d’extrémité. Extrémités rapprochées et meulées et un guide sont conseillés."],
+        "Helix angle above ~12° reduces coiling accuracy and the rate formula loses precision. Add coils or reduce free length.":["Un ángulo de hélice mayor a ~12° reduce la precisión del enrollado y la fórmula de la constante pierde exactitud. Añade espiras o reduce la longitud libre.","Un angle d’hélice > ~12° réduit la précision d’enroulement et la formule de raideur perd en exactitude. Ajoutez des spires ou réduisez la longueur libre."],
+        "Pitch at or below wire diameter":["Paso igual o menor al diámetro de alambre","Pas égal ou inférieur au diamètre du fil"],
+        "Coils touch or overlap at free length. Increase free length or reduce coil count.":["Las espiras se tocan o se traslapan en longitud libre. Aumenta la longitud libre o reduce las espiras.","Les spires se touchent ou se chevauchent à la longueur libre. Augmentez la longueur libre ou réduisez le nombre de spires."],
+        "Below ~3 active coils the rate is hard to hold and end effects dominate. Add coils if the envelope allows.":["Con menos de ~3 espiras activas la constante es difícil de sostener y dominan los efectos de extremo. Añade espiras si el espacio lo permite.","Sous ~3 spires actives la raideur est difficile à tenir et les effets d’extrémité dominent. Ajoutez des spires si l’encombrement le permet."],
+        "Grinding feasibility risk":["Riesgo de factibilidad del rectificado","Risque de faisabilité du meulage"],
+        "High index + ground ends: slender coils can deflect during grinding, hurting squareness and load tolerance.":["Índice alto + extremos rectificados: las espiras esbeltas pueden deformarse al rectificar, afectando escuadría y tolerancia de carga.","Indice élevé + extrémités meulées : les spires élancées peuvent fléchir au meulage, au détriment de l’équerrage et de la tolérance de charge."],
+        "Ends are ground — secondary grinding operation required":["Extremos rectificados: se requiere operación secundaria de rectificado","Extrémités meulées : opération secondaire de meulage requise"],
+        "Include end-grinding in routing and cost. Verify squareness and parallelism tolerances are achievable.":["Incluye el rectificado de extremos en la ruta y el costo. Verifica que las tolerancias de escuadría y paralelismo sean alcanzables.","Incluez le meulage des extrémités dans la gamme et le coût. Vérifiez que les tolérances d’équerrage et de parallélisme sont atteignables."],
+        "Low index is hard to coil and over-stresses tooling. Increase mean diameter or reduce wire diameter.":["Un índice bajo es difícil de enrollar y sobrecarga el herramental. Aumenta el diámetro medio o reduce el de alambre.","Un indice faible est difficile à enrouler et surcharge l’outillage. Augmentez le diamètre moyen ou réduisez le fil."],
+        "Coilable but hard on tooling. Aim for 5–12.":["Enrollable pero duro para el herramental. Objetivo 5–12.","Enroulable mais dur pour l’outillage. Viser 5–12."],
+        "Very high index gives an unstable, tangle-prone coil. Reduce mean diameter or increase wire diameter.":["Un índice muy alto da una espira inestable que se enreda. Reduce el diámetro medio o aumenta el de alambre.","Un indice très élevé donne un ressort instable qui s’emmêle. Réduisez le diamètre moyen ou augmentez le fil."],
+        "Tighten toward 5–12 to improve consistency.":["Acércalo a 5–12 para mejorar la consistencia.","Rapprochez-le de 5–12 pour plus de régularité."],
+        "Tighten toward 5–12 for consistency.":["Acércalo a 5–12 por consistencia.","Rapprochez-le de 5–12 pour la régularité."],
+        "C below 4 is very hard to coil, causes high coiling stress and tool wear. Increase mean diameter or reduce wire diameter to bring C into 5–12.":["Un C menor a 4 es muy difícil de enrollar, genera alto esfuerzo de enrollado y desgaste de herramienta. Aumenta el diámetro medio o reduce el de alambre para llevar C a 5–12.","Un C < 4 est très difficile à enrouler, avec forte contrainte d’enroulement et usure d’outil. Augmentez le diamètre moyen ou réduisez le fil pour amener C dans 5–12."],
+        "C of 4–5 is coilable but stresses tooling. Aim for 5–12 where practical.":["Un C de 4–5 es enrollable pero exige al herramental. Objetivo 5–12 cuando sea práctico.","Un C de 4–5 est enroulable mais sollicite l’outillage. Viser 5–12 si possible."],
+        "C above 15 gives a slack, tangle-prone coil with inconsistent free length. Reduce mean diameter or increase wire diameter.":["Un C mayor a 15 da una espira floja, que se enreda y con longitud libre inconsistente. Reduce el diámetro medio o aumenta el de alambre.","Un C > 15 donne un ressort lâche, qui s’emmêle, à longueur libre irrégulière. Réduisez le diamètre moyen ou augmentez le fil."],
+        "C of 12–15 risks tangling and free-length scatter. Tighten toward 5–12 if the envelope allows.":["Un C de 12–15 arriesga enredos y dispersión de longitud libre. Acércalo a 5–12 si el espacio lo permite.","Un C de 12–15 risque l’emmêlement et la dispersion de longueur libre. Rapprochez-le de 5–12 si l’encombrement le permet."],
+        "Initial tension below preferred band":["Tensión inicial por debajo de la banda preferida","Tension initiale sous la plage préférée"],
+        "Initial tension above preferred band":["Tensión inicial por encima de la banda preferida","Tension initiale au-dessus de la plage préférée"],
+        "Initial tension within preferred band":["Tensión inicial dentro de la banda preferida","Tension initiale dans la plage préférée"],
+        "Coiled-in stress exceeds the preferred range. High initial tension is difficult to coil and may relax in service. Reduce it or accept tighter process control.":["El esfuerzo de enrollado supera el rango preferido. Una tensión inicial alta es difícil de enrollar y puede relajarse en servicio. Redúcela o acepta un control de proceso más estricto.","La contrainte d’enroulement dépasse la plage préférée. Une tension initiale élevée est difficile à enrouler et peut se relaxer en service. Réduisez-la ou acceptez un contrôle plus strict."],
+        "Stress at the hook exceeds the allowable — hooks are the usual failure point. Increase the hook bend radius, reduce load, or use a heavier wire.":["El esfuerzo en el gancho supera el admisible; los ganchos son el punto habitual de falla. Aumenta el radio de doblez, reduce la carga o usa alambre más grueso.","La contrainte au crochet dépasse l’admissible ; les crochets sont le point de rupture habituel. Augmentez le rayon de pliage, réduisez la charge ou prenez un fil plus gros."],
+        "Hooks carry a stress concentration. Target SF ≥ 1.5 static and well above that for cyclic duty. Increase the bend radius.":["Los ganchos concentran esfuerzo. Objetivo FS ≥ 1.5 estático y bastante más en servicio cíclico. Aumenta el radio de doblez.","Les crochets concentrent les contraintes. Viser CS ≥ 1,5 en statique et bien plus en cyclique. Augmentez le rayon de pliage."],
+        "Hook is the limiting feature":["El gancho es el elemento limitante","Le crochet est l’élément limitant"],
+        "Hook stress exceeds body stress — fatigue cracks will start at the hook. Generous bend radii and stress-relief help.":["El esfuerzo del gancho supera al del cuerpo: las grietas por fatiga empezarán en el gancho. Ayudan radios generosos y alivio de esfuerzos.","La contrainte au crochet dépasse celle du corps : les fissures de fatigue partiront du crochet. Rayons généreux et détente aident."],
+        "Body operating stress is high. Target SF ≥ 1.2 static.":["El esfuerzo de operación del cuerpo es alto. Objetivo FS ≥ 1.2 estático.","La contrainte de service du corps est élevée. Viser CS ≥ 1,2 en statique."],
+        "Hook type adds forming complexity":["El tipo de gancho añade complejidad de formado","Le type de crochet complique le formage"],
+        "The selected hook style needs extra forming / secondary operations. Standard machine loops are the most economical and repeatable.":["El estilo de gancho elegido necesita formado extra / operaciones secundarias. Los lazos estándar a máquina son los más económicos y repetibles.","Le style de crochet choisi demande du formage / des opérations secondaires. Les boucles machine standard sont les plus économiques et répétables."],
+        "Close-wound body — set cannot be removed":["Cuerpo enrollado cerrado: no se puede quitar el asentamiento","Corps à spires jointives : le tassement ne peut pas être retiré"],
+        "Extension springs are coiled solid, so cold-set / preset is not available. Keep body stress conservative.":["Los resortes de extensión se enrollan cerrados, así que no hay preasentado. Mantén conservador el esfuerzo del cuerpo.","Les ressorts de traction sont enroulés à spires jointives : pas de pré-tassement possible. Gardez une contrainte de corps prudente."],
+        "Low index over-stresses coiling tooling and raises bending stress. Increase mean diameter or reduce wire diameter.":["Un índice bajo sobrecarga el herramental de enrollado y eleva el esfuerzo de flexión. Aumenta el diámetro medio o reduce el de alambre.","Un indice faible surcharge l’outillage et élève la contrainte de flexion. Augmentez le diamètre moyen ou réduisez le fil."],
+        "High index gives a loose, unstable coil. Reduce mean diameter or increase wire diameter.":["Un índice alto da una espira floja e inestable. Reduce el diámetro medio o aumenta el de alambre.","Un indice élevé donne un ressort lâche et instable. Réduisez le diamètre moyen ou augmentez le fil."],
+        "Load unwinds the spring":["La carga desenrolla el resorte","La charge déroule le ressort"],
+        "The wire yields at the working angle. Increase wire diameter, raise index, or reduce the angle of rotation.":["El alambre cede al ángulo de trabajo. Aumenta el diámetro de alambre, sube el índice o reduce el ángulo de rotación.","Le fil plastifie à l’angle de travail. Augmentez le fil, l’indice, ou réduisez l’angle de rotation."],
+        "Operating bending stress is close to the allowable. Target SF ≥ 1.2 static, higher for cyclic duty.":["El esfuerzo de flexión de operación está cerca del admisible. Objetivo FS ≥ 1.2 estático, mayor en cíclico.","La contrainte de flexion en service est proche de l’admissible. Viser CS ≥ 1,2 en statique, plus en cyclique."],
+        "Angle of rotation exceeds safe deflection":["El ángulo de rotación supera la deflexión segura","L’angle de rotation dépasse la flèche sûre"],
+        "Coil closes onto itself under load":["La espira se cierra sobre sí misma bajo carga","Les spires se referment sous charge"],
+        "Inside diameter under load computes to zero. Coil count or angle is excessive.":["El diámetro interior bajo carga sale cero. Las espiras o el ángulo son excesivos.","Le diamètre intérieur sous charge ressort nul. Spires ou angle excessifs."],
+        "Mandrel interference under load":["Interferencia con el mandril bajo carga","Interférence avec le mandrin sous charge"],
+        "Tight mandrel clearance":["Holgura del mandril ajustada","Jeu du mandrin serré"],
+        "Mandrel clearance adequate":["Holgura del mandril adecuada","Jeu du mandrin suffisant"],
+        "Long legs":["Patas largas","Branches longues"],
+        "Legs longer than ~2.5× mean diameter deflect under load and may need support or a heavier section. Confirm leg geometry with the customer.":["Patas mayores a ~2.5× el diámetro medio se flexionan bajo carga y pueden necesitar apoyo o sección más gruesa. Confirma la geometría de las patas con el cliente.","Des branches > ~2,5× le diamètre moyen fléchissent sous charge et peuvent demander un appui ou une section plus forte. Confirmez la géométrie avec le client."],
+        "Below ~3 body coils the rate is dominated by the legs and is hard to hold. Add coils if possible.":["Con menos de ~3 espiras de cuerpo la constante la dominan las patas y es difícil de sostener. Añade espiras si es posible.","Sous ~3 spires de corps la raideur est dominée par les branches et difficile à tenir. Ajoutez des spires si possible."],
+        "Leg forming is a secondary operation":["El formado de patas es una operación secundaria","Le formage des branches est une opération secondaire"],
+        "Account for leg bending / end forming in routing and cost. Sharp leg bends concentrate stress — use generous radii.":["Considera el doblado de patas / formado de extremos en la ruta y el costo. Los dobleces agudos concentran esfuerzo: usa radios generosos.","Prévoyez le pliage des branches / formage des extrémités dans la gamme et le coût. Les plis vifs concentrent les contraintes : rayons généreux."],
+        "Wire diameter outside material data range":["Diámetro de alambre fuera del rango de datos del material","Diamètre de fil hors de la plage de données de la matière"],
+        "Machine Selection Rules":["Reglas de selección de máquina","Règles de choix de machine"],
+        "Safety Factor (work)":["Factor de seguridad (trabajo)","Coef. de sécurité (travail)"],
+        "operating point":["punto de operación","point de fonctionnement"],
+        "Outside ø (OD)":["ø exterior (DE)","ø extérieur (DE)"],
+        "Free length L0":["Longitud libre L0","Longueur libre L0"],
+        "Body length":["Longitud del cuerpo","Longueur du corps"],
+        "COMPRESSION":["COMPRESIÓN","COMPRESSION"],
+        "EXTENSION":["EXTENSIÓN","TRACTION"],
+        "TORSION":["TORSIÓN","TORSION"],
+        "Load winds the spring closed (correct direction)":["La carga enrolla el resorte cerrándolo (sentido correcto)","La charge enroule le ressort en fermeture (sens correct)"],
+        "Torsion springs must be loaded in the direction that winds them tighter (closing). Loading in the opening direction over-stresses the wire and loosens the coil over the mandrel. Reverse the wind direction or the load direction.":["Los resortes de torsión deben cargarse en el sentido que los cierra. Cargarlos en sentido de apertura sobreesfuerza el alambre y afloja la espira sobre el mandril. Invierte el sentido de enrollado o el de la carga.","Les ressorts de torsion doivent être chargés dans le sens qui les ferme. Charger en ouverture surcontraint le fil et desserre les spires sur le mandrin. Inversez le sens d’enroulement ou de la charge."],
+        "Solid stress exceeds the allowable. Acceptable only if the spring is never compressed fully solid in service; otherwise preset (cold-set) the spring or add capacity.":["El esfuerzo a sólido supera el admisible. Aceptable sólo si el resorte nunca se comprime a sólido en servicio; si no, preasienta el resorte o añade capacidad.","La contrainte à bloc dépasse l’admissible. Acceptable seulement si le ressort n’est jamais comprimé à bloc en service ; sinon pré-tassez le ressort ou ajoutez de la capacité."],
+        "Enter the wire ø first (Material card) — the coiler choice depends on it.":["Captura primero el ø de alambre (ficha Material): la elección de enrolladora depende de él.","Saisissez d’abord le ø du fil (fiche Matière) : le choix de l’enrouleuse en dépend."],
+        "Ends":["Extremos","Extrémités"],
+        "Load, lbf":["Carga, lbf","Charge, lbf"],
+        "Load, N":["Carga, N","Charge, N"],
+        "Deflection, in":["Deflexión, in","Flèche, in"],
+        "Deflection, mm":["Deflexión, mm","Flèche, mm"],
+        "Force, lbf":["Fuerza, lbf","Force, lbf"],
+        "Force, N":["Fuerza, N","Force, N"],
+        "Extension, in":["Extensión, in","Allongement, in"],
+        "Extension, mm":["Extensión, mm","Allongement, mm"],
+        "Torque, lbf·in":["Par, lbf·in","Couple, lbf·in"],
+        "Torque, N·mm":["Par, N·mm","Couple, N·mm"],
+        "Highest-quality high-carbon wire. Best fatigue life of the carbon steels; preferred for dynamic / high-cycle service.":["Alambre de alto carbono de la mejor calidad. La mejor vida a fatiga entre los aceros al carbono; preferido para servicio dinámico / alto ciclaje.","Fil à haute teneur en carbone de première qualité. Meilleure tenue en fatigue des aciers au carbone ; préféré en service dynamique / grand nombre de cycles."],
+        "Alloy steel for shock, impact and elevated-temperature duty. High allowable stress; common for engine / valve springs.":["Acero aleado para choque, impacto y temperatura elevada. Alto esfuerzo admisible; común en resortes de motor / válvula.","Acier allié pour chocs, impacts et température élevée. Contrainte admissible élevée ; courant pour ressorts moteur / soupape."],
+        "Austenitic stainless. Good general corrosion resistance; lower allowable stress and modulus than carbon steel.":["Inoxidable austenítico. Buena resistencia general a la corrosión; menor esfuerzo admisible y módulo que el acero al carbono.","Inox austénitique. Bonne résistance générale à la corrosion ; contrainte admissible et module plus faibles que l’acier au carbone."],
+        "General-purpose pre-tempered carbon steel. Economical for static and moderate-cycle loads; not for high-cycle fatigue or shock.":["Acero al carbono pretemplado de uso general. Económico para cargas estáticas y de ciclaje moderado; no para fatiga de alto ciclaje ni choque.","Acier au carbone prétrempé d’usage général. Économique en charges statiques et cycles modérés ; pas pour fatigue élevée ni chocs."],
+        "Copper alloy with good electrical conductivity and corrosion resistance. Low modulus and modest strength; used for contacts / electrical springs.":["Aleación de cobre con buena conductividad eléctrica y resistencia a la corrosión. Módulo bajo y resistencia modesta; para contactos / resortes eléctricos.","Alliage de cuivre à bonne conductivité et résistance à la corrosion. Module faible et résistance modeste ; pour contacts / ressorts électriques."],
+        "Nickel-chromium superalloy for high-temperature and corrosive environments. Expensive; specify only when service conditions require it.":["Superaleación níquel-cromo para alta temperatura y ambientes corrosivos. Cara; especifícala sólo cuando el servicio lo exija.","Superalliage nickel-chrome pour hautes températures et milieux corrosifs. Coûteux ; à prescrire seulement si le service l’exige."],
+        "load":["carga","charge"],
+        "Modulus, density and tensile-model constants are standard published values for spring wire. Allowable-stress factors, temperature limits and cost factors are typical engineering estimates — adjust them to your own shop data and supplier certificates. Tensile strength uses the model Sut = A / d":["Los módulos, densidades y constantes del modelo de tracción son valores publicados estándar para alambre de resorte. Los factores de esfuerzo admisible, límites de temperatura y factores de costo son estimaciones típicas de ingeniería: ajústalos a los datos de tu taller y a los certificados del proveedor. La resistencia a la tracción usa el modelo Sut = A / d","Modules, densités et constantes du modèle de traction sont des valeurs publiées standard pour le fil à ressort. Les facteurs de contrainte admissible, limites de température et facteurs de coût sont des estimations d’ingénierie : ajustez-les aux données de votre atelier et aux certificats fournisseur. La résistance à la traction suit le modèle Sut = A / d"],
+        "(d in mm, A in MPa·mm":["(d en mm, A en MPa·mm","(d en mm, A en MPa·mm"],
+        "The wire-diameter and OD limits below are reasonable industry estimates so the tool runs out of the box. Replace them with the real capability specs of your CGR / ISC machines before using machine recommendations for production decisions.":["Los límites de diámetro de alambre y DE de abajo son estimaciones razonables de la industria para que la herramienta funcione de entrada. Sustitúyelos por las capacidades reales de las máquinas de CGR / ISC antes de usar las recomendaciones de máquina en decisiones de producción.","Les limites de diamètre de fil et de DE ci-dessous sont des estimations raisonnables pour que l’outil fonctionne d’emblée. Remplacez-les par les capacités réelles des machines CGR / ISC avant d’utiliser les recommandations machine en production."],
+        "Enlarge":["Ampliar","Agrandir"],
+        "Enlarge the spring in 3D":["Ampliar el resorte en 3D","Agrandir le ressort en 3D"],
+        "Spring in 3D":["Resorte en 3D","Ressort en 3D"],
+        "Length":["Longitud","Longueur"],
+        "Spring length":["Longitud del resorte","Longueur du ressort"],
+        "Animate":["Animar","Animer"],
+        "Solid wire":["Alambre relleno","Fil plein"],
+        "Plates":["Placas","Plateaux"],
+        "Reset view":["Vista inicial","Vue initiale"],
+        "Deflection":["Deflexión","Flèche"],
+        "Force":["Fuerza","Force"],
+        "Stress":["Esfuerzo","Contrainte"],
+        "Gap between coils":["Hueco entre espiras","Jeu entre spires"],
+        "Force and stress come from the calculator’s rate and solid stress, in proportion to the deflection. This is a representation, not a CAD model.":["Fuerza y esfuerzo salen de la constante y del esfuerzo a sólido de la calculadora, en proporción a la deflexión. Es una representación, no un modelo CAD.","Force et contrainte viennent de la raideur et de la contrainte à bloc du calculateur, proportionnellement à la flèche. C’est une représentation, pas un modèle CAO."],
+        "Free":["Libre","Libre"],
+        "Solid":["Sólido","À bloc"],
+        "Free length":["Longitud libre","Longueur libre"],
+        "Working height L1":["Altura de trabajo L1","Hauteur de travail L1"],
+        "0 — coils in contact":["0 — espiras en contacto","0 — spires en contact"],
+        "⤢ Enlarge":["⤢ Ampliar","⤢ Agrandir"],
+        "→ Use weight in quote":["→ Usar el peso en la cotización","→ Utiliser le poids dans le devis"]};
+
+    const P = [
+        [/^Working height (.+?) is below solid height (.+?)\. The spring is over-travelled — it will be forced past solid\.$/, "La altura de trabajo $1 queda por debajo de la altura sólida $2. El resorte está sobrerrecorrido: se forzará más allá de sólido.", "La hauteur de travail $1 est sous la hauteur à bloc $2. Le ressort est en surcourse : il sera forcé au-delà du bloc."],
+        [/^Wire ø (.+?) is outside the validated range for (.+?)\s*(\(.*\))?$/, "El ø de alambre $1 está fuera del rango validado para $2 $3", "Le ø de fil $1 est hors de la plage validée pour $2 $3"],
+        [/^Working angle (.+?)° is beyond the safe (.+?)°\. Reduce the angle or increase capacity\.$/, "El ángulo de trabajo $1° supera el seguro $2°. Reduce el ángulo o aumenta la capacidad.", "L’angle de travail $1° dépasse l’angle sûr $2°. Réduisez l’angle ou augmentez la capacité."],
+        [/^The coil ID shrinks to (.+?) under load — smaller than the (.+?) mandrel\. The spring binds\. Use a mandrel ≤ (.+)$/, "El DI de la espira baja a $1 bajo carga, menor que el mandril de $2. El resorte se traba. Usa un mandril ≤ $3", "Le DI des spires descend à $1 sous charge, moins que le mandrin de $2. Le ressort coince. Utilisez un mandrin ≤ $3"],
+        [/^Mandrel is above the recommended 90% of loaded ID\. Drop to ≤ (.+?) to avoid binding and friction\.$/, "El mandril supera el 90 % recomendado del DI bajo carga. Bájalo a ≤ $1 para evitar trabas y fricción.", "Le mandrin dépasse les 90 % recommandés du DI sous charge. Descendez à ≤ $1 pour éviter coincement et frottement."],
+        [/^(.+?)\. Usage rank (\d+) of (\d+) in (\d{4})\.$/, "$1. Puesto $2 de $3 por uso en $4.", "$1. Rang $2 sur $3 par usage en $4."],
+        [/^Coiled-in stress (.+)$/, "Esfuerzo de enrollado $1", "Contrainte d’enroulement $1"],
+        [/^Spring index in ideal range \(C = (.+)\)$/, "Índice del resorte en rango ideal (C = $1)", "Indice du ressort dans la plage idéale (C = $1)"],
+        [/^Spring index (too )?high \(C = (.+)\)$/, "Índice del resorte $1alto (C = $2)", "Indice du ressort $1élevé (C = $2)"],
+        [/^Spring index (too )?low \(C = (.+)\)$/, "Índice del resorte $1bajo (C = $2)", "Indice du ressort $1faible (C = $2)"],
+        [/^Low safety factor at working load \(SF = (.+)\)$/, "Factor de seguridad bajo a la carga de trabajo (FS = $1)", "Coefficient de sécurité faible à la charge de travail (CS = $1)"],
+        [/^Moderate working safety factor \(SF = (.+)\)$/, "Factor de seguridad de trabajo moderado (FS = $1)", "Coefficient de sécurité de travail modéré (CS = $1)"],
+        [/^Overstressed at working load \(SF = (.+)\)$/, "Sobreesforzado a la carga de trabajo (FS = $1)", "Surcontraint à la charge de travail (CS = $1)"],
+        [/^Low safety factor \(SF = (.+)\)$/, "Factor de seguridad bajo (FS = $1)", "Coefficient de sécurité faible (CS = $1)"],
+        [/^Low body safety factor \(SF = (.+)\)$/, "Factor de seguridad del cuerpo bajo (FS = $1)", "Coef. de sécurité du corps faible (CS = $1)"],
+        [/^Low hook safety factor \(SF = (.+)\)$/, "Factor de seguridad del gancho bajo (FS = $1)", "Coef. de sécurité du crochet faible (CS = $1)"],
+        [/^Hook overstressed \(SF = (.+)\)$/, "Gancho sobreesforzado (FS = $1)", "Crochet surcontraint (CS = $1)"],
+        [/^Bending stress exceeds allowable \(SF = (.+)\)$/, "El esfuerzo de flexión supera el admisible (FS = $1)", "La contrainte de flexion dépasse l’admissible (CS = $1)"],
+        [/^Spring takes a set if compressed solid \(SF = (.+)\)$/, "El resorte se asienta si se comprime a sólido (FS = $1)", "Le ressort se tasse s’il est comprimé à bloc (CS = $1)"],
+        [/^Buckling risk \((.+?)% of critical deflection\)$/, "Riesgo de pandeo ($1 % de la deflexión crítica)", "Risque de flambage ($1 % de la flèche critique)"],
+        [/^Slender spring \(L0 \/ D = (.+)\)$/, "Resorte esbelto (L0 / D = $1)", "Ressort élancé (L0 / D = $1)"],
+        [/^Helix angle high \((.+)°\)$/, "Ángulo de hélice alto ($1°)", "Angle d’hélice élevé ($1°)"],
+        [/^Few active coils \(Na = (.+)\)$/, "Pocas espiras activas (Na = $1)", "Peu de spires actives (Na = $1)"],
+        [/^Few body coils \(Nb = (.+)\)$/, "Pocas espiras de cuerpo (Nb = $1)", "Peu de spires de corps (Nb = $1)"],
+        [/^Free length must exceed solid height \((.+?)\)\. The spring has no working travel — revise free length or coil count\.$/, "La longitud libre debe superar la altura sólida ($1). El resorte no tiene recorrido de trabajo: revisa la longitud libre o las espiras.", "La longueur libre doit dépasser la hauteur à bloc ($1). Le ressort n’a pas de course de travail : revoyez la longueur libre ou les spires."],
+        [/^No machine in the shop can coil (.+)$/, "Ninguna máquina del taller puede enrollar $1", "Aucune machine de l’atelier ne peut enrouler $1"],
+        [/^Compressed (.+)$/, "Comprimido $1", "Comprimé $1"]
+    ];
+
+    /** La ventana de Pohua (la que tiene I18N), subiendo por los marcos: el
+     *  Spring Calculator vive dentro de la calculadora de precios, dos niveles
+     *  por debajo de Pohua. */
+    function pohua() {
+        let w = window, salto = 0;
+        try {
+            while (w.parent && w.parent !== w && salto < 5) {
+                w = w.parent; salto++;
+                if (w.I18N && w.I18N.idioma) return w;
+            }
+        } catch (_) { /* otro origen: no se puede leer */ }
+        return null;
+    }
+
+    function idiomaActual() {
+        const p = pohua();
+        if (p) return p.I18N.idioma;
+        try { const v = localStorage.getItem(CLAVE); if (v) return v; } catch (_) { /* privado */ }
+        return 'en';
+    }
+
+    let idioma = idiomaActual();
+    let escribiendo = false;      // para no reaccionar a los propios cambios
+
+    function traducir(texto, idx) {
+        const t = texto.trim();
+        if (!t) return null;
+        const e = D[t];
+        if (e) return e[idx];
+        for (const [re, es, fr] of P) {
+            if (re.test(t)) return t.replace(re, idx === 0 ? es : fr);
+        }
+        return null;
+    }
+
+    /** Sustituye el texto conservando los espacios de los bordes. */
+    function conBordes(original, nuevo) {
+        const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(original);
+        return m[1] + nuevo + m[3];
+    }
+
+    function nodoTexto(n) {
+        const en = (n.__en != null) ? n.__en : n.nodeValue;
+        if (n.__en == null && idioma !== 'en') n.__en = n.nodeValue;
+        const idx = IDX[idioma];
+        if (idx == null) {                       // inglés: se restaura el original
+            if (n.__en != null && n.nodeValue !== n.__en) n.nodeValue = n.__en;
+            return;
+        }
+        const tr = traducir(en, idx);
+        const salida = tr == null ? en : conBordes(en, tr);
+        if (n.nodeValue !== salida) n.nodeValue = salida;
+    }
+
+    const ATRIBUTOS = ['placeholder', 'title', 'aria-label'];
+
+    function elemento(el) {
+        for (const a of ATRIBUTOS) {
+            if (!el.hasAttribute(a)) continue;
+            const clave = '__en_' + a;
+            const en = (el[clave] != null) ? el[clave] : el.getAttribute(a);
+            if (el[clave] == null && idioma !== 'en') el[clave] = en;
+            const idx = IDX[idioma];
+            const nuevo = (idx == null) ? en : (traducir(en, idx) || en);
+            if (el.getAttribute(a) !== nuevo) el.setAttribute(a, nuevo);
+        }
+    }
+
+    const SALTAR = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, NOSCRIPT: 1 };
+
+    function recorrer(raiz) {
+        if (!raiz) return;
+        escribiendo = true;
+        try {
+            if (raiz.nodeType === 3) { nodoTexto(raiz); return; }
+            if (raiz.nodeType !== 1 && raiz.nodeType !== 9 && raiz.nodeType !== 11) return;
+            if (raiz.nodeType === 1) {
+                if (SALTAR[raiz.tagName]) return;
+                elemento(raiz);
+            }
+            const w = document.createTreeWalker(raiz, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+                acceptNode(n) {
+                    if (n.nodeType === 1) return SALTAR[n.tagName] ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+                    return SALTAR[n.parentNode && n.parentNode.tagName] ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+                }
+            });
+            let n;
+            while ((n = w.nextNode())) {
+                if (n.nodeType === 3) nodoTexto(n); else elemento(n);
+            }
+        } finally {
+            escribiendo = false;
+        }
+    }
+
+    function todo() {
+        recorrer(document.body);
+        if (document.title) {
+            if (document.__enTitle == null) document.__enTitle = document.title;
+            const idx = IDX[idioma];
+            document.title = (idx == null) ? document.__enTitle : (traducir(document.__enTitle, idx) || document.__enTitle);
+        }
+        document.documentElement.setAttribute('lang', idioma);
+    }
+
+    function vigilar() {
+        const obs = new MutationObserver((cambios) => {
+            if (escribiendo) return;
+            for (const c of cambios) {
+                if (c.type === 'childList') {
+                    c.addedNodes.forEach((n) => recorrer(n));
+                } else if (c.type === 'characterData') {
+                    // La calculadora cambió el texto: el original ya no vale.
+                    c.target.__en = null;
+                    recorrer(c.target);
+                } else if (c.type === 'attributes') {
+                    c.target['__en_' + c.attributeName] = null;
+                    recorrer(c.target);
+                }
+            }
+        });
+        obs.observe(document.documentElement, {
+            childList: true, subtree: true, characterData: true,
+            attributes: true, attributeFilter: ATRIBUTOS,
+        });
+    }
+
+    function cambiar(nuevo) {
+        if (!nuevo || nuevo === idioma) return;
+        idioma = nuevo;
+        todo();
+    }
+
+    function seguirAPohua() {
+        const p = pohua();
+        if (p && p.I18N.alCambiar) {
+            p.I18N.alCambiar((codigo) => cambiar(codigo));
+            return;
+        }
+        window.addEventListener('storage', (ev) => { if (ev.key === CLAVE) cambiar(ev.newValue || 'en'); });
+    }
+
+    function arrancar() {
+        todo();
+        vigilar();
+        seguirAPohua();
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar);
+    else arrancar();
+
+    // Para depurar desde la consola: ISC_IDIOMA.cambiar('es')
+    window.ISC_IDIOMA = { cambiar, get idioma() { return idioma; }, traducir: (t) => traducir(t, IDX[idioma]) };
+})();

@@ -4860,9 +4860,12 @@ body.menu-abierto { overflow: hidden; }
        Ahora hereda el papel de Pohua y la calculadora se pinta encima con los
        mismos colores (js/isc-nube.js), así que no hay nada que enmarcar. */
     border: 0;
-    /* El mismo papel que se le pasa a la calculadora, para que no se vea un
-       salto de tono entre el marco y lo que hay dentro mientras carga. */
-    background: var(--bg-base);
+    /* Transparente: la calculadora deja su suelo sin pintar dentro de Pohua
+       (js/isc-tema.js) y por el marco se ve el cielo de la aplicación —el
+       resplandor y las estrellas— detrás de las tarjetas, en claro igual que
+       en oscuro. Antes llevaba el papel de Pohua y en claro se veía un
+       rectángulo lavanda liso sobre un fondo con estrellas. */
+    background: transparent;
 }
 
 
@@ -4946,17 +4949,18 @@ body.revision-abierta { overflow: hidden; }
 
 .revision {
     width: 100%;
-    max-width: 960px;
-    max-height: calc(100vh - 48px);
-    max-height: calc(100dvh - 48px);
+    max-width: 900px;
+    max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 40px);
     display: flex;
     flex-direction: column;
-    background: var(--bg-card);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
+    background: #ffffff;
+    border: 1px solid #d4dfe7;
+    border-radius: 12px;
+    box-shadow: 0 16px 48px rgba(10, 25, 50, 0.22);
     overflow: hidden;
     animation: dialogoEntra var(--duration-normal) var(--ease-out);
+    font-family: inherit;
 }
 
 .revision--cargando {
@@ -4968,128 +4972,182 @@ body.revision-abierta { overflow: hidden; }
 
 .revision-fondo.ocupado .revision { opacity: 0.85; pointer-events: none; }
 
-/* --- Cabecera: PN · tipo · RFQ · cliente --------------------------------- */
+/* --- Cabecera: Azul Marino CGR / Pohua ----------------------------------- */
 .revision-cab {
     display: flex;
     align-items: center;
-    gap: var(--sp-3);
-    padding: var(--sp-4) var(--sp-5);
-    border-bottom: 1px solid var(--border-subtle);
-    background: color-mix(in srgb, var(--cgr-primary) 12%, var(--bg-card));
+    justify-content: space-between;
+    padding: 10px 18px;
+    background: #13376e;
+    color: #ffffff;
+    flex: none;
 }
 
-.revision-titulo {
-    flex: 1;
-    min-width: 0;
+.revision-cab-izq {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.revision-cab-pn {
     font-size: 15px;
     font-weight: 700;
-    color: var(--text-primary);
+    color: #ffffff;
+    letter-spacing: -0.01em;
+}
+
+.revision-cab-sep {
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0 2px;
+    font-weight: 400;
+}
+
+.revision-cab-tipo {
+    font-size: 14px;
+    font-weight: 400;
+    color: #ffffff;
+}
+
+.revision-cab-meta {
+    font-size: 13px;
+    color: #c0d3e8;
+    margin-left: auto;
+    margin-right: 14px;
+    font-weight: 400;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.revision-sep { margin: 0 var(--sp-2); color: var(--text-muted); font-weight: 400; }
-
 .revision-cerrar {
-    flex: none;
-    width: 34px;
-    height: 34px;
-    border-radius: var(--radius-full);
-    border: 1px solid var(--border-default);
     background: transparent;
-    color: var(--text-secondary);
-    font-size: 22px;
+    border: none;
+    color: #c0d3e8;
+    font-size: 20px;
     line-height: 1;
     cursor: pointer;
+    padding: 4px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: all var(--duration-fast) var(--ease-out);
+    border-radius: 4px;
+    transition: color var(--duration-fast) var(--ease-out);
 }
-.revision-cerrar:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.revision-cerrar:hover { color: #ffffff; }
 
-/* --- Cuerpo: lo único que hace scroll ----------------------------------- */
+/* --- Cuerpo ------------------------------------------------------------- */
 .revision-cuerpo {
     flex: 1;
     min-height: 0;
-    overflow: auto;
-    padding: var(--sp-4) var(--sp-5);
+    overflow-y: auto;
+    padding: 14px 18px;
     display: flex;
     flex-direction: column;
-    gap: var(--sp-4);
+    gap: 12px;
+    background: #ffffff;
 }
-/* Los hijos con overflow (la fila de tramos, la cascada) se encogerían a
-   cero dentro de la columna flexible: que midan lo que miden. */
 .revision-cuerpo > * { flex: none; }
 
+/* --- ALL TIERS y especificaciones comunes (píldoras) -------------------- */
+.revision-comunes {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .revision-rotulo {
-    margin-bottom: var(--sp-2);
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: #768b9d;
+    white-space: nowrap;
+    flex: none;
 }
 
-/* Lo común a todos los tramos: material, diámetro, peso, precios del alambre */
-.revision-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-
-.revision-chip {
+.revision-pills {
     display: flex;
-    flex-direction: column;
-    gap: 1px;
-    min-width: 108px;
-    padding: 6px 12px;
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    background: var(--bg-elevated);
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
 }
-.revision-chip-etq { font-size: 11px; color: var(--text-muted); }
-.revision-chip-val {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-primary);
-    font-variant-numeric: tabular-nums;
-}
-.revision-chip-val small { font-weight: 400; color: var(--text-muted); }
 
-/* Los tramos: uno por cantidad. La franja de la izquierda dice si llega al
-   objetivo (verde) o se queda corto (ámbar), igual que las fichas de abajo. */
+.revision-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    border: 1px solid #d4e0e9;
+    background: #ffffff;
+    color: #496177;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 3px 12px;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+/* --- Tramos de cantidad (Tarjetas de Tiers) ----------------------------- */
 .revision-tramos {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: var(--sp-2);
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
 }
 
-.revision-tramo {
+.revision-tramo-card {
     appearance: none;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 10px 12px;
+    gap: 5px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #dce5ec;
+    background: #ffffff;
+    cursor: pointer;
     text-align: left;
     font: inherit;
-    color: var(--text-primary);
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-left: 4px solid var(--color-warning);
-    border-radius: var(--radius-md);
-    cursor: pointer;
     transition: all var(--duration-fast) var(--ease-out);
 }
-.revision-tramo.llega { border-left-color: var(--color-success); }
-.revision-tramo:hover { background: var(--bg-card-hover); }
-.revision-tramo.activo {
-    background: color-mix(in srgb, var(--cgr-primary) 16%, var(--bg-card));
-    outline: 2px solid var(--cgr-primary-light);
-    outline-offset: -1px;
+.revision-tramo-card:hover {
+    background: #f8fbfe;
+    border-color: #bcd4e6;
 }
-.revision-tramo-qty    { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
-.revision-tramo-precio { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.revision-tramo-precio small { font-size: 12px; font-weight: 500; color: var(--text-muted); }
-.revision-tramo-margen { font-size: 12px; color: var(--text-secondary); }
-.revision-tramo small  { font-size: 11px; color: var(--text-muted); }
+.revision-tramo-card.activo {
+    border: 2px solid #239ac9;
+    background: #f0f8fd;
+    padding: 9px 13px;
+}
+
+.revision-tramo-cab {
+    font-size: 12px;
+    font-weight: 600;
+    color: #50687e;
+    display: flex;
+    align-items: baseline;
+    white-space: nowrap;
+}
+.revision-tramo-tit { color: #50687e; }
+
+.revision-tramo-cuerpo {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+.revision-tramo-precio {
+    font-size: 19px;
+    font-weight: 700;
+    color: #152c42;
+    font-variant-numeric: tabular-nums;
+}
+.revision-tramo-margen {
+    font-size: 13px;
+    font-weight: 600;
+    color: #2e7d32;
+    font-variant-numeric: tabular-nums;
+}
+
+.qty-larga, .precio-largo { display: inline; }
+.qty-corta, .precio-corto { display: none; }
 
 .revision-sin-tramos {
     padding: var(--sp-4);
@@ -5099,135 +5157,267 @@ body.revision-abierta { overflow: hidden; }
     color: var(--text-secondary);
 }
 
-/* La franja de avisos: ámbar si hay algo que mirar, magenta si el costeo
-   falló, azul si sólo son motivos informativos. */
+/* --- Franja de avisos (ámbar / error) ----------------------------------- */
 .revision-franja {
     display: flex;
-    gap: var(--sp-3);
-    padding: var(--sp-3) var(--sp-4);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--color-warning);
-    border-left-width: 4px;
-    background: var(--color-warning-bg);
-    color: var(--text-primary);
+    align-items: center;
+    gap: 9px;
+    padding: 8px 14px;
+    border-radius: 8px;
     font-size: 13px;
-    line-height: 1.5;
+    line-height: 1.4;
+    background: #fef9e8;
+    border: 1px solid #f6d674;
+    color: #8c6707;
 }
-.revision-franja svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--color-warning); }
-.revision-franja ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; }
-.revision-franja--error { border-color: var(--color-error); background: var(--color-error-bg); }
-.revision-franja--error svg { color: var(--color-error); }
-.revision-franja--info  { border-color: var(--color-info);  background: var(--color-info-bg); }
-.revision-franja--info svg { color: var(--color-info); }
-.revision-aviso--info { color: var(--text-secondary); }
+.revision-franja-icono {
+    font-size: 15px;
+    flex: none;
+    color: #e6a817;
+}
+.revision-franja-texto {
+    flex: 1;
+    min-width: 0;
+}
+.revision-franja--error {
+    background: #fdf2f4;
+    border-color: #f5b5c2;
+    color: #9c2738;
+}
+.revision-franja--error .revision-franja-icono { color: #c43247; }
+.revision-franja--info {
+    background: #f0f7fd;
+    border-color: #badcf7;
+    color: #1e5a8a;
+}
+.revision-franja--info .revision-franja-icono { color: #1e88e5; }
 
-/* La cascada: venta → AV → C/CV → C/CD → resultado. Cinco fichas en fila. */
-.revision-cascada {
+/* --- Cascada de margen (Waterfall 5 columnas) --------------------------- */
+.revision-cascada-wrap {
+    display: flex;
+    flex-direction: column;
+}
+.revision-cascada-tit-movil { display: none; }
+.revision-cascada-lista { display: none; }
+
+.revision-cascada-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: var(--sp-2);
+    border: 1px solid #dce5ec;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
 }
 
-.revision-ficha {
+.revision-cascada-col {
+    padding: 10px 14px;
+    border-right: 1px solid #edf2f6;
     display: flex;
     flex-direction: column;
     gap: 2px;
     min-width: 0;
-    padding: 10px 12px;
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    background: var(--bg-surface);
 }
-.revision-ficha-etq { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.revision-ficha-val { font-size: 19px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.revision-ficha-sub { font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.revision-cascada-col:last-child { border-right: none; }
 
-/* La última ficha es el veredicto del número: verde llega, ámbar se queda corto. */
-.revision-ficha--ok    { border-color: var(--color-success); background: var(--color-success-bg); }
-.revision-ficha--ok .revision-ficha-val    { color: var(--color-success); }
-.revision-ficha--corto { border-color: var(--color-warning); background: var(--color-warning-bg); }
-.revision-ficha--corto .revision-ficha-val { color: var(--color-warning); }
+.revision-cascada-lbl {
+    font-size: 11px;
+    font-weight: 600;
+    color: #7b90a1;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.revision-cascada-val {
+    font-size: 18px;
+    font-weight: 700;
+    color: #162c42;
+    font-variant-numeric: tabular-nums;
+    margin: 2px 0 1px;
+}
+.revision-cascada-sub {
+    font-size: 12px;
+    color: #5c7388;
+    font-variant-numeric: tabular-nums;
+}
 
-/* Material · Ruta · Totales, en tres columnas. */
-.revision-columnas {
+/* Columna de Resultado (5ª columna resaltada en verde) */
+.revision-cascada-col--resultado {
+    background: #eef8ea;
+    border-left: 1px solid #d4ebce;
+}
+.revision-cascada-col--resultado .revision-cascada-lbl { color: #2e7d32; font-weight: 700; }
+.revision-cascada-col--resultado .revision-cascada-val { color: #2e7d32; }
+.revision-cascada-col--resultado .revision-cascada-sub { color: #2e7d32; font-weight: 600; }
+
+.revision-cascada-col--resultado.revision-cascada--corto {
+    background: #fef9e8;
+    border-left-color: #f6d674;
+}
+.revision-cascada-col--resultado.revision-cascada--corto .revision-cascada-lbl,
+.revision-cascada-col--resultado.revision-cascada--corto .revision-cascada-val,
+.revision-cascada-col--resultado.revision-cascada--corto .revision-cascada-sub {
+    color: #8c6707;
+}
+
+/* --- Bloques: Material · Ruta · Totales ---------------------------------- */
+.revision-columnas-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--sp-3);
+    grid-template-columns: 1fr 1.25fr 1fr;
+    border: 1px solid #dce5ec;
+    border-radius: 8px;
+    background: #ffffff;
+    overflow: hidden;
 }
 
 .revision-bloque {
+    padding: 11px 15px;
+    border-right: 1px solid #edf2f6;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
     min-width: 0;
-    padding: var(--sp-3) var(--sp-4);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    background: var(--bg-surface);
 }
-.revision-bloque h4 {
-    margin: 0 0 var(--sp-2);
+.revision-bloque:last-child { border-right: none; }
+
+.revision-bloque-tit {
+    margin: 0 0 5px;
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: #7b90a1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.revision-fila {
+.revision-fila-dato {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    gap: var(--sp-3);
-    padding: 5px 0;
-    border-bottom: 1px solid var(--border-subtle);
+    padding: 4px 0;
     font-size: 13px;
-    color: var(--text-secondary);
+    color: #556c80;
+    border-bottom: 1px solid #f4f7fa;
 }
-.revision-fila:last-child { border-bottom: 0; }
-.revision-fila b { color: var(--text-primary); font-variant-numeric: tabular-nums; text-align: right; }
-.revision-fila b small, .revision-fila small { font-weight: 400; color: var(--text-muted); }
+.revision-fila-dato:last-child { border-bottom: none; }
 
-.revision-nota { margin-top: var(--sp-2); font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+.revision-fila-lbl { color: #556c80; }
+.revision-fila-val {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+.revision-fila-val b { color: #162c42; font-weight: 700; }
+.revision-fila-val small { color: #556c80; font-weight: 400; }
+
+.lbl-desktop { display: inline; }
+.lbl-movil { display: none; }
+
+.revision-nota { margin-top: 4px; font-size: 11.5px; color: #8295a7; line-height: 1.4; }
 
 .revision-notas pre {
     margin: 0;
     white-space: pre-wrap;
     font: inherit;
     font-size: 13px;
-    line-height: 1.55;
-    color: var(--text-secondary);
+    line-height: 1.5;
+    color: #556c80;
 }
 
-/* --- Pie: qué pasa con cada botón, y los botones ------------------------ */
+/* --- Pie: notas explicativas y acciones con botón PDF ------------------- */
 .revision-pie {
     display: flex;
     align-items: center;
-    gap: var(--sp-4);
-    padding: var(--sp-3) var(--sp-5);
-    border-top: 1px solid var(--border-subtle);
-    background: var(--bg-surface);
+    justify-content: space-between;
+    gap: 16px;
+    padding: 11px 18px;
+    border-top: 1px solid #e8eff4;
+    background: #ffffff;
+    flex: none;
 }
-.revision-pie-nota { flex: 1; min-width: 0; font-size: 12px; line-height: 1.45; color: var(--text-muted); }
-.revision-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-2); }
 
-/* Rechazar es la salida rara: está, pero no compite con Aprobar. */
+.revision-pie-nota {
+    font-size: 12px;
+    color: #8295a7;
+    flex: 1;
+    min-width: 0;
+    line-height: 1.4;
+}
+
+.revision-acciones {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+}
+
+.revision-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+    min-height: 35px;
+    padding: 0 16px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.revision-btn--outline {
+    background: #ffffff;
+    border-color: #d0dce5;
+    color: #435b72;
+    font-weight: 500;
+}
+.revision-btn--outline:hover {
+    background: #f7fafc;
+    border-color: #b8cad6;
+    color: #1e3347;
+}
+
+.revision-btn--pdf {
+    background: #ffffff;
+    border-color: #d0dce5;
+    color: #435b72;
+    font-weight: 500;
+}
+.revision-btn--pdf:hover {
+    background: #f0f7fd;
+    border-color: #239ac9;
+    color: #1288b8;
+}
+
+.revision-btn--primary {
+    background: #1288b8;
+    border-color: #1288b8;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 0 18px;
+}
+.revision-btn--primary:hover {
+    background: #0e729a;
+    border-color: #0e729a;
+    color: #ffffff;
+}
+
 .revision-btn--suave {
     background: transparent;
-    color: var(--color-error);
-    border-color: var(--color-error);
+    color: #c43247;
+    border-color: #f2bac2;
+    font-weight: 500;
 }
-.revision-btn--suave:hover { background: var(--color-error-bg); filter: none; }
-
-@supports not (background: color-mix(in srgb, red 50%, transparent)) {
-    .revision-cab { background: var(--bg-surface); }
-    .revision-tramo.activo { background: var(--bg-elevated); }
-}
-
-/* --- Compu estrecha: las cinco fichas pasan a tres y dos ---------------- */
-@media (max-width: 980px) {
-    .revision-cascada { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .revision-columnas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.revision-btn--suave:hover {
+    background: #fdf2f4;
+    border-color: #c43247;
 }
 
-/* --- Teléfono: pantalla entera, una columna --------------------------- */
+/* --- Teléfono (≤ 768 px): exactamente como Imagen 3 -------------------- */
 @media (max-width: 768px) {
     .revision-fondo { padding: 0; }
 
@@ -5240,69 +5430,163 @@ body.revision-abierta { overflow: hidden; }
         border-radius: 0;
     }
 
-    /* La cabecera en dos filas: estado y cierre arriba, el título a todo el
-       ancho debajo. En 390 px el título de cuatro piezas no cabe al lado. */
-    .revision-cab { flex-wrap: wrap; padding: var(--sp-3) var(--sp-4); padding-top: calc(var(--sp-3) + env(safe-area-inset-top)); }
-    .revision-cab .badge { order: 1; }
-    .revision-cerrar { order: 2; margin-left: auto; }
-    .revision-titulo { order: 3; flex: 1 1 100%; white-space: normal; font-size: 14px; line-height: 1.35; }
-    .revision-cuerpo { padding: var(--sp-3) var(--sp-4); gap: var(--sp-3); }
-
-    .revision-chip { flex: 1 1 calc(50% - var(--sp-2)); min-width: 0; }
-
-    /* Los tramos como tarjetas que se pasan con el dedo. */
-    .revision-tramos {
-        display: flex;
-        overflow-x: auto;
-        scroll-snap-type: x mandatory;
-        -webkit-overflow-scrolling: touch;
-        margin: 0 calc(-1 * var(--sp-4));
-        padding: 2px var(--sp-4);
-    }
-    .revision-tramo { flex: 0 0 min(62vw, 220px); scroll-snap-align: center; }
-
-    /* La cascada deja de ser fichas y pasa a ser una lista en cascada. */
-    .revision-cascada { grid-template-columns: 1fr; gap: 0; border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; }
-    .revision-ficha {
+    /* Cabecera en 2 filas */
+    .revision-cab {
         display: grid;
-        grid-template-columns: 1fr auto auto;
-        align-items: baseline;
-        column-gap: var(--sp-3);
-        padding: 10px 12px;
-        border: 0;
-        border-bottom: 1px solid var(--border-subtle);
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            "izq cerrar"
+            "meta meta";
+        padding: 12px 16px 10px;
+        padding-top: calc(12px + env(safe-area-inset-top));
+        row-gap: 3px;
         border-radius: 0;
     }
-    .revision-ficha:last-child { border-bottom: 0; }
-    .revision-ficha-etq { font-size: 13px; color: var(--text-secondary); white-space: normal; }
-    .revision-ficha-val { font-size: 16px; }
-    .revision-ficha-sub { min-width: 3.5em; text-align: right; }
-    .revision-ficha--ok, .revision-ficha--corto { border-left: 4px solid var(--color-success); padding-left: 8px; }
-    .revision-ficha--corto { border-left-color: var(--color-warning); }
+    .revision-cab-izq { grid-area: izq; }
+    .revision-cerrar { grid-area: cerrar; justify-self: end; font-size: 22px; }
+    .revision-cab-meta { grid-area: meta; margin: 0; font-size: 12px; color: #c0d3e8; }
 
-    .revision-columnas { grid-template-columns: 1fr; }
+    .revision-cuerpo {
+        padding: 12px 14px;
+        gap: 12px;
+    }
 
-    /* El pie: el botón principal a todo el ancho arriba; Devolver y Aprobar
-       debajo, en punteado, con 44 px de alto para el pulgar. */
+    .revision-comunes {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    .revision-pills { gap: 6px; }
+    .revision-pill { padding: 3px 10px; font-size: 11.5px; }
+
+    /* Tramos como tarjetas horizontales */
+    .revision-tramos {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+        margin: 0 -2px;
+        padding: 0 2px;
+    }
+    .revision-tramo-card {
+        flex: 1 1 0;
+        min-width: 90px;
+        padding: 8px 10px;
+        scroll-snap-align: start;
+    }
+    .revision-tramo-card.activo {
+        padding: 7px 9px;
+    }
+    .revision-tramo-cab { font-size: 11px; white-space: nowrap; }
+    .revision-tramo-precio { font-size: 16px; }
+    .revision-tramo-margen { font-size: 12px; }
+    .qty-larga, .precio-largo { display: none; }
+    .qty-corta, .precio-corto { display: inline; }
+
+    /* Cascada en formato lista */
+    .revision-cascada-grid { display: none; }
+    .revision-cascada-tit-movil {
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        color: #7b90a1;
+        margin-bottom: 6px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+    .revision-cascada-lista {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #dce5ec;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #ffffff;
+    }
+    .revision-cascada-fila {
+        display: grid;
+        grid-template-columns: 1fr auto 54px;
+        align-items: center;
+        padding: 9px 14px;
+        border-bottom: 1px solid #edf2f6;
+        font-size: 13px;
+    }
+    .revision-cascada-fila:last-child { border-bottom: none; }
+    .revision-cascada-fila-lbl { color: #4a6177; font-weight: 500; }
+    .revision-cascada-fila-val {
+        font-weight: 700;
+        color: #162c42;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        padding-right: 12px;
+    }
+    .revision-cascada-fila-sub {
+        color: #5c7388;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        font-size: 12px;
+    }
+    .revision-cascada-fila--resultado { background: #eef8ea; }
+    .revision-cascada-fila--resultado * { color: #2e7d32 !important; font-weight: 700; }
+    .revision-cascada-fila--resultado.revision-cascada--corto { background: #fef9e8; }
+    .revision-cascada-fila--resultado.revision-cascada--corto * { color: #8c6707 !important; }
+
+    /* Bloques apilados en tarjetas individuales */
+    .revision-columnas-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        border: none;
+        background: transparent;
+    }
+    .revision-bloque {
+        border: 1px solid #dce5ec;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 11px 14px;
+        border-right: 1px solid #dce5ec;
+    }
+    .lbl-desktop { display: none; }
+    .lbl-movil { display: inline; }
+
+    /* Pie en móvil: Open full quote arriba, acciones abajo, nota al pie */
     .revision-pie {
         flex-direction: column;
         align-items: stretch;
-        gap: var(--sp-3);
-        padding-bottom: calc(var(--sp-3) + env(safe-area-inset-bottom));
+        gap: 10px;
+        padding: 12px 16px;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom));
     }
-    .revision-pie-nota { font-size: 11px; }
-    .revision-acciones { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
-    .revision-acciones .btn { min-height: 44px; justify-content: center; }
-    .revision-acciones [data-accion="cotizar"] { grid-column: 1 / -1; order: -1; }
-    .revision-acciones [data-accion="declinar"] { grid-column: 1 / -1; }
-    .revision-acciones [data-accion="devolver"],
-    .revision-acciones [data-accion="aprobar"] {
-        background: transparent;
-        border: 1px dashed var(--border-strong);
-        color: var(--text-primary);
+    .revision-acciones {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        width: 100%;
     }
-    .revision-acciones [data-accion="aprobar"] { border-color: var(--color-success); color: var(--color-success); }
+    .revision-btn { min-height: 42px; }
+    .revision-btn--primary {
+        grid-column: 1 / -1;
+        order: -1;
+        min-height: 44px;
+        font-size: 14px;
+    }
+    .revision-btn--pdf {
+        grid-column: 1 / -1;
+    }
+    .revision-btn--suave {
+        grid-column: 1 / -1;
+    }
+    .revision-btn--outline {
+        border-style: dashed;
+        border-color: #c0ceda;
+    }
+    .revision-pie-nota {
+        text-align: center;
+        font-size: 11px;
+        margin-top: 2px;
+    }
 }
+
 
 
 /* --- La pantalla de la oferta (js/pages/quote-review.js) ------------------ */
@@ -5367,5 +5651,361 @@ body.revision-abierta { overflow: hidden; }
 @media (max-width: 768px) {
     .notif-pie { padding: var(--sp-3) var(--sp-4) calc(var(--sp-3) + env(safe-area-inset-bottom)); }
     .notif-pie-boton { min-height: 40px; padding: 8px 14px; }
+}
+
+/* --------------------------------------------------------------------------
+   Teléfono: nada flota encima de la calculadora
+   --------------------------------------------------------------------------
+   En Quoting la calculadora llena la pantalla y tiene su propia barra de
+   acciones abajo. Lo que Pohua dejaba FIJO en el teléfono —los controles de
+   la esquina, el reloj, el botón del menú y la burbuja del asistente— se le
+   ponía encima: el reloj sobre los campos, la burbuja sobre "Approve". Así
+   que en el teléfono los controles de arriba se van con la página al
+   desplazar (están en la cabecera; para volver a ellos se sube), el botón del
+   menú sólo se queda fijo mientras el menú está abierto (es la ✕ que lo
+   cierra), y la burbuja del asistente no se enseña en Quoting.
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .barra-esquina, .reloj { position: absolute; }
+    body:not(.menu-abierto) .mobile-toggle { position: absolute; }
+    body[data-pagina="quoting"] .assistant-dock:not(.assistant-dock--abierto) { display: none; }
+}
+
+/* ==========================================================================
+   Revision – Ventana de aprobación del Plant Manager
+   ==========================================================================
+   Overlay de pantalla completa en móvil, modal centrado en desktop (> 768px).
+   ========================================================================== */
+
+/* ---- velo / fondo ---- */
+.revision-fondo {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(9, 15, 29, 0.82);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    padding: var(--sp-6);
+}
+body.revision-abierta { overflow: hidden; }
+
+/* ---- caja modal ---- */
+.revision {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 860px;
+    max-height: calc(100vh - 48px);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    overflow: hidden;
+}
+.revision--cargando { align-items: center; justify-content: center; min-height: 260px; }
+
+/* ---- cabecera ---- */
+.revision-cab {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-4) var(--sp-6);
+    border-bottom: 1px solid var(--border-default);
+    background: var(--bg-card);
+    flex: none;
+}
+.revision-cab-izq   { display: flex; align-items: center; gap: var(--sp-2); flex: 1; min-width: 0; }
+.revision-cab-pn    { font-size: 15px; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.revision-cab-sep   { color: var(--text-muted); flex: none; }
+.revision-cab-tipo  { font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.revision-cab-meta  { font-size: 12px; color: var(--text-muted); flex: none; white-space: nowrap; }
+.revision-cerrar {
+    flex: none;
+    width: 32px; height: 32px;
+    border: none; background: transparent;
+    color: var(--text-secondary); font-size: 20px; line-height: 1;
+    cursor: pointer; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s;
+}
+.revision-cerrar:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+/* ---- cuerpo scrollable ---- */
+.revision-cuerpo {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--sp-5) var(--sp-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+}
+
+/* ---- comunes / pills ---- */
+.revision-rotulo    { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--text-muted); text-transform: uppercase; margin-bottom: var(--sp-2); }
+.revision-pills     { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.revision-pill {
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-default);
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+}
+
+/* ---- tarjetas de tramo (pestañas) ---- */
+.revision-tramos {
+    display: flex;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+}
+.revision-tramo-card {
+    flex: 1 1 140px;
+    display: flex; flex-direction: column; gap: 2px;
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    cursor: pointer; text-align: left;
+    transition: border-color 0.15s, background 0.15s;
+    color: var(--text-secondary);
+    font: inherit;
+}
+.revision-tramo-card:hover { border-color: var(--cgr-primary-light); background: var(--bg-card-hover); }
+.revision-tramo-card.activo {
+    border-color: var(--cgr-primary);
+    background: rgba(27,61,121,0.18);
+    color: var(--text-primary);
+}
+.revision-tramo-cab    { display: flex; align-items: center; gap: var(--sp-2); }
+.revision-tramo-tit    { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+.revision-tramo-cuerpo { display: flex; align-items: baseline; gap: var(--sp-2); }
+.revision-tramo-precio { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.revision-tramo-margen { font-size: 12px; color: var(--cgr-verde); font-weight: 600; }
+
+/* cortos solo en móvil */
+.qty-corta, .precio-corto { display: none; }
+
+/* ---- franja de avisos ---- */
+.revision-franja {
+    display: flex; align-items: flex-start; gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+}
+.revision-franja--error { background: var(--color-error-bg); color: var(--color-error); border: 1px solid rgba(179,22,113,0.25); }
+.revision-franja--warn  { background: var(--color-warning-bg); color: var(--color-warning); border: 1px solid rgba(214,124,47,0.25); }
+.revision-franja--info  { background: var(--color-info-bg); color: var(--color-info); border: 1px solid rgba(20,142,194,0.25); }
+.revision-franja-icono  { flex: none; font-size: 15px; }
+.revision-franja-texto  { flex: 1; }
+
+/* ---- cascada waterfall (desktop: grid 5 cols) ---- */
+.revision-cascada-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--sp-4);
+}
+.revision-cascada-tit-movil { display: none; }
+.revision-cascada-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--border-default);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+.revision-cascada-col {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: var(--sp-4) var(--sp-3);
+    background: var(--bg-surface);
+    text-align: center;
+}
+.revision-cascada-lbl { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
+.revision-cascada-val { font-size: 17px; font-weight: 700; color: var(--text-primary); }
+.revision-cascada-sub { font-size: 11px; color: var(--text-secondary); }
+.revision-cascada-col--resultado .revision-cascada-val { font-size: 20px; }
+.revision-cascada--ok    .revision-cascada-val { color: var(--cgr-verde); }
+.revision-cascada--corto .revision-cascada-val { color: var(--color-warning); }
+
+/* mobile: lista de filas en vez de grid */
+.revision-cascada-lista { display: none; }
+.revision-cascada-fila {
+    display: flex; align-items: center; gap: var(--sp-2);
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+.revision-cascada-fila:last-child { border-bottom: none; }
+.revision-cascada-fila-lbl { flex: 1; font-size: 13px; color: var(--text-secondary); }
+.revision-cascada-fila-val { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.revision-cascada-fila-sub { font-size: 12px; color: var(--text-muted); width: 44px; text-align: right; }
+.revision-cascada-fila--resultado .revision-cascada-fila-val { font-size: 16px; }
+.revision-cascada--ok    .revision-cascada-fila--resultado .revision-cascada-fila-val { color: var(--cgr-verde); }
+.revision-cascada--corto .revision-cascada-fila--resultado .revision-cascada-fila-val { color: var(--color-warning); }
+
+/* ---- 3 columnas: material / ruta / totales ---- */
+.revision-columnas-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--sp-4);
+}
+.revision-bloque {
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--sp-4);
+    display: flex; flex-direction: column; gap: var(--sp-2);
+}
+.revision-bloque-tit {
+    font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: var(--sp-1);
+}
+.revision-fila-dato {
+    display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2);
+    padding: 3px 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+.revision-fila-dato:last-child { border-bottom: none; }
+.revision-fila-lbl { font-size: 12px; color: var(--text-secondary); }
+.revision-fila-val { font-size: 13px; color: var(--text-primary); text-align: right; }
+.revision-fila-val b { font-weight: 700; }
+.revision-fila-val small { font-size: 11px; color: var(--text-muted); }
+.revision-nota { font-size: 12px; color: var(--text-muted); font-style: italic; }
+.revision-notas pre { font-size: 12px; color: var(--text-secondary); white-space: pre-wrap; margin: 0; }
+.revision-sin-tramos { padding: var(--sp-4); font-size: 13px; color: var(--text-muted); text-align: center; }
+
+/* labels largos/cortos para desktop/móvil */
+.lbl-movil { display: none; }
+
+/* ---- pie: nota + botones de acción ---- */
+.revision-pie {
+    flex: none;
+    padding: var(--sp-4) var(--sp-6);
+    border-top: 1px solid var(--border-default);
+    background: var(--bg-card);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+}
+.revision-pie-nota {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text-muted);
+    min-width: 100px;
+}
+.revision-acciones {
+    display: flex;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
+    align-items: center;
+}
+.revision-btn {
+    height: 36px;
+    padding: 0 16px;
+    border-radius: var(--radius-full);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: filter 0.15s, background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.revision-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* PDF – icono azul frío */
+.revision-btn--pdf {
+    background: transparent;
+    border-color: var(--cgr-azul-frio);
+    color: var(--cgr-azul-frio);
+}
+.revision-btn--pdf:hover:not(:disabled) { background: rgba(20,142,194,0.12); }
+
+/* Send back / Devolver – contorno neutro */
+.revision-btn--outline {
+    background: transparent;
+    border-color: var(--border-strong);
+    color: var(--text-secondary);
+}
+.revision-btn--outline:hover:not(:disabled) { background: var(--bg-elevated); color: var(--text-primary); }
+
+/* Approve – acento verde */
+.revision-btn--outline[data-accion="aprobar"] {
+    border-color: var(--cgr-verde);
+    color: var(--cgr-verde);
+}
+.revision-btn--outline[data-accion="aprobar"]:hover:not(:disabled) { background: rgba(164,174,45,0.12); }
+
+/* Decline – suave rojo-rosa */
+.revision-btn--suave {
+    background: transparent;
+    border-color: var(--cgr-accent);
+    color: var(--cgr-accent);
+}
+.revision-btn--suave:hover:not(:disabled) { background: var(--color-error-bg); }
+
+/* Open full quote – primary sólido */
+.revision-btn--primary {
+    background: var(--cgr-primary);
+    border-color: var(--cgr-primary);
+    color: #fff;
+}
+.revision-btn--primary:hover:not(:disabled) { filter: brightness(1.12); }
+
+/* ---- responsivo móvil (≤ 768px) ---- */
+@media (max-width: 768px) {
+    .revision-fondo { padding: 0; align-items: flex-end; }
+    .revision {
+        max-width: 100%;
+        max-height: 96dvh;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        border-bottom: none;
+    }
+
+    /* cabecera */
+    .revision-cab { padding: var(--sp-3) var(--sp-4); }
+    .revision-cab-meta { display: none; }
+
+    /* cuerpo */
+    .revision-cuerpo { padding: var(--sp-4); gap: var(--sp-3); }
+
+    /* tarjetas de tramo: scroll horizontal */
+    .revision-tramos { flex-wrap: nowrap; overflow-x: auto; padding-bottom: var(--sp-1); }
+    .revision-tramo-card { flex: 0 0 130px; }
+    .qty-larga  { display: none; }
+    .qty-corta  { display: inline; }
+    .precio-largo { display: none; }
+    .precio-corto { display: inline; }
+
+    /* cascada: ocultar grid, mostrar lista */
+    .revision-cascada-grid   { display: none; }
+    .revision-cascada-lista  { display: flex; flex-direction: column; }
+    .revision-cascada-tit-movil { display: block; font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--sp-3); }
+
+    /* 3 columnas → 1 columna */
+    .revision-columnas-grid { grid-template-columns: 1fr; }
+
+    /* labels */
+    .lbl-desktop { display: none; }
+    .lbl-movil   { display: inline; }
+
+    /* pie */
+    .revision-pie {
+        flex-direction: column;
+        align-items: stretch;
+        padding: var(--sp-4) var(--sp-4) calc(var(--sp-4) + env(safe-area-inset-bottom));
+    }
+    .revision-pie-nota { display: none; }
+    .revision-acciones { flex-direction: column; gap: var(--sp-2); }
+    .revision-btn {
+        width: 100%;
+        height: 48px;
+        font-size: 15px;
+        border-radius: var(--radius-md);
+    }
 }
 
