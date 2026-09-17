@@ -5668,7 +5668,59 @@ body.revision-abierta { overflow: hidden; }
 @media (max-width: 768px) {
     .barra-esquina, .reloj { position: absolute; }
     body:not(.menu-abierto) .mobile-toggle { position: absolute; }
-    body[data-pagina="quoting"] .assistant-dock:not(.assistant-dock--abierto) { display: none; }
+
+    /* Quoting en teléfono: nada se encrespa ni flota tapando campos o botones */
+    body[data-pagina="quoting"] .assistant-dock,
+    body[data-pagina="quoting"] .assistant-burbuja,
+    body[data-pagina="quoting"] #assistantDock,
+    :has(#page-quoting.active) .assistant-dock,
+    :has(#page-quoting.active) .assistant-burbuja {
+        display: none !important;
+    }
+
+    body[data-pagina="quoting"] .reloj {
+        display: none !important;
+    }
+
+    body[data-pagina="quoting"] .mobile-toggle {
+        position: fixed;
+        top: 8px;
+        left: 10px;
+        z-index: 310;
+    }
+
+    body[data-pagina="quoting"] .barra-esquina {
+        position: fixed;
+        top: 8px;
+        right: 10px;
+        z-index: 310;
+        gap: 6px;
+    }
+
+    body[data-pagina="quoting"] .page-header {
+        position: sticky;
+        top: 0;
+        z-index: 200;
+        display: flex;
+        align-items: center;
+        min-height: 52px;
+        padding: 8px 16px 8px 58px;
+        background: var(--bg-surface);
+        border-bottom: 1px solid var(--border-default);
+    }
+
+    body[data-pagina="quoting"] .page-title {
+        font-size: 16px;
+        line-height: 1.2;
+    }
+
+    body[data-pagina="quoting"] .page-subtitle {
+        display: none;
+    }
+
+    body[data-pagina="quoting"] .page-body {
+        padding: 4px;
+    }
 }
 
 /* ==========================================================================

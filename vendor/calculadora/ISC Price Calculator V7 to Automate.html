@@ -203,8 +203,98 @@ th.num{text-align:right}
 #scbox>header{background:var(--navy);color:#fff;padding:9px 14px;display:flex;align-items:center;font-weight:600}
 #scbox iframe{flex:1;border:0;width:100%}
 .altproc th{background:var(--orange)}
-.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:7px}
-@keyframes spin{to{transform:rotate(360deg)}}
+#viewtabs button:not([data-v="quote"]){display:none !important}
+#clock, #btn-settings, #btn-help-global, #userchip{display:none !important}
+
+@media (max-width: 820px) {
+  .grid, .grid.g2, .grid.g3, .grid.g4, .grid.g5, .grid.g6 {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+    gap: 8px !important;
+  }
+  input, select, textarea {
+    font-size: 15px !important;
+    min-height: 36px !important;
+    padding: 6px 8px !important;
+  }
+  .card > header {
+    flex-wrap: wrap !important;
+    row-gap: 6px !important;
+    font-size: .85rem !important;
+    padding: 8px 12px !important;
+  }
+  .card > header .sp { flex: 1 0 100% !important; height: 0 !important; }
+  .card > .bd { padding: 10px 12px !important; }
+  #scwrap { padding: 0 !important; inset: 0 !important; }
+  #scbox {
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+  #scbox > header {
+    height: 48px !important;
+    padding: 0 14px !important;
+  }
+  #sc-x {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .verdictbox {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    padding: 12px 14px !important;
+  }
+  .dwwarn {
+    padding: 12px 14px !important;
+    margin-bottom: 12px !important;
+  }
+  .dwwarn .wline {
+    margin: 5px 0 !important;
+    line-height: 1.45 !important;
+  }
+  #botbar {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    row-gap: 8px !important;
+    column-gap: 8px !important;
+    padding: 8px 12px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    align-items: center !important;
+  }
+  #botbar .sp { display: none !important; }
+  #bb-falta {
+    width: 100% !important;
+    order: -2 !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    text-align: center !important;
+    white-space: normal !important;
+    margin: 0 !important;
+    padding: 4px 8px !important;
+    background: rgba(191, 56, 121, .15) !important;
+    border-radius: 6px !important;
+  }
+  #botbar .qnum { font-size: 12px !important; flex: none !important; }
+  #botbar .badge { font-size: 10px !important; padding: 2px 8px !important; }
+  #botbar .bbtn {
+    flex: 1 1 auto !important;
+    min-height: 38px !important;
+    padding: 8px 10px !important;
+    font-size: 13px !important;
+    border-radius: 6px !important;
+  }
+  #bb-approve {
+    flex: 1 1 100% !important;
+    min-height: 44px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    order: 10 !important;
+  }
+}
 </style>
 </head>
 

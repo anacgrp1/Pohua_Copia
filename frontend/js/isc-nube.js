@@ -372,14 +372,12 @@
                               'está en este navegador; vuelve a guardar.';
             return;
         }
-        // Guardado bien: el letrero verde ya no se enseña (se pidió quitarlo y
-        // dejar sólo Quote y Spring Calc). El dato se conserva en el título
-        // de la barra, por si alguien quiere saber cuándo y quién.
+        // Guardado bien: letrero verde con estado de sincronización en Neon y los dos botones Quote / Spring Calc
         barra.classList.add('ok');
         barra.classList.remove('nube-aviso');
         var quien = String((shared && shared.savedBy) || '').split('@')[0] || '—';
         var cuando = (shared && shared.savedAt) || '—';
-        msg.textContent = '';
+        msg.textContent = '☁ Guardado en Pohua (Neon) — lo mismo para todos. Último guardado: ' + cuando + ' por ' + quien;
         barra.title = 'Guardado en Pohua (Neon). Último guardado: ' + cuando + ' por ' + quien;
     }
 
