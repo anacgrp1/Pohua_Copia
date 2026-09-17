@@ -341,7 +341,13 @@
             '.nube-herramientas .topbtn:hover{background:#EEF3FA;border-color:#8FA8C8}',
             '.nube-herramientas #viewtabs button.on{',
             '  background:#1B365D;color:#fff;border-color:#1B365D}',
-            '#btn-spring{font-weight:700}'
+            '#btn-spring{font-weight:700}',
+            /* Dentro de Pohua las dos pestañas —Quote y Spring Calc— son suyas
+               y están encima del marco (js/pages/quoting.js). Repetirlas aquí
+               dejaba dos filas de botones diciendo lo mismo, una con el
+               aspecto de la calculadora y otra con el de Pohua. Se esconden,
+               no se quitan: la calculadora sigue cambiando de vista sola. */
+            'html.nube-en-pohua .nube-herramientas{display:none}'
         ].join('');
         document.head.appendChild(css);
     }
@@ -652,11 +658,95 @@
         anclarFijos();
     }
 
+
+    // ------------------------------------------------- el resorte, por fuera
+
+    /**
+     * El Spring Calculator deja de abrirse DENTRO de la calculadora.
+     *
+     * La calculadora de precios lo abría en un marco propio (`#scframe`)
+     * dentro de una capa flotante (`#scwrap`): una ventana pequeña, con su
+     * barra de título dentro de otra barra, y a dos marcos de profundidad de
+     * Pohua —lo bastante lejos como para que el tema no siempre llegara y se
+     * viera blanca dentro de Pohua oscuro—.
+     *
+     * Dentro de Pohua el resorte es un apartado hermano, con su propio botón
+     * arriba (js/pages/quoting.js). Aquí no se reescribe nada de la
+     * calculadora: se le cambian dos cosas al marco anidado y su función de
+     * apertura sigue haciendo exactamente lo que hacía.
+     *
+     *   `src`           ya no carga nada; avisa a Pohua de qué dirección
+     *                   quería (lleva el `?j=` del plano) y finge el `load`,
+     *                   que es lo que la calculadora espera para mandar.
+     *   `contentWindow` un buzón: lo que ella le postea a "su" marco, se lo
+     *                   reenvía a Pohua, que lo mete en el marco de verdad.
+     *
+     * Así el traspaso del plano y la vuelta del peso siguen siendo los de la
+     * calculadora, sin copiar aquí ni una línea de cómo se arma esa carga.
+     */
+    function desanidarResorte() {
+        document.documentElement.classList.add('nube-en-pohua');
+        var marco = document.getElementById('scframe');
+        var capa = document.getElementById('scwrap');
+        if (!marco || marco.dataset.desanidado) return;
+        marco.dataset.desanidado = '1';
+
+        var urlPedida = '';
+
+        function aPohua(mensaje) {
+            try { window.parent.postMessage(mensaje, '*'); } catch (e) {}
+        }
+
+        Object.defineProperty(marco, 'src', {
+            configurable: true,
+            get: function () { return urlPedida; },
+            set: function (v) {
+                urlPedida = String(v || '');
+                aPohua({ source: 'isc-nube', tipo: 'abrir-resortes', url: urlPedida });
+                // El `load` que la calculadora espera para poder mandar.
+                var fn = marco.onload;
+                if (typeof fn === 'function') setTimeout(function () { fn.call(marco); }, 0);
+            }
+        });
+
+        Object.defineProperty(marco, 'contentWindow', {
+            configurable: true,
+            get: function () {
+                return {
+                    postMessage: function (carga) {
+                        aPohua({ source: 'isc-nube', tipo: 'a-resortes',
+                                 url: urlPedida, carga: carga });
+                    }
+                };
+            }
+        });
+
+        // La capa flotante ya no se abre: si algo la enciende, se apaga.
+        if (capa) {
+            capa.classList.remove('on');
+            new MutationObserver(function () {
+                if (capa.classList.contains('on')) {
+                    capa.classList.remove('on');
+                    aPohua({ source: 'isc-nube', tipo: 'abrir-resortes', url: urlPedida });
+                }
+            }).observe(capa, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        // Y Pohua puede pedirle la entrega cuando es ELLA quien abre el
+        // apartado: la misma función, sin enseñar ninguna capa.
+        window.addEventListener('message', function (ev) {
+            var d = ev.data || {};
+            if (d.source !== 'pohua' || d.tipo !== 'pedir-resorte') return;
+            try { if (typeof openSpringCalc === 'function') openSpringCalc(false); } catch (e) {}
+        });
+    }
+
     // ------------------------------------------------------------- arranque
 
     esperarCalculadora(function () {
         estilos();
         fusionarBarras();
+        desanidarResorte();
         vigilarAnclaje();
         vigilarTablas();
         vigilarAlto();

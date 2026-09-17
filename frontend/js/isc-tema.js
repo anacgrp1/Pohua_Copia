@@ -118,7 +118,6 @@ window.ISCTema = (function () {
         var t = {
             fondo:   variable(raiz, '--bg-base', '#fff'),
             panel:   variable(raiz, '--bg-card', '#F5F7FA'),
-            panelVeil: variable(raiz, '--bg-card-veil', 'rgba(255,255,255,0.06)'),
             campo:   variable(raiz, '--bg-input', '#fff'),
             realce:  variable(raiz, '--bg-card-hover', '#EEF2F7'),
             linea:   variable(raiz, '--border-default', '#E2E8F0'),
@@ -252,8 +251,7 @@ window.ISCTema = (function () {
                siendo blancos escritos a mano, y darle esta tinta clara la deja
                ilegible: letra casi blanca sobre papel casi blanco. */
             !regen ? '' : [
-            '  --bg:transparent;',
-            '  --panel:', t.panel, ';--line:', t.linea, ';',
+            '  --bg:', t.fondo, ';--panel:', t.panel, ';--line:', t.linea, ';',
             '  --line-strong:', t.hilo, ';',
             '  --ink:', t.tinta, ';--muted:', t.secundaria, ';--ink-soft:', t.secundaria, ';'
             ].join(''),
@@ -261,22 +259,62 @@ window.ISCTema = (function () {
             '  --crit:', letra.mal, ';--crit-bg:', fondo(tono.mal, 14), ';',
             '  --info:', letra.info, ';--info-bg:', fondo(tono.info, 14), ';',
             '  --accent-soft:', fondo(tono.info, 14), ';',
+            /* --warn no aparece: no quiere decir lo mismo en las dos
+               calculadoras —rojo en la de precios, ámbar en la de resortes— y
+               aquí no se puede saber cuál es, porque este script corre en el
+               <head>, antes de que exista el <style> que lo declara. Lo deja
+               resuelto `vendorizar_nucleo.py`, que sí ve el :root. */
+            /* Los realces dorados: la misma familia del ámbar, más cargados,
+               porque son fondo de cabecera de regla, no de texto. */
             '  --gold:', fondo(tono.avi, 22), ';',
             '  --goldline:', fondo(tono.avi, 45), ';',
-            !regen ? '}' : ['  background:transparent !important;color:', t.tinta, ';}'].join(''),
-            'html, html[', MARCA, ']{background:transparent !important}',
-            'body, html body{font-family:', t.letra, ';background:transparent !important;color:', t.tinta, '}',
-            'main, html main{background:transparent !important;max-width:none;margin:0;padding:0}',
+            !regen ? '}' : ['  background:', t.fondo, ';color:', t.tinta, ';}'].join(''),
+            h, 'body{font-family:', t.letra, '}',
+            /* Todo lo que pinta PAPEL y TINTA va sólo si la calculadora está
+               regenerada. Sin regenerar, sus fondos siguen siendo blancos y
+               cremas escritos a mano, y ponerle esta tinta encima la deja
+               ilegible. */
             !regen ? '' : [
-            h, '.card,', h, '#banner{background:', t.panelVeil, ' !important;border-color:', t.linea, ';',
-            '  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}',
+            /* El suelo de la calculadora es TRANSPARENTE cuando cuelga directa
+               de Pohua: así se ve el cielo de Pohua —el resplandor y las
+               estrellas— detrás de las tarjetas, en claro igual que en
+               oscuro, y el marco deja de notarse como un rectángulo liso. El
+               Spring Calculator, que va dentro de la calculadora de precios,
+               conserva su suelo: detrás tiene el velo del modal, no el cielo. */
+            (saltosAPohua === 1 ? 'html[' + MARCA + ']{background:transparent}' : ''),
+            h, 'body{background:', (saltosAPohua === 1 ? 'transparent' : t.fondo), ';color:', t.tinta, '}',
+            h, '.card,', h, '#banner{background:', t.panel, ';border-color:', t.linea, '}',
             h, 'input,', h, 'select,', h, 'textarea{background:', t.campo, ';',
             '  color:', t.tinta, ';border-color:', t.linea, '}',
             h, 'input::placeholder,', h, 'textarea::placeholder{color:', t.apagado, '}',
+
+            /* Que no parezca una aplicación dentro de otra.
+               ----------------------------------------------------------
+               Dos cosas la delataban, y ninguna es el color:
+
+               1. `main{max-width:1560px;margin:0 auto;padding:16px 18px}`.
+                  La calculadora se maqueta como una PÁGINA, con su propio
+                  ancho máximo y su propio margen, dentro de la página de
+                  Pohua, que ya trae el suyo. Se veía el doble margen y el
+                  contenido centrado en una columna más estrecha que el resto
+                  de Pohua: la firma de algo empotrado. El marco ya está
+                  colocado donde toca, así que aquí sobra.
+
+               2. Sus tarjetas tenían otra carpintería: radio de 10 px contra
+                  los 16 de Pohua, y una sombra tintada de azul marino propia.
+                  Al lado de una tarjeta del Overview se notaba que eran de
+                  dos sitios distintos. Ahora comparten radio, sombra y borde,
+                  que es lo que hace que se lean como una sola aplicación. */
+            h, 'main{max-width:none;margin:0;padding:0}',
             h, '.card{border-radius:', t.radio, ';border:1px solid ', t.borde, ';',
             '  box-shadow:', t.sombra, '}',
+            /* Y la cabecera de color, redondeada por arriba para acompañarla.
+               Se redondea la CABECERA en vez de recortar la tarjeta con
+               `overflow:hidden`: ahí dentro hay ayudas y menús que se dibujan
+               fuera de su caja, y recortando desaparecerían. */
             h, '.card>header{border-radius:calc(', t.radio, ' - 1px) calc(',
             t.radio, ' - 1px) 0 0}',
+            /* Y por nombre, para lo que use --r o --sh directamente. */
             'html[', MARCA, ']{--r:', t.radio, ';--sh:', t.sombra, '}'
             ].join(''),
             /* th NO se toca: `th{background:var(--navy);color:#fff}` es una
@@ -302,90 +340,130 @@ window.ISCTema = (function () {
 
                Y el color no cambia con el tema: es un bloque de marca, como la
                cabecera navy. En claro y en oscuro es el mismo verde. */
-            /* La barra de arriba: transparente, sin letrero verde, dejando sólo Quote y Spring Calc */
-            h, '#sharebar, #sharebar{background:transparent !important;border:none !important;padding:0 !important;box-shadow:none !important;',
-            '  justify-content:flex-start;margin-bottom:12px;display:flex;align-items:center;gap:10px}',
-            h, '#sharebar.ok, #sharebar.ok{background:transparent !important;border:none !important;box-shadow:none !important}',
-            h, '#sharebar-msg, #sharebar-msg{display:none !important}',
+            /* La barra de arriba ya NO es un bloque de color: se pidió quitar
+               el letrero "Guardado en Pohua…" y dejar sólo Quote y Spring
+               Calc, a la izquierda, sobre el cielo. El aviso de "el último
+               guardado no llegó" sí se enseña, como pastilla ámbar, sólo
+               cuando pasa (js/isc-nube.js le pone .nube-aviso). */
+            h, '#sharebar{background:transparent;border:0;padding:0;',
+            '  justify-content:flex-start;margin-bottom:10px}',
+            h, '#sharebar-msg{display:none}',
             h, '#sharebar.nube-aviso #sharebar-msg{display:inline-block;flex:0 1 auto;',
             '  min-width:0;background:', tono.avi, ';color:#0f172a;font-weight:600;',
             '  font-size:.78rem;padding:5px 11px;border-radius:7px;',
             '  border:1px solid color-mix(in srgb,', tono.avi, ' 72%,#0f172a)}',
-            h, '.nube-herramientas{display:flex;align-items:center;gap:6px;flex:0 0 auto}',
+            /* Los botones, sobre el cielo de Pohua: papel del tema con la
+               tinta del tema, y el activo en el marino de marca. */
             h, '.nube-herramientas #viewtabs button,',
             h, '.nube-herramientas .topbtn{background:', t.panel, ';',
-            '  color:', t.tinta, ';border:1px solid ', t.linea, ';',
-            '  padding:6px 14px;border-radius:7px;font-weight:700;font-size:.82rem;',
-            '  cursor:pointer;line-height:1.4}',
+            '  color:', t.tinta, ';border:1px solid ', t.linea, '}',
             h, '.nube-herramientas #viewtabs button:hover,',
             h, '.nube-herramientas .topbtn:hover{border-color:var(--cyan);color:', t.tinta, '}',
             h, '.nube-herramientas #viewtabs button.on{background:var(--navy);color:#fff;',
             '  border-color:var(--navy)}',
-            h, '.nube-herramientas #viewtabs button:not([data-v="quote"]){display:none !important}',
-            h, '#topbar #viewtabs button:not([data-v="quote"]){display:none !important}',
-            h, '#topbar #clock, #topbar #btn-settings, #topbar #btn-help-global, #topbar #userchip{display:none !important}',
-            '#botbar,', h, '#botbar{display:none !important}',
-            'body,', h, 'body{padding-bottom:0 !important}',
+            /* --- El teléfono -------------------------------------------
+               La calculadora está escrita para una pantalla ancha y no trae
+               una sola regla responsiva: `.g6` son seis columnas siempre, y a
+               360 px eso deja campos de 38 px donde "(select customer)" se ve
+               como "(sele". Nada de esto se puede arreglar con el ancho del
+               marco: hay que rehacer las rejillas.
 
-            /* --- El teléfono y pantallas móviles (≤ 820px) ----------------
-               Despejar todo el quoter para que no se vea amontonado:
-               - En Spring Calc: layout vertical de 1 columna (diagrama 3D
-                 completo y tabla legible con desplazamiento).
-               - En la calculadora principal: cards, alertas y botones
-                 con respiro y touch-friendly. */
+               `auto-fit` con un mínimo, en vez de un número fijo de columnas
+               por cada corte: así cada rejilla mete las que le caben —dos en
+               un teléfono, cuatro en una tableta— sin tener que escribir un
+               media query por cada una de las cinco clases. */
             '@media (max-width:820px){',
             h, '.grid,', h, '.grid.g2,', h, '.grid.g3,', h, '.grid.g4,',
             h, '.grid.g5,', h, '.grid.g6{',
-            '  grid-template-columns:repeat(auto-fit,minmax(140px,1fr)) !important;gap:8px !important}',
+            '  grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}',
 
+            /* Las etiquetas largas ("DRAWING → AI EXTRACTION (PDF / IMAGE)")
+               ocupan tres líneas y descuadran la fila. Se dejan en dos como
+               mucho y el resto se corta con puntos suspensivos: el campo que
+               hay debajo dice lo mismo. */
             h, '.grid label{display:block;overflow:hidden;',
             '  text-overflow:ellipsis;font-size:.72rem;line-height:1.25}',
             h, 'input,', h, 'select,', h, 'textarea{width:100%;min-width:0;',
-            '  font-size:15px;min-height:36px;padding:6px 8px}',
+            '  font-size:16px}',   /* 16px: por debajo, iOS hace zoom al tocar */
 
-            h, '.card>header{flex-wrap:wrap;row-gap:6px;font-size:.85rem;padding:8px 12px}',
+            /* La cabecera de tarjeta lleva el título y hasta tres pastillas en
+               una fila que no se parte; en el teléfono se salían por la
+               derecha. */
+            h, '.card>header{flex-wrap:wrap;row-gap:6px;font-size:.85rem}',
             h, '.card>header .sp{flex:1 0 100%;height:0}',
-            h, '.card>.bd{padding:10px 12px}',
 
-            /* Spring Engineering Calculator V2 en teléfono */
-            'html,body{height:auto !important;min-height:100% !important;overflow-y:auto !important;overflow-x:hidden !important}',
-            '#appwrap{height:auto !important;overflow:visible !important;padding:6px !important}',
-            '.sheet{display:flex !important;flex-direction:column !important;height:auto !important;',
-            '  min-height:100% !important;overflow:visible !important;box-shadow:none !important}',
-            '.ds-info{display:grid !important;grid-template-columns:repeat(2,1fr) !important;gap:4px !important;padding:6px !important}',
-            '.fcell{min-width:0 !important;padding:6px 8px !important;border-right:1px solid var(--line) !important}',
-            '.fcell .k{font-size:9px !important}',
-            '.fcell .v{font-size:13px !important}',
-            '.ds-left{width:100% !important;border-right:none !important;border-bottom:2px solid var(--line-strong) !important;',
-            '  overflow:visible !important;min-height:auto !important}',
-            '.ds-tblwrap{overflow-x:auto !important;-webkit-overflow-scrolling:touch !important;width:100% !important}',
-            'table.dst{width:100% !important;min-width:320px !important}',
-            'table.dst td,table.dst th{padding:6px 8px !important;font-size:11.5px !important}',
-            '.ds-right{width:100% !important;overflow:visible !important;min-height:auto !important}',
-            '.diagram{width:100% !important;padding:10px 0 !important;min-height:200px !important}',
-            '.diagram svg,.diagram canvas{max-width:100% !important;height:auto !important}',
-            '.vdt{padding:12px 14px !important;margin:8px 0 !important;font-size:12.5px !important;border-radius:8px !important}',
-            '.score-card{flex-direction:column !important;align-items:flex-start !important;gap:8px !important}',
+            /* La barra de acciones: los botones se salían hasta x=621 en una
+               pantalla de 328. Ahora se reparte en varias filas, el aviso de
+               lo que falta ocupa una entera —es una frase, no una etiqueta— y
+               los botones crecen hasta llenar la fila. */
+            /* Y ocupa lo menos posible: antes eran tres filas (número y
+               estado + Reset/Save, Preview/Approve, y el aviso de lo que
+               falta) —unos 180 px, un cuarto del teléfono— tapando lo que se
+               estaba escribiendo. Ahora el aviso es UNA línea arriba, con
+               puntos suspensivos (se lee entero al tocar Approve, que es cuando
+               importa), y los cuatro botones van en una fila. */
+            h, '#botbar{flex-wrap:wrap;row-gap:6px;column-gap:6px;padding:6px 8px}',
+            h, '#botbar .sp{display:none}',
+            h, '#botbar .small{flex:1 0 100%;order:-1;font-size:.68rem;',
+            '  line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+            '  margin:0;opacity:.9}',
+            h, '#botbar .bbtn{flex:1 1 auto;min-width:0;padding:8px 6px;font-size:.78rem;',
+            '  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+            h, '#botbar .qnum{font-size:.78rem;max-width:34vw;overflow:hidden;',
+            '  text-overflow:ellipsis;white-space:nowrap}',
 
-            /* Modal Spring Calc */
-            '#scwrap{padding:0 !important;inset:0 !important}',
-            '#scbox{width:100vw !important;height:100dvh !important;max-height:100dvh !important;border-radius:0 !important}',
-            '#scbox>header{height:48px !important;padding:0 14px !important;font-size:14px !important}',
-            '#sc-x{width:40px !important;height:40px !important;font-size:24px !important;display:flex !important;align-items:center !important;justify-content:center !important}',
-
-            /* Alertas y avisos de cotización */
-            '.verdictbox{flex-direction:column !important;align-items:flex-start !important;gap:8px !important;padding:12px 14px !important;border-radius:8px !important}',
-            '.verdictbox .vtag{font-size:.8rem !important;padding:4px 10px !important}',
-            '.verdictbox .vbody{font-size:.85rem !important;line-height:1.5 !important}',
-            '.dwwarn{padding:12px 14px !important;margin-bottom:12px !important;border-radius:8px !important}',
-            '.dwwarn .wline{margin:5px 0 !important;line-height:1.45 !important;font-size:.82rem !important}',
-            '.dwfeas .row{padding:6px 0 !important}',
-
-            /* Anchuras y scroll */
+            /* Nada se sale por la derecha. Las filas (.hrow) y las rejillas
+               son `display:grid`, y un hijo de rejilla nace con
+               `min-width:auto`: la tabla de rutas (656 px de contenido
+               mínimo) ensanchaba su columna, la columna a la tarjeta y la
+               tarjeta al documento, que quedaba a 690 px en una pantalla de
+               390. La calculadora se podía arrastrar de lado y a la derecha no
+               había nada. Con `min-width:0` la columna se queda en su sitio y
+               la tabla se desplaza dentro de su caja (.tbl-wrap / .nube-ancha),
+               que es lo que ya hacía en la compu. */
             h, '.hrow>*,', h, '.grid>*,', h, '.card,', h, '.card>*{min-width:0}',
             h, '.tbl-wrap,', h, '.nube-ancha{max-width:100%;min-width:0}',
             h, 'html,', h, 'body{overflow-x:hidden;max-width:100%}',
-            h, 'main{padding:8px 8px}',
+            h, 'main{padding:10px 10px}',
+
+            /* --- Y la hoja del Spring Calculator ---------------------
+               La calculadora de resortes es una HOJA: dos columnas fijas y
+               `height:calc(100vh - 60px)`, pensada para verse entera en una
+               pantalla ancha. En un teléfono eso metía la mitad derecha
+               —el dibujo del resorte y las verificaciones— en una columna de
+               150 px, y la cabecera se montaba encima de la primera fila.
+
+               En vertical se lee en orden: primero la ficha y las cotas,
+               después el dibujo y los avisos. Es la misma hoja, puesta una
+               cosa debajo de otra. */
+            h, '.sheet{display:block;height:auto;overflow:visible}',
+            h, '#appwrap{overflow:visible;padding:0}',
+            h, '.ds-info{display:grid;grid-template-columns:1fr 1fr}',
+            h, '.fcell{min-width:0}',
+            /* La tabla de parámetros mide más que un teléfono: se desplaza
+               dentro de su caja, no arrastrando la pantalla entera. */
+            h, '.ds-tblwrap{overflow:auto;max-width:100%}',
+            h, '.ds-left{border-right:0;border-bottom:1px solid var(--line-strong)}',
+            h, '.ds-rtop,', h, '.ds-kgrid,', h, '.row2,',
+            h, '.sum-grid{grid-template-columns:1fr}',
+            h, 'header .hbar{padding:8px 10px}',
+            h, 'header h1{font-size:.95rem;line-height:1.2}',
+            /* La cabecera de la hoja es una fila de 46 px con marca, tipos de
+               resorte y unidades: en un teléfono la marca se montaba encima de
+               la primera fila y los tipos se salían por la derecha. Se parte en
+               dos líneas, la marca se queda en su nombre corto —el subtítulo
+               explica lo que ya se está viendo— y los tipos se reparten el
+               ancho. */
+            h, 'body>header{height:auto;flex-wrap:wrap;row-gap:6px;padding:6px 8px}',
+            h, '.ds-brand{flex:1 1 auto;min-width:0}',
+            h, '.ds-brand h1{font-size:12px;white-space:nowrap;overflow:hidden;',
+            '  text-overflow:ellipsis}',
+            h, '.ds-brand p,', h, 'header .sub{display:none}',
+            h, '.ds-units{flex:0 0 auto}',
+            h, '.ds-tabs{flex:1 0 100%;order:3;display:grid;',
+            '  grid-template-columns:repeat(4,1fr);gap:3px}',
+            h, '.ds-tabs button{padding:7px 4px;font-size:11px;min-width:0;',
+            '  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
             '}',
 
             /* La caja que `isc-nube.js` pone alrededor de cada tabla. Va fuera
@@ -430,6 +508,28 @@ window.ISCTema = (function () {
             poner();
         }
     }
+
+    /**
+     * Y que Pohua pueda EMPUJARLO, además de que nosotros lo leamos.
+     *
+     * Leerlo subiendo por los marcos funciona cuando el marco ya está pintado
+     * y su cadena de padres es alcanzable. Hay un caso en el que no: un marco
+     * que carga mientras se cambia el interruptor, o que arranca antes de que
+     * su anfitrión haya puesto `data-tema`. Se quedaba con el tema de antes
+     * —el resorte en claro dentro de Pohua oscuro— y no había nada que lo
+     * volviera a mirar.
+     *
+     * Con esto Pohua manda «repásalo» (js/pages/quoting.js) y aquí se vuelve a
+     * leer todo. Es un mensaje sin datos a propósito: el tema se sigue leyendo
+     * de Pohua, así que nadie puede pintar esta pantalla desde fuera.
+     */
+    window.addEventListener('message', function (ev) {
+        var d = ev.data || {};
+        if (d && d.source === 'pohua' && d.tipo === 'tema') {
+            aplicar();
+            seguir();
+        }
+    });
 
     // Ahora mismo, sin esperar a nada: es lo único que tiene que pasar antes
     // de que el navegador pinte.

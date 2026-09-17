@@ -181,3 +181,29 @@ banderas del cálculo y lo que falte para aprobar.
 En el teléfono va a pantalla completa con los botones fijos abajo. Los
 textos siguen el idioma de Pohua (diccionario en
 `scripts/isc_idioma_diccionario.py`).
+
+## 8. Cotización: dos apartados, no una ventana dentro de otra
+
+La pantalla de Cotización tiene arriba dos pestañas de Pohua —**Quote** y
+**Spring Calc**— y cada una enseña su calculadora a pantalla completa. Los dos
+marcos son hijos directos de Pohua: el de resortes ya no se abre anidado
+dentro del de precios.
+
+Por qué se cambió: anidado se veía como una ventanita con dos barras de
+título, y a dos marcos de profundidad el tema de Pohua no siempre llegaba —el
+resorte salía en claro dentro de Pohua oscuro—. Como apartado propio hereda el
+tema igual que la calculadora de precios, en claro y en oscuro, y en el
+teléfono la hoja se lee en vertical (`js/isc-tema.js`, reglas ≤820 px).
+
+El traspaso entre las dos sigue igual de automático; lo hace Pohua de
+centralita (`js/pages/quoting.js`):
+
+- El botón **Spring Calc** —el de Pohua o el de la propia calculadora— abre el
+  apartado y le entrega el plano leído (cotas, tipo de resorte, lista de
+  fabricabilidad, número de parte).
+- **→ Usar el peso en la cotización** manda el peso y el dictamen a la
+  calculadora de precios y vuelve solo a Quote, que es donde se ve el efecto.
+
+La calculadora del núcleo no se tocó para esto: `js/isc-nube.js` intercepta su
+apertura anidada y la convierte en un mensaje a Pohua, así que
+`scripts/vendorizar_nucleo.py` se puede volver a pasar sin perder nada.

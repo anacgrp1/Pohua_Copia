@@ -5017,6 +5017,58 @@ body.menu-abierto { overflow: hidden; }
 
    No hay reglas de `:has()` porque ya no hace falta ninguna: esta pantalla se
    comporta como las demás. */
+/* --- Los dos apartados: Quote y Spring Calc -------------------------------
+   Los botones son de Pohua, no de la calculadora: antes vivían dentro del
+   marco, con el aspecto de otra aplicación, y el resorte se abría anidado.
+   Aquí son dos pestañas de verdad, con los colores del tema y el mismo trato
+   en claro y en oscuro. */
+.quoting-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    align-self: flex-start;
+}
+
+.quoting-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 8px 16px;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--duration-fast) ease, color var(--duration-fast) ease;
+}
+
+.quoting-tab svg { width: 16px; height: 16px; opacity: .85; }
+.quoting-tab:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.quoting-tab.active {
+    background: var(--cgr-primary);
+    color: #fff;
+}
+.quoting-tab.active svg { opacity: 1; }
+.quoting-tab:focus-visible { outline: 2px solid var(--cgr-primary-light); outline-offset: 2px; }
+
+/* Los marcos se esconden, no se destruyen: volver a Quote a media cotización
+   tiene que encontrarlo todo como estaba. */
+.quoting-marcos { display: flex; flex-direction: column; min-width: 0; }
+.quoting-marcos > [hidden] { display: none; }
+
+@media (max-width: 768px) {
+    .quoting-tabs { align-self: stretch; padding: 3px; }
+    .quoting-tab { flex: 1 1 0; justify-content: center; padding: 8px 6px; font-size: 12px; }
+    .quoting-tab svg { width: 14px; height: 14px; }
+}
+
 .quoting-marco {
     width: 100%;
     display: block;
