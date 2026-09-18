@@ -207,3 +207,67 @@ centralita (`js/pages/quoting.js`):
 La calculadora del núcleo no se tocó para esto: `js/isc-nube.js` intercepta su
 apertura anidada y la convierte en un mensaje a Pohua, así que
 `scripts/vendorizar_nucleo.py` se puede volver a pasar sin perder nada.
+
+## 9. Los recortes del plano
+
+"Ver en el plano" abre el recuadro que el lector recortó del PDF. El lector los
+escribe en `vendor/lector/_crops`, en disco, y el disco de Render se vacía en
+cada despliegue: una cotización de la semana pasada se abría con todos sus
+recortes rotos.
+
+Ahora el servidor los conserva: al servir un recorte por primera vez lo copia a
+`lector_recortes` (migración 019, Neon), y si el disco ya no lo tiene, lo sirve
+desde ahí. La cotización vive en la base; sus recortes también.
+
+Los recortes anteriores a este cambio no están en ninguna parte: la pantalla lo
+dice en su sitio —"ya no está guardado, vuelve a leer el plano"— en vez de
+enseñar el icono de imagen partida.
+
+## 10. El horario de atención
+
+El sistema contesta de lunes a viernes, de 6:00 a 18:00. Fuera de esa ventana
+el ciclo **ni abre el buzón**: el correo se queda sin leer donde está y entra
+en el primer ciclo de la apertura siguiente. Nada se pierde —el buzón es la
+cola—, no se gasta el modelo de madrugada y no sale una oferta a las 2 a.m.,
+que es algo que un cliente nota y no para bien.
+
+La ventana vive en un solo reloj, el de la planta (Kansas City), porque el
+ciclo es un proceso y no puede tener tres horarios a la vez. Se configura con
+cinco variables (`app/core/config.py`):
+
+| Variable | Por defecto | Qué es |
+|---|---|---|
+| `HORARIO_ACTIVO` | `true` | A `false` se quita la restricción: se lee a cualquier hora. |
+| `HORARIO_ZONA` | `America/Chicago` | El reloj que manda. |
+| `HORARIO_DESDE` | `6` | Hora de apertura. |
+| `HORARIO_HASTA` | `18` | Hora de cierre (a las 18:00 en punto, cerrado). |
+| `HORARIO_DIAS` | `1-5` | Días laborables (1 = lunes, 7 = domingo). |
+
+Lo que sí cambia de una persona a otra es cómo se **lee** ese horario. La
+pantalla lo dice en la casa que tenga puesta el reloj de arriba —Kansas City
+en inglés, Querétaro en español, Sevran en francés— y con el formato de ese
+sitio: 12 horas en América, 24 en Francia. Las 6:00 de Kansas son las 5:00 de
+Querétaro y las 13:00 de Sevran; una sola ventana, dicha en tres husos. Para
+eso `GET /api/status` devuelve los instantes con su desfase
+(`2026-09-21T06:00:00-05:00`) y `js/horario.js` los pinta; rotar el reloj mueve
+las horas con él.
+
+Dónde se ve:
+
+- **Tablero (Correo)**: una pastilla junto a "Ejecutar ciclo" — "En marcha ·
+  contestando hasta las 5:00 p. m." o, en ámbar, "En espera · abre lun 5:00
+  a. m.".
+- **Barra lateral**: el punto de estado tiene ahora tres colores, no dos —
+  verde en marcha, ámbar en espera, rojo parado.
+- **Monitor**: la primera tarjeta dice lo mismo, con un reloj por icono.
+
+Un ciclo omitido por horario no cuenta como ciclo: no mueve "último ciclo" ni
+los totales (`api/routes/status.py`), porque apuntarlo haría creer que se miró
+el buzón y no llegó nada.
+
+**"Ejecutar ciclo" se salta el horario a propósito.** Lo pulsa una persona con
+permiso: si le hace falta leer el buzón un domingo, la respuesta correcta es
+leerlo. Queda dicho en el registro quién lo pidió y cuándo.
+
+Pruebas: `tests/rfq/test_horario.py` (la ventana, el paso de viernes a lunes,
+los tres husos, el ciclo que no toca el buzón y el que se fuerza a mano).

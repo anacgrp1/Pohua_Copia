@@ -741,12 +741,90 @@
         });
     }
 
+
+    // ------------------------------------------------- la fecha del RFQ
+
+    /**
+     * La fecha de una cotización que empieza hoy, es la de hoy.
+     *
+     * La calculadora pone `today()` al crear el borrador, y hasta ahí bien.
+     * Lo que pasa es que el borrador VIVE: se queda guardado en el navegador
+     * de un día para otro, así que quien abre Pohua el jueves se encuentra la
+     * cotización en blanco que dejó el viernes anterior, con la fecha de aquel
+     * viernes. Como por aquí van a entrar los RFQ que llegan por correo, esa
+     * fecha vieja acabaría en la oferta.
+     *
+     * Se corrige SÓLO si el borrador está en blanco —sin número y sin
+     * cliente—: en cuanto alguien ha empezado a trabajar, la fecha es suya y
+     * no se toca. Y se usa el día del reloj de Pohua (Querétaro), que es el
+     * que tiene delante quien mira la pantalla.
+     */
+    function fechaDeHoy() {
+        try {
+            var hoy = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Mexico_City' });
+            var q = (typeof Q === 'function') ? Q() : null;
+            if (!q || !q.header) return;
+            if (q.number || q.header.customerCode) return;      // ya hay trabajo hecho
+            if (q.header.rfqDate === hoy) return;
+
+            q.header.rfqDate = hoy;
+            var campo = document.getElementById('q-rfq') || document.getElementById('q-date');
+            if (campo) campo.value = hoy;
+            if (typeof queueDraft === 'function') queueDraft();
+        } catch (e) { /* la fecha nunca puede impedir que arranque */ }
+    }
+
+
+    // ------------------------------------------------- recortes que ya no están
+
+    /**
+     * Un recorte de plano que no carga, explicado.
+     *
+     * "Ver en el plano" abre el recuadro que el lector recortó al leer el PDF.
+     * Ese PNG lo guarda el lector en su disco, y el disco de Render se vacía
+     * en cada despliegue: una cotización de la semana pasada se abría con el
+     * icono de imagen partida y ni una palabra de por qué. Desde ahora el
+     * servidor los conserva en la base (api/lector.py), pero los recortes
+     * ANTERIORES a ese cambio no están en ninguna parte, y los de un plano
+     * que nunca se volvió a leer tampoco.
+     *
+     * Así que cuando uno falla se dice, en su sitio y en una línea: no está
+     * guardado, se recupera volviendo a leer el plano. Es lo que alguien
+     * necesita saber para desatascarse.
+     */
+    function explicarRecortes() {
+        var textos = {
+            en: 'This drawing crop is no longer stored. Read the drawing again to see it.',
+            es: 'Este recorte del plano ya no está guardado. Vuelve a leer el plano para verlo.',
+            fr: "Ce détail du plan n'est plus enregistré. Relisez le plan pour le revoir."
+        };
+        function idioma() {
+            try { return (window.parent && window.parent.I18N && window.parent.I18N.idioma) || 'en'; }
+            catch (e) { return 'en'; }
+        }
+        document.addEventListener('error', function (ev) {
+            var img = ev.target;
+            if (!img || img.tagName !== 'IMG' || img.dataset.recorteAvisado) return;
+            if (String(img.src || '').indexOf('/api/crop/') === -1) return;
+            img.dataset.recorteAvisado = '1';
+            var nota = document.createElement('p');
+            nota.className = 'small';
+            nota.style.cssText = 'margin:6px 0;padding:8px 10px;border-radius:8px;' +
+                'background:var(--n-avi-fondo,rgba(245,158,11,.14));' +
+                'border:1px solid var(--n-avi-linea,rgba(245,158,11,.5))';
+            nota.textContent = textos[idioma()] || textos.en;
+            if (img.parentNode) img.parentNode.replaceChild(nota, img);
+        }, true);   // en captura: el error de una imagen no burbujea
+    }
+
     // ------------------------------------------------------------- arranque
 
     esperarCalculadora(function () {
         estilos();
         fusionarBarras();
         desanidarResorte();
+        fechaDeHoy();
+        explicarRecortes();
         vigilarAnclaje();
         vigilarTablas();
         vigilarAlto();

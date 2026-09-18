@@ -93,6 +93,7 @@ _IDIOMA = "/js/isc-idioma.js"
 _CONTRATO = "/js/isc-contrato.js"
 _VISOR = "/js/isc-visor3d.js"
 _APROBACION = "/js/isc-aprobacion.js"
+_SELECTS = "/js/isc-selects.js"
 
 
 def carpeta() -> Optional[Path]:
@@ -201,8 +202,9 @@ class _InyectarParserURL:
                 "<script defer src=\"%s\"></script>"
                 "<script defer src=\"%s\"></script>"
                 "<script defer src=\"%s\"></script>"
+                "<script defer src=\"%s\"></script>"
                 % ("".join(partes), _TEMA, _ADAPTADOR, _IDIOMA, _CONTRATO, _VISOR,
-                   _APROBACION)).encode("utf-8")
+                   _APROBACION, _SELECTS)).encode("utf-8")
 
     def __call__(self, environ, start_response):
         captura: dict = {}
@@ -214,6 +216,9 @@ class _InyectarParserURL:
             return lambda _: None      # nadie usa el write() antiguo de WSGI
 
         cuerpo = b"".join(self.wsgi_app(environ, _start))
+
+        # Los recortes del plano, a prueba de despliegues (ver _recorte).
+        cuerpo, captura = _recorte(environ, captura, cuerpo)
 
         tipo = ""
         for nombre, valor in captura["cabeceras"]:
@@ -231,6 +236,95 @@ class _InyectarParserURL:
 
         start_response(captura["estado"], cabeceras, captura["exc_info"])
         return [cuerpo]
+
+
+# --------------------------------------------------------------------------- #
+# Los recortes del plano
+# --------------------------------------------------------------------------- #
+
+# Tope de lo que se guarda por recorte. Un recuadro de un plano ronda los
+# 40 KB; medio mega ya sería una página entera y no es lo que esto guarda.
+MAX_BYTES_RECORTE = 512 * 1024
+
+
+def _recorte(environ, captura, cuerpo):
+    """Guarda el PNG en la base la primera vez, y lo sirve cuando el disco ya no lo tiene.
+
+    El lector escribe los recortes en `vendor/lector/_crops`, en disco. En la
+    planta eso dura; en Render el disco se vacía en cada despliegue, así que
+    una cotización de ayer se abría hoy con todos sus recortes rotos — el
+    icono de imagen partida dentro de "On the drawing", sin explicación.
+
+    Aquí se resuelve donde se puede resolver sin tocar el lector, que es del
+    núcleo: se mira el PNG al pasar. Si el lector lo sirvió, se copia a Neon
+    (una vez, en un hilo aparte: nadie espera por esto). Si el lector contesta
+    404 y en Neon está, se devuelve desde ahí. La cotización vive en la base;
+    sus recortes también.
+    """
+    ruta = environ.get("PATH_INFO", "") or ""
+    if "/api/crop/" not in ruta:
+        return cuerpo, captura
+    cid = ruta.rsplit("/", 1)[-1].strip()
+    if not cid:
+        return cuerpo, captura
+
+    estado = str(captura.get("estado", ""))
+
+    if estado.startswith("200") and cuerpo and len(cuerpo) <= MAX_BYTES_RECORTE:
+        _guardar_recorte_en_segundo_plano(cid, cuerpo)
+        return cuerpo, captura
+
+    if estado.startswith("404"):
+        png = _leer_recorte(cid)
+        if png:
+            log.info("Recorte %s recuperado de la base (el disco ya no lo tenía).", cid)
+            return png, {
+                "estado": "200 OK",
+                "cabeceras": [("Content-Type", "image/png"),
+                              ("Cache-Control", "private, max-age=600")],
+                "exc_info": None,
+            }
+    return cuerpo, captura
+
+
+def _guardar_recorte_en_segundo_plano(cid: str, png: bytes) -> None:
+    import threading
+
+    def _trabajo():
+        try:
+            import psycopg2
+
+            import app.persistence.duplicates as duplicates
+            with duplicates.conexion_bd() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO lector_recortes (cid, png, bytes)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (cid) DO UPDATE SET ultimo_uso = now();
+                        """,
+                        (cid, psycopg2.Binary(png), len(png)),
+                    )
+        except Exception as error:      # guardar nunca puede romper la imagen
+            log.debug("No se pudo guardar el recorte %s: %s", cid, error)
+
+    threading.Thread(target=_trabajo, name="recorte-plano", daemon=True).start()
+
+
+def _leer_recorte(cid: str):
+    try:
+        import app.persistence.duplicates as duplicates
+        with duplicates.conexion_bd() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT png FROM lector_recortes WHERE cid = %s;", (cid,))
+                fila = cur.fetchone()
+                if fila:
+                    cur.execute("UPDATE lector_recortes SET ultimo_uso = now() "
+                                "WHERE cid = %s;", (cid,))
+        return bytes(fila[0]) if fila else None
+    except Exception as error:
+        log.debug("No se pudo leer el recorte %s: %s", cid, error)
+        return None
 
 
 def _tras_head(cuerpo: bytes) -> int:

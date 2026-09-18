@@ -374,6 +374,11 @@ const DashboardPage = (() => {
                      también en Quoting, Monitor y Settings, donde no pintan
                      nada. -->
                 <div class="flujo-controles">
+                    <!-- El horario de atención, aquí y no en otro sitio: es la
+                         pantalla donde se pulsa "Ejecutar ciclo" y donde, si
+                         nadie lo dice, uno se pregunta por qué no entra nada.
+                         Lo rellena APP.pintarHorario con el estado real. -->
+                    <span class="flujo-horario" id="flujoHorario" hidden></span>
                     <button class="btn btn-secondary" id="btnRunCycle"
                             data-permiso="worker:operar" title="${esc(I18N.t('boton.correrCiclo.ayuda'))}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"

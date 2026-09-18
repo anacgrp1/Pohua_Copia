@@ -21,7 +21,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from api.models.schemas import CycleResult, LogLine, LogTail, ServiceStatus
+from api.models.schemas import CycleResult, EstadoHorario, LogLine, LogTail, ServiceStatus
 from api.security import exige, usuario_actual
 from app.auth.tokens import UsuarioSesion
 
@@ -62,6 +62,10 @@ def registrar_ciclo(resultado) -> None:
     ``total_rfqs`` se rellena aquí: antes se exponía en /api/status pero nadie
     lo incrementaba nunca, así que el tablero mostraba siempre 0 RFQ.
     """
+    if not getattr(resultado, "en_horario", True):
+        # Fuera de horario no hubo ciclo: apuntar la hora como "último ciclo"
+        # haría creer que se miró el buzón y no llegó nada.
+        return
     with _lock:
         _state["last_cycle"] = getattr(resultado, "timestamp", None) or datetime.now().isoformat()
         _state["total_processed"] += getattr(resultado, "procesados", 0)
@@ -89,8 +93,11 @@ def get_status(usuario: UsuarioSesion = Depends(usuario_actual)):
     """Estado actual del servicio. Requiere sesión, pero ningún permiso extra."""
     import app.core.config as config
 
+    import app.rfq.horario as horario
+
     estado = _snapshot()
     return ServiceStatus(
+        horario=EstadoHorario(**horario.estado()),
         running=estado["running"],
         mode=config.settings.MAIL_MODE,
         last_cycle=estado["last_cycle"],
@@ -110,15 +117,27 @@ def health():
 
 @router.post("/pipeline/run", response_model=CycleResult)
 def run_pipeline(usuario: UsuarioSesion = Depends(exige("worker:operar"))):
-    """Ejecuta un ciclo de detección a mano y devuelve el resultado."""
-    log.info("Ciclo manual solicitado por %s.", usuario.correo)
+    """Ejecuta un ciclo de detección a mano y devuelve el resultado.
+
+    Este ciclo se salta el horario de atención a propósito. El horario existe
+    para que el sistema no conteste solo de madrugada; si a alguien con permiso
+    le hace falta leer el buzón un domingo, la respuesta correcta es leerlo, no
+    una puerta cerrada. Queda dicho en el registro quién lo pidió y cuándo.
+    """
+    import app.rfq.horario as horario
+
+    if not horario.abierto():
+        log.info("Ciclo manual FUERA DE HORARIO solicitado por %s. %s",
+                 usuario.correo, horario.motivo_cerrado())
+    else:
+        log.info("Ciclo manual solicitado por %s.", usuario.correo)
 
     try:
         from app.main import ciclo_deteccion
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Backend import error: {e}")
 
-    resultado = ciclo_deteccion()
+    resultado = ciclo_deteccion(forzar=True)
     registrar_ciclo(resultado)
 
     log.info("Ciclo manual terminado: %d encontrados, %d procesados, %d errores.",
@@ -130,6 +149,7 @@ def run_pipeline(usuario: UsuarioSesion = Depends(exige("worker:operar"))):
         errors=resultado.errores,
         timestamp=resultado.timestamp,
         details=resultado.detalles,
+        en_horario=resultado.en_horario,
     )
 
 

@@ -53,6 +53,26 @@ class CambioPasswordRequest(BaseModel):
 # Status
 # --------------------------------------------------------------------------- #
 
+class EstadoHorario(BaseModel):
+    """El horario de atención tal y como lo necesita la pantalla.
+
+    Los instantes viajan en ISO CON su huso (``2026-09-14T06:00:00-05:00``)
+    para que el navegador los pinte en la ciudad del reloj sin que el servidor
+    tenga que saber en qué idioma está la sesión. La ventana es una sola —la
+    de la planta—; lo que cambia es en qué reloj se lee.
+    """
+    activo: bool = True
+    abierto: bool = True
+    zona: str = "America/Chicago"
+    ciudad: str = "Kansas City"
+    desde: int = 6
+    hasta: int = 18
+    dias: List[int] = Field(default_factory=lambda: [1, 2, 3, 4, 5])
+    ahora_local: Optional[str] = None
+    proxima_apertura: Optional[str] = None
+    proximo_cierre: Optional[str] = None
+
+
 class ServiceStatus(BaseModel):
     running: bool = False
     mode: str = "imap"
@@ -62,6 +82,7 @@ class ServiceStatus(BaseModel):
     total_processed: int = 0
     total_rfqs: int = 0
     total_errors: int = 0
+    horario: Optional[EstadoHorario] = None
 
 
 class CycleResult(BaseModel):
@@ -71,6 +92,8 @@ class CycleResult(BaseModel):
     errors: int = 0
     timestamp: str = ""
     details: List[str] = Field(default_factory=list)
+    # False cuando el ciclo no se ejecutó por estar fuera de horario.
+    en_horario: bool = True
 
 
 # --------------------------------------------------------------------------- #

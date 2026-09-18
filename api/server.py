@@ -38,6 +38,7 @@ from api.routes import notificaciones as notificaciones_router
 from api.routes import push as push_router
 from api.routes import users as users_router
 from api.security import exige
+import app.rfq.horario as horario
 from app.auth.tokens import UsuarioSesion
 from app.core.logging import configure_logging
 
@@ -61,12 +62,27 @@ def _worker_loop():
     status_router.set_running(True)
     log.info("Worker en segundo plano arrancado (intervalo=%d min).", interval)
 
+    # ¿Ya se dijo que está cerrado? Para no repetirlo cada intervalo: una
+    # noche entera son ~140 líneas idénticas y la primera de la mañana se
+    # pierde entre ellas. Se dice al cerrar y al abrir, que es cuando cambia
+    # algo.
+    dormido = False
+
     while not _worker_stop.is_set():
         time_since_heartbeat = time.time() - _last_heartbeat_time
         # Tolerancia: intervalo + 1 minuto
         if time_since_heartbeat < (interval * 60 + 60):
             log.info("Worker en espera: la aplicación de escritorio está leyendo los correos.")
+        elif not horario.abierto():
+            # Fuera de horario el buzón ni se abre: los correos esperan ahí y
+            # entran en el primer ciclo de la apertura siguiente.
+            if not dormido:
+                log.info("Worker en reposo. %s", horario.motivo_cerrado())
+                dormido = True
         else:
+            if dormido:
+                log.info("Horario de atención abierto: el worker vuelve a leer el buzón.")
+                dormido = False
             try:
                 log.info("Worker activo: ejecutando ciclo de lectura.")
                 from app.main import ciclo_deteccion

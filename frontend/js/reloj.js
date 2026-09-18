@@ -78,6 +78,10 @@ const Reloj = (() => {
     let indice = 0;          // casa que se está enseñando
     let fijadaPorMano = false; // ¿la eligió alguien, o la sigue mandando el idioma?
     let temporizador = null;
+    // Quien quiera repintarse cuando el reloj cambie de casa. Lo usa el
+    // horario de atención: sus horas se dicen en la casa que esté puesta, así
+    // que al rotar el reloj tienen que rotar con él.
+    const oyentes = [];
 
     const boton  = () => document.getElementById('btnReloj');
     const elFecha  = () => document.getElementById('relojFecha');
@@ -164,12 +168,29 @@ const Reloj = (() => {
     function fijar(id, { guardarlo = true } = {}) {
         const i = CASAS.findIndex(c => c.id === id);
         if (i < 0) return;
+        const cambia = i !== indice;
         indice = i;
         if (guardarlo) {
             fijadaPorMano = true;
             try { localStorage.setItem(CLAVE, id); } catch (err) { /* modo privado */ }
         }
         pintar();
+        if (cambia) avisar();
+    }
+
+    /** La casa que se está enseñando. Copia: nadie de fuera la toca. */
+    function actual() {
+        return Object.assign({}, CASAS[indice]);
+    }
+
+    function alCambiar(fn) {
+        if (typeof fn === 'function') oyentes.push(fn);
+    }
+
+    function avisar() {
+        for (const fn of oyentes) {
+            try { fn(actual()); } catch (err) { console.warn('[reloj] oyente:', err); }
+        }
     }
 
     function rotar(atras = false) {
@@ -268,7 +289,7 @@ const Reloj = (() => {
         ajustarVisibilidad();
     }
 
-    return { init, fijar, rotar, CASAS };
+    return { init, fijar, rotar, actual, alCambiar, CASAS };
 })();
 
 if (document.readyState === 'loading') {

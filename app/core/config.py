@@ -66,6 +66,21 @@ class Settings:
     # --- Scheduler ---
     INTERVALO_MINUTOS: int = 5
 
+    # --- Horario de atención ---------------------------------------------
+    # Cuándo contesta Pohua. Fuera de esta ventana el ciclo no abre el buzón:
+    # el correo se queda sin leer y entra en el primer ciclo de la apertura
+    # siguiente, así que nada se pierde y de madrugada no se gasta el modelo.
+    #
+    # La ventana se define en UNA zona —la planta, Kansas City— porque el
+    # ciclo es un solo proceso y no puede tener tres horarios. La pantalla lo
+    # enseña en la ciudad del idioma de quien mira (js/reloj.js), que es otra
+    # cosa: la misma hora dicha en su huso.
+    HORARIO_ACTIVO: bool = True
+    HORARIO_ZONA: str = "America/Chicago"      # Kansas City, la planta
+    HORARIO_DESDE: int = 6                     # 6:00
+    HORARIO_HASTA: int = 18                    # 18:00 (a las 18:00 en punto, cerrado)
+    HORARIO_DIAS: str = "1-5"                  # lunes a viernes (1=lunes, 7=domingo)
+
     # --- Local Worker / Failover ---
     # Sin valor por defecto a proposito: en prod _validate() exige que este
     # definida.  En dev, si se deja vacia, el endpoint de heartbeat se apaga

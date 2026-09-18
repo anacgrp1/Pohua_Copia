@@ -63,6 +63,10 @@ class TestCicloDeteccion(unittest.TestCase):
     def setUp(self):
         self.provider = FakeProvider([FakeMensaje("A"), FakeMensaje("B"), FakeMensaje("C")])
         parches = [
+            # El ciclo respeta el horario de atención; estas pruebas son sobre
+            # lo que pasa DENTRO de él, así que se deja abierto a propósito
+            # (si no, el lote entero se saltaría al correr de madrugada).
+            mock.patch("app.rfq.horario.abierto", return_value=True),
             mock.patch("app.email.factory.EmailProviderFactory.get_provider",
                        return_value=self.provider),
             mock.patch("app.persistence.duplicates.es_duplicado", return_value=False),

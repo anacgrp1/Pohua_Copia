@@ -117,6 +117,23 @@ const I18N = (() => {
 
         'barra.servicioParado':    { en: 'Service stopped', es: 'Servicio detenido', fr: 'Service arrêté' },
         'barra.servicioCorriendo': { en: 'Service running (every {n}m)', es: 'Servicio en marcha (cada {n} min)', fr: 'Service actif (toutes les {n} min)' },
+        'barra.enEspera':          { en: 'Waiting — opens {cuando}', es: 'En espera — abre {cuando}', fr: 'En attente — ouvre {cuando}' },
+
+        // --- Horario de atención ------------------------------------------
+        // La ventana es la de la planta; las horas se escriben en la casa del
+        // reloj de arriba, que es la del idioma mientras nadie lo toque.
+        'horario.ventana':   { en: 'Answering hours: {franja}, {dias} ({ciudad} time)',
+                               es: 'Horario de atención: {franja}, {dias} (hora de {ciudad})',
+                               fr: 'Heures de traitement : {franja}, {dias} (heure de {ciudad})' },
+        'horario.lunVie':    { en: 'Mon–Fri', es: 'de lunes a viernes', fr: 'du lundi au vendredi' },
+        'horario.enHorario': { en: 'Running', es: 'En marcha', fr: 'En marche' },
+        'horario.enEspera':  { en: 'Waiting', es: 'En espera', fr: 'En attente' },
+        'horario.hasta':     { en: 'Answering until {cuando}', es: 'Contestando hasta {cuando}', fr: "Traitement jusqu'à {cuando}" },
+        'horario.abre':      { en: 'Opens {cuando}', es: 'Abre {cuando}', fr: 'Ouvre {cuando}' },
+        'horario.fuera':     { en: 'Outside answering hours', es: 'Fuera del horario de atención', fr: 'Hors des heures de traitement' },
+        'horario.esperan':   { en: 'Emails wait unread in the inbox until it opens.',
+                               es: 'Los correos esperan sin leer en el buzón hasta la apertura.',
+                               fr: "Les courriels attendent non lus dans la boîte jusqu'à l'ouverture." },
 
         // --- Monitor -----------------------------------------------------
         'monitor.titulo':    { en: 'Service log', es: 'Registro del servicio', fr: 'Journal du service' },

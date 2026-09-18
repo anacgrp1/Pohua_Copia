@@ -337,6 +337,13 @@ a:hover { color: var(--cgr-primary); }
     animation: pulse 2s ease-in-out infinite;
 }
 
+/* En espera: el servicio está levantado, pero fuera del horario de atención.
+   Ni verde (que sería "trabajando") ni rojo (que sería "algo va mal"): ámbar y
+   quieto, porque no está pasando nada y no tiene que pasar. */
+.status-dot.espera {
+    background: var(--color-warning, var(--cgr-naranja));
+}
+
 @keyframes pulse {
     0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
     50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
@@ -724,7 +731,7 @@ a:hover { color: var(--cgr-primary); }
     position: relative;
     flex: 1 1 auto;
     min-height: 300px;
-    border-radius: var(--radio-md);
+    border-radius: var(--radius-md);
     overflow: hidden;
     /* El mismo cielo que la PORTADA, y por tanto distinto en cada tema.
        Antes esta caja era azul marino fija en los dos, y en modo claro se veía
@@ -3406,11 +3413,51 @@ a:hover { color: var(--cgr-primary); }
 
 .flujo-controles {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     gap: var(--sp-3);
     margin-top: var(--sp-6);
     padding-top: var(--sp-5);
     border-top: 1px solid var(--border-subtle);
+}
+
+/* --- El horario de atención ----------------------------------------------
+   Va a la izquierda de los botones y empuja: es información, no una acción, y
+   leerla antes de pulsar "Ejecutar ciclo" es justo el orden que hace falta.
+   Dos renglones —qué pasa y hasta cuándo— para que se lea de un vistazo sin
+   tener que abrir el globito. */
+.flujo-horario {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-right: auto;
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    line-height: 1.25;
+    cursor: default;
+}
+
+.flujo-horario-valor {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-success);
+}
+
+.flujo-horario-detalle {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* Fuera de hora la pastilla se tiñe de ámbar, el mismo color que el punto de
+   la barra lateral: el mismo estado dicho dos veces tiene que verse igual. */
+.flujo-horario--espera {
+    border-color: var(--color-warning, var(--cgr-naranja));
+}
+
+.flujo-horario--espera .flujo-horario-valor {
+    color: var(--color-warning, var(--cgr-naranja));
 }
 
 /* El diagrama se recoloca solo (el JS lo gira a vertical por debajo de 720 px);
@@ -3427,6 +3474,12 @@ a:hover { color: var(--cgr-primary); }
         flex: 1 1 130px;
         justify-content: center;
         min-width: 0;
+    }
+    /* A 320 px la pastilla y los dos botones no caben en una fila: la pastilla
+       se queda arriba, a lo ancho, y los botones debajo. */
+    .flujo-horario {
+        flex: 1 1 100%;
+        margin-right: 0;
     }
 }
 

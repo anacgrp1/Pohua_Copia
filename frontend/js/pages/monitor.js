@@ -106,6 +106,9 @@ const MonitorPage = (() => {
         // pausa cuando está parado. Es la señal que antes daba el color.
         corriendo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
         parado:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="14" y1="9" x2="14" y2="15"/></svg>',
+        // En espera no es ni lo uno ni lo otro: el servicio está levantado,
+        // pero fuera del horario de atención. Un reloj lo dice sin palabras.
+        espera:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
         correo:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
         documento: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
         aviso:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
@@ -114,12 +117,22 @@ const MonitorPage = (() => {
     async function cargarTarjetas() {
         try {
             const estado = await API.getStatus();
+            // La primera tarjeta lleva DOS cosas: si el servicio está
+            // levantado y si ahora mismo toca contestar. Fuera del horario de
+            // atención decía "En marcha" mientras el buzón llevaba la noche
+            // entera sin tocarse, que es la lectura contraria a la verdad.
+            const h = estado.horario;
+            const r = (typeof Horario !== 'undefined' && h) ? Horario.resumen(h)
+                                                            : { enEspera: false, detalle: '' };
+            const enEspera = estado.running && r.enEspera;
             const tarjetas = [
                 {
                     id: 'status',
-                    icono: estado.running ? ICONOS.corriendo : ICONOS.parado,
-                    valor: estado.running ? I18N.t('estado.corriendo') : I18N.t('estado.parado'),
-                    etiqueta: I18N.t('tarjeta.estado'),
+                    icono: !estado.running ? ICONOS.parado
+                         : (enEspera ? ICONOS.espera : ICONOS.corriendo),
+                    valor: !estado.running ? I18N.t('estado.parado')
+                         : (enEspera ? I18N.t('horario.enEspera') : I18N.t('estado.corriendo')),
+                    etiqueta: estado.running && r.detalle ? r.detalle : I18N.t('tarjeta.estado'),
                     color: COLORES.status,
                 },
                 {

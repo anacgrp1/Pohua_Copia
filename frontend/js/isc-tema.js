@@ -424,7 +424,13 @@ window.ISCTema = (function () {
             h, '.hrow>*,', h, '.grid>*,', h, '.card,', h, '.card>*{min-width:0}',
             h, '.tbl-wrap,', h, '.nube-ancha{max-width:100%;min-width:0}',
             h, 'html,', h, 'body{overflow-x:hidden;max-width:100%}',
-            h, 'main{padding:10px 10px}',
+            /* La barra de abajo es FIJA y mide dos filas en un teléfono: tapaba
+               los últimos campos del formulario y no había forma de llegar a
+               ellos —se escribía a ciegas debajo de los botones—. Se le
+               reserva ese hueco al final del contenido, que es lo que hace un
+               teclado en pantalla y nadie discute. */
+            h, 'main{padding:10px 10px 132px}',
+            h, '#appwrap{padding-bottom:132px}',
 
             /* --- Y la hoja del Spring Calculator ---------------------
                La calculadora de resortes es una HOJA: dos columnas fijas y

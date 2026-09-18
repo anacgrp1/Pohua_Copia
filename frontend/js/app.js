@@ -88,6 +88,7 @@ const APP = {
         Toast.init();
         Assistant.init();
         PerfilMenu.init();
+        this.seguirHorario();
         this.medirEsquina();
 
         // Al cambiar de idioma se repinta lo que está en pantalla: el título,
@@ -663,9 +664,34 @@ const APP = {
             // que actualizar y no es un error.
             const btn = document.getElementById('btnToggleWorker');
 
-            if (status.running) {
+            // Tres estados, no dos: parado, en marcha y EN ESPERA. El tercero
+            // es "el servicio está levantado pero ahora no toca leer" —fuera
+            // del horario de atención—, y sin él la barra decía "en marcha"
+            // mientras el buzón llevaba doce horas sin tocarse, o parecía que
+            // algo se había colgado.
+            const h = status.horario;
+            const espera = typeof Horario !== 'undefined' ? Horario.resumen(h) : { enEspera: false };
+            this.pintarHorario(h, status.running);
+
+            if (status.running && espera.enEspera) {
+                if (dot) dot.className = 'status-dot espera';
+                if (lbl) {
+                    lbl.textContent = h.proxima_apertura
+                        ? I18N.t('barra.enEspera', { cuando: Horario.cuando(h.proxima_apertura) })
+                        : I18N.t('horario.fuera');
+                    lbl.title = espera.titulo;
+                }
+                if (btn) {
+                    btn.dataset.corriendo = '1';
+                    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> ${I18N.t('boton.detener')}`;
+                    btn.className = 'btn btn-secondary';
+                }
+            } else if (status.running) {
                 if (dot) dot.className = 'status-dot running';
-                if (lbl) lbl.textContent = I18N.t('barra.servicioCorriendo', { n: status.interval_minutes });
+                if (lbl) {
+                    lbl.textContent = I18N.t('barra.servicioCorriendo', { n: status.interval_minutes });
+                    lbl.title = espera.titulo || '';
+                }
                 if (btn) {
                     btn.dataset.corriendo = '1';
                     btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> ${I18N.t('boton.detener')}`;
@@ -673,7 +699,7 @@ const APP = {
                 }
             } else {
                 if (dot) dot.className = 'status-dot';
-                if (lbl) lbl.textContent = I18N.t('barra.servicioParado');
+                if (lbl) { lbl.textContent = I18N.t('barra.servicioParado'); lbl.title = espera.titulo || ''; }
                 if (btn) {
                     btn.dataset.corriendo = '0';
                     btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg> ${I18N.t('boton.arrancar')}`;
@@ -684,6 +710,48 @@ const APP = {
             if (err.sesionExpirada) return;
             console.warn('No se pudo obtener el estado:', err.message);
         }
+    },
+
+    /**
+     * La pastilla del horario, junto a los botones del tablero.
+     *
+     * Ahí es donde alguien pulsa "Ejecutar ciclo" y donde, si no se dice, uno
+     * se queda pensando por qué no entra nada. Sólo existe en el tablero: en
+     * el resto de pantallas no hay hueco ni falta hace.
+     */
+    pintarHorario(h, corriendo) {
+        const caja = document.getElementById('flujoHorario');
+        if (!caja) return;
+        if (!h || !h.activo || typeof Horario === 'undefined') { caja.hidden = true; return; }
+
+        const r = Horario.resumen(h);
+        caja.hidden = false;
+        caja.classList.toggle('flujo-horario--espera', r.enEspera && corriendo !== false);
+        caja.title = r.titulo;
+        // textContent, no innerHTML: los textos salen de plantillas propias,
+        // pero el hueco lo rellenan horas de Intl y el nombre de una ciudad,
+        // y no hay razón para abrir la puerta.
+        caja.textContent = '';
+        const valor = document.createElement('span');
+        valor.className = 'flujo-horario-valor';
+        valor.textContent = r.valor;
+        const detalle = document.createElement('span');
+        detalle.className = 'flujo-horario-detalle';
+        detalle.textContent = r.detalle;
+        caja.append(valor, detalle);
+    },
+
+    /**
+     * Repinta el horario cuando el reloj cambia de casa.
+     *
+     * Las horas del horario se dicen en la casa que tenga puesta el reloj de
+     * arriba, así que rotarlo tiene que moverlas con él: las 6:00 de Kansas
+     * son las 7:00 de Querétaro y las 13:00 de Sevran. Del cambio de idioma no
+     * hay que ocuparse aquí: I18N.alCambiar ya vuelve a llamar a updateStatus.
+     */
+    seguirHorario() {
+        if (typeof Reloj === 'undefined' || !Reloj.alCambiar) return;
+        Reloj.alCambiar(() => { if (API.getToken()) this.updateStatus(); });
     }
 };
 

@@ -19,6 +19,7 @@ import app.core.config as config
 import app.persistence.duplicates as duplicates
 import app.persistence.spring_repository as spring_repository
 import app.rfq.flow as flow
+import app.rfq.horario as horario
 import app.rfq.repository as repository
 import app.rfq.thread_validator as thread_validator
 from app.core.logging import configure_logging
@@ -43,6 +44,10 @@ class ResultadoCiclo:
     errores: int = 0
     detalles: List[str] = field(default_factory=list)
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    # Un ciclo que no se ejecutó por estar fuera de horario no es un ciclo con
+    # cero correos: la diferencia importa para no leer "no llega nada" cuando
+    # lo que pasa es que todavía no ha abierto.
+    en_horario: bool = True
 
 
 def procesar_correo(correo):
@@ -88,14 +93,32 @@ def map_email_message(msg):
     }
 
 
-def ciclo_deteccion() -> ResultadoCiclo:
+def ciclo_deteccion(*, forzar: bool = False) -> ResultadoCiclo:
     """Un ciclo completo: buscar no leídos -> filtrar duplicados -> procesar -> marcar como leído.
 
     Devuelve un ``ResultadoCiclo`` con el recuento de lo ocurrido, para que
     quien lo llame (el worker del servidor, la app de escritorio o el endpoint
     manual) pueda informar sin volver a implementar el ciclo.
+
+    Fuera del horario de atención no se abre el buzón: se devuelve un
+    resultado vacío con ``en_horario=False``. El correo se queda sin leer
+    donde está y entra en el primer ciclo de la apertura siguiente, que es
+    justo lo que se quiere —nada se pierde, no se gasta el modelo de
+    madrugada y no sale una oferta a las 2 a.m.
+
+    ``forzar`` se salta el horario. Lo usa el botón de "Ejecutar ciclo": si
+    alguien lo pulsa un domingo es porque quiere que se lea ahora, y negárselo
+    sería una puerta cerrada sin motivo.
     """
     resultado = ResultadoCiclo()
+
+    if not forzar and not horario.abierto():
+        motivo = horario.motivo_cerrado()
+        log.info("Ciclo omitido. %s", motivo)
+        resultado.en_horario = False
+        resultado.detalles.append(motivo)
+        return resultado
+
     log.info("Buscando correos no leídos (modo=%s)...", config.settings.MAIL_MODE)
     try:
         provider = EmailProviderFactory.get_provider()

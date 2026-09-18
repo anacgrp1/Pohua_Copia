@@ -253,13 +253,19 @@ const QuotingPage = {
                 return;
             }
 
-            // El resorte manda su peso y su dictamen: van a la cotización, y
-            // se vuelve a Quote, que es donde se ve el efecto.
+            // El resorte manda su peso y su dictamen: van a la cotización.
+            //
+            // Y se vuelve a Quote SÓLO si lo mandó una persona con el botón
+            // "Usar el peso en la cotización". La calculadora de resortes
+            // también lo manda ella sola cada vez que recalcula
+            // (`automatico:true`), y con eso el apartado se cerraba en cuanto
+            // el resorte terminaba de dimensionarse: no daba tiempo ni a
+            // verlo. Lo automático llega a la cotización igual, calladito.
             if (deResortes && d.source === 'spring-calculator') {
                 if (precio && precio.contentWindow) {
                     try { precio.contentWindow.postMessage(d, '*'); } catch (_) {}
                 }
-                if (d.type === 'springWeight') this.cambiar('precio');
+                if (d.type === 'springWeight' && !d.automatico) this.cambiar('precio');
             }
         });
     },
@@ -284,12 +290,53 @@ const QuotingPage = {
      * cuando se cambió el interruptor se quedaba con el tema anterior.
      */
     vestir(marco) {
+        this.reforzar(marco);
         try {
             const v = marco.contentWindow;
             if (!v) return;
             if (v.ISCTema && v.ISCTema.aplicar) v.ISCTema.aplicar();
             v.postMessage({ source: 'pohua', tipo: 'tema' }, '*');
         } catch (_) { /* otro origen: se queda con lo que él mismo deduzca */ }
+    },
+
+    /**
+     * Las capas de Pohua dentro de la calculadora, pase lo que pase.
+     *
+     * Quien las mete normalmente es el servidor: `api/lector.py` añade los
+     * <script> al vuelo cuando sirve el HTML de la calculadora. Eso funciona
+     * mientras el servidor y el navegador vayan a la par, y deja de funcionar
+     * justo cuando más se nota: si el despliegue lleva el JavaScript nuevo
+     * pero un `lector.py` anterior, la calculadora se sirve SIN la capa y por
+     * fuera todo parece correcto —el archivo está, se descarga si lo pides—
+     * pero dentro del marco no corre nadie. Lo que se ve entonces es que el
+     * botón Aprobar no abre nada, sin un solo error en la consola.
+     *
+     * Así que Pohua lo comprueba por su cuenta: mira el documento del marco
+     * —mismo origen, se puede— y añade la que falte. Si el servidor ya las
+     * puso, no hace nada: se reconocen por su propio <script src>.
+     */
+    reforzar(marco) {
+        // `isc-nube.js` va en la lista aunque sea la más vieja: es la que mide
+        // el marco y lo pone a pantalla cuando se abre una capa. Sin ella, la
+        // ventana de aprobación se dibuja dentro de un marco de 320 px y se ve
+        // recortada, que es peor que no verla.
+        const CAPAS = ['isc-tema.js', 'isc-nube.js', 'isc-idioma.js', 'isc-contrato.js',
+                       'isc-visor3d.js', 'isc-aprobacion.js', 'isc-selects.js'];
+        try {
+            const doc = marco.contentDocument;
+            if (!doc || !doc.head || !doc.getElementById) return;
+            // Sólo en la calculadora: si el marco acabó enseñando otra cosa
+            // (la propia Pohua, un error del servidor), no se le añade nada.
+            if (!doc.querySelector('#botbar, .sheet, #app')) return;
+            CAPAS.forEach((nombre) => {
+                if (doc.querySelector(`script[src*="${nombre}"]`)) return;
+                const s = doc.createElement('script');
+                s.src = this.dondeViven(nombre);
+                s.defer = true;
+                doc.head.appendChild(s);
+                console.info('Pohua añadió al marco la capa que faltaba:', nombre);
+            });
+        } catch (_) { /* otro origen: el servidor es el único que puede */ }
     },
 
     /**
@@ -308,6 +355,20 @@ const QuotingPage = {
             this.contenedor.querySelectorAll('iframe').forEach((m) => this.vestir(m));
         }).observe(document.documentElement,
                    { attributes: true, attributeFilter: ['data-tema'] });
+    },
+
+    /**
+     * Dónde vive un archivo de la capa, preguntándoselo a la propia página.
+     *
+     * Escribir "/js/isc-tema.js" a mano parece inofensivo y es justo la clase
+     * de cosa que se rompe cuando la aplicación se sirve bajo otra ruta. Se
+     * deduce del <script> de esta misma página, que el navegador ya resolvió.
+     */
+    dondeViven(nombre) {
+        const mio = document.querySelector('script[src*="pages/quoting.js"]') ||
+                    document.querySelector('script[src*="app.js"]');
+        try { return new URL('../' + nombre, mio.src).href; }
+        catch (_) { return '/js/' + nombre; }
     },
 
     /** Al cambiar de página no queda nada corriendo, pero sí que repasar temas. */
