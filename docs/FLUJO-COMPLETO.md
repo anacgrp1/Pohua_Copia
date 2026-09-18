@@ -66,7 +66,12 @@ pantalla Quote lo dicen, y la pantalla pregunta antes de forzar.
    cantidades en el cuerpo).
 2. En el `.env` del servidor: `MAIL_FOLDER=TEST` y deja
    `ENVIO_AUTOMATICO=False` la primera vez. En Render, las mismas dos
-   variables en *Environment*.
+   variables en *Environment*. Vale tanto para IMAP como para Graph: en
+   Graph la carpeta se busca por su nombre, en la raíz y dentro de la
+   bandeja, que es donde Outlook la crea. **El Monitor dice cuál se está
+   leyendo** —"IMAP · TEST", junto al registro—: trabajar contra TEST
+   creyendo que se lee la bandeja de ventas, o al revés, es el susto que esa
+   línea evita.
 3. Arranca y lanza un ciclo: botón **Run cycle** en Mail, o
    `POST /api/pipeline/run`. El correo tiene que estar **sin leer**: el
    ciclo lo marca leído al terminar; para repetir, márcalo sin leer y borra
@@ -208,6 +213,20 @@ La calculadora del núcleo no se tocó para esto: `js/isc-nube.js` intercepta su
 apertura anidada y la convierte en un mensaje a Pohua, así que
 `scripts/vendorizar_nucleo.py` se puede volver a pasar sin perder nada.
 
+### Salir de Cotización y volver no recarga nada
+
+Las demás pantallas se repintan al entrar, y está bien: vuelven a pedir sus
+datos. Ésta no. Aquí dentro hay una calculadora con una cotización a medio
+escribir, y repintarla significaba tirar los marcos y cargarla otra vez desde
+cero —varios segundos, el borrador recuperándose solo y el sitio por donde ibas
+perdido—: ir al Monitor un momento costaba más que el trabajo.
+
+Los marcos se quedan montados en su contenedor, que sigue en el documento
+aunque esté escondido, y al volver se enseña la pestaña que estaba abierta
+(`QuotingPage.montado`). Lo que sí se vacía es al **cerrar sesión**
+(`APP.vaciarVistas()`): lo que quedara dentro es trabajo de quien acaba de
+salir.
+
 ### El alto de los marcos: una sola barra de desplazar
 
 Los dos marcos miden lo que mide su contenido y quien se desplaza es la página
@@ -238,10 +257,31 @@ de Pohua. Eso hay que sostenerlo en tres sitios, y los tres estaban flojos:
    dónde empieza el marco— para abrirse hacia arriba o hacia abajo, con tope en
    píxeles.
 
+4. **Y el marco deja pasar el cielo.** La calculadora declaraba
+   `color-scheme:dark` para que los controles del sistema salieran oscuros. El
+   efecto secundario es que el navegador deja de dejar ver lo que hay detrás
+   del marco y pinta su lienzo del gris casi negro que usa por defecto
+   (#121212) —o blanco en claro—, así que el rectángulo de la calculadora salía
+   tapado mientras alrededor se veía el resplandor y las estrellas. Dentro de
+   Pohua ya no se declara (`js/isc-tema.js`): los desplegables, el campo de
+   archivos y la fecha son nuestros, las barras de desplazar se pintan a mano y
+   los campos llevan su color puesto, así que no se pierde nada. Suelta, la
+   calculadora lo sigue declarando.
+
 En el teléfono, además: la barra de acciones cabe en dos filas (el aviso y el
 número arriba, los cuatro botones abajo), el buscador de los desplegables no se
 enfoca solo —enfocarlo abre el teclado justo encima de la lista— y la hoja de
 resortes se lee en vertical.
+
+Y la barra NO se persigue con JavaScript en el teléfono. Colocarla en cada
+scroll de la página de fuera se ve: el dedo desplaza por el compositor y el
+`transform` llega un fotograma tarde, así que la barra nadaba sobre el
+contenido y parpadeaba, peor todavía con el impulso del scroll táctil. Sin la
+regla de anclaje —que ahora es sólo de 821 px para arriba— vuelve a su
+`position:fixed` de siempre, que dentro de un marco tan alto como su contenido
+la deja quieta al final de la calculadora. El aviso de la calculadora sí haría
+falta verlo desde cualquier sitio, así que en el teléfono se esconde ahí y su
+texto se le pasa a Pohua, que lo enseña con los suyos.
 
 ## 9. Los recortes del plano
 
@@ -255,8 +295,27 @@ Ahora el servidor los conserva: al servir un recorte por primera vez lo copia a
 desde ahí. La cotización vive en la base; sus recortes también.
 
 Los recortes anteriores a este cambio no están en ninguna parte: la pantalla lo
-dice en su sitio —"ya no está guardado, vuelve a leer el plano"— en vez de
-enseñar el icono de imagen partida.
+dice en su sitio en vez de enseñar el icono de imagen partida.
+
+Y lo dice CON EL MOTIVO, porque "no se ve la imagen" son cuatro cosas distintas
+y cada una se arregla de otra forma (`js/isc-nube.js`):
+
+- *El lector no guardó ningún recorte para este punto.* La lista de
+  factibilidad de la hoja de resortes abre la ventana del plano en CUALQUIER
+  fila, y hay filas —una norma, una nota— que no tienen recuadro.
+- *Ya no está guardado en el servidor: vuelve a leer el plano.* El 404 de
+  siempre, el de los recortes anteriores a la migración 019.
+- *La sesión del lector caducó: recarga Pohua.* Un 401 o un 403.
+- *Apunta a otra máquina.* La cotización guarda la dirección del lector con la
+  que se leyó el plano; si se leyó con el lector corriendo en la computadora de
+  quien cotiza, esa dirección es un `127.0.0.1` que desde la nube no existe.
+  Antes de decirlo, se vuelve a pedir el mismo recorte a ESTE servidor —el
+  identificador es el mismo—, así que si el servidor lo tiene, se ve y no hace
+  falta enterarse de nada.
+
+La imagen no se saca del documento, se esconde y la nota se pone a su lado: la
+hoja de resortes reusa siempre el mismo `<img>` y sacarlo dejaba la ventana del
+plano rota para el resto de la sesión.
 
 ## 10. El horario de atención
 
@@ -306,3 +365,46 @@ leerlo. Queda dicho en el registro quién lo pidió y cuándo.
 
 Pruebas: `tests/rfq/test_horario.py` (la ventana, el paso de viernes a lunes,
 los tres husos, el ciclo que no toca el buzón y el que se fuerza a mano).
+
+## 11. Qué dice cada correo y cada aviso
+
+El texto no se inventa aquí: sale de `docs/Cotizador - texto email &
+notificaciones.pdf`, el machote de la empresa. Vive todo junto en
+`app/email/templates.py`, y `tests/correo/test_machote.py` comprueba frase por
+frase que no se pierda ninguna al tocar el módulo.
+
+**Al cliente** (los tres llevan la firma de la planta: INDUSTRIAL SPRING
+CORPORATION, 1801 Bedford Ave, North Kansas City, MO 64116, y los dos sitios):
+
+| Cuándo | Qué dice |
+|---|---|
+| Falta información para cotizar | Agradece, dice que ya se está revisando y pide **sólo lo que falta**, con la descripción del machote ("Volume / EAU: Target batch quantity or Estimated Annual Usage"), no el nombre interno del campo. |
+| No se puede cotizar | Declina sin adornos: los parámetros quedan fuera de la capacidad de fabricación, y deja la puerta abierta a otros proyectos. |
+| Se manda la oferta | Cuerpo corto del machote, el PDF adjunto y las tres condiciones que se contestan sin abrir el adjunto: plazo, incoterm y validez. |
+
+**A quien dictamina** — y esto es lo importante: el aviso principal **no es el
+correo**, es la campana de Pohua y la notificación del teléfono, con los textos
+del machote ("Feasibility review required – Cliente", "Quote validation
+required – Cliente"). El correo es el respaldo.
+
+### El recordatorio
+
+Si un RFQ lleva más de `RECORDATORIO_HORAS` (4 por defecto) esperando a una
+persona, sale **un** correo a quien puede dictaminar, con el enlace al caso:
+
+- en `RequiresReview` → *Feasibility review required*, con la línea que evita
+  malentendidos: al cliente todavía no se le ha escrito nada;
+- en `New` → *Quote validation required*.
+
+Quién lo recibe no es una lista escrita a mano: son los usuarios de Pohua, de
+alta, con permiso `rfq:dictaminar`. Dar de alta a alguien con rol de PM basta
+para que empiece a recibirlos.
+
+Que sea un respaldo y no una lluvia lo garantizan tres cosas: la tabla
+`recordatorios_revision` (migración 020) apunta cada caso ya recordado y no se
+repite; la revisión corre al final del ciclo de detección, que **sólo corre en
+horario de atención** (sección 10), así que lo del viernes por la tarde se
+recuerda el lunes por la mañana y no de madrugada; y sin `APP_URL` no se manda
+nada, porque un enlace a `localhost` en un correo no sirve para nada.
+
+Para apagarlo: `RECORDATORIO_HORAS=0`.

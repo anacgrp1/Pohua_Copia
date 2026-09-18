@@ -81,6 +81,16 @@ class Settings:
     HORARIO_HASTA: int = 18                    # 18:00 (a las 18:00 en punto, cerrado)
     HORARIO_DIAS: str = "1-5"                  # lunes a viernes (1=lunes, 7=domingo)
 
+    # --- El recordatorio de lo que espera dictamen ---
+    # El aviso principal es la campana y el teléfono. Si un RFQ lleva más de
+    # estas horas esperando a una persona, sale además UN correo a quien puede
+    # dictaminar (app/rfq/recordatorios.py). 0 lo apaga.
+    RECORDATORIO_HORAS: int = 4
+    # Dónde vive Pohua de cara al mundo, para el enlace de ese correo:
+    # https://isc-by-cgr.onrender.com. Sin esto el enlace sería a localhost y
+    # el recordatorio no se manda.
+    APP_URL: str = ""
+
     # --- Local Worker / Failover ---
     # Sin valor por defecto a proposito: en prod _validate() exige que este
     # definida.  En dev, si se deja vacia, el endpoint de heartbeat se apaga

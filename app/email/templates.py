@@ -1,37 +1,37 @@
-"""Construcción del contenido de correos salientes del flujo de RFQ.
+"""El texto de los correos que salen del flujo de RFQ.
 
-Propósito
----------
-Este módulo **construye** el contenido de los correos que el sistema envía
-durante el ciclo de cotización: declinaciones, peticiones de datos
-faltantes, validaciones internas con el Project Manager y ofertas
-formales al cliente. Devuelve la representación completa del correo como
-un ``dict`` con destinatario, asunto, cuerpo HTML, cuerpo en texto plano y
-lista de adjuntos.
+De dónde sale este texto
+------------------------
+De `docs/Cotizador - texto email & notificaciones.pdf`, el machote que
+escribió la empresa. No es una redacción de aquí: cuando el machote cambie,
+cambia este módulo y nada más, porque el resto del sistema sólo pide "el
+correo de tal tipo" y lo despacha.
+
+Los cinco textos del machote:
+
+    Al CLIENTE
+      datos_faltantes        pedirle lo que falta antes de poder cotizar
+      declinar_rfq           decirle que no podemos cotizar esta pieza
+      oferta_cliente         mandarle la cotización formal (PDF adjunto)
+
+    INTERNOS (al plant manager)
+      revision_factibilidad  hace falta dictaminar la factibilidad
+      validacion_pm          la cotización está lista y espera visto bueno
+
+Los dos internos son el AVISO DE RESPALDO, no el principal: quien revisa se
+entera por la campana de Pohua y por el teléfono, y el correo sólo sale
+cuando un caso lleva demasiado tiempo esperando (``app/rfq/recordatorios.py``).
+Por eso llevan el enlace al caso: se abre desde el correo y se acabó.
 
 Alcance
 -------
-* **Sí hace:** rellenar las plantillas de los cuatro tipos de correo con
-  los parámetros recibidos y devolver el ``dict`` listo para que un
-  remitente lo entregue.
-* **NO hace:** enviar correos. El envío real es responsabilidad de
-  ``smtp_sender.py`` (**COT-57**) y ``graph_sender.py`` (**COT-58**). Este
-  módulo no toca SMTP, ni Microsoft Graph, ni el sistema de archivos.
+* **Sí hace:** rellenar las plantillas y devolver el ``dict`` del correo.
+* **NO hace:** enviar nada. Eso es ``app/email/outbound.py``, que además
+  decide si el envío está habilitado.
 
 Función pública
 ---------------
 ``construir_correo(tipo: str, params: dict) -> dict``
-
-Actúa como dispatcher: según ``tipo`` invoca a la función privada
-correspondiente (``_construir_declinar_rfq``, ``_construir_datos_faltantes``,
-``_construir_validacion_pm``, ``_construir_oferta_cliente``).
-
-Tipos soportados
-----------------
-* ``"declinar_rfq"``     — declinar una solicitud no factible.
-* ``"datos_faltantes"``  — pedir datos al comprador.
-* ``"validacion_pm"``    — pedir validación interna al PM.
-* ``"oferta_cliente"``   — enviar la propuesta comercial formal.
 """
 
 from __future__ import annotations
@@ -39,87 +39,166 @@ from __future__ import annotations
 from html import escape
 
 # --------------------------------------------------------------------------- #
-# Firma común
+# Firmas
 # --------------------------------------------------------------------------- #
 
-_FIRMA_TEXTO = "Best regards,\nCGR International"
-_FIRMA_HTML = "<p>Best regards,<br>CGR International</p>"
+# La firma del machote, tal cual: nombre legal de la planta, su dirección y
+# los dos sitios. Va en los correos al CLIENTE.
+_FIRMA_CLIENTE = (
+    "INDUSTRIAL SPRING CORPORATION",
+    "1801 Bedford Ave",
+    "North Kansas City, MO 64116",
+    "www.cgr-international.com",
+    "www.isckc.com",
+)
+
+_DESPEDIDA = "Best regards,"
+
+_FIRMA_CLIENTE_TEXTO = _DESPEDIDA + "\n\n" + "\n".join(_FIRMA_CLIENTE)
+_FIRMA_CLIENTE_HTML = (
+    f"<p>{_DESPEDIDA}</p>\n<p>"
+    + "<br>".join(escape(linea) for linea in _FIRMA_CLIENTE)
+    + "</p>"
+)
+
+
+# --------------------------------------------------------------------------- #
+# Lo que se le puede pedir al comprador
+# --------------------------------------------------------------------------- #
+
+# El machote enumera cinco cosas y las describe. Aquí está la traducción de
+# los nombres internos de los campos —los que usa `field_validator`— a esas
+# frases: lo que el comprador lee tiene que decirle QUÉ mandar, no el nombre
+# de una columna ("volumen" no significa nada fuera de aquí).
+_QUE_FALTA = {
+    "tiene_adjunto":  "Technical Drawing: Drawing or schematic file (PDF, PNG, or CAD)",
+    "drawing":        "Technical Drawing: Drawing or schematic file (PDF, PNG, or CAD)",
+    "plano":          "Technical Drawing: Drawing or schematic file (PDF, PNG, or CAD)",
+    "part_number":    "Part Number: Part identifier or drawing reference number",
+    "num_parte":      "Part Number: Part identifier or drawing reference number",
+    "volumen":        "Volume / EAU: Target batch quantity or Estimated Annual Usage",
+    "volume":         "Volume / EAU: Target batch quantity or Estimated Annual Usage",
+    "cantidad":       "Volume / EAU: Target batch quantity or Estimated Annual Usage",
+    "material":       "Material Specification: Required material grade, alloy, or finish",
+    "key_dimensions": "Key Dimensions & Tolerances: Critical dimensional requirements "
+                      "or tolerance ranges",
+    "dimensiones":    "Key Dimensions & Tolerances: Critical dimensional requirements "
+                      "or tolerance ranges",
+    "tolerancias":    "Key Dimensions & Tolerances: Critical dimensional requirements "
+                      "or tolerance ranges",
+    "customer":       "Company Name: The company this quotation should be issued to",
+}
+
+
+def _pedido(campo: str) -> str:
+    """La frase del machote para un campo, o el campo tal cual si es otro.
+
+    Lo desconocido no se descarta ni se inventa: se enseña con el nombre que
+    venga, en mayúscula inicial. Un campo nuevo del validador aparecerá feo
+    antes que desaparecer sin que nadie se entere.
+    """
+    clave = str(campo or "").strip()
+    frase = _QUE_FALTA.get(clave.lower())
+    if frase:
+        return frase
+    return clave.replace("_", " ").strip().capitalize() or clave
+
+
+def _sin_repetir(campos) -> list:
+    """Las frases de los campos que faltan, sin duplicados y en orden.
+
+    Varios campos internos caen en la misma frase del machote —tolerancias y
+    dimensiones son una sola línea— y repetirla haría dudar de si son dos
+    cosas distintas.
+    """
+    vistas, fuera = set(), []
+    for campo in campos:
+        frase = _pedido(campo)
+        if frase in vistas:
+            continue
+        vistas.add(frase)
+        fuera.append(frase)
+    return fuera
 
 
 # --------------------------------------------------------------------------- #
 # Helpers internos
 # --------------------------------------------------------------------------- #
 
-def _exigir_params(params: dict, requeridos: tuple[str, ...]) -> None:
-    """Verifica que ``params`` traiga todos los campos requeridos.
-
-    Un parámetro se considera faltante si no está en el dict o si su valor
-    es ``None`` o cadena vacía. Lanza ``ValueError`` indicando cuáles
-    faltan.
-    """
+def _exigir_params(params: dict, requeridos: tuple) -> None:
+    """Verifica que ``params`` traiga todos los campos requeridos."""
     faltantes = [
         nombre for nombre in requeridos
         if params.get(nombre) is None or params.get(nombre) == ""
     ]
     if faltantes:
-        raise ValueError(
-            "Faltan parámetros requeridos: " + ", ".join(faltantes)
-        )
+        raise ValueError("Faltan parámetros requeridos: " + ", ".join(faltantes))
 
 
-def _parrafos_html(parrafos: list[str]) -> str:
-    """Convierte una lista de párrafos en texto plano a HTML, escapando."""
+def _parrafos_html(parrafos: list) -> str:
     return "\n".join(f"<p>{escape(p)}</p>" for p in parrafos)
 
 
-def _envoltorio_html(cuerpo_interno: str) -> str:
+def _lista_html(puntos: list) -> str:
+    return ("<ul>\n"
+            + "\n".join(f"  <li>{escape(p)}</li>" for p in puntos)
+            + "\n</ul>")
+
+
+def _lista_texto(puntos: list) -> str:
+    return "\n".join(f"  • {p}" for p in puntos)
+
+
+def _documento(cuerpo_interno: str, firma_html: str = "") -> str:
     """Envuelve el HTML del cuerpo en un documento mínimo."""
-    return (
-        "<html><body>\n"
-        f"{cuerpo_interno}\n"
-        f"{_FIRMA_HTML}\n"
-        "</body></html>"
-    )
+    partes = ["<html><body>", cuerpo_interno]
+    if firma_html:
+        partes.append(firma_html)
+    partes.append("</body></html>")
+    return "\n".join(partes)
 
 
-# --------------------------------------------------------------------------- #
-# TIPO 1: declinar_rfq
-# --------------------------------------------------------------------------- #
+def _correo_cliente(destinatario, asunto, intro, puntos, cierre, adjuntos=None) -> dict:
+    """Arma un correo al cliente: párrafos, lista opcional y la firma de ISC."""
+    texto = "\n\n".join(intro)
+    if puntos:
+        texto += "\n\n" + _lista_texto(puntos)
+    if cierre:
+        texto += "\n\n" + "\n\n".join(cierre)
+    texto += "\n\n" + _FIRMA_CLIENTE_TEXTO
 
-def _construir_declinar_rfq(params: dict) -> dict:
-    """Construye el correo de declinación de un RFQ no factible."""
-    _exigir_params(
-        params, ("destinatario", "asunto_original", "nombre_comprador")
-    )
-
-    nombre = params["nombre_comprador"]
-
-    parrafos = [
-        f"Dear {nombre},",
-        "Our engineering team reviewed the drawing. Unfortunately, this RFQ "
-        "is not feasible for us.",
-        "Thank you for considering us and we would be glad to work with you "
-        "on other projects.",
-    ]
-
-    cuerpo_texto = "\n\n".join(parrafos) + "\n\n" + _FIRMA_TEXTO
-    cuerpo_html = _envoltorio_html(_parrafos_html(parrafos))
+    html = _parrafos_html(intro)
+    if puntos:
+        html += "\n" + _lista_html(puntos)
+    if cierre:
+        html += "\n" + _parrafos_html(cierre)
 
     return {
-        "destinatario": params["destinatario"],
-        "asunto": params["asunto_original"],
-        "cuerpo_html": cuerpo_html,
-        "cuerpo_texto": cuerpo_texto,
-        "adjuntos": [],
+        "destinatario": destinatario,
+        "asunto": asunto,
+        "cuerpo_html": _documento(html, _FIRMA_CLIENTE_HTML),
+        "cuerpo_texto": texto,
+        "adjuntos": list(adjuntos or []),
     }
 
 
+def _enlace_html(enlace: str) -> str:
+    """El enlace del correo interno, pinchable y visible a la vez.
+
+    Se enseña la dirección completa además de enlazarla: un correo interno se
+    reenvía, se abre en clientes que no pintan HTML, y una palabra "aquí" que
+    no se puede copiar no sirve de nada.
+    """
+    seguro = escape(enlace, quote=True)
+    return f'<p><a href="{seguro}">{escape(enlace)}</a></p>'
+
+
 # --------------------------------------------------------------------------- #
-# TIPO 2: datos_faltantes
+# AL CLIENTE 1: datos_faltantes
 # --------------------------------------------------------------------------- #
 
 def _construir_datos_faltantes(params: dict) -> dict:
-    """Construye el correo solicitando los datos que faltan al comprador."""
+    """Pide lo que falta para poder cotizar. Machote: REQUEST DATA EMAIL."""
     _exigir_params(
         params,
         ("destinatario", "asunto_original", "nombre_comprador", "campos_faltantes"),
@@ -128,184 +207,171 @@ def _construir_datos_faltantes(params: dict) -> dict:
     campos = params["campos_faltantes"]
     if not isinstance(campos, list) or len(campos) == 0:
         raise ValueError(
-            "campos_faltantes debe ser una lista no vacía de nombres de campos"
-        )
-
-    nombre = params["nombre_comprador"]
+            "campos_faltantes debe ser una lista no vacía de nombres de campos")
 
     intro = [
-        f"Dear {nombre},",
-        "Thank you very much for considering us for this project. We "
-        "appreciate the opportunity to participate and collaborate with you.",
-        "In order to proceed with an accurate commercial proposal and meet "
-        "your timeline, could you please provide us with the following "
-        "missing information?",
+        f"Dear {params['nombre_comprador']},",
+        "Thank you for considering us for this project.",
+        "We have received your request and started reviewing the specifications.",
+        "To prepare an accurate quotation for you, we need the following "
+        "missing details:",
     ]
     cierre = [
-        "As soon as we receive these details, our team will immediately "
-        "trigger the quoting process.",
-        "Thank you again for your trust. We look forward to hearing from you.",
+        "Please provide this information by replying to this email. As soon as "
+        "we receive it, we will proceed with your quote.",
     ]
 
-    # --- Texto plano ---
-    lista_texto = "\n".join(f"• {c}" for c in campos)
-    cuerpo_texto = (
-        "\n\n".join(intro)
-        + "\n\n" + lista_texto + "\n\n"
-        + "\n\n".join(cierre)
-        + "\n\n" + _FIRMA_TEXTO
-    )
-
-    # --- HTML ---
-    lista_html = "<ul>\n" + "\n".join(
-        f"  <li>{escape(c)}</li>" for c in campos
-    ) + "\n</ul>"
-    cuerpo_html = _envoltorio_html(
-        _parrafos_html(intro) + "\n" + lista_html + "\n" + _parrafos_html(cierre)
-    )
-
-    return {
-        "destinatario": params["destinatario"],
-        "asunto": params["asunto_original"],
-        "cuerpo_html": cuerpo_html,
-        "cuerpo_texto": cuerpo_texto,
-        "adjuntos": [],
-    }
+    return _correo_cliente(
+        params["destinatario"], params["asunto_original"],
+        intro, _sin_repetir(campos), cierre)
 
 
 # --------------------------------------------------------------------------- #
-# TIPO 3: validacion_pm
+# AL CLIENTE 2: declinar_rfq
 # --------------------------------------------------------------------------- #
 
-def _construir_validacion_pm(params: dict) -> dict:
-    """Construye el correo interno de validación de oferta para el PM."""
-    _exigir_params(
-        params,
-        ("destinatario", "nombre_pm", "nombre_proyecto", "volumen",
-         "tooling_capex", "margen"),
-    )
-
-    nombre_pm = params["nombre_pm"]
-    nombre_proyecto = params["nombre_proyecto"]
-    volumen = params["volumen"]
-    tooling_capex = params["tooling_capex"]
-    margen = params["margen"]
-
-    asunto = f"Validation Required: Commercial Offer - {nombre_proyecto}"
+def _construir_declinar_rfq(params: dict) -> dict:
+    """Declina la solicitud. Machote: NOT FEASIBLE - DECLINE EMAIL."""
+    _exigir_params(params, ("destinatario", "asunto_original", "nombre_comprador"))
 
     intro = [
-        f"Hi {nombre_pm},",
-        f"The commercial offer for {nombre_proyecto} is ready for your "
-        "review and approval before submission to the customer.",
-        "Key Figures:",
-    ]
-    cierre = [
-        "Attached to this email you will find the complete breakdown for "
-        "your review. I look forward to your comments or approval to proceed "
-        "with the submission.",
-        "Thank you for your support.",
-    ]
-    figuras = [
-        f"Volume: {volumen} units/year",
-        f"Tooling/CapEx: {tooling_capex} USD",
-        f"Margin: {margen}%",
+        f"Dear {params['nombre_comprador']},",
+        "Thank you for reaching out and sharing your request with us.",
+        "After reviewing your technical specifications, we regret to inform you "
+        "that we are unable to quote this project, as the required parameters "
+        "fall outside our current manufacturing capabilities.",
+        "Thank you for considering us, and please let us know if we can assist "
+        "with future projects.",
     ]
 
-    # --- Texto plano ---
-    lista_texto = "\n".join(f"• {f}" for f in figuras)
-    cuerpo_texto = (
-        "\n\n".join(intro)
-        + "\n" + lista_texto + "\n\n"
-        + "\n\n".join(cierre)
-        + "\n\n" + _FIRMA_TEXTO
-    )
-
-    # --- HTML ---
-    lista_html = "<ul>\n" + "\n".join(
-        f"  <li>{escape(f)}</li>" for f in figuras
-    ) + "\n</ul>"
-    cuerpo_html = _envoltorio_html(
-        _parrafos_html(intro) + "\n" + lista_html + "\n" + _parrafos_html(cierre)
-    )
-
-    return {
-        "destinatario": params["destinatario"],
-        "asunto": asunto,
-        "cuerpo_html": cuerpo_html,
-        "cuerpo_texto": cuerpo_texto,
-        "adjuntos": [],
-    }
+    return _correo_cliente(
+        params["destinatario"], params["asunto_original"], intro, [], [])
 
 
 # --------------------------------------------------------------------------- #
-# TIPO 4: oferta_cliente
+# AL CLIENTE 3: oferta_cliente
 # --------------------------------------------------------------------------- #
 
 def _construir_oferta_cliente(params: dict) -> dict:
-    """Construye la propuesta comercial formal al cliente."""
+    """Manda la cotización formal. Machote: SEND OFFER, con el PDF adjunto.
+
+    El machote deja el cuerpo corto y remite al PDF. Se conservan las tres
+    condiciones comerciales —plazo, incoterm y validez— porque son lo que se
+    contesta sin abrir el adjunto, y porque una oferta sin validez a la vista
+    se responde tarde.
+    """
     _exigir_params(
         params,
         ("destinatario", "asunto_original", "nombre_comprador",
-         "nombre_proyecto", "lead_time", "incoterm", "validez_oferta"),
+         "lead_time", "incoterm", "validez_oferta"),
     )
 
-    nombre = params["nombre_comprador"]
-    nombre_proyecto = params["nombre_proyecto"]
-    lead_time = params["lead_time"]
-    incoterm = params["incoterm"]
-    validez = params["validez_oferta"]
-
-    # adjuntos es opcional (lista, puede ser vacía); si viene None lo
-    # tratamos como [].
     adjuntos = params.get("adjuntos") or []
     if not isinstance(adjuntos, list):
         raise ValueError("adjuntos debe ser una lista de rutas de archivos")
 
     intro = [
-        f"Dear {nombre},",
-        f"Following up on your request, we are pleased to submit our "
-        f"official commercial proposal for the {nombre_proyecto} project.",
-        "Attached to this email, you will find our detailed quotation, "
-        "which has been structured to meet all the technical and quality "
-        "requirements specified by your team.",
-        "Key highlights of our proposal:",
+        f"Dear {params['nombre_comprador']},",
+        "Following the review of your technical specifications, please find "
+        "attached our formal quotation for your review.",
+    ]
+    condiciones = [
+        f"Lead Time: {params['lead_time']}",
+        f"Incoterm: {params['incoterm']}",
+        f"Offer Validity: {params['validez_oferta']}",
     ]
     cierre = [
-        "We are very excited about the prospect of partnering with you on "
-        "this business. Please let us know if you would like to schedule a "
-        "review meeting to go over the details.",
-        "Thank you for the opportunity. We look forward to your feedback.",
-    ]
-    highlights = [
-        f"Lead Time: {lead_time}",
-        f"Incoterm: {incoterm}",
-        f"Offer Validity: {validez}",
+        "Do not hesitate to reach out if you have any questions or require any "
+        "adjustments. We look forward to working with you.",
     ]
 
-    # --- Texto plano ---
-    lista_texto = "\n".join(f"• {h}" for h in highlights)
-    cuerpo_texto = (
-        "\n\n".join(intro)
-        + "\n" + lista_texto + "\n\n"
-        + "\n\n".join(cierre)
-        + "\n\n" + _FIRMA_TEXTO
-    )
+    return _correo_cliente(
+        params["destinatario"], params["asunto_original"],
+        intro, condiciones, cierre, adjuntos)
 
-    # --- HTML ---
-    lista_html = "<ul>\n" + "\n".join(
-        f"  <li>{escape(h)}</li>" for h in highlights
-    ) + "\n</ul>"
-    cuerpo_html = _envoltorio_html(
-        _parrafos_html(intro) + "\n" + lista_html + "\n" + _parrafos_html(cierre)
-    )
+
+# --------------------------------------------------------------------------- #
+# INTERNO 1: revision_factibilidad
+# --------------------------------------------------------------------------- #
+
+def _construir_revision_factibilidad(params: dict) -> dict:
+    """Pide dictamen de factibilidad. Machote: NOT FEASIBLE REVIEW (RODEA).
+
+    La última línea —que al cliente todavía no se le ha escrito— no es un
+    adorno: es lo que evita que alguien conteste por su cuenta creyendo que el
+    sistema ya dijo algo.
+    """
+    _exigir_params(params, ("destinatario", "nombre_pm", "cliente", "enlace"))
+
+    cliente = params["cliente"]
+    parrafos = [
+        f"Hi {params['nombre_pm']},",
+        f"A feasibility review is required for a new quote request from "
+        f"{cliente} before any reply can be sent to the client.",
+        "Please access the case details, drawing, and technical flags using the "
+        "link below to decide whether to proceed or decline:",
+    ]
+    nota = "(Note: No email has been sent to the client yet)."
+    enlace = params["enlace"]
+
+    texto = "\n\n".join(parrafos) + "\n\n" + enlace + "\n\n" + nota
+    html = _documento(_parrafos_html(parrafos) + "\n" + _enlace_html(enlace)
+                      + "\n" + _parrafos_html([nota]))
 
     return {
         "destinatario": params["destinatario"],
-        "asunto": params["asunto_original"],
-        "cuerpo_html": cuerpo_html,
-        "cuerpo_texto": cuerpo_texto,
-        "adjuntos": list(adjuntos),
+        "asunto": f"Feasibility review required – {cliente}",
+        "cuerpo_html": html,
+        "cuerpo_texto": texto,
+        "adjuntos": [],
     }
+
+
+# --------------------------------------------------------------------------- #
+# INTERNO 2: validacion_pm
+# --------------------------------------------------------------------------- #
+
+def _construir_validacion_pm(params: dict) -> dict:
+    """Pide el visto bueno de la cotización. Machote: VALIDATION EMAIL (RODEA)."""
+    _exigir_params(params, ("destinatario", "nombre_pm", "cliente", "enlace"))
+
+    cliente = params["cliente"]
+    parrafos = [
+        f"Hi {params['nombre_pm']},",
+        f"A new quote for {cliente} is ready and requires your review and "
+        "approval before the final offer is sent to the customer.",
+        "Please access the full details, drawings, and cost breakdown using the "
+        "link below:",
+    ]
+    cierre = "Thank you,"
+    enlace = params["enlace"]
+
+    texto = "\n\n".join(parrafos) + "\n\n" + enlace + "\n\n" + cierre
+    html = _documento(_parrafos_html(parrafos) + "\n" + _enlace_html(enlace)
+                      + "\n" + _parrafos_html([cierre]))
+
+    return {
+        "destinatario": params["destinatario"],
+        "asunto": f"Quote validation required – {cliente}",
+        "cuerpo_html": html,
+        "cuerpo_texto": texto,
+        "adjuntos": [],
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Los textos de la campana
+# --------------------------------------------------------------------------- #
+
+# El machote también dice qué tiene que decir el aviso DENTRO de la
+# aplicación. Vive aquí, junto a los correos, porque es el mismo texto dicho
+# por el otro canal y se cambia en el mismo sitio.
+def aviso_revision_factibilidad(cliente: str) -> str:
+    return f"Feasibility review required – {cliente or '—'}"
+
+
+def aviso_validacion(cliente: str) -> str:
+    return f"Quote validation required – {cliente or '—'}"
 
 
 # --------------------------------------------------------------------------- #
@@ -313,10 +379,11 @@ def _construir_oferta_cliente(params: dict) -> dict:
 # --------------------------------------------------------------------------- #
 
 _CONSTRUCTORES = {
-    "declinar_rfq": _construir_declinar_rfq,
     "datos_faltantes": _construir_datos_faltantes,
-    "validacion_pm": _construir_validacion_pm,
+    "declinar_rfq": _construir_declinar_rfq,
     "oferta_cliente": _construir_oferta_cliente,
+    "revision_factibilidad": _construir_revision_factibilidad,
+    "validacion_pm": _construir_validacion_pm,
 }
 
 
@@ -324,24 +391,20 @@ def construir_correo(tipo: str, params: dict) -> dict:
     """Construye el contenido de un correo saliente.
 
     Args:
-        tipo: identificador del tipo de correo. Uno de:
-            ``"declinar_rfq"``, ``"datos_faltantes"``,
-            ``"validacion_pm"``, ``"oferta_cliente"``.
-        params: parámetros específicos del tipo (ver docstring de cada
-            constructor interno para el detalle de campos requeridos).
+        tipo: ``"datos_faltantes"``, ``"declinar_rfq"``, ``"oferta_cliente"``,
+            ``"revision_factibilidad"`` o ``"validacion_pm"``.
+        params: los parámetros de ese tipo (ver cada constructor).
 
     Returns:
-        ``dict`` con las claves ``destinatario``, ``asunto``,
-        ``cuerpo_html``, ``cuerpo_texto`` y ``adjuntos``.
+        ``dict`` con ``destinatario``, ``asunto``, ``cuerpo_html``,
+        ``cuerpo_texto`` y ``adjuntos``.
 
     Raises:
-        ValueError: si ``tipo`` no es uno de los soportados, o si faltan
-            parámetros requeridos.
+        ValueError: tipo desconocido o parámetros incompletos.
     """
     constructor = _CONSTRUCTORES.get(tipo)
     if constructor is None:
         soportados = ", ".join(sorted(_CONSTRUCTORES))
         raise ValueError(
-            f"Tipo de correo desconocido: {tipo!r}. Tipos soportados: {soportados}"
-        )
+            f"Tipo de correo desconocido: {tipo!r}. Tipos soportados: {soportados}")
     return constructor(params)

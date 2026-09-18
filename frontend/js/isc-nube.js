@@ -604,13 +604,20 @@
         var css = document.createElement('style');
         css.id = 'nube-anclaje';
         css.textContent = [
-            'html:not(.nube-ventana) #botbar{position:absolute;top:0;bottom:auto;',
-            '  left:0;right:0;will-change:transform}',
-            'html:not(.nube-ventana) #toast{position:absolute;top:0;bottom:auto;',
-            '  left:50%;will-change:transform}'
+            /* Sólo de tableta para arriba. En el teléfono esta barra NO se
+               persigue con JavaScript: ver `anclarFijos`. */
+            '@media (min-width:821px){',
+            ' html:not(.nube-ventana) #botbar{position:absolute;top:0;bottom:auto;',
+            '   left:0;right:0;will-change:transform}',
+            ' html:not(.nube-ventana) #toast{position:absolute;top:0;bottom:auto;',
+            '   left:50%;will-change:transform}',
+            '}'
         ].join('');
         document.head.appendChild(css);
     }
+
+    /* De este ancho para abajo, la barra no se persigue: ver `anclarFijos`. */
+    var ANCHO_TELEFONO = 820;
 
     function anclarFijos() {
         if (!marco || modoVentana) return;
@@ -619,6 +626,34 @@
         var toast = document.getElementById('toast');
         if (!bot && !toast) return;
 
+        /* EN EL TELÉFONO NO SE PERSIGUE NADA.
+         *
+         * Aquí la barra se colocaba a mano en cada scroll de la página de
+         * fuera, y eso en un teléfono se ve: el dedo desplaza la pantalla por
+         * el compositor y el `transform` llega un fotograma tarde, así que la
+         * barra nada por encima del contenido y parpadea. Con el impulso del
+         * scroll táctil —que sigue corriendo solo— es peor todavía.
+         *
+         * Se le quita el trabajo: sin la regla de anclaje (que ahora es sólo
+         * de 821 px para arriba) la barra vuelve a su `position:fixed` de
+         * siempre, y dentro de un marco tan alto como su contenido eso la deja
+         * quieta AL FINAL de la calculadora. Se llega a ella desplazando, como
+         * al último campo del formulario, y no se mueve ni tapa nada por el
+         * camino. El hueco que se reserva al final se sigue publicando.
+         */
+        if (bot) {
+            var alto = bot.offsetHeight || 0;
+            if (alto && alto !== ultimoAlto) {
+                ultimoAlto = alto;
+                document.documentElement.style.setProperty('--nube-barra', alto + 'px');
+            }
+        }
+        if (window.innerWidth <= ANCHO_TELEFONO) {
+            if (bot && bot.style.transform) bot.style.transform = '';
+            if (toast && toast.style.transform) toast.style.transform = '';
+            return;
+        }
+
         var r;
         try { r = marco.getBoundingClientRect(); } catch (e) { return; }
         var ventana = altoDelPadre();
@@ -626,15 +661,6 @@
 
         if (bot) {
             var h = bot.offsetHeight || 0;
-            /* Cuánto mide la barra, para que el contenido se reserve ese hueco
-               al final y no escriba a ciegas debajo de los botones. Se publica
-               en una variable de CSS y la usa `js/isc-tema.js`: el número lo
-               dice la barra, que es la que sabe cuántas filas le han salido
-               hoy en esta pantalla. */
-            if (h && h !== ultimoAlto) {
-                ultimoAlto = h;
-                document.documentElement.style.setProperty('--nube-barra', h + 'px');
-            }
             /* Pegada al borde de abajo de la ventana mientras el marco lo
                cruce, y quieta dentro del marco cuando no: ni se sale por
                arriba al llegar al final de la página ni por abajo al empezar. */
@@ -647,6 +673,34 @@
                     Math.round(Math.max(y - ht - HUECO_AVISO, 0)) + 'px)';
             }
         }
+    }
+
+    /**
+     * Los avisos de la calculadora, dichos por Pohua (sólo en el teléfono).
+     *
+     * `#toast` también era `position:fixed`, así que en el teléfono —donde ya
+     * no se persigue nada— se quedaría al final del documento: un "Guardado"
+     * que aparece y se va a cinco pantallas de distancia no lo lee nadie. Se
+     * esconde ahí (js/isc-tema.js) y su texto se le pasa a Pohua, que tiene su
+     * propio aviso y sí está fijo de verdad sobre la pantalla.
+     */
+    function relevarAvisos() {
+        var caja = document.getElementById('toast');
+        if (!caja || typeof MutationObserver === 'undefined') return;
+        var ultimo = '';
+        new MutationObserver(function () {
+            var encendido = (caja.className || '').indexOf('on') !== -1;
+            if (!encendido) { ultimo = ''; return; }
+            if (window.innerWidth > ANCHO_TELEFONO) return;
+            var texto = (caja.textContent || '').trim();
+            if (!texto || texto === ultimo) return;
+            ultimo = texto;
+            try {
+                window.parent.postMessage({ source: 'isc-nube', tipo: 'aviso',
+                                            texto: texto.slice(0, 300) }, '*');
+            } catch (e) { /* sin padre: se queda como estaba */ }
+        }).observe(caja, { attributes: true, attributeFilter: ['class'],
+                           childList: true, characterData: true, subtree: true });
     }
 
     /* El scroll que hay que escuchar es el del PADRE, no el nuestro: aquí
@@ -803,28 +857,164 @@
      * necesita saber para desatascarse.
      */
     function explicarRecortes() {
-        var textos = {
-            en: 'This drawing crop is no longer stored. Read the drawing again to see it.',
-            es: 'Este recorte del plano ya no está guardado. Vuelve a leer el plano para verlo.',
-            fr: "Ce détail du plan n'est plus enregistré. Relisez le plan pour le revoir."
+        var T = {
+            en: { base: 'This drawing crop did not load.',
+                  vacio: 'The reader saved no crop for this item.',
+                  falta: 'It is no longer stored on the server: read the drawing again.',
+                  sesion: 'The reader session expired: reload Pohua and try again.',
+                  lejos: 'It points at another machine ({host}), which is not reachable from here.',
+                  http: 'The server answered {n}.' },
+            es: { base: 'Este recorte del plano no cargó.',
+                  vacio: 'El lector no guardó ningún recorte para este punto.',
+                  falta: 'Ya no está guardado en el servidor: vuelve a leer el plano.',
+                  sesion: 'La sesión del lector caducó: recarga Pohua y vuelve a intentarlo.',
+                  lejos: 'Apunta a otra máquina ({host}), que desde aquí no se alcanza.',
+                  http: 'El servidor contestó {n}.' },
+            fr: { base: "Ce détail du plan n'a pas pu s'afficher.",
+                  vacio: "Le lecteur n'a enregistré aucun détail pour ce point.",
+                  falta: "Il n'est plus enregistré sur le serveur : relisez le plan.",
+                  sesion: 'La session du lecteur a expiré : rechargez Pohua et réessayez.',
+                  lejos: "Il pointe vers une autre machine ({host}), injoignable d'ici.",
+                  http: 'Le serveur a répondu {n}.' }
         };
         function idioma() {
             try { return (window.parent && window.parent.I18N && window.parent.I18N.idioma) || 'en'; }
             catch (e) { return 'en'; }
         }
+        function t(clave, datos) {
+            var textos = T[idioma()] || T.en;
+            var s = textos[clave] || T.en[clave] || '';
+            if (datos) for (var k in datos) s = s.replace('{' + k + '}', datos[k]);
+            return s;
+        }
+
+        /**
+         * Por qué no cargó, preguntándoselo al servidor.
+         *
+         * "No se ve la imagen" puede ser cuatro cosas muy distintas —no hay
+         * recorte, el disco de Render se vació, la sesión del lector caducó, o
+         * la cotización guarda la dirección del lector de OTRA máquina— y cada
+         * una se arregla de una forma. El icono de imagen partida no dice
+         * ninguna; esto lo pregunta y lo escribe en la nota.
+         */
+        function diagnosticar(url, alSaber) {
+            if (!url) return alSaber(t('vacio'));
+            var destino;
+            try { destino = new URL(url, location.href); } catch (e) { destino = null; }
+            if (destino && destino.origin !== location.origin) {
+                return alSaber(t('lejos', { host: destino.host }));
+            }
+            fetch(url, { credentials: 'same-origin', cache: 'no-store' }).then(function (r) {
+                if (r.status === 404) return alSaber(t('falta'));
+                if (r.status === 401 || r.status === 403) return alSaber(t('sesion'));
+                alSaber(t('http', { n: r.status }));
+            }).catch(function () { alSaber(t('falta')); });
+        }
+
+        /**
+         * El mismo recorte, pero pedido a ESTE servidor.
+         *
+         * Una cotización guarda la dirección del lector con la que se leyó el
+         * plano. Si se leyó con el lector corriendo en la máquina de quien
+         * cotiza —"Parser: LIVE (local server)"—, esa dirección es un
+         * `127.0.0.1` que desde la nube no existe, y al abrir la cotización en
+         * otro sitio los recuadros salen rotos aunque el servidor los tenga
+         * guardados. El identificador del recorte es el mismo en los dos
+         * lados, así que se vuelve a pedir aquí antes de rendirse.
+         */
+        function prefijoLector() {
+            try {
+                var p = window.ISC_PARSER_URL;
+                if (typeof p === 'string' && p && p.charAt(0) === '/') return p.replace(/\/$/, '');
+            } catch (e) { /* no está puesto */ }
+            var m = /^(.*\/lector)\//.exec(location.pathname || '');
+            return m ? m[1] : '';
+        }
+
+        function mismoRecorteAqui(url) {
+            if (!url || url.indexOf('/api/crop/') === -1) return '';
+            var destino;
+            try { destino = new URL(url, location.href); } catch (e) { return ''; }
+            if (destino.origin === location.origin) return '';
+            var id = destino.pathname.split('/api/crop/').pop();
+            if (!id) return '';
+            return prefijoLector() + '/api/crop/' + id;
+        }
+
+        /* La imagen NO se saca del documento: se esconde y la nota se pone a su
+           lado. Sacarla costó caro la primera vez: la hoja de resortes reusa
+           SIEMPRE el mismo `<img id="cropImg">` —le cambia el `src` en cada
+           punto que se abre—, así que en cuanto uno fallaba y la nota ocupaba
+           su sitio, el siguiente reventaba con "cannot set src of null" y la
+           ventana del plano no volvía a abrirse en toda la sesión. */
+        function limpiarNota(img) {
+            if (img.notaRecorte && img.notaRecorte.parentNode) {
+                img.notaRecorte.parentNode.removeChild(img.notaRecorte);
+            }
+            img.notaRecorte = null;
+            img.dataset.recorteAvisado = '';
+            /* También el reintento: la hoja de resortes usa siempre la MISMA
+               imagen, y sin esto el segundo recorte de otra máquina ya no se
+               volvía a pedir aquí —se comía el intento del primero—. No hay
+               bucle posible: el reintento apunta a este mismo servidor, y de
+               una dirección de aquí ya no se reintenta nada. */
+            img.dataset.recorteReintentado = '';
+            img.style.display = '';
+        }
+
+        /* Cada vez que le cambian el `src`, borrón y cuenta nueva: el punto
+           siguiente puede tener su recuadro perfectamente. */
+        function vigilarSrc(img) {
+            if (img.vigiladoRecorte || typeof MutationObserver === 'undefined') return;
+            img.vigiladoRecorte = new MutationObserver(function () { limpiarNota(img); });
+            img.vigiladoRecorte.observe(img, { attributes: true, attributeFilter: ['src'] });
+        }
+
         document.addEventListener('error', function (ev) {
             var img = ev.target;
             if (!img || img.tagName !== 'IMG' || img.dataset.recorteAvisado) return;
-            if (String(img.src || '').indexOf('/api/crop/') === -1) return;
+            var url = img.getAttribute('src') || '';
+            /* Los recortes del lector, y también el visor de la hoja de
+               resortes (`#cropImg`), que se queda con `src=""` cuando el punto
+               no trae recuadro: esa imagen partida es la de la captura que
+               llegó, y sin esto no decía nada. */
+            var esRecorte = url.indexOf('/api/crop/') !== -1 || img.id === 'cropImg' ||
+                            !!(img.closest && img.closest('.crop-b'));
+            if (!esRecorte) return;
+
+            /* Antes de dar nada por perdido: si la dirección es de otra
+               máquina, se pide el mismo recorte a este servidor. Una sola vez. */
+            var aqui = mismoRecorteAqui(url);
+            if (aqui && !img.dataset.recorteReintentado) {
+                img.dataset.recorteReintentado = '1';
+                vigilarSrc(img);
+                img.src = aqui;
+                return;
+            }
+
             img.dataset.recorteAvisado = '1';
+            vigilarSrc(img);
+
             var nota = document.createElement('p');
             nota.className = 'small';
             nota.style.cssText = 'margin:6px 0;padding:8px 10px;border-radius:8px;' +
                 'background:var(--n-avi-fondo,rgba(245,158,11,.14));' +
                 'border:1px solid var(--n-avi-linea,rgba(245,158,11,.5))';
-            nota.textContent = textos[idioma()] || textos.en;
-            if (img.parentNode) img.parentNode.replaceChild(nota, img);
+            nota.textContent = t('base');
+            img.notaRecorte = nota;
+            img.style.display = 'none';
+            if (img.parentNode) img.parentNode.insertBefore(nota, img.nextSibling);
+
+            diagnosticar(url, function (motivo) {
+                nota.textContent = t('base') + ' ' + motivo;
+            });
         }, true);   // en captura: el error de una imagen no burbujea
+
+        /* Y si luego carga, la nota sobra. */
+        document.addEventListener('load', function (ev) {
+            var img = ev.target;
+            if (img && img.tagName === 'IMG' && img.notaRecorte) limpiarNota(img);
+        }, true);
     }
 
     // ------------------------------------------------------------- arranque
@@ -845,6 +1035,13 @@
         estilos();
         vigilarAlto();
         vigilarAnclaje();
+        relevarAvisos();
+        /* Y explicar los recortes que no carguen. Esto también es de cualquier
+           documento: el recuadro del plano se abre desde la lista de
+           factibilidad, que vive en la HOJA DE RESORTES. Estaba colgado de la
+           espera de la calculadora de precios, así que justo donde ella lo
+           estaba viendo roto no salía la explicación. */
+        explicarRecortes();
     }
 
     if (document.readyState === 'loading') {
@@ -857,7 +1054,6 @@
         fusionarBarras();
         desanidarResorte();
         fechaDeHoy();
-        explicarRecortes();
         vigilarTablas();
         /* Si la calculadora no se regeneró, el tema no puede pintarla y se
            queda en claro dentro de Pohua oscuro. Se dice en voz alta: la vez

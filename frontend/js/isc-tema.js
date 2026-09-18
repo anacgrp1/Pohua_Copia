@@ -457,6 +457,10 @@ window.ISCTema = (function () {
             h, '#botbar .qnum{order:-2;font-size:.72rem;max-width:34vw;overflow:hidden;',
             '  text-overflow:ellipsis;white-space:nowrap}',
             h, '#botbar .badge{order:-2;font-size:.6rem;padding:2px 6px}',
+            /* El aviso de la calculadora lo dice Pohua (js/isc-nube.js lo
+               releva): aquí se quedaría al final del documento, donde no lo
+               vería nadie. */
+            m, '#toast{display:none}',
 
             /* Nada se sale por la derecha. Las filas (.hrow) y las rejillas
                son `display:grid`, y un hijo de rejilla nace con
@@ -536,8 +540,26 @@ window.ISCTema = (function () {
             h, '.nube-ancha table{min-width:max-content}',
 
             /* El esquema del sistema y la barra, iguales a las de Pohua: finas
-               y discretas, no la barra gorda por defecto del navegador. */
-            'html[', MARCA, ']{color-scheme:', tema, '}',
+               y discretas, no la barra gorda por defecto del navegador.
+
+               PERO `color-scheme` sólo cuando la calculadora va SOLA. Dentro de
+               Pohua no, y no es un capricho: cuando un documento declara
+               `color-scheme:dark`, el navegador deja de dejar pasar lo que hay
+               detrás del marco y pinta su lienzo del gris casi negro que usa
+               por defecto en oscuro (#121212). Eso es lo que tapaba el cielo
+               de Pohua —el resplandor y las estrellas— justo en el rectángulo
+               de la calculadora, mientras alrededor se veía bien. En claro
+               pasa lo mismo con blanco.
+
+               Sin la declaración, el lienzo del marco vuelve a ser
+               transparente y se ve el fondo de la aplicación. Lo que se
+               perdería —los controles nativos en oscuro— ya no aplica: los
+               desplegables, el campo de archivos y la fecha son nuestros
+               (js/isc-selects.js), las barras de desplazar se pintan aquí
+               abajo, y los campos de texto llevan su color puesto. Sólo queda
+               el acento de las casillas, que se dice a mano. */
+            'html[', MARCA, ']:not(.nube-marco){color-scheme:', tema, '}',
+            m, '{accent-color:', tono.info, ';caret-color:', t.tinta, '}',
             h, '::-webkit-scrollbar{width:6px;height:6px}',
             h, '::-webkit-scrollbar-track{background:transparent}',
             h, '::-webkit-scrollbar-thumb{background:', t.hilo, ';border-radius:3px}',

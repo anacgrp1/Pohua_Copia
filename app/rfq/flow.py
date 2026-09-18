@@ -377,7 +377,23 @@ def _avisar(tipo, rfq_id, titulo, detalle, datos, nivel):
         return False
 
 
-def notificar_factibilidad_pm(rfq_id, factibilidad):
+def _texto_aviso(cual, cliente):
+    """El título del aviso, tal y como lo dice el machote.
+
+    Está en `app/email/templates.py`, junto a los correos: es el mismo texto
+    dicho por el otro canal —campana y teléfono en vez de correo—, y cuando la
+    empresa cambie el machote no puede quedarse uno de los dos sin cambiar.
+    """
+    try:
+        import app.email.templates as textos
+        return (textos.aviso_revision_factibilidad(cliente) if cual == 'revision'
+                else textos.aviso_validacion(cliente))
+    except Exception:
+        return ('Feasibility review required' if cual == 'revision'
+                else 'Quote validation required')
+
+
+def notificar_factibilidad_pm(rfq_id, factibilidad, cliente=None):
     """
     Avisa que un RFQ no pasó las directrices y lo tiene que dictaminar el PM.
 
@@ -401,8 +417,8 @@ def notificar_factibilidad_pm(rfq_id, factibilidad):
     notificado = _avisar(
         tipo="factibilidad_revision",
         rfq_id=rfq_id,
-        titulo=f"{rfq_id}: la factibilidad necesita tu dictamen",
-        detalle=detalle,
+        titulo=_texto_aviso('revision', cliente or rfq_id),
+        detalle=f"{rfq_id} · {detalle}" if detalle else rfq_id,
         datos={"score": score, "banda": banda, "motivos": motivos,
                "reglas_version": factibilidad.get("reglas_version")},
         nivel=_nivel_de_motivos(motivos),
@@ -689,7 +705,10 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
     registrar_veredicto(rfq_id, factibilidad, resultado["registro"])
 
     if a_revision:
-        notificar_factibilidad_pm(rfq_id, factibilidad)
+        notificar_factibilidad_pm(
+            rfq_id, factibilidad,
+            cliente=datos.get("cliente_id") or datos.get("customer")
+                    or datos.get("dominio"))
         return resultado
 
     log.info("RFQ=%s dado de alta (cliente=%s).",
@@ -712,8 +731,8 @@ def notificar_alta_pm(rfq_id, datos, factibilidad):
     return _avisar(
         tipo="factibilidad_revision",
         rfq_id=rfq_id,
-        titulo=f"{rfq_id}: listo para aprobar y ofertar",
-        detalle=f"PN {pn} · {cliente} · score {factibilidad.get('score')} "
+        titulo=_texto_aviso('validacion', cliente),
+        detalle=f"{rfq_id} · PN {pn} · score {factibilidad.get('score')} "
                 f"({factibilidad.get('banda') or '-'})",
         datos={"score": factibilidad.get("score"), "banda": factibilidad.get("banda"),
                "motivos": factibilidad.get("motivos") or []},

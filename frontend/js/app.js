@@ -243,6 +243,23 @@ const APP = {
         setTimeout(() => Password.pedirCambioInicial(), 300);
     },
 
+    /**
+     * Vacía las pantallas montadas.
+     *
+     * Las vistas no se destruyen al navegar —volver a Cotización encuentra la
+     * calculadora tal y como se dejó, sin recargarla—, así que al salir hay
+     * que vaciarlas a mano: lo que quedara dentro es trabajo de quien acaba de
+     * cerrar la sesión, y la siguiente persona que entre en este navegador no
+     * tiene por qué verlo.
+     */
+    vaciarVistas() {
+        document.querySelectorAll('.page-view').forEach((vista) => {
+            vista.innerHTML = '';
+            vista.classList.remove('active');
+        });
+        this.currentPage = null;
+    },
+
     /** Reacciona a un 401: limpia la sesión y regresa al login. */
     sesionExpirada() {
         const pantalla = document.getElementById('loginScreen');
@@ -251,6 +268,8 @@ const APP = {
         this.detenerSondeo();
         if (typeof Notificaciones !== 'undefined') Notificaciones.limpiar();
         if (typeof Revision !== 'undefined') Revision.cerrar();
+        if (typeof QuotingPage !== 'undefined') QuotingPage.limpiar?.();
+        this.vaciarVistas();
         API.limpiarSesion();
         Toast.warning(I18N.t('aviso.sesionExpirada'));
         this.mostrarLogin(I18N.t('aviso.sesionExpirada'));
@@ -288,6 +307,8 @@ const APP = {
         recoger('las notificaciones', () => Notificaciones?.limpiar?.());
         recoger('la ventana de revisión', () => Revision?.cerrar?.());
         recoger('los avisos del teléfono', () => Push?.limpiar?.());
+        recoger('la cotización', () => QuotingPage?.limpiar?.());
+        recoger('las vistas', () => this.vaciarVistas());
         API.logout();
         // Salida a mano: se vuelve a la portada. La sesión expirada sí va
         // directa al login, porque ahí hay un mensaje que leer.

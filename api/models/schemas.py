@@ -76,6 +76,10 @@ class EstadoHorario(BaseModel):
 class ServiceStatus(BaseModel):
     running: bool = False
     mode: str = "imap"
+    # La carpeta del buzón que se está leyendo (MAIL_FOLDER). Se enseña en el
+    # Monitor: trabajar contra TEST y creer que se está leyendo la bandeja de
+    # ventas —o al revés— es un susto que se evita diciéndolo.
+    folder: str = ""
     last_cycle: Optional[str] = None
     next_cycle: Optional[str] = None
     interval_minutes: int = 5

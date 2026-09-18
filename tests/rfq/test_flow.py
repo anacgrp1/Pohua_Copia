@@ -176,7 +176,10 @@ class TestRespuestaDatosFaltantes(unittest.TestCase):
         self.assertEqual(contenido["destinatario"], "roberto.perez@neogen.com")
         self.assertEqual(contenido["asunto"], "RFQ 4500")
         self.assertIn("Roberto Perez", contenido["cuerpo_texto"])
-        self.assertIn("volumen", contenido["cuerpo_texto"])
+        # Lo que falta se dice como en el machote, no con el nombre del campo:
+        # "volumen" no significa nada para quien recibe el correo.
+        self.assertIn("Volume / EAU", contenido["cuerpo_texto"])
+        self.assertIn("Material Specification", contenido["cuerpo_texto"])
 
     def test_fallo_del_envio_no_propaga(self):
         with mock.patch.object(flow, "_envio_habilitado", return_value=True), \

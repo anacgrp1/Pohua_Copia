@@ -263,6 +263,35 @@ def crear_usuario_temporal(correo: str, nombre: str, rol_codigo: str, *,
 MAX_BYTES_FOTO = 400 * 1024
 
 
+_SELECT_CON_PERMISO = """
+    SELECT DISTINCT u.id, u.correo, u.nombre, COALESCE(r.codigo, '') AS rol
+    FROM usuarios u
+    JOIN roles r         ON r.id = u.rol_id
+    JOIN rol_permisos rp ON rp.rol_id = u.rol_id
+    JOIN permisos p      ON p.id = rp.permiso_id
+    WHERE p.codigo = %s
+      AND u.activo
+      AND COALESCE(u.correo, '') <> ''
+    ORDER BY u.nombre;
+"""
+
+
+def usuarios_con_permiso(permiso: str, conexion=None) -> List[Dict[str, Any]]:
+    """Quiénes pueden hacer algo, con su correo. Sólo los de alta.
+
+    Lo usa el recordatorio de los RFQ que llevan mucho esperando
+    (``app/rfq/recordatorios.py``): a quién se le escribe no es una lista
+    escrita a mano en la configuración, son los usuarios de Pohua que tienen
+    ese permiso. Dar de alta a alguien con rol de PM basta para que empiece a
+    recibirlos; darlo de baja, para que dejen de llegarle.
+    """
+    with _conexion(conexion) as conn:
+        with conn.cursor() as cur:
+            cur.execute(_SELECT_CON_PERMISO, (permiso,))
+            return [{"id": f[0], "correo": f[1], "nombre": f[2], "rol": f[3]}
+                    for f in cur.fetchall()]
+
+
 def listar_usuarios(conexion=None) -> List[Dict[str, Any]]:
     """Todos los usuarios con su rol. Sin el hash de la contraseña.
 

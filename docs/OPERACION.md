@@ -272,7 +272,14 @@ JWT_SECRET=...          (48+ caracteres aleatorios)
 WORKER_SECRET_KEY=...
 ANTHROPIC_API_KEY=...
 IMAP_SERVER / IMAP_USER / IMAP_PASSWORD
+APP_URL=https://isc-by-cgr.onrender.com
+MAIL_FOLDER=TEST        (mientras se prueba; INBOX cuando entre en servicio)
+VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY   (scripts/generar_vapid.py)
 ```
+
+`APP_URL` es dónde vive Pohua de cara al mundo. Se usa en el enlace del correo
+de recordatorio (`RECORDATORIO_HORAS`, sección 7): sin ella ese correo no sale,
+porque el enlace apuntaría a `localhost`.
 
 Deja `CORS_ORIGINS` **vacía**: la PWA se sirve desde el mismo servidor y no
 necesita CORS. Con `APP_ENV=prod` no se admite `*`.

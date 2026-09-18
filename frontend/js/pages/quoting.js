@@ -40,16 +40,37 @@ const QuotingPage = {
     vista: 'precio',
     urlResortes: null,
     resortesListo: false,
+    montado: false,           // ¿los marcos ya están puestos en el contenedor?
     pendiente: null,          // carga que espera a que el marco termine de cargar
     centralitaPuesta: false,
 
     // ---------------------------------------------------------------- pintar
 
     async render(contenedor) {
+        /* Volver a Cotización NO vuelve a montar nada.
+         *
+         * Cada pantalla de Pohua se repinta al entrar, y para las demás está
+         * bien: vuelven a pedir sus datos y se ven al día. Aquí dentro vive
+         * una calculadora entera con una cotización a medio escribir, y
+         * repintar significaba tirar los marcos y cargarla otra vez desde
+         * cero: varios segundos de espera, el borrador recuperándose solo, y
+         * el sitio por donde ibas perdido. Salir a mirar el Monitor y volver
+         * costaba más que hacer el trabajo.
+         *
+         * Los marcos se quedan montados en su contenedor —que sigue en el
+         * documento, sólo escondido— y al volver se enseña la pestaña que
+         * estaba abierta. Nada que recargar. */
+        if (this.montado && contenedor === this.contenedor &&
+            contenedor.querySelector('#quotingMarcos')) {
+            this.cambiar(this.vista);
+            return;
+        }
+
         this.contenedor = contenedor;
         this.vista = 'precio';
         this.resortesListo = false;
         this.pendiente = null;
+        this.montado = false;
 
         contenedor.innerHTML = `
             <div class="quoting">
@@ -82,6 +103,10 @@ const QuotingPage = {
             .addEventListener('load', (ev) => this.vestir(ev.target));
         await this.cargar();
         await this.montar();
+        // Montado de verdad sólo si el marco sobrevivió: cuando no hay
+        // calculadora (o falta el permiso) `montar()` lo quita y deja el
+        // aviso, y eso SÍ conviene volver a intentarlo al entrar de nuevo.
+        this.montado = !!contenedor.querySelector('#quotingMarco');
     },
 
     icono(cual) {
@@ -238,6 +263,15 @@ const QuotingPage = {
             const dePrecio = precio && ev.source === precio.contentWindow;
             const deResortes = resortes && ev.source === resortes.contentWindow;
 
+            // Un aviso de dentro del marco, dicho por Pohua. En el teléfono
+            // el aviso de la calculadora se queda al final del documento —no
+            // se persigue nada por el scroll, que era lo que parpadeaba—, así
+            // que su texto sube aquí y se enseña donde se ven los demás.
+            if ((dePrecio || deResortes) && d.source === 'isc-nube' && d.tipo === 'aviso') {
+                if (d.texto) Toast.info(String(d.texto).slice(0, 300));
+                return;
+            }
+
             // La calculadora de precios pide abrir el apartado de resortes
             // (su botón "Spring Calc", o el aviso de después de leer un plano).
             if (dePrecio && d.source === 'isc-nube') {
@@ -372,7 +406,19 @@ const QuotingPage = {
     },
 
     /** Al cambiar de página no queda nada corriendo, pero sí que repasar temas. */
-    detener() { /* los marcos se van con el contenedor */ },
+    /* El router llama a esto al salir de la pantalla. No se desmonta nada: los
+       marcos se quedan vivos y escondidos para poder volver a ellos tal y como
+       se dejaron. Se sueltan solos cuando se cierra la sesión, que es cuando
+       Pohua vacía las vistas. */
+    detener() { /* los marcos siguen montados a propósito */ },
+
+    /** Al cerrar sesión no puede quedarse la cotización de nadie en memoria. */
+    limpiar() {
+        this.montado = false;
+        this.contenedor = null;
+        this.diagnostico = null;
+        this._puerta = null;
+    },
 
     // ------------------------------------------------------------- utilidades
 

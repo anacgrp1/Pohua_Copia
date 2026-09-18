@@ -182,7 +182,7 @@ class ImapEmailProvider(BaseEmailProvider):
 
             # Obtener lista de IDs
             mail_ids = data[0].split()
-            logger.info(f"Se encontraron {len(mail_ids)} correos no leídos en INBOX.")
+            logger.info(f"Se encontraron {len(mail_ids)} correos no leídos en '{carpeta}'.")
 
             for mail_id in mail_ids:
                 id_str = mail_id.decode("utf-8")

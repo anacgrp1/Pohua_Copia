@@ -172,6 +172,20 @@ def ciclo_deteccion(*, forzar: bool = False) -> ResultadoCiclo:
         except Exception:
             log.debug("Fallo al desconectar el proveedor; se ignora.", exc_info=True)
 
+    # El respaldo por correo de lo que lleva demasiado tiempo esperando
+    # dictamen. Va aquí y no en un hilo aparte porque el ciclo ya corre sólo
+    # en horario de atención: así el recordatorio de un caso que entró el
+    # viernes por la tarde sale el lunes por la mañana, no de madrugada.
+    try:
+        import app.rfq.recordatorios as recordatorios
+        recordado = recordatorios.revisar()
+        if recordado.get("avisados"):
+            resultado.detalles.append(
+                f"Recordatorio de dictamen enviado por {recordado['avisados']} "
+                f"caso(s) ({recordado['correos']} correo/s).")
+    except Exception as error:
+        log.warning("No se pudo revisar lo pendiente de dictamen: %s", error)
+
     log.info("Ciclo terminado: %d no leídos, %d nuevos procesados, %d RFQ, %d con error.",
              resultado.encontrados, resultado.procesados, resultado.rfqs, resultado.errores)
     return resultado

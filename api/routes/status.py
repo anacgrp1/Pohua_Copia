@@ -100,6 +100,7 @@ def get_status(usuario: UsuarioSesion = Depends(usuario_actual)):
         horario=EstadoHorario(**horario.estado()),
         running=estado["running"],
         mode=config.settings.MAIL_MODE,
+        folder=getattr(config.settings, "MAIL_FOLDER", "") or "INBOX",
         last_cycle=estado["last_cycle"],
         next_cycle=estado["next_cycle"],
         interval_minutes=config.settings.INTERVALO_MINUTOS,

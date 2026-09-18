@@ -159,6 +159,14 @@ const MonitorPage = (() => {
             ];
             const rejilla = document.getElementById('monitorCards');
             if (rejilla) StatusCard.render(rejilla, tarjetas);
+
+            // De qué buzón se está leyendo. Va junto al registro, que es donde
+            // se mira cuando algo no entra: "imap · TEST" contesta de un
+            // vistazo la pregunta de por qué no llega el correo de ventas.
+            const donde = document.getElementById('logBuzon');
+            if (donde) {
+                donde.textContent = [estado.mode, estado.folder].filter(Boolean).join(' · ');
+            }
         } catch (err) {
             if (err && err.sesionExpirada) return;
             Toast.error(I18N.t('aviso.estadoFallo', { motivo: err.message }));
@@ -173,6 +181,7 @@ const MonitorPage = (() => {
             <div class="monitor-logs-head">
                 <span class="status-dot running"></span>
                 <span class="monitor-logs-titulo">${esc(I18N.t('monitor.titulo'))}</span>
+                <span class="badge badge-buzon" id="logBuzon"></span>
                 <span class="monitor-logs-meta" id="logTotal"></span>
                 <button type="button" class="btn btn-secondary btn-icon" id="logRefrescar"
                         title="${esc(I18N.t('monitor.refrescar'))}" aria-label="${esc(I18N.t('monitor.refrescar'))}">

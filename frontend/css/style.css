@@ -938,6 +938,18 @@ a:hover { color: var(--cgr-primary); }
 .resumen-fila--critico td:first-child { border-left-color: var(--color-error); }
 .resumen-fila--aviso   td:first-child { border-left-color: var(--color-warning); }
 
+/* Qué buzón se está leyendo, junto al registro del Monitor: "imap · TEST".
+   Discreta a propósito —es un dato, no un aviso— pero siempre a la vista. */
+.badge-buzon {
+    background: var(--bg-elevated);
+    color: var(--text-muted);
+    font-size: 11px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.badge-buzon:empty { display: none; }
+
 .badge-critico {
     background: var(--color-error-bg);
     color: var(--color-error);
