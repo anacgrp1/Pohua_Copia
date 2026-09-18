@@ -64,6 +64,13 @@ class GraphEmailProvider(BaseEmailProvider):
         logger.info("Token de Azure AD obtenido y guardado con éxito.")
         return True
 
+    def disconnect(self) -> None:
+        """Cierra la sesión y desconecta del servidor de correo.
+        En Graph API (REST), la desconexión es simplemente descartar el token.
+        """
+        self.token = None
+        logger.info("Desconectado de Azure AD (token descartado).")
+
     @track_email_errors(default_fallback=[])
     def fetch_unread_messages(self) -> List[EmailMessage]:
         """Busca y recupera correos no leídos vía llamadas REST de Microsoft Graph."""

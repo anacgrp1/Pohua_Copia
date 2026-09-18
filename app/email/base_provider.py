@@ -58,6 +58,12 @@ class BaseEmailProvider(ABC):
         pass
 
     @abstractmethod
+    def disconnect(self) -> None:
+        """Cierra la sesión y desconecta del servidor de correo.
+        """
+        pass
+
+    @abstractmethod
     def fetch_unread_messages(self) -> List[EmailMessage]:
         """Busca y recupera los correos electrónicos no leídos de la bandeja de entrada.
 
