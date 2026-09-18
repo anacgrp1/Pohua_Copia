@@ -192,7 +192,16 @@ window.ISCTema = (function () {
 
         document.documentElement.setAttribute(MARCA, '');
 
+        /* Dentro de un marco o por su cuenta: no es lo mismo.
+           Suelta, la calculadora de resortes ocupa UNA pantalla y se desplaza
+           por dentro, que es como está escrita y como debe seguir viéndose si
+           alguien abre su HTML. Dentro de Pohua vive en un marco tan alto como
+           su contenido, y ahí esa maqueta se muerde la cola. Las reglas que la
+           hacen fluir cuelgan de esta clase para no tocarla cuando va sola. */
+        if (window !== window.parent) document.documentElement.classList.add('nube-marco');
+
         var h = 'html[' + MARCA + '] ';
+        var m = 'html.nube-marco[' + MARCA + '] ';
         var css = document.getElementById('nube-tema');
         if (!css) {
             css = document.createElement('style');
@@ -361,6 +370,35 @@ window.ISCTema = (function () {
             h, '.nube-herramientas .topbtn:hover{border-color:var(--cyan);color:', t.tinta, '}',
             h, '.nube-herramientas #viewtabs button.on{background:var(--navy);color:#fff;',
             '  border-color:var(--navy)}',
+            /* --- La hoja del Spring Calculator, dentro de Pohua ---------
+               La calculadora de resortes está escrita para ocupar UNA pantalla:
+               `html,body{height:100%;overflow:hidden}` y
+               `.sheet{height:calc(100vh - 60px)}`, con cada panel desplazándose
+               por dentro. Eso funciona cuando su ventana es la pantalla.
+
+               Aquí su ventana es el marco, y el marco mide lo que mide su
+               contenido (js/isc-nube.js): el alto de la hoja depende del alto
+               del marco y el del marco del de la hoja. Esa pescadilla se
+               quedaba en la primera medida —unos 350 px—, y lo que se veía era
+               la ficha cortada por la mitad, con su propia barra de desplazar
+               dentro y media pantalla de vacío debajo. En la compu igual que en
+               el teléfono.
+
+               Dentro de Pohua la hoja FLUYE: se estira hasta lo que ocupe y la
+               única barra de desplazar vuelve a ser la de la página. Las dos
+               columnas siguen una al lado de la otra en una pantalla ancha;
+               abajo, en el teléfono, se ponen una debajo de otra. */
+            m, '{height:auto;min-height:0;overflow:visible}',
+            m, 'body{height:auto;min-height:0;overflow:visible}',
+            m, '#appwrap{flex:0 0 auto;min-height:0;overflow:visible}',
+            m, '.sheet{height:auto;min-height:0;overflow:visible}',
+            m, '.ds-left,', m, '.ds-right{min-height:0;overflow:visible}',
+            m, '.ds-tblwrap,', m, '.ds-panel,', m, '.ds-panel-b{',
+            '  flex:0 0 auto;min-height:0;overflow:visible}',
+            /* La cabecera pegajosa de la tabla se pegaba al borde de un marco
+               que ya no se desplaza: se quedaba flotando sobre las filas. */
+            m, 'table.dst th{position:static}',
+
             /* --- El teléfono -------------------------------------------
                La calculadora está escrita para una pantalla ancha y no trae
                una sola regla responsiva: `.g6` son seis columnas siempre, y a
@@ -402,15 +440,23 @@ window.ISCTema = (function () {
                estaba escribiendo. Ahora el aviso es UNA línea arriba, con
                puntos suspensivos (se lee entero al tocar Approve, que es cuando
                importa), y los cuatro botones van en una fila. */
-            h, '#botbar{flex-wrap:wrap;row-gap:6px;column-gap:6px;padding:6px 8px}',
+            /* Dos filas y ni una más: el aviso y el número arriba, los cuatro
+               botones abajo repartiéndose el ancho a partes iguales. Con
+               `flex:1 1 auto` cada botón pedía lo que mide su texto —"Preview
+               PDF" mide el doble que "Save"— y a 390 px se iban a una tercera
+               fila. Con `flex:1 1 0` todos valen lo mismo y caben los cuatro. */
+            h, '#botbar{flex-wrap:wrap;row-gap:5px;column-gap:5px;padding:5px 7px}',
             h, '#botbar .sp{display:none}',
-            h, '#botbar .small{flex:1 0 100%;order:-1;font-size:.68rem;',
-            '  line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
-            '  margin:0;opacity:.9}',
-            h, '#botbar .bbtn{flex:1 1 auto;min-width:0;padding:8px 6px;font-size:.78rem;',
+            h, '#botbar .small{flex:1 1 auto;order:-1;font-size:.66rem;',
+            '  line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+            '  margin:0;opacity:.9;min-width:0}',
+            h, '#botbar .bbtn{flex:1 1 0;min-width:0;padding:7px 3px;font-size:.72rem;',
             '  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-            h, '#botbar .qnum{font-size:.78rem;max-width:34vw;overflow:hidden;',
+            /* El número de cotización y el estado suben a la línea del aviso:
+               abajo mandan los botones. */
+            h, '#botbar .qnum{order:-2;font-size:.72rem;max-width:34vw;overflow:hidden;',
             '  text-overflow:ellipsis;white-space:nowrap}',
+            h, '#botbar .badge{order:-2;font-size:.6rem;padding:2px 6px}',
 
             /* Nada se sale por la derecha. Las filas (.hrow) y las rejillas
                son `display:grid`, y un hijo de rejilla nace con
@@ -429,8 +475,13 @@ window.ISCTema = (function () {
                ellos —se escribía a ciegas debajo de los botones—. Se le
                reserva ese hueco al final del contenido, que es lo que hace un
                teclado en pantalla y nadie discute. */
-            h, 'main{padding:10px 10px 132px}',
-            h, '#appwrap{padding-bottom:132px}',
+            /* El hueco que se reserva al final NO es un número fijo: lo mide
+               la propia barra y lo publica `js/isc-nube.js` en
+               `--nube-barra`. Con 132 px a pelo, el día que la barra midiera
+               dos filas en vez de tres sobraba un dedo de aire, y el día que
+               midiera cuatro volvía a tapar el último campo. */
+            h, 'main{padding:10px 10px calc(var(--nube-barra,120px) + 12px)}',
+            h, '#appwrap{padding-bottom:calc(var(--nube-barra,120px) + 12px)}',
 
             /* --- Y la hoja del Spring Calculator ---------------------
                La calculadora de resortes es una HOJA: dos columnas fijas y
@@ -448,7 +499,11 @@ window.ISCTema = (function () {
             h, '.fcell{min-width:0}',
             /* La tabla de parámetros mide más que un teléfono: se desplaza
                dentro de su caja, no arrastrando la pantalla entera. */
-            h, '.ds-tblwrap{overflow:auto;max-width:100%}',
+            /* Las dos, `h` y `m`: la regla de arriba que hace fluir la hoja
+               dentro del marco es más específica que `h` a secas, y sin este
+               `m` la tabla ancha volvía a empujar el documento 9 px a la
+               derecha en el teléfono. */
+            h, '.ds-tblwrap,', m, '.ds-tblwrap{overflow:auto;max-width:100%}',
             h, '.ds-left{border-right:0;border-bottom:1px solid var(--line-strong)}',
             h, '.ds-rtop,', h, '.ds-kgrid,', h, '.row2,',
             h, '.sum-grid{grid-template-columns:1fr}',

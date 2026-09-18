@@ -597,6 +597,7 @@
      * colgada de `html:not(.nube-ventana)`.
      */
     var HUECO_AVISO = 12;
+    var ultimoAlto = 0;      // el alto de la barra que ya está publicado
 
     function estiloAnclaje() {
         if (document.getElementById('nube-anclaje')) return;
@@ -625,6 +626,15 @@
 
         if (bot) {
             var h = bot.offsetHeight || 0;
+            /* Cuánto mide la barra, para que el contenido se reserve ese hueco
+               al final y no escriba a ciegas debajo de los botones. Se publica
+               en una variable de CSS y la usa `js/isc-tema.js`: el número lo
+               dice la barra, que es la que sabe cuántas filas le han salido
+               hoy en esta pantalla. */
+            if (h && h !== ultimoAlto) {
+                ultimoAlto = h;
+                document.documentElement.style.setProperty('--nube-barra', h + 'px');
+            }
             /* Pegada al borde de abajo de la ventana mientras el marco lo
                cruce, y quieta dentro del marco cuando no: ni se sale por
                arriba al llegar al final de la página ni por abajo al empezar. */
@@ -819,15 +829,36 @@
 
     // ------------------------------------------------------------- arranque
 
-    esperarCalculadora(function () {
+    /* Medir el marco NO depende de la calculadora de precios.
+     *
+     * `esperarCalculadora` espera a que existan `SFS` y `shared`, que son
+     * globales SUYAS. La hoja de resortes es otro documento —otra pestaña de
+     * Pohua, otro marco— y ahí esos dos nunca aparecen: por eso su marco se
+     * quedaba en el mínimo del CSS, 320 px, con la ficha cortada dentro y
+     * media pantalla vacía debajo. Era el mismo fallo en la compu y en el
+     * teléfono, y la causa no era el teléfono.
+     *
+     * Así que lo que vale para cualquier documento dentro de un marco —medirlo
+     * y anclar lo que esté fijo— arranca ya. Lo que es de la calculadora de
+     * precios sigue esperándola. */
+    function arrancarMarco() {
         estilos();
+        vigilarAlto();
+        vigilarAnclaje();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', arrancarMarco, { once: true });
+    } else {
+        arrancarMarco();
+    }
+
+    esperarCalculadora(function () {
         fusionarBarras();
         desanidarResorte();
         fechaDeHoy();
         explicarRecortes();
-        vigilarAnclaje();
         vigilarTablas();
-        vigilarAlto();
         /* Si la calculadora no se regeneró, el tema no puede pintarla y se
            queda en claro dentro de Pohua oscuro. Se dice en voz alta: la vez
            que pasó, lo que se vio fue una tabla ilegible y no había forma de

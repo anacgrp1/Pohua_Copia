@@ -208,6 +208,41 @@ La calculadora del núcleo no se tocó para esto: `js/isc-nube.js` intercepta su
 apertura anidada y la convierte en un mensaje a Pohua, así que
 `scripts/vendorizar_nucleo.py` se puede volver a pasar sin perder nada.
 
+### El alto de los marcos: una sola barra de desplazar
+
+Los dos marcos miden lo que mide su contenido y quien se desplaza es la página
+de Pohua. Eso hay que sostenerlo en tres sitios, y los tres estaban flojos:
+
+1. **El marco mide lo suyo** (`js/isc-nube.js`). Antes esa medida sólo
+   arrancaba después de esperar a `SFS` y `shared`, que son globales de la
+   calculadora de PRECIOS: en la hoja de resortes no existen, así que su marco
+   se quedaba en el mínimo del CSS —320 px— con la ficha cortada dentro y media
+   pantalla vacía debajo. En la compu igual que en el teléfono. Ahora medir el
+   marco arranca solo, en cualquier documento; lo que es de la calculadora de
+   precios sigue esperándola.
+
+2. **La hoja fluye** (`js/isc-tema.js`). La calculadora de resortes está
+   escrita para ocupar una pantalla: `html,body{height:100%}` y
+   `.sheet{height:calc(100vh - 60px)}`. Dentro de un marco que mide lo que su
+   contenido, el alto de la hoja depende del marco y el del marco de la hoja.
+   Dentro de Pohua —clase `nube-marco`— la hoja se estira hasta lo que ocupe y
+   ningún panel se desplaza por dentro. Suelta, su HTML se sigue viendo como se
+   escribió.
+
+3. **Lo que flota se coloca contra la ventana de verdad.** Dentro de un marco
+   de seis mil píxeles, `position:fixed` no es "la pantalla" y `60vh` no son
+   dos tercios de pantalla. La barra de acciones se ancla con un `transform`
+   (`js/isc-nube.js`) y publica su alto en `--nube-barra`, que es el hueco que
+   el contenido se reserva al final; los desplegables y el calendario
+   (`js/isc-selects.js`) miden el hueco real —`window.parent.innerHeight` y
+   dónde empieza el marco— para abrirse hacia arriba o hacia abajo, con tope en
+   píxeles.
+
+En el teléfono, además: la barra de acciones cabe en dos filas (el aviso y el
+número arriba, los cuatro botones abajo), el buscador de los desplegables no se
+enfoca solo —enfocarlo abre el teclado justo encima de la lista— y la hoja de
+resortes se lee en vertical.
+
 ## 9. Los recortes del plano
 
 "Ver en el plano" abre el recuadro que el lector recortó del PDF. El lector los
