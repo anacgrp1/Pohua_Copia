@@ -100,10 +100,20 @@ async function guardar(peticion, respuesta) {
     await cache.put(peticion, respuesta.clone());
 }
 
-/** La red primero; la caché es el plan B cuando no hay conexión. */
-async function redPrimero(peticion, alternativa) {
+/** La red primero; la caché es el plan B cuando no hay conexión.
+ *
+ * `fresco` salta además la caché HTTP del navegador (`cache: 'reload'`), que
+ * es OTRA caché distinta de la nuestra y estaba dando el peor fallo posible:
+ * media aplicación nueva y media vieja. El HTML y app.js llegaban del
+ * despliegue recién hecho mientras un componente seguía viniendo de la caché
+ * del navegador, y un método que la versión vieja no tenía cortaba en seco lo
+ * que estuviera haciendo —cerrar sesión, sin ir más lejos—.
+ *
+ * Sólo para el código: las imágenes y las fuentes no se desincronizan.
+ */
+async function redPrimero(peticion, alternativa, fresco) {
     try {
-        const respuesta = await fetch(peticion);
+        const respuesta = await fetch(fresco ? new Request(peticion, { cache: 'reload' }) : peticion);
         guardar(peticion, respuesta);   // sin await: no hace esperar a la página
         return respuesta;
     } catch (err) {
@@ -147,14 +157,14 @@ self.addEventListener('fetch', (evento) => {
     // Navegación: SIEMPRE la red primero. El HTML nombra al resto de ficheros,
     // así que servirlo viejo desincroniza la aplicación entera.
     if (peticion.mode === 'navigate') {
-        evento.respondWith(redPrimero(peticion, '/'));
+        evento.respondWith(redPrimero(peticion, '/', true));
         return;
     }
 
     // Código: la red primero, por la misma razón: HTML y scripts tienen que
     // venir del mismo despliegue.
     if (/\.(?:js|css)$/.test(url.pathname)) {
-        evento.respondWith(redPrimero(peticion));
+        evento.respondWith(redPrimero(peticion, null, true));
         return;
     }
 

@@ -46,12 +46,37 @@ const APP = {
                 }
             } else {
                 try {
+                    // Una recarga sola cuando entra un despliegue nuevo.
+                    //
+                    // El service worker se instala y toma el mando enseguida
+                    // (skipWaiting + clients.claim en sw.js), pero la pestaña
+                    // que ya estaba abierta sigue ejecutando el JavaScript que
+                    // cargó al principio. Ahí es donde aparecía el peor fallo:
+                    // media aplicación del despliegue nuevo y media del viejo,
+                    // y un método que la mitad vieja no tenía cortando en seco
+                    // lo que estuvieras haciendo.
+                    //
+                    // `controllerchange` avisa justo cuando el nuevo toma el
+                    // mando. Se recarga UNA vez —el pestillo evita el bucle— y
+                    // la pestaña queda entera en la versión nueva sin que nadie
+                    // tenga que vaciar cachés a mano.
+                    let recargando = false;
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        if (recargando) return;
+                        recargando = true;
+                        console.log('Despliegue nuevo: recargando la aplicación.');
+                        location.reload();
+                    });
+
                     const registro = await navigator.serviceWorker.register('/sw.js');
                     // Comprobación explícita de actualización: el navegador ya
                     // la hace al navegar, pero esta aplicación se queda abierta
                     // horas en la misma pestaña. Sin esto, quien no recarga se
                     // queda con el service worker del despliegue anterior.
                     registro.update().catch(() => {});
+                    // Y cada media hora, por si la pestaña se queda abierta
+                    // toda la jornada: es lo que pasa en la planta.
+                    setInterval(() => registro.update().catch(() => {}), 30 * 60 * 1000);
                     console.log('Service Worker registrado');
                 } catch (err) {
                     console.error('Falló el registro del Service Worker:', err);
@@ -212,7 +237,8 @@ const APP = {
      */
     exigirPasswordPropia() {
         const yo = API.getUsuario();
-        if (!yo || !yo.debe_cambiar_password || typeof Password === 'undefined') return;
+        if (!yo || !yo.debe_cambiar_password) return;
+        if (typeof Password === 'undefined' || !Password.pedirCambioInicial) return;
         setTimeout(() => Password.pedirCambioInicial(), 300);
     },
 
@@ -238,14 +264,29 @@ const APP = {
         if (!salir) return;
 
         this.detenerSondeo();
+
+        // Cada recogida por separado y tolerando fallos.
+        //
+        // Antes iban en fila: si una fallaba, las de después no corrían y
+        // —lo grave— `API.logout()` tampoco, así que pulsar "Cerrar sesión"
+        // dejaba la sesión abierta y la pantalla a medias. Y fallar es fácil:
+        // basta con que el navegador sirva de su caché un componente de la
+        // versión anterior mientras el resto ya es nuevo; ahí un método que
+        // todavía no existe tiraba todo el cierre.
+        //
+        // Salir tiene que salir siempre. Lo que no se pueda recoger se anota
+        // en la consola y se sigue.
+        const recoger = (nombre, fn) => {
+            try { fn(); } catch (err) { console.warn('Al cerrar sesión, ' + nombre + ':', err.message); }
+        };
         const actual = this.pages[this.currentPage];
-        if (actual && typeof actual.detener === 'function') actual.detener();
-        Assistant.limpiar();
-        PerfilMenu.limpiar();
-        if (typeof Password !== 'undefined') Password.quitarAviso();
-        Notificaciones.limpiar();
-        Revision.cerrar();
-        if (typeof Push !== 'undefined') Push.limpiar();
+        recoger('la página', () => { if (actual && typeof actual.detener === 'function') actual.detener(); });
+        recoger('el asistente', () => Assistant?.limpiar?.());
+        recoger('el menú de perfil', () => PerfilMenu?.limpiar?.());
+        recoger('el aviso de contraseña', () => Password?.quitarAviso?.());
+        recoger('las notificaciones', () => Notificaciones?.limpiar?.());
+        recoger('la ventana de revisión', () => Revision?.cerrar?.());
+        recoger('los avisos del teléfono', () => Push?.limpiar?.());
         API.logout();
         // Salida a mano: se vuelve a la portada. La sesión expirada sí va
         // directa al login, porque ahí hay un mensaje que leer.
