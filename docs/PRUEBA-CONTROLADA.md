@@ -222,7 +222,53 @@ Cuando quieras verlo salir de verdad, en otra pasada: `ENVIO_AUTOMATICO=true`,
 
 ---
 
-## Paso 8 · Cerrar la prueba
+## Paso 8 · La vuelta con envío: el flujo entero
+
+Hasta aquí nada ha salido del edificio. Esta vuelta es para ver el recorrido
+completo —los cuatro correos del machote incluidos— con el cliente haciendo de
+cliente. Como el RFQ de prueba viene de tu propia dirección, todo lo que salga
+te llega a ti.
+
+**Antes de encender nada**, mira la carpeta TEST y asegúrate de que el único
+correo **sin leer** es el tuyo. Con el envío encendido, cualquier otro que
+quede ahí sin leer y parezca un RFQ recibirá respuesta de verdad, y si lo mandó
+una compañera, le llegará a ella.
+
+Entonces, en tu `.env`, `ENVIO_AUTOMATICO=true`, y vuelve a abrir la
+aplicación. Al mandar el primer correo, Outlook enseñará **otro** aviso de
+seguridad, distinto del de antes: *"A program is trying to send an e-mail on
+your behalf"*. Marca también ahí la casilla de los 10 minutos.
+
+**1. Faltan datos.** Manda un correo de prueba **sin el material** (asunto con
+"quote", el plano adjunto, la parte y los volúmenes), déjalo sin leer en TEST y
+pulsa **Leer ahora**. El RFQ se queda en *Esperando al cliente* y a tu buzón
+llega la petición de datos faltantes, firmada por Industrial Spring
+Corporation, con la lista de lo que falta.
+
+**2. El cliente contesta.** Responde a ese correo desde la misma cuenta,
+diciendo el material ("Material: music wire ASTM A228"), muévelo a TEST sin
+leer y vuelve a leer. El validador de hilos lo reconoce como respuesta del
+mismo RFQ —por el `In-Reply-To`, no por el asunto—, completa los datos, lee el
+plano y evalúa la factibilidad.
+
+**3. El dictamen.** Según lo que salga, el RFQ cae en *Necesita revisión* —la
+extracción tuvo poca confianza y la mira una persona— o en *Esperando
+dictamen*. En este segundo caso llega el aviso a la campana y, si el caso se
+queda parado más de `RECORDATORIO_HORAS`, el recordatorio interno por correo.
+En Pohua, abre el RFQ y pulsa **Aprobar factibilidad**: pasa a cotización.
+
+**4. El precio.** En **Cotización** se abre la calculadora con los datos del
+resorte. Cotiza y aprueba el precio: eso es lo que arma la oferta.
+
+**5. La oferta.** En la pantalla de **Oferta** revisa plazo de entrega,
+validez y condiciones de pago, mira el PDF con **Ver PDF**, y pulsa **Enviar
+oferta**. El correo sale desde el buzón de ventas con el PDF adjunto, te llega
+a ti, y el contador de arriba pasa a **Oferta enviada**.
+
+Al terminar, `ENVIO_AUTOMATICO=false` otra vez, que es como debe quedarse
+mientras se sigue probando.
+
+## Paso 9 · Cerrar la prueba
 
 * Devuelve a su sitio lo que hayas tocado para probar
   (`RECORDATORIO_HORAS`, `ENVIO_AUTOMATICO`).

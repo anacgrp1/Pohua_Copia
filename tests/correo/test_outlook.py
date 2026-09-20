@@ -112,6 +112,37 @@ class _CorreoRoto:
         raise RuntimeError("COM")
 
 
+class _CorreoBloqueado:
+    """Un correo al que el guardián de Outlook le tapa TODAS las direcciones.
+
+    Es lo que se ve cuando salta el aviso "A program is trying to access
+    e-mail address information" y nadie lo acepta: el correo está ahí y se le
+    lee el asunto, pero ninguna de las tres vías da la dirección. No hereda de
+    `_Correo` porque su constructor ASIGNA esas tres cosas, y aquí justamente
+    no se pueden ni tocar.
+    """
+    Class = 43
+    UnRead = True
+    EntryID = "TAPADO"
+    Subject = "Spring Quote - Fake Customer"
+    Body = "Good afternoon"
+    HTMLBody = "<p>Good afternoon</p>"
+
+    def __init__(self):
+        import datetime
+        self.ReceivedTime = datetime.datetime(2026, 9, 11, 19, 50,
+                                              tzinfo=datetime.timezone.utc)
+        self.Attachments = _Coleccion([])
+        self.PropertyAccessor = _Propiedades({})
+
+    def _corta(self):
+        raise RuntimeError("El guardián de Outlook denegó el acceso")
+
+    SenderEmailType = property(_corta)
+    Sender = property(_corta)
+    SenderEmailAddress = property(_corta)
+
+
 class _Cita:
     """Una cita de calendario: está en la carpeta, pero no es un correo."""
     Class = 26
@@ -228,6 +259,19 @@ class TestLeer(_Base):
         proveedor = self._proveedor([_CorreoRoto(), _Correo(entry="BUENO")])
         proveedor.connect()
         self.assertEqual([m.id for m in proveedor.fetch_unread_messages()], ["BUENO"])
+
+    def test_si_outlook_tapa_la_direccion_el_correo_no_se_procesa(self):
+        """Sin remitente no hay ni cliente ni a quién contestar.
+
+        Así que ese correo no sale del lote a medias: se queda fuera y, como
+        nadie lo marca como leído, vuelve a intentarse en el siguiente ciclo.
+        Lo que no puede hacer es frenar a los demás.
+        """
+        proveedor = self._proveedor([_CorreoBloqueado(),
+                                     _Correo(entry="BUENO")])
+        proveedor.connect()
+        mensajes = proveedor.fetch_unread_messages()
+        self.assertEqual([m.id for m in mensajes], ["BUENO"])
 
     def test_sin_remitente_de_exchange_se_usa_la_direccion(self):
         correo = _Correo(tipo="SMTP", direccion="comprador@neogen.com")

@@ -54,6 +54,25 @@ PR_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x39FE001E"
 CLASE_CORREO = 43          # olMail: lo demás (citas, avisos) no se procesa
 MAX_BYTES_ADJUNTO = 25 * 1024 * 1024
 
+AVISO_GUARDIAN = (
+    "Outlook no dejó leer la dirección del remitente (el aviso de seguridad "
+    "\"A program is trying to access e-mail address information\"). Marca en "
+    "ese aviso la casilla \"Allow access for\" con 10 minutos antes de "
+    "aceptar, o pide a sistemas que apruebe el acceso programático. Los "
+    "correos se quedan SIN LEER: se vuelven a intentar solos."
+)
+
+
+class AccesoBloqueado(RuntimeError):
+    """El guardián de Outlook cortó el acceso a la dirección del remitente.
+
+    Es una excepción propia y no un remitente vacío a propósito. Sin la
+    dirección no se puede ni reconocer al cliente ni contestarle, así que el
+    correo no se procesa a medias: se deja sin leer y se reintenta cuando el
+    permiso esté dado. Antes esto se veía como "0 correos", que es la peor
+    manera de contar un permiso denegado.
+    """
+
 
 class OutlookEmailProvider(BaseEmailProvider):
     """Lee (y manda) por el Outlook de escritorio, sin credenciales propias."""
@@ -217,15 +236,24 @@ class OutlookEmailProvider(BaseEmailProvider):
         except Exception:
             total = 0
 
+        bloqueados = 0
         for i in range(total):
             try:
                 item = sin_leer.Item(i + 1)
                 if getattr(item, "Class", CLASE_CORREO) != CLASE_CORREO:
                     continue
                 correos.append(self._a_mensaje(item))
+            except AccesoBloqueado:
+                # El permiso se pide una vez y se explica una vez: un correo
+                # por línea sería el mismo aviso repetido veinte veces.
+                bloqueados += 1
             except Exception as error:
                 # Un correo que no se deja leer no puede parar a los demás.
                 logger.exception("No se pudo leer un correo de la carpeta: %s", error)
+
+        if bloqueados:
+            logger.error("%d correo(s) no se pudieron leer. %s",
+                         bloqueados, AVISO_GUARDIAN)
 
         logger.info("Se encontraron %d correo(s) sin leer.", len(correos))
         return correos
@@ -243,20 +271,35 @@ class OutlookEmailProvider(BaseEmailProvider):
         interna (`/O=EXCHANGELABS/OU=…`), que no sirve ni para responder ni
         para reconocer al cliente. La de verdad está en el usuario de Exchange.
         """
+        tipo = ""
         try:
-            if (item.SenderEmailType or "").upper() == "EX":
-                try:
-                    usuario = item.Sender.GetExchangeUser()
-                    if usuario and usuario.PrimarySmtpAddress:
-                        return str(usuario.PrimarySmtpAddress)
-                except Exception:
-                    pass
-                smtp = self._propiedad(item, PR_SMTP_ADDRESS)
-                if smtp:
-                    return smtp
-            return str(item.SenderEmailAddress or "")
-        except Exception:
-            return ""
+            tipo = (item.SenderEmailType or "").upper()
+        except Exception as error:
+            logger.debug("No se pudo leer SenderEmailType: %s", error)
+
+        if tipo == "EX":
+            try:
+                usuario = item.Sender.GetExchangeUser()
+                if usuario and usuario.PrimarySmtpAddress:
+                    return str(usuario.PrimarySmtpAddress)
+            except Exception as error:
+                logger.debug("GetExchangeUser no contestó: %s", error)
+            smtp = self._propiedad(item, PR_SMTP_ADDRESS)
+            if smtp:
+                return smtp
+
+        try:
+            directa = str(item.SenderEmailAddress or "")
+        except Exception as error:
+            logger.debug("SenderEmailAddress no contestó: %s", error)
+            directa = ""
+        if directa:
+            return directa
+
+        # Ninguno de los tres caminos dio nada. En una organización de
+        # Exchange eso no pasa por un correo raro: pasa porque el guardián de
+        # Outlook los está cortando todos.
+        raise AccesoBloqueado(AVISO_GUARDIAN)
 
     def _fecha(self, item) -> str:
         try:
