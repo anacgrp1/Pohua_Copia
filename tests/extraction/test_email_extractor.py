@@ -28,7 +28,7 @@ class FakeRespuesta:
 class FakeMessages:
     def __init__(self, texto):
         self._texto = texto
-        self.kwargs = None
+        self.kwargs: dict | None = None
 
     def create(self, **kwargs):
         self.kwargs = kwargs
@@ -63,6 +63,7 @@ class TestAnalizarCuerpo(unittest.TestCase):
             "Necesito cotizar 5000 piezas", asunto="RFQ 4471", cliente=cliente)
 
         enviado = cliente.messages.kwargs
+        assert enviado is not None
         self.assertIs(enviado["system"], email_extractor.PROMPT_COMERCIAL)
         contenido = enviado["messages"][0]["content"]
         self.assertIn("RFQ 4471", contenido)

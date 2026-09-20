@@ -685,7 +685,7 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
     resultado = {
         "rfq_id": rfq_id,
         "clasificacion": clasificacion,
-        "etapa": None,
+        "etapa": "",
         "es_valido": False,
         "campos_faltantes": [],
         "cliente_id": None,

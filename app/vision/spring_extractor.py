@@ -323,7 +323,7 @@ def normalizar(datos_crudos):
 ENCABEZADO_MATRIZ = ["Variable", "Descripción", "Valor", "Unidad", "Obligatoria cotizar"]
 
 
-def _construir_matriz(datos, incluir_encabezado=True):
+def _construir_matriz(datos, incluir_encabezado=True) -> list[list]:
     """Construye la matriz (lista de filas) a partir del dict de datos."""
     filas = [list(ENCABEZADO_MATRIZ)] if incluir_encabezado else []
     for campo in ORDEN_MATRIZ:
