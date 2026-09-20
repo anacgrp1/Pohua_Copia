@@ -34,7 +34,7 @@
 // para lo que está el service worker.
 // ============================================================================
 
-const VERSION = 'v103';
+const VERSION = 'v105';
 const CACHE = `cgr-quoter-${VERSION}`;
 
 // Lo mínimo para que la aplicación abra sin conexión. No hace falta listarlo
@@ -201,6 +201,17 @@ self.addEventListener('push', (evento) => {
         renotify: true,
         // Un RFQ que espera dictamen no se descarta solo al rato.
         requireInteraction: datos.nivel === 'crit' || datos.nivel === 'warn',
+        // Que suene y que vibre.
+        //
+        // Con Pohua abierta el tono lo pone js/sonido.js, que es nuestro. Aquí
+        // no se puede: la Notifications API nunca llegó a tener `sound`, así
+        // que un aviso del sistema suena con el sonido del sistema o no suena.
+        // Lo único que se decide desde aquí es eso —`silent: false`— y el
+        // patrón de vibración, que en el teléfono es lo que de verdad se nota.
+        // Si en Windows no se oye nada, el interruptor está en Configuración →
+        // Sistema → Notificaciones, en la fila del navegador.
+        silent: false,
+        vibrate: datos.nivel === 'crit' ? [90, 60, 90, 60, 160] : [70, 50, 110],
         data: { url: datos.url || '/', rfq_id: datos.rfq_id || null },
         actions: datos.rfq_id ? [{ action: 'abrir', title: 'Revisar' }] : [],
     };

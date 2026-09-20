@@ -30,6 +30,11 @@ const Assistant = (() => {
         resumen:  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>',
         atencion: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
         exportar: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+        errores:  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+        estado:   '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+        registro: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+        recorrido:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
+        clientes: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
         enviar:   '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
         chispa:   '<svg class="icono-sol" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><use href="#pohua-sol"/></svg>',
         cerrar:   '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
@@ -146,6 +151,146 @@ const Assistant = (() => {
         }
     }
 
+    // --------------------------------------------------- acciones de Monitor
+
+    /** Sólo lo que falló: ERROR y WARNING de las últimas líneas del registro. */
+    async function verErrores() {
+        ocupado(I18N.t('asis.tituloErrores'));
+        try {
+            const d = await API.getLogs(400);
+            const malas = (d.lineas || []).filter(
+                l => l.nivel === 'ERROR' || l.nivel === 'CRITICAL' || l.nivel === 'WARNING');
+            if (!malas.length) {
+                mostrar(cabecera(I18N.t('asis.tituloErrores'),
+                                 I18N.t('asis.deLineas', { n: d.total || 0 }))
+                    + `<p class="assistant-vacio">${esc(I18N.t('asis.sinErrores'))}</p>`);
+                return;
+            }
+            // De abajo arriba: lo último que falló es lo que se viene a ver.
+            const filas = malas.reverse().map(l => `
+                <li class="assistant-log assistant-log--${esc((l.nivel || '').toLowerCase())}">
+                    <span class="assistant-log-marca">${esc(l.marca || '')}</span>
+                    <span class="assistant-log-nivel">${esc(l.nivel)}</span>
+                    <span class="assistant-log-origen">${esc(l.origen || '')}</span>
+                    <span class="assistant-log-mensaje">${esc(l.mensaje)}</span>
+                </li>`).join('');
+            mostrar(cabecera(I18N.t('asis.tituloErrores'),
+                             I18N.t('asis.deLineas', { n: d.total || 0 }))
+                + `<ul class="assistant-logs">${filas}</ul>`);
+        } catch (err) { fallo(err, I18N.t('asis.tituloErrores')); }
+    }
+
+    /** El servicio de un vistazo: si corre, qué lee y cuándo vuelve. */
+    async function verEstado() {
+        ocupado(I18N.t('asis.tituloEstado'));
+        try {
+            const e = await API.getStatus();
+            const h = e.horario;
+            const r = (typeof Horario !== 'undefined' && h) ? Horario.resumen(h)
+                                                            : { enEspera: false, detalle: '' };
+            const reloj = (iso) => {
+                if (!iso) return '—';
+                const d = new Date(iso);
+                return isNaN(d) ? String(iso)
+                    : d.toLocaleString(I18N.locale ? I18N.locale() : undefined,
+                                       { hour: '2-digit', minute: '2-digit',
+                                         day: 'numeric', month: 'short' });
+            };
+            const marcha = !e.running ? I18N.t('asis.est.parado')
+                         : (r.enEspera ? I18N.t('asis.est.espera') : I18N.t('asis.est.enMarcha'));
+            const filas = [
+                [I18N.t('asis.est.servicio'), marcha],
+                [I18N.t('asis.est.buzon'), `${(e.mode || '').toUpperCase()}${e.folder ? ' · ' + e.folder : ''}`],
+                [I18N.t('asis.est.intervalo'), I18N.t('asis.est.minutos', { n: e.interval_minutes })],
+                [I18N.t('asis.est.ultimo'), reloj(e.last_cycle)],
+                [I18N.t('asis.est.siguiente'), reloj(e.next_cycle)],
+                [I18N.t('asis.est.procesados'), e.total_processed],
+                [I18N.t('asis.est.rfqs'), e.total_rfqs],
+                [I18N.t('asis.est.errores'), e.total_errors],
+            ];
+            mostrar(cabecera(I18N.t('asis.tituloEstado'), r.detalle || '')
+                + `<ul class="assistant-lista">${filas.map(
+                    ([k, v]) => `<li><span>${esc(k)}</span><b>${esc(v)}</b></li>`).join('')}</ul>`);
+        } catch (err) { fallo(err, I18N.t('asis.tituloEstado')); }
+    }
+
+    /**
+     * El registro como fichero de texto, sin pasar por el servidor.
+     *
+     * Ya está descargado para pintarlo: volver a pedirlo en otro formato sería
+     * una ruta nueva en la API para algo que el navegador sabe hacer solo.
+     */
+    async function descargarRegistro() {
+        try {
+            const d = await API.getLogs(1000);
+            const texto = (d.lineas || []).map(
+                l => `${l.marca || ''}  ${(l.nivel || '').padEnd(8)}  ${l.origen || ''}  ${l.mensaje}`
+            ).join('\n');
+            const fecha = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+            const url = URL.createObjectURL(new Blob([texto], { type: 'text/plain;charset=utf-8' }));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pohua-registro-${fecha}.txt`;
+            a.click();
+            // Sin esto el blob se queda en memoria hasta recargar la página.
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            Toast.success(I18N.t('asis.registroHecho'));
+        } catch (err) {
+            if (err && err.sesionExpirada) return;
+            Toast.error(err.message);
+        }
+    }
+
+    // ------------------------------------------------------ acciones de Mail
+
+    /** El recorrido de un correo: cuántos hay parados en cada escalón. */
+    async function verRecorrido() {
+        ocupado(I18N.t('asis.tituloRecorrido'));
+        try {
+            const d = await API.assistantPipeline();
+            const etapas = d.etapas || [];
+            if (!etapas.length) {
+                mostrar(cabecera(I18N.t('asis.tituloRecorrido'))
+                    + `<p class="assistant-vacio">${esc(I18N.t('asis.sinDatos'))}</p>`);
+                return;
+            }
+            const filas = etapas.map(e => `
+                <li class="${e.espera ? 'assistant-etapa--espera' : ''}">
+                    <span>${esc(e.etiqueta)}${e.detalle ? ` <small>${esc(e.detalle)}</small>` : ''}</span>
+                    <b>${esc(e.total)}</b>
+                </li>`).join('');
+            mostrar(cabecera(I18N.t('asis.tituloRecorrido'), I18N.t('asis.recorridoNota'))
+                + `<ul class="assistant-lista">${filas}</ul>`);
+        } catch (err) { fallo(err, I18N.t('asis.tituloRecorrido')); }
+    }
+
+    // -------------------------------------------------- acciones de Overview
+
+    /** Quién pidió más esta semana, y quién todavía no está en el catálogo. */
+    async function verClientes() {
+        ocupado(I18N.t('asis.tituloClientes'));
+        try {
+            const d = await API.assistantTopClientes(7);
+            const lista = d.clientes || [];
+            if (!lista.length) {
+                mostrar(cabecera(I18N.t('asis.tituloClientes'))
+                    + `<p class="assistant-vacio">${esc(I18N.t('asis.sinSemana'))}</p>`);
+                return;
+            }
+            const filas = lista.map(c => `
+                <li>
+                    <span>${esc(c.cliente)}
+                        ${c.estrella ? `<small class="assistant-marca">★ ${esc(I18N.t('asis.estrella'))}</small>` : ''}
+                        ${c.es_nuevo ? `<small class="assistant-marca assistant-marca--nuevo">${esc(I18N.t('asis.nuevo'))}</small>` : ''}
+                    </span>
+                    <b>${esc(c.total)}</b>
+                </li>`).join('');
+            mostrar(cabecera(I18N.t('asis.tituloClientes'),
+                             I18N.t('asis.semanaNota', { n: d.total_rfqs, nuevos: d.nuevos }))
+                + `<ul class="assistant-lista">${filas}</ul>`);
+        } catch (err) { fallo(err, I18N.t('asis.tituloClientes')); }
+    }
+
     async function preguntar() {
         const campo = document.getElementById('assistantInput');
         const boton = document.getElementById('assistantEnviar');
@@ -171,6 +316,90 @@ const Assistant = (() => {
         } finally {
             if (boton) boton.disabled = false;
         }
+    }
+
+    // ------------------------------------------------- los botones de cada sección
+
+    /**
+     * Qué botón sale en cada apartado.
+     *
+     * Antes salían los tres mismos en toda la aplicación, y en Monitor eso
+     * quería decir un "Exportar a Excel" que no tenía nada que ver con lo que
+     * hay en pantalla: quien está mirando el registro del servicio quiere ver
+     * qué falló, no bajarse una hoja de RFQs. Un acceso rápido que no sirve
+     * donde está ocupa sitio y enseña a no mirar la fila.
+     *
+     * Así que la fila la decide la sección. La clave es la misma que el router
+     * pone en `body[data-pagina]`.
+     *
+     *   Monitor   el registro del servicio  → qué falló, cómo está, llévatelo
+     *   Mail      el correo entrando        → por dónde va cada correo, qué está parado
+     *   Quoting   la calculadora            → sólo lo que espera dictamen; lo demás
+     *                                         robaría sitio a la propia calculadora
+     *   Overview  el panel                  → las cifras, quién pidió, qué espera, y la hoja
+     *
+     * Las pantallas que no están en la tabla (la ficha de un RFQ, la oferta,
+     * el perfil) se quedan con `POR_DEFECTO`, que es lo de siempre.
+     */
+    const ACCIONES = {
+        resumen:  verResumen,
+        atencion: verAtencion,
+        exportar: exportar,
+        errores:  verErrores,
+        estado:   verEstado,
+        registro: descargarRegistro,
+        recorrido: verRecorrido,
+        clientes: verClientes,
+    };
+
+    // [clave de la acción, icono, clave del texto, ¿es el de aviso?]
+    const CHIPS = {
+        errores:   ['errores',   'asis.errores',   true],
+        estado:    ['estado',    'asis.estado',    false],
+        registro:  ['registro',  'asis.registro',  false],
+        recorrido: ['recorrido', 'asis.recorrido', false],
+        atencion:  ['atencion',  'asis.atencion',  true],
+        resumen:   ['resumen',   'asis.resumen',   false],
+        clientes:  ['clientes',  'asis.topClientes', false],
+        exportar:  ['exportar',  'asis.exportar',  false],
+    };
+
+    const POR_SECCION = {
+        'monitor': ['errores', 'estado', 'registro'],
+        'mail':    ['recorrido', 'atencion'],
+        'quoting': ['atencion'],
+        'resumen': ['resumen', 'clientes', 'atencion', 'exportar'],
+    };
+    const POR_DEFECTO = ['resumen', 'atencion', 'exportar'];
+
+    function seccion() {
+        return document.body.dataset.pagina || '';
+    }
+
+    function chips() {
+        const cuales = POR_SECCION[seccion()] || POR_DEFECTO;
+        return cuales.map((clave) => {
+            const [icono, texto, aviso] = CHIPS[clave];
+            return `<button type="button" class="btn btn-chip${aviso ? ' btn-chip--aviso' : ''}"
+                            data-accion="${clave}" data-permiso="rfq:leer">${
+                        ICONOS[icono]}<span>${esc(I18N.t(texto))}</span></button>`;
+        }).join('');
+    }
+
+    /**
+     * Repinta la fila al cambiar de sección. La llama el router.
+     *
+     * Se toca sólo la fila de botones, no la barra entera: el campo de texto
+     * puede tener media pregunta escrita y navegar no debería borrarla. Y se
+     * cierra el panel de resultados, que era de la pantalla anterior.
+     */
+    function alCambiarSeccion() {
+        const fila = document.getElementById('assistantAcciones');
+        if (!fila) return;
+        fila.innerHTML = chips();
+        APP.aplicarPermisos?.(fila);
+        cerrar();
+        publicarAlto(document.getElementById('assistantDock'));
     }
 
     // --------------------------------------------------------------- montaje
@@ -208,14 +437,7 @@ const Assistant = (() => {
                         title="${esc(I18N.t('asis.enviar'))}" aria-label="${esc(I18N.t('asis.enviar'))}">${ICONOS.enviar}</button>
             </div>
 
-            <div class="assistant-acciones">
-                <button type="button" class="btn btn-chip" data-accion="resumen"
-                        data-permiso="rfq:leer">${ICONOS.resumen}<span>${esc(I18N.t('asis.resumen'))}</span></button>
-                <button type="button" class="btn btn-chip btn-chip--aviso" data-accion="atencion"
-                        data-permiso="rfq:leer">${ICONOS.atencion}<span>${esc(I18N.t('asis.atencion'))}</span></button>
-                <button type="button" class="btn btn-chip" data-accion="exportar"
-                        data-permiso="rfq:leer">${ICONOS.exportar}<span>${esc(I18N.t('asis.exportar'))}</span></button>
-            </div>`;
+            <div class="assistant-acciones" id="assistantAcciones">${chips()}</div>`;
     }
 
     /**
@@ -297,7 +519,6 @@ const Assistant = (() => {
             window.addEventListener('resize', () => publicarAlto(muelle), { passive: true });
         }
 
-        const acciones = { resumen: verResumen, atencion: verAtencion, exportar: exportar };
         muelle.addEventListener('click', (ev) => {
             if (ev.target.closest('#assistantBurbuja')) return desplegar(muelle, true);
             if (ev.target.closest('#assistantChispa')) {
@@ -312,7 +533,7 @@ const Assistant = (() => {
             if (ev.target.closest('[data-cerrar]')) return cerrar();
 
             const chip = ev.target.closest('.btn-chip');
-            if (chip) return acciones[chip.dataset.accion]?.();
+            if (chip) return ACCIONES[chip.dataset.accion]?.();
 
             if (ev.target.closest('#assistantEnviar')) return preguntar();
 
@@ -347,5 +568,5 @@ const Assistant = (() => {
         document.documentElement.style.setProperty('--alto-asistente', '0px');
     }
 
-    return { init, limpiar, cerrarPanel: cerrar };
+    return { init, limpiar, cerrarPanel: cerrar, alCambiarSeccion };
 })();

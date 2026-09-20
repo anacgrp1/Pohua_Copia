@@ -342,6 +342,10 @@ const API = {
     assistantSummary()   { return this.request('GET', '/api/assistant/summary'); },
     assistantAttention() { return this.request('GET', '/api/assistant/attention'); },
     assistantPipeline()  { return this.request('GET', '/api/assistant/pipeline'); },
+    // Quién pidió más en los últimos días. SQL puro, no gasta API.
+    assistantTopClientes(dias = 7) {
+        return this.request('GET', `/api/assistant/top-clientes?dias=${dias}`);
+    },
 
     // ----------------------------------------------------------------------
     // Notificaciones (COT-77)

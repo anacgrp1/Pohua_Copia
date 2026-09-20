@@ -211,6 +211,14 @@ class AssistantAttention(BaseModel):
     criticas: int = 0
 
 
+class AssistantTopClientes(BaseModel):
+    """Quién pidió más en los últimos días, y si es de los grandes."""
+    clientes: List[Dict[str, Any]] = Field(default_factory=list)
+    dias: int = 7
+    total_rfqs: int = 0
+    nuevos: int = 0
+
+
 class AssistantQuestion(BaseModel):
     pregunta: str
 

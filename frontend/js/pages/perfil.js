@@ -808,7 +808,7 @@ const PerfilPage = (() => {
         return `
         <section class="panel">
             <h3 class="panel-titulo panel-titulo--con-accion">
-                <span>${esc(I18N.t('flujo.titulo'))}</span>${boton}
+                <span>${esc(I18N.t('flujo.listoTitulo'))}</span>${boton}
             </h3>
             ${cuerpo}
         </section>`;

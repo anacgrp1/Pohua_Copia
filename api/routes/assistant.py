@@ -5,6 +5,7 @@ Cuatro endpoints, y la diferencia entre ellos importa:
     GET  /api/assistant/pipeline    → SQL puro
     GET  /api/assistant/summary     → SQL puro
     GET  /api/assistant/attention   → SQL puro
+    GET  /api/assistant/top-clientes → SQL puro
     GET  /api/assistant/export      → SQL puro, devuelto como Excel
     POST /api/assistant/ask         → ÚNICO que llama al modelo de Anthropic
 
@@ -32,6 +33,7 @@ from api.models.schemas import (
     AssistantAttention,
     AssistantQuestion,
     AssistantSummary,
+    AssistantTopClientes,
     PipelineFlow,
     PipelineStage,
 )
@@ -187,6 +189,80 @@ def _atencion(limite: int = 20) -> dict:
         "total": len(pendientes),
         "criticas": sum(1 for p in pendientes if p["criticas"]),
     }
+
+
+def _top_clientes(dias: int = 7, limite: int = 10) -> dict:
+    """Quién pidió más en los últimos ``dias``, de más a menos.
+
+    El cliente se toma del catálogo cuando el dominio del remitente ya está
+    dado de alta, y del propio correo cuando no. Sin esa segunda mitad, una
+    semana entera de peticiones de empresas que todavía no están en la base
+    saldría como una sola fila vacía: precisamente la semana que interesa
+    mirar.
+
+    `es_nuevo` es del cliente, no del RFQ: nadie del catálogo detrás del
+    dominio. Eso es lo que convierte la lista en una de trabajo —a quién hay
+    que dar de alta— y no en otra tabla de conteos.
+    """
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT COALESCE(c.razon_social,
+                                NULLIF(TRIM(r.datos_json->>'customer'), ''),
+                                NULLIF(TRIM(r.datos_json->>'dominio'), ''),
+                                NULLIF(split_part(COALESCE(r.datos_json->>'remitente', ''), '@', 2), ''),
+                                'Sin cliente')            AS nombre,
+                       (c.cliente_id IS NULL)              AS es_nuevo,
+                       COALESCE(c.es_estrella, FALSE)      AS estrella,
+                       -- DISTINCT: un RFQ con tres versiones es UNA
+                       -- petición de ese cliente, no tres.
+                       COUNT(DISTINCT r.rfq_id)            AS rfqs,
+                       MAX(r.fecha_registro)::text         AS ultima
+                FROM rfqs r
+                LEFT JOIN clientes c ON c.cliente_id = r.cliente_id
+                WHERE r.fecha_registro >= NOW() - (%s || ' days')::interval
+                GROUP BY 1, 2, 3
+                ORDER BY rfqs DESC, MAX(r.fecha_registro) DESC
+                LIMIT %s;
+                """,
+                (str(int(dias)), limite),
+            )
+            filas = [
+                {"cliente": nombre, "es_nuevo": bool(nuevo), "estrella": bool(estrella),
+                 "total": int(n or 0), "ultima": ultima}
+                for nombre, nuevo, estrella, n, ultima in cur.fetchall()
+            ]
+
+            # El total NO se suma de la lista de arriba: está recortada al
+            # top 10 y daría una cifra corta en cuanto haya un cliente más.
+            cur.execute(
+                "SELECT COUNT(DISTINCT rfq_id) FROM rfqs "
+                "WHERE fecha_registro >= NOW() - (%s || ' days')::interval;",
+                (str(int(dias)),),
+            )
+            total = int(cur.fetchone()[0] or 0)
+
+    return {
+        "clientes": filas,
+        "dias": int(dias),
+        "total_rfqs": total,
+        # Los que habría que dar de alta. La fila "Sin cliente" no cuenta:
+        # no es una empresa sin catalogar, es un correo del que no se sacó
+        # ningún nombre, y darla de alta no significa nada.
+        "nuevos": sum(1 for f in filas
+                      if f["es_nuevo"] and f["cliente"] != "Sin cliente"),
+    }
+
+
+@router.get("/top-clientes", response_model=AssistantTopClientes)
+def top_clientes(
+    dias: int = Query(7, ge=1, le=90),
+    limit: int = Query(10, ge=1, le=50),
+    usuario: UsuarioSesion = Depends(exige("rfq:leer")),
+):
+    """Los clientes que más pidieron en los últimos días."""
+    return AssistantTopClientes(**_top_clientes(dias, limit))
 
 
 @router.get("/summary", response_model=AssistantSummary)

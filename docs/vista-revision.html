@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="es" data-tema="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pohua · La ventana de revisión</title>
+<!--
+  La ventana de revisión del PM, en claro y en oscuro y en los dos tamaños,
+  todo en una pantalla.
+
+  No hay una sola línea de maqueta: los marcos cargan panel-revision.html,
+  que abre la ventana DE VERDAD (js/components/revision.js) con datos
+  inventados. Si mañana cambia un botón en la aplicación, cambia aquí —que es
+  justo lo que no pasaba con la vista anterior, dibujada aparte y quedada en
+  el estilo viejo—.
+
+  El teléfono va dentro de un marco de 390 px a propósito: las reglas del
+  teléfono son media queries y sólo se activan si la VENTANA mide eso. Una
+  caja estrecha dentro de una ventana ancha enseñaría el diseño de compu
+  encogido, que es mentira.
+
+  Se abre con doble clic; no necesita servidor.
+-->
+<link rel="stylesheet" href="../frontend/css/style.css">
+<style>
+    body { margin: 0; background: var(--bg-base); color: var(--text-primary);
+           font-family: var(--font-sans, 'Segoe UI', system-ui, sans-serif); }
+    .guia { max-width: 1280px; margin: 0 auto; padding: 28px 20px 56px; }
+    .guia-cab { display: flex; flex-wrap: wrap; align-items: flex-end;
+                gap: 16px; margin-bottom: 6px; }
+    .guia h1 { margin: 0; font-size: 26px; letter-spacing: -.01em; }
+    .guia .sub { margin: 4px 0 26px; color: var(--text-muted); font-size: 14px;
+                 max-width: 68ch; line-height: 1.55; }
+    .mandos { margin-left: auto; }
+    .mando { display: flex; gap: 4px; padding: 4px; border-radius: 999px;
+             background: var(--bg-card); border: 1px solid var(--border-default); }
+    .mando button { border: 0; background: transparent; color: var(--text-secondary);
+                    font: inherit; font-size: 13px; font-weight: 600; padding: 6px 14px;
+                    border-radius: 999px; cursor: pointer; }
+    .mando button[aria-pressed="true"] { background: var(--cgr-primary); color: #fff; }
+
+    .rejilla { display: flex; flex-direction: column; gap: 34px; }
+    .pieza { min-width: 0; }
+    .pieza h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em;
+                color: var(--text-muted); margin: 0 0 10px; }
+    .marco { border: 1px solid var(--border-default); border-radius: 16px;
+             overflow: hidden; background: var(--bg-card); box-shadow: var(--shadow-md); }
+    .marco--pc { overflow-x: auto; }
+    .marco iframe { display: block; width: 100%; min-width: 1024px; height: 700px;
+                    border: 0; background: var(--bg-base); }
+    .telefonos { display: flex; flex-wrap: wrap; gap: 28px; }
+    .telefonos figure { margin: 0; }
+    .telefonos figcaption { margin-top: 10px; font-size: 12.5px; color: var(--text-muted); }
+    .telefono { width: 390px; border-radius: 28px; border: 8px solid #10131a;
+                box-shadow: var(--shadow-lg); overflow: hidden; background: #10131a; }
+    .telefono iframe { display: block; width: 390px; height: 820px; border: 0; }
+    .nota { margin-top: 12px; font-size: 12.5px; line-height: 1.6;
+            color: var(--text-muted); max-width: 88ch; }
+    .nota b { color: var(--text-secondary); }
+</style>
+</head>
+<body>
+
+<div class="guia">
+    <div class="guia-cab">
+        <h1>La ventana de revisión del PM</h1>
+        <div class="mandos">
+            <div class="mando" id="mandoTema" role="group" aria-label="Tema">
+                <button type="button" data-tema="dark" aria-pressed="true">Oscuro</button>
+                <button type="button" data-tema="light" aria-pressed="false">Claro</button>
+            </div>
+        </div>
+    </div>
+    <p class="sub">Lo mismo que ve quien dictamina. Los marcos abren la ventana
+       de verdad con datos de ejemplo, no un dibujo: lo que se ve aquí es lo
+       que hay.</p>
+
+    <div class="rejilla">
+        <div class="pieza">
+            <h2>Computadora</h2>
+            <div class="marco marco--pc"><iframe id="marcoPc" title="Ventana de revisión en computadora"></iframe></div>
+            <p class="nota">Los botones van en dos grupos separados por una raya:
+               a la izquierda lo que sólo <b>mira</b> —el PDF y la cotización
+               entera—, a la derecha lo que <b>decide</b>, con Aprobar cerrando
+               la fila. Los tramos se eligen arriba y todo lo de abajo —la
+               cascada, el material, la ruta, los totales— es del tramo
+               elegido.</p>
+        </div>
+
+        <div class="pieza">
+            <h2>Teléfono</h2>
+            <div class="telefonos">
+                <figure>
+                    <div class="telefono"><iframe id="marcoTel" title="Ventana de revisión en teléfono"></iframe></div>
+                    <figcaption>Tal como llega: la pieza, lo común y los tramos.</figcaption>
+                </figure>
+                <figure>
+                    <div class="telefono"><iframe id="marcoTel2" title="Ventana de revisión en teléfono, más abajo"></iframe></div>
+                    <figcaption>Bajando: la cascada deja de ser fichas y es lista.</figcaption>
+                </figure>
+            </div>
+            <p class="nota">Una sola columna, los tramos se pasan con el dedo, y
+               las decisiones se apilan a todo el ancho con <b>Aprobar</b>
+               abajo: donde llega el pulgar y donde termina la lectura. El pie
+               se queda quieto mientras el cuerpo sube.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    var marcos = [
+        ['marcoPc', ''],
+        ['marcoTel', ''],
+        ['marcoTel2', '&abajo=1'],
+    ];
+
+    function aplicar(tema) {
+        document.documentElement.dataset.tema = tema;
+        Array.prototype.forEach.call(
+            document.querySelectorAll('#mandoTema button'),
+            function (b) { b.setAttribute('aria-pressed', String(b.dataset.tema === tema)); });
+        marcos.forEach(function (m) {
+            document.getElementById(m[0]).src = 'panel-revision.html?t=' + tema + m[1];
+        });
+    }
+
+    document.getElementById('mandoTema').addEventListener('click', function (ev) {
+        var b = ev.target.closest('button[data-tema]');
+        if (b) aplicar(b.dataset.tema);
+    });
+
+    aplicar('dark');
+})();
+</script>
+</body>
+</html>

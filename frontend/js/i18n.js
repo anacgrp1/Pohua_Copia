@@ -144,7 +144,10 @@ const I18N = (() => {
         'monitor.sinFichero': { en: 'No log file yet.', es: 'Todavía no hay fichero de registro.', fr: 'Pas encore de fichier journal.' },
 
         // --- Comprobación del flujo (Perfil → Sistema) --------------------
-        'flujo.titulo':     { en: 'Ready to run the flow?', es: '¿Listo para el flujo?', fr: 'Prêt pour le flux ?' },
+        // Ojo: esta clave era 'flujo.titulo' y pisaba a la del recorrido de
+        // Mail (dos claves iguales en el mismo objeto: manda la última), así
+        // que la cabecera de Mail salía como '¿Listo para el flujo?'.
+        'flujo.listoTitulo':{ en: 'Ready to run the flow?', es: '¿Listo para el flujo?', fr: 'Prêt pour le flux ?' },
         'flujo.comprobar':  { en: 'Check again', es: 'Comprobar de nuevo', fr: 'Vérifier à nouveau' },
         'flujo.comprobando':{ en: 'Checking…', es: 'Comprobando…', fr: 'Vérification…' },
         'flujo.listo':      { en: 'Nothing missing: the flow can run.', es: 'No falta nada: el flujo puede correr.', fr: 'Rien ne manque : le flux peut tourner.' },
@@ -223,6 +226,42 @@ const I18N = (() => {
         'asis.resumen':   { en: 'Summarize', es: 'Resumen', fr: 'Résumé' },
         'asis.atencion':  { en: 'Needs attention', es: 'Requiere atención', fr: 'À traiter' },
         'asis.exportar':  { en: 'Export to Excel', es: 'Exportar a Excel', fr: 'Exporter vers Excel' },
+
+        // Los accesos rápidos que sólo salen en su sección (Monitor, Mail,
+        // Quoting, Overview): los decide js/components/assistant.js.
+        'asis.errores':   { en: 'Errors', es: 'Errores', fr: 'Erreurs' },
+        'asis.estado':    { en: 'Service status', es: 'Estado del servicio', fr: 'État du service' },
+        'asis.registro':  { en: 'Download log', es: 'Descargar registro', fr: 'Télécharger le journal' },
+        'asis.recorrido': { en: 'Mail flow', es: 'Recorrido del correo', fr: 'Parcours du courrier' },
+        'asis.topClientes': { en: 'Top customers', es: 'Clientes de la semana', fr: 'Clients de la semaine' },
+
+        'asis.tituloErrores':   { en: 'What failed', es: 'Lo que falló', fr: 'Ce qui a échoué' },
+        'asis.tituloEstado':    { en: 'Service status', es: 'Estado del servicio', fr: 'État du service' },
+        'asis.tituloRecorrido': { en: 'Mail flow', es: 'Recorrido del correo', fr: 'Parcours du courrier' },
+        'asis.tituloClientes':  { en: 'Customers this week', es: 'Clientes de esta semana', fr: 'Clients de cette semaine' },
+
+        'asis.deLineas':   { en: 'out of the last {n} lines', es: 'de las últimas {n} líneas', fr: 'sur les {n} dernières lignes' },
+        'asis.sinErrores': { en: 'Nothing failed in the lines loaded.', es: 'No falló nada en las líneas cargadas.', fr: 'Rien n’a échoué dans les lignes chargées.' },
+        'asis.sinDatos':   { en: 'Nothing to show yet.', es: 'Todavía no hay nada que enseñar.', fr: 'Rien à afficher pour l’instant.' },
+        'asis.sinSemana':  { en: 'No requests came in over the last seven days.', es: 'No entró ninguna solicitud en los últimos siete días.', fr: 'Aucune demande reçue ces sept derniers jours.' },
+        'asis.recorridoNota': { en: 'Amber = waiting on a person', es: 'Ámbar = esperando a una persona', fr: 'Ambre = en attente d’une personne' },
+        'asis.semanaNota': { en: '{n} requests · {nuevos} not in the catalog yet', es: '{n} solicitudes · {nuevos} todavía sin dar de alta', fr: '{n} demandes · {nuevos} pas encore au catalogue' },
+        'asis.estrella':   { en: 'key account', es: 'cuenta clave', fr: 'compte clé' },
+        'asis.nuevo':      { en: 'new', es: 'nuevo', fr: 'nouveau' },
+        'asis.registroHecho': { en: 'Log downloaded.', es: 'Registro descargado.', fr: 'Journal téléchargé.' },
+
+        'asis.est.servicio':   { en: 'Service', es: 'Servicio', fr: 'Service' },
+        'asis.est.enMarcha':   { en: 'Running', es: 'En marcha', fr: 'En marche' },
+        'asis.est.parado':     { en: 'Stopped', es: 'Parado', fr: 'Arrêté' },
+        'asis.est.espera':     { en: 'Waiting — outside business hours', es: 'En espera — fuera del horario', fr: 'En attente — hors horaires' },
+        'asis.est.buzon':      { en: 'Mailbox', es: 'Buzón', fr: 'Boîte' },
+        'asis.est.intervalo':  { en: 'Every', es: 'Cada', fr: 'Toutes les' },
+        'asis.est.minutos':    { en: '{n} min', es: '{n} min', fr: '{n} min' },
+        'asis.est.ultimo':     { en: 'Last round', es: 'Última vuelta', fr: 'Dernier tour' },
+        'asis.est.siguiente':  { en: 'Next round', es: 'Próxima vuelta', fr: 'Prochain tour' },
+        'asis.est.procesados': { en: 'Emails read', es: 'Correos leídos', fr: 'Courriels lus' },
+        'asis.est.rfqs':       { en: 'RFQs created', es: 'RFQ creados', fr: 'RFQ créés' },
+        'asis.est.errores':    { en: 'Errors', es: 'Errores', fr: 'Erreurs' },
         'asis.cerrar':    { en: 'Close', es: 'Cerrar', fr: 'Fermer' },
         'asis.pensando':  { en: 'Thinking…', es: 'Pensando…', fr: 'Réflexion…' },
         'asis.deLaBase':  { en: 'Counted in the database', es: 'Contado en la base de datos', fr: 'Compté dans la base de données' },
@@ -370,6 +409,7 @@ const I18N = (() => {
         'rev.porHora':       { en: 'per hour', es: 'por hora', fr: 'par heure' },
         'rev.notas':         { en: 'PM notes', es: 'Notas del PM', fr: 'Notes du PM' },
         'rev.sinTramos':     { en: 'Nothing priced yet for the requested quantities:', es: 'Todavía no hay costeo para las cantidades pedidas:', fr: 'Aucun chiffrage pour les quantités demandées :' },
+        'rev.previewPdf':    { en: 'Preview PDF', es: 'Ver PDF', fr: 'Aperçu PDF' },
         'rev.devolver':      { en: 'Send back', es: 'Devolver', fr: 'Renvoyer' },
         'rev.aprobar':       { en: 'Approve', es: 'Aprobar', fr: 'Approuver' },
         'rev.declinar':      { en: 'Decline', es: 'Rechazar', fr: 'Refuser' },
@@ -409,6 +449,14 @@ const I18N = (() => {
         'push.noSoportado':    { en: 'This browser cannot show push alerts.', es: 'Este navegador no puede mostrar avisos push.', fr: 'Ce navigateur ne peut pas afficher d’alertes push.' },
         'push.iosInstalar':    { en: 'On iPhone, add Pohua to the Home Screen (Share → Add to Home Screen) to get alerts.', es: 'En iPhone, añade Pohua a la pantalla de inicio (Compartir → Añadir a inicio) para recibir avisos.', fr: 'Sur iPhone, ajoutez Pohua à l’écran d’accueil (Partager → Sur l’écran d’accueil) pour recevoir les alertes.' },
         'push.sinSw':          { en: 'Alerts need the installed app (HTTPS): not available on localhost.', es: 'Los avisos necesitan la app publicada (HTTPS): no están disponibles en localhost.', fr: 'Les alertes nécessitent l’app publiée (HTTPS) : indisponibles sur localhost.' },
+        // El sonido de los avisos (js/sonido.js), al pie de la campana.
+        'sonido.activo':       { en: 'New alerts play a sound on this device.', es: 'Los avisos nuevos suenan en este equipo.', fr: 'Les nouvelles alertes émettent un son sur cet appareil.' },
+        'sonido.apagado':      { en: 'Alerts are silent on this device.', es: 'Los avisos están en silencio en este equipo.', fr: 'Les alertes sont muettes sur cet appareil.' },
+        'sonido.encender':     { en: 'Turn sound on', es: 'Activar sonido', fr: 'Activer le son' },
+        'sonido.apagar':       { en: 'Mute', es: 'Silenciar', fr: 'Couper le son' },
+        'sonido.probar':       { en: 'Test', es: 'Probar', fr: 'Tester' },
+        'sonido.probarTitulo': { en: 'Play the alert sound now', es: 'Escuchar ahora el tono de los avisos', fr: 'Écouter le son des alertes' },
+
         'push.error':          { en: 'Could not set up alerts:', es: 'No se pudieron activar los avisos:', fr: 'Impossible d’activer les alertes :' },
 
         // --- La oferta al cliente (pantalla Quote) --------------------------

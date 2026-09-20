@@ -3042,6 +3042,57 @@ a:hover { color: var(--cgr-primary); }
 .assistant-lista li b { color: var(--text-primary); }
 .assistant-lista li.vacio { color: var(--text-muted); }
 
+/* Los accesos rápidos de Monitor: el registro sin salir de la barra.
+
+   Cada línea repite la forma de la consola de la página —hora, nivel, de
+   dónde salió, qué dijo— para que la vista de "lo que falló" se lea como un
+   recorte de lo de arriba y no como otra pantalla. */
+.assistant-logs { list-style: none; margin: 0; padding: 0; }
+
+.assistant-log {
+    display: grid;
+    grid-template-columns: auto auto auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: var(--sp-2) var(--sp-3);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--text-secondary);
+}
+.assistant-log:last-child { border-bottom: 0; }
+.assistant-log-marca  { color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.assistant-log-nivel  { font-weight: 700; white-space: nowrap; }
+.assistant-log-origen { color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 16ch; }
+.assistant-log-mensaje { min-width: 0; color: var(--text-primary); overflow-wrap: anywhere; }
+.assistant-log--error .assistant-log-nivel,
+.assistant-log--critical .assistant-log-nivel { color: var(--color-error); }
+.assistant-log--warning .assistant-log-nivel  { color: var(--color-warning); }
+
+/* En el teléfono no caben cuatro columnas: la hora y el nivel arriba, el
+   mensaje entero debajo a todo el ancho. */
+@media (max-width: 768px) {
+    .assistant-log { grid-template-columns: auto auto minmax(0, 1fr); }
+    .assistant-log-mensaje { grid-column: 1 / -1; }
+}
+
+/* El recorrido del correo: en ámbar lo que está esperando a una persona. */
+.assistant-lista li.assistant-etapa--espera b { color: var(--color-warning); }
+.assistant-lista li small { color: var(--text-muted); }
+
+/* Los distintivos de la lista de clientes: cuenta clave y cliente nuevo. */
+.assistant-marca {
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-default);
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+.assistant-marca--nuevo { border-color: var(--color-info); color: var(--color-info); }
+
 /* Tabla de "needs attention". */
 .assistant-tabla-caja { overflow-x: auto; }
 
@@ -5289,11 +5340,16 @@ body.menu-abierto { overflow: hidden; }
    En la compu es una caja compacta en el centro, por encima de todo menos de
    los diálogos de confirmación (9500) y los avisos: "¿Aprobar?" tiene que
    poder salir encima de ella. En el teléfono ocupa la pantalla entera, en una
-   sola columna, con el pie fijo abajo y botones de 44 px: es lo que se toca
-   con el pulgar desde el correo, no una ventana más.
+   sola columna, con el pie abajo y botones de 46 px: es lo que se toca con el
+   pulgar desde el correo, no una ventana más.
 
-   Todo sale de los mismos tokens que el resto: en claro y en oscuro se ve
-   como Pohua, no como algo pegado encima.
+   Todo sale de los mismos tokens que el resto (--bg-*, --text-*, --border-*,
+   --color-*): en claro y en oscuro se ve como Pohua, no como algo pegado
+   encima. Ni un color a mano.
+
+   El orden de lectura es el mismo de arriba abajo en los dos tamaños: qué
+   pieza es, lo común a todos los tramos, los tramos, los avisos, la cascada
+   del tramo elegido, el detalle, y al final el pie con los botones.
    -------------------------------------------------------------------------- */
 .revision-fondo {
     position: fixed;
@@ -5313,7 +5369,7 @@ body.revision-abierta { overflow: hidden; }
 
 .revision {
     width: 100%;
-    max-width: 960px;
+    max-width: 980px;
     max-height: calc(100vh - 48px);
     max-height: calc(100dvh - 48px);
     display: flex;
@@ -5335,7 +5391,7 @@ body.revision-abierta { overflow: hidden; }
 
 .revision-fondo.ocupado .revision { opacity: 0.85; pointer-events: none; }
 
-/* --- Cabecera: PN · tipo · RFQ · cliente --------------------------------- */
+/* --- Cabecera: número de parte · tipo — y a la derecha, de qué es --------- */
 .revision-cab {
     display: flex;
     align-items: center;
@@ -5345,18 +5401,36 @@ body.revision-abierta { overflow: hidden; }
     background: color-mix(in srgb, var(--cgr-primary) 12%, var(--bg-card));
 }
 
-.revision-titulo {
-    flex: 1;
+.revision-cab-izq {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
     min-width: 0;
-    font-size: 15px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+.revision-cab-pn {
+    font-size: 16px;
     font-weight: 700;
     color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+.revision-cab-sep  { color: var(--text-muted); }
+.revision-cab-tipo {
+    font-size: 13px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.revision-cab-meta {
+    margin-left: auto;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-
-.revision-sep { margin: 0 var(--sp-2); color: var(--text-muted); font-weight: 400; }
 
 .revision-cerrar {
     flex: none;
@@ -5390,7 +5464,8 @@ body.revision-abierta { overflow: hidden; }
    cero dentro de la columna flexible: que midan lo que miden. */
 .revision-cuerpo > * { flex: none; }
 
-.revision-rotulo {
+.revision-rotulo,
+.revision-cascada-tit-movil {
     margin-bottom: var(--sp-2);
     font-size: 11px;
     font-weight: 700;
@@ -5399,64 +5474,89 @@ body.revision-abierta { overflow: hidden; }
     color: var(--text-muted);
 }
 
-/* Lo común a todos los tramos: material, diámetro, peso, precios del alambre */
-.revision-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+/* Lo común a todos los tramos —material, diámetro, peso, precio del alambre—
+   va en pastillas y no en fichas: son datos de una línea que no cambian al
+   cambiar de tramo, y no deben competir con los números que sí cambian. */
+.revision-pills { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 
-.revision-chip {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    min-width: 108px;
-    padding: 6px 12px;
+.revision-pill {
+    padding: 5px 12px;
     border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-full);
     background: var(--bg-elevated);
-}
-.revision-chip-etq { font-size: 11px; color: var(--text-muted); }
-.revision-chip-val {
-    font-size: 14px;
+    font-size: 12.5px;
     font-weight: 600;
     color: var(--text-primary);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
-.revision-chip-val small { font-weight: 400; color: var(--text-muted); }
 
-/* Los tramos: uno por cantidad. La franja de la izquierda dice si llega al
-   objetivo (verde) o se queda corto (ámbar), igual que las fichas de abajo. */
+/* Los tramos: uno por cantidad, y se elige tocando. El elegido se marca con
+   el azul de la casa y una raya a la izquierda, no sólo con un borde: a
+   simple vista tiene que verse cuál de los números de abajo se está viendo. */
 .revision-tramos {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
     gap: var(--sp-2);
 }
 
-.revision-tramo {
+.revision-tramo-card {
     appearance: none;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 10px 12px;
+    gap: 4px;
+    min-width: 0;
+    padding: 9px 12px;
     text-align: left;
     font: inherit;
     color: var(--text-primary);
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
-    border-left: 4px solid var(--color-warning);
+    border-left: 3px solid transparent;
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all var(--duration-fast) var(--ease-out);
 }
-.revision-tramo.llega { border-left-color: var(--color-success); }
-.revision-tramo:hover { background: var(--bg-card-hover); }
-.revision-tramo.activo {
-    background: color-mix(in srgb, var(--cgr-primary) 16%, var(--bg-card));
-    outline: 2px solid var(--cgr-primary-light);
-    outline-offset: -1px;
+.revision-tramo-card:hover { background: var(--bg-card-hover); }
+.revision-tramo-card.activo {
+    background: color-mix(in srgb, var(--cgr-primary) 14%, var(--bg-card));
+    border-color: var(--cgr-primary);
+    border-left-color: var(--cgr-primary);
 }
-.revision-tramo-qty    { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
-.revision-tramo-precio { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.revision-tramo-precio small { font-size: 12px; font-weight: 500; color: var(--text-muted); }
-.revision-tramo-margen { font-size: 12px; color: var(--text-secondary); }
-.revision-tramo small  { font-size: 11px; color: var(--text-muted); }
+
+.revision-tramo-cab {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+}
+.revision-tramo-tit { color: var(--text-muted); font-weight: 700; }
+.revision-tramo-cuerpo {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-2);
+}
+.revision-tramo-precio {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+.revision-tramo-margen {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Cada dato tiene su versión corta para cuando la tarjeta se estrecha:
+   "100,000 pcs" pasa a "100k" y "$3.686/pc" a "$3.686". Se cambia por ancho,
+   no por dispositivo. */
+.qty-corta, .precio-corto, .lbl-movil { display: none; }
 
 .revision-sin-tramos {
     padding: var(--sp-4);
@@ -5466,8 +5566,8 @@ body.revision-abierta { overflow: hidden; }
     color: var(--text-secondary);
 }
 
-/* La franja de avisos: ámbar si hay algo que mirar, magenta si el costeo
-   falló, azul si sólo son motivos informativos. */
+/* La franja de avisos: ámbar si hay algo que mirar, rojo si el costeo falló,
+   azul si sólo son motivos informativos. */
 .revision-franja {
     display: flex;
     gap: var(--sp-3);
@@ -5477,25 +5577,32 @@ body.revision-abierta { overflow: hidden; }
     border-left-width: 4px;
     background: var(--color-warning-bg);
     color: var(--text-primary);
-    font-size: 13px;
-    line-height: 1.5;
 }
-.revision-franja svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--color-warning); }
-.revision-franja ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.revision-franja-icono {
+    flex: none;
+    font-size: 15px;
+    line-height: 1.35;
+    color: var(--color-warning);
+}
+.revision-franja-texto { min-width: 0; font-size: 13px; line-height: 1.5; }
 .revision-franja--error { border-color: var(--color-error); background: var(--color-error-bg); }
-.revision-franja--error svg { color: var(--color-error); }
+.revision-franja--error .revision-franja-icono { color: var(--color-error); }
 .revision-franja--info  { border-color: var(--color-info);  background: var(--color-info-bg); }
-.revision-franja--info svg { color: var(--color-info); }
-.revision-aviso--info { color: var(--text-secondary); }
+.revision-franja--info  .revision-franja-icono { color: var(--color-info); }
 
-/* La cascada: venta → AV → C/CV → C/CD → resultado. Cinco fichas en fila. */
-.revision-cascada {
+/* --- La cascada: venta → AV → C/CV → C/CD → resultado -------------------- */
+/* En la compu, cinco fichas en fila: se lee de izquierda a derecha cómo se
+   come el precio. En el teléfono la misma cascada es una lista, porque cinco
+   fichas en 390 px son cinco sellos ilegibles. Van los dos en el HTML y manda
+   el ancho: .revision-cascada-grid arriba, .revision-cascada-lista abajo. */
+.revision-cascada-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: var(--sp-2);
 }
+.revision-cascada-lista { display: none; }
 
-.revision-ficha {
+.revision-cascada-col {
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -5505,18 +5612,41 @@ body.revision-abierta { overflow: hidden; }
     border-radius: var(--radius-md);
     background: var(--bg-surface);
 }
-.revision-ficha-etq { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.revision-ficha-val { font-size: 19px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.revision-ficha-sub { font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.revision-cascada-lbl {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.revision-cascada-val {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+.revision-cascada-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+}
 
-/* La última ficha es el veredicto del número: verde llega, ámbar se queda corto. */
-.revision-ficha--ok    { border-color: var(--color-success); background: var(--color-success-bg); }
-.revision-ficha--ok .revision-ficha-val    { color: var(--color-success); }
-.revision-ficha--corto { border-color: var(--color-warning); background: var(--color-warning-bg); }
-.revision-ficha--corto .revision-ficha-val { color: var(--color-warning); }
+/* La última es el veredicto del número: verde llega al objetivo, ámbar no. */
+.revision-cascada-col--resultado.revision-cascada--ok {
+    border-color: var(--color-success);
+    background: var(--color-success-bg);
+}
+.revision-cascada-col--resultado.revision-cascada--ok .revision-cascada-val { color: var(--color-success); }
+.revision-cascada-col--resultado.revision-cascada--corto {
+    border-color: var(--color-warning);
+    background: var(--color-warning-bg);
+}
+.revision-cascada-col--resultado.revision-cascada--corto .revision-cascada-val { color: var(--color-warning); }
 
-/* Material · Ruta · Totales, en tres columnas. */
-.revision-columnas {
+/* --- Material · Ruta · Totales, en tres columnas ------------------------- */
+.revision-columnas-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--sp-3);
@@ -5529,7 +5659,8 @@ body.revision-abierta { overflow: hidden; }
     border-radius: var(--radius-md);
     background: var(--bg-surface);
 }
-.revision-bloque h4 {
+.revision-bloque h4,
+.revision-bloque-tit {
     margin: 0 0 var(--sp-2);
     font-size: 11px;
     font-weight: 700;
@@ -5538,19 +5669,29 @@ body.revision-abierta { overflow: hidden; }
     color: var(--text-muted);
 }
 
-.revision-fila {
+.revision-fila-dato {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
     gap: var(--sp-3);
     padding: 5px 0;
     border-bottom: 1px solid var(--border-subtle);
+}
+.revision-fila-dato:last-child { border-bottom: 0; }
+.revision-fila-lbl {
+    min-width: 0;
     font-size: 13px;
     color: var(--text-secondary);
 }
-.revision-fila:last-child { border-bottom: 0; }
-.revision-fila b { color: var(--text-primary); font-variant-numeric: tabular-nums; text-align: right; }
-.revision-fila b small, .revision-fila small { font-weight: 400; color: var(--text-muted); }
+.revision-fila-val {
+    text-align: right;
+    font-size: 13px;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.revision-fila-val b { font-weight: 700; }
+.revision-fila-val small { font-weight: 400; color: var(--text-muted); }
 
 .revision-nota { margin-top: var(--sp-2); font-size: 12px; color: var(--text-muted); line-height: 1.5; }
 
@@ -5573,7 +5714,49 @@ body.revision-abierta { overflow: hidden; }
     background: var(--bg-surface);
 }
 .revision-pie-nota { flex: 1; min-width: 0; font-size: 12px; line-height: 1.45; color: var(--text-muted); }
-.revision-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-2); }
+
+/* Los botones, en dos grupos separados por una raya: MIRAR y DECIDIR.
+   Estaban los cinco en una fila con estilos distintos cada uno —uno azul
+   grande, dos punteados, uno rojo—, y la mano no distinguía "ver el PDF" de
+   "aprobar la cotización". Ahora los de mirar son iguales entre sí y
+   apagados; los de decidir van aparte, y el verde cierra la fila. */
+.revision-acciones {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--sp-4);
+    flex-wrap: wrap;
+}
+.revision-grupo { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.revision-grupo--decidir {
+    padding-left: var(--sp-4);
+    border-left: 1px solid var(--border-default);
+}
+.revision-btn {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+/* Mirar: no cambian nada, así que no piden atención. */
+.revision-btn--fantasma {
+    background: transparent;
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
+}
+.revision-btn--fantasma:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+    filter: none;
+}
+
+/* Devolver y Aprobar usan las clases de la casa (.btn-secondary y
+   .btn-success): el verde de "Aprobar" aquí tiene que ser el mismo verde que
+   el de "Aprobar factibilidad" en la ficha del RFQ, no uno parecido. */
 
 /* Rechazar es la salida rara: está, pero no compite con Aprobar. */
 .revision-btn--suave {
@@ -5585,13 +5768,20 @@ body.revision-abierta { overflow: hidden; }
 
 @supports not (background: color-mix(in srgb, red 50%, transparent)) {
     .revision-cab { background: var(--bg-surface); }
-    .revision-tramo.activo { background: var(--bg-elevated); }
+    .revision-tramo-card.activo { background: var(--bg-elevated); }
 }
 
-/* --- Compu estrecha: las cinco fichas pasan a tres y dos ---------------- */
+/* --- Compu estrecha: las cinco fichas pasan a tres, y los datos a corto -- */
+@media (max-width: 1080px) {
+    .revision-tramo-precio { font-size: 17px; }
+    .qty-larga, .precio-largo { display: none; }
+    .qty-corta, .precio-corto { display: inline; }
+}
+
 @media (max-width: 980px) {
-    .revision-cascada { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .revision-columnas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .revision-cascada-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .revision-columnas-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .revision-cascada-col--resultado { grid-column: span 3; }
 }
 
 /* --- Teléfono: pantalla entera, una columna --------------------------- */
@@ -5607,17 +5797,22 @@ body.revision-abierta { overflow: hidden; }
         border-radius: 0;
     }
 
-    /* La cabecera en dos filas: estado y cierre arriba, el título a todo el
-       ancho debajo. En 390 px el título de cuatro piezas no cabe al lado. */
-    .revision-cab { flex-wrap: wrap; padding: var(--sp-3) var(--sp-4); padding-top: calc(var(--sp-3) + env(safe-area-inset-top)); }
-    .revision-cab .badge { order: 1; }
+    /* La cabecera en dos filas: la pieza y el cierre arriba, de qué es
+       debajo. En 390 px las dos cosas al lado no caben sin cortarse. */
+    .revision-cab {
+        flex-wrap: wrap;
+        gap: 2px var(--sp-3);
+        padding: var(--sp-3) var(--sp-4);
+        padding-top: calc(var(--sp-3) + env(safe-area-inset-top));
+    }
+    .revision-cab-izq { flex: 1 1 auto; white-space: normal; }
     .revision-cerrar { order: 2; margin-left: auto; }
-    .revision-titulo { order: 3; flex: 1 1 100%; white-space: normal; font-size: 14px; line-height: 1.35; }
+    .revision-cab-meta { order: 3; flex: 1 1 100%; margin-left: 0; white-space: normal; }
+
     .revision-cuerpo { padding: var(--sp-3) var(--sp-4); gap: var(--sp-3); }
 
-    .revision-chip { flex: 1 1 calc(50% - var(--sp-2)); min-width: 0; }
-
-    /* Los tramos como tarjetas que se pasan con el dedo. */
+    /* Los tramos, tarjetas que se pasan con el dedo, y el ancho ya no lo
+       decide una rejilla: cada una mide lo suyo y se engancha al centro. */
     .revision-tramos {
         display: flex;
         overflow-x: auto;
@@ -5626,31 +5821,63 @@ body.revision-abierta { overflow: hidden; }
         margin: 0 calc(-1 * var(--sp-4));
         padding: 2px var(--sp-4);
     }
-    .revision-tramo { flex: 0 0 min(62vw, 220px); scroll-snap-align: center; }
+    .revision-tramo-card { flex: 0 0 min(58vw, 200px); scroll-snap-align: center; }
 
-    /* La cascada deja de ser fichas y pasa a ser una lista en cascada. */
-    .revision-cascada { grid-template-columns: 1fr; gap: 0; border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; }
-    .revision-ficha {
+    /* La cascada deja de ser fichas y pasa a ser lista: una línea por paso,
+       etiqueta a la izquierda y los dos números a la derecha, alineados. */
+    .revision-cascada-grid { display: none; }
+    .revision-cascada-lista {
+        display: block;
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        background: var(--bg-surface);
+    }
+    .revision-cascada-fila {
         display: grid;
         grid-template-columns: 1fr auto auto;
         align-items: baseline;
         column-gap: var(--sp-3);
         padding: 10px 12px;
-        border: 0;
         border-bottom: 1px solid var(--border-subtle);
-        border-radius: 0;
     }
-    .revision-ficha:last-child { border-bottom: 0; }
-    .revision-ficha-etq { font-size: 13px; color: var(--text-secondary); white-space: normal; }
-    .revision-ficha-val { font-size: 16px; }
-    .revision-ficha-sub { min-width: 3.5em; text-align: right; }
-    .revision-ficha--ok, .revision-ficha--corto { border-left: 4px solid var(--color-success); padding-left: 8px; }
-    .revision-ficha--corto { border-left-color: var(--color-warning); }
+    .revision-cascada-fila:last-child { border-bottom: 0; }
+    .revision-cascada-fila-lbl { font-size: 13px; color: var(--text-secondary); }
+    .revision-cascada-fila-val {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-primary);
+        font-variant-numeric: tabular-nums;
+    }
+    .revision-cascada-fila-sub {
+        min-width: 3.6em;
+        text-align: right;
+        font-size: 12px;
+        color: var(--text-secondary);
+        font-variant-numeric: tabular-nums;
+    }
+    .revision-cascada-fila--resultado {
+        border-left: 4px solid var(--color-success);
+        padding-left: 8px;
+        background: var(--color-success-bg);
+    }
+    .revision-cascada-fila--resultado.revision-cascada--ok .revision-cascada-fila-val { color: var(--color-success); }
+    .revision-cascada-fila--resultado.revision-cascada--corto {
+        border-left-color: var(--color-warning);
+        background: var(--color-warning-bg);
+    }
+    .revision-cascada-fila--resultado.revision-cascada--corto .revision-cascada-fila-val { color: var(--color-warning); }
 
-    .revision-columnas { grid-template-columns: 1fr; }
+    .revision-columnas-grid { grid-template-columns: 1fr; }
 
-    /* El pie: el botón principal a todo el ancho arriba; Devolver y Aprobar
-       debajo, en punteado, con 44 px de alto para el pulgar. */
+    /* En el teléfono hay sitio para el nombre entero del dato: "C/CV per
+       machine hour" se entiende y "C/CV per h" hay que adivinarlo. */
+    .lbl-desktop { display: none; }
+    .lbl-movil   { display: inline; }
+
+    /* El pie en el teléfono: arriba los dos de mirar, lado a lado; debajo,
+       separadas por una raya, las decisiones en columna, con la verde al
+       final —donde llega el pulgar— y 46 px de alto cada una. */
     .revision-pie {
         flex-direction: column;
         align-items: stretch;
@@ -5658,17 +5885,19 @@ body.revision-abierta { overflow: hidden; }
         padding-bottom: calc(var(--sp-3) + env(safe-area-inset-bottom));
     }
     .revision-pie-nota { font-size: 11px; }
-    .revision-acciones { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
-    .revision-acciones .btn { min-height: 44px; justify-content: center; }
-    .revision-acciones [data-accion="cotizar"] { grid-column: 1 / -1; order: -1; }
-    .revision-acciones [data-accion="declinar"] { grid-column: 1 / -1; }
-    .revision-acciones [data-accion="devolver"],
-    .revision-acciones [data-accion="aprobar"] {
-        background: transparent;
-        border: 1px dashed var(--border-strong);
-        color: var(--text-primary);
+    .revision-acciones { flex-direction: column; align-items: stretch; gap: var(--sp-3); }
+    /* "Ver PDF" mide lo que mide y el resto del ancho se lo queda el otro:
+       a mitades, "Abrir cotización completa" se parte en tres renglones. */
+    .revision-grupo--ver { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-2); }
+    .revision-grupo--decidir {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--sp-2);
+        padding: var(--sp-3) 0 0;
+        border-left: 0;
+        border-top: 1px solid var(--border-default);
     }
-    .revision-acciones [data-accion="aprobar"] { border-color: var(--color-success); color: var(--color-success); }
+    .revision-acciones .btn { min-height: 46px; justify-content: center; white-space: normal; }
 }
 
 

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es" data-tema="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pohua · Panel de revisión (con datos de ejemplo)</title>
+<!--
+  La ventana de revisión DE VERDAD, con datos inventados.
+
+  No hay maqueta aquí: esto carga js/components/revision.js y le pasa un RFQ
+  ya costeado, así que lo que se ve es exactamente lo que pinta la aplicación.
+  Lo único falso son los números y cuatro piezas que la ventana pide prestadas
+  (el permiso, los avisos, el navegador de pantallas): se sustituyen por
+  muñecos para poder abrirla sin servidor ni sesión.
+
+  Se abre sola con doble clic. Con ?t=light sale en claro, y con ?abajo=1
+  arranca con el cuerpo desplazado —para mirar la mitad de abajo en un
+  teléfono sin tener que arrastrar—. vista-revision.html la enseña en los dos
+  temas y los dos tamaños a la vez; esta página es la pieza.
+-->
+<link rel="stylesheet" href="../frontend/css/style.css">
+<style>body { margin: 0; background: var(--bg-base); }</style>
+</head>
+<body>
+<script src="../frontend/js/i18n.js"></script>
+<script>
+window.API = { puede: () => true };
+window.Toast = { error(){}, success(){}, warning(){} };
+window.APP = { navigate(){} };
+window.Confirmar = { pedir: async () => false };
+</script>
+<script src="../frontend/js/components/revision.js"></script>
+<script>
+const DATOS = {
+  puede_dictaminar: true,
+  rfq: { rfq_id: 'INT-15E30DF2', part_number: '1060-022', tipo_resorte: 'compression',
+         quote_number: '26-0142', customer: 'Sample Customer Inc.', estado: 'RequiresReview' },
+  comunes: { material: 'SS302', material_nombre: 'Stainless steel 302',
+             dia_in: 0.205, peso_lb_pc: 0.295, base_lb: 1.85, surcharge_lb: 1.30 },
+  costeo: { completo: true, faltantes: [], banderas_motor: ['Solid stress al 88 % del límite — es un comentario, no frena la cotización.'] },
+  factibilidad: { motivos: [] },
+  cantidades: [100000, 250000, 500000],
+  tramos: [
+    { cantidad: 100000, precio_pc: 3.686, resultado_pct: 20.0, objetivo_pct: 20, llega: true,
+      cascada: { sell: 3.686, av: 2.480, av_pct: 67.3, ccv: 2.465, ccv_pct: 66.9, ccd: 2.027, ccd_pct: 55.0, resultado: 0.737, resultado_pct: 20.0 },
+      material: { pc: 1.195, pct: 32.4, lb_comprar: 32686 },
+      ruta: [{ maquina: 'AIM 3000', pph: 250, setup_h: 6 }, { maquina: 'Grinder A', pph: 500, setup_h: 1 }],
+      totales: { horas: 660, ingreso: 368583, ccv_hora: 373.07 }, avisos: {} },
+    { cantidad: 250000, precio_pc: 3.420, resultado_pct: 20.0, objetivo_pct: 20, llega: true,
+      cascada: { sell: 3.42, av: 2.30, av_pct: 67.2, ccv: 2.29, ccv_pct: 66.9, ccd: 1.88, ccd_pct: 55.0, resultado: 0.684, resultado_pct: 20.0 },
+      material: { pc: 1.195, pct: 34.9, lb_comprar: 81715 },
+      ruta: [{ maquina: 'AIM 3000', pph: 250, setup_h: 6 }],
+      totales: { horas: 1606, ingreso: 855000, ccv_hora: 356.2 }, avisos: {} },
+    { cantidad: 500000, precio_pc: 3.310, resultado_pct: 18.5, objetivo_pct: 20, llega: false,
+      cascada: { sell: 3.31, av: 2.25, av_pct: 68.0, ccv: 2.24, ccv_pct: 67.7, ccd: 1.85, ccd_pct: 55.9, resultado: 0.612, resultado_pct: 18.5 },
+      material: { pc: 1.195, pct: 36.1, lb_comprar: 163430, moq_manda: true },
+      ruta: [{ maquina: 'AIM 3000', pph: 250, setup_h: 6 }, { maquina: 'Grinder A', pph: 500, setup_h: 1 }],
+      totales: { horas: 3206, ingreso: 1655000, ccv_hora: 349.4 }, avisos: { bajo_contribucion: true } },
+  ],
+};
+window.addEventListener('load', () => {
+  const p = new URLSearchParams(location.search);
+  if (p.get('t')) document.documentElement.dataset.tema = p.get('t');
+  Revision.abrir(DATOS);
+  if (p.get('abajo')) {
+    // Para la foto de la mitad de abajo: la cascada en lista, que en la
+    // compu no existe.
+    setTimeout(() => {
+      const c = document.querySelector('.revision-cuerpo');
+      const w = document.querySelector('.revision-cascada-wrap');
+      if (c && w) c.scrollTop = w.offsetTop - 8;
+    }, 60);
+  }
+});
+</script>
+</body></html>

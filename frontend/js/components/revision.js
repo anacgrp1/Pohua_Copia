@@ -349,21 +349,35 @@ const Revision = (() => {
         const r = d.rfq || {};
         const puede = d.puede_dictaminar && API.puede('rfq:dictaminar');
         const abierto = r.estado === 'RequiresReview' || r.estado === 'New' || r.estado === 'Incomplete';
+        const icono = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
+
+        // Dos grupos, y la raya entre ellos es lo que importa: a la izquierda
+        // lo que sólo MIRA —el PDF y la cotización entera—, a la derecha lo
+        // que DECIDE. En una sola fila, "ver el PDF" quedaba pegado a
+        // "Aprobar", que es un clic entre enterarse y cerrar la cotización.
+        const ver = [
+            `<button type="button" class="btn revision-btn revision-btn--fantasma" data-accion="pdf">${icono}${esc(t('rev.previewPdf'))}</button>`,
+            `<button type="button" class="btn revision-btn revision-btn--fantasma" data-accion="cotizar">${esc(t(r.estado === 'Approved' ? 'rev.abrirOferta' : 'rev.abrirCompleta'))}</button>`,
+        ];
+        const decidir = [];
+        if (puede && abierto) {
+            decidir.push(`<button type="button" class="btn btn-secondary revision-btn" data-accion="devolver">${esc(t('rev.devolver'))}</button>`);
+        }
+        if (puede && r.estado !== 'Declined') {
+            decidir.push(`<button type="button" class="btn revision-btn revision-btn--suave" data-accion="declinar">${esc(t('rev.declinar'))}</button>`);
+        }
+        if (puede && abierto) {
+            // La verde, la última: a la derecha en la compu y abajo en el
+            // teléfono, donde llega el pulgar y donde termina la lectura.
+            decidir.push(`<button type="button" class="btn btn-success revision-btn" data-accion="aprobar">${esc(t('rev.aprobar'))}</button>`);
+        }
+
         return `
             <div class="revision-pie">
                 <div class="revision-pie-nota">${esc(puede && abierto ? t('rev.pieNota') : (puede ? t('rev.pieCerrado') : t('rev.pieSoloLectura')))}</div>
                 <div class="revision-acciones">
-                    <button type="button" class="btn revision-btn revision-btn--pdf" data-accion="pdf">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;vertical-align:-2px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>${esc(t('rev.previewPdf'))}
-                    </button>
-                    ${puede && abierto ? `
-                        <button type="button" class="btn revision-btn revision-btn--outline" data-accion="devolver">${esc(t('rev.devolver'))}</button>
-                        <button type="button" class="btn revision-btn revision-btn--outline" data-accion="aprobar">${esc(t('rev.aprobar'))}</button>
-                    ` : ''}
-                    ${puede && r.estado !== 'Declined' ? `
-                        <button type="button" class="btn revision-btn revision-btn--suave" data-accion="declinar">${esc(t('rev.declinar'))}</button>
-                    ` : ''}
-                    <button type="button" class="btn revision-btn revision-btn--primary" data-accion="cotizar">${esc(t(r.estado === 'Approved' ? 'rev.abrirOferta' : 'rev.abrirCompleta'))}</button>
+                    <div class="revision-grupo revision-grupo--ver">${ver.join('')}</div>
+                    ${decidir.length ? `<div class="revision-grupo revision-grupo--decidir">${decidir.join('')}</div>` : ''}
                 </div>
             </div>`;
     }
@@ -434,6 +448,19 @@ const Revision = (() => {
         } catch (err) {
             if (!err.sesionExpirada) Toast.error(err.message);
         } finally { bloquear(false); }
+    }
+
+    /** La cotización entera: la pantalla de la oferta, con tramos y PDF.
+
+        Esta función NO EXISTÍA: el botón la llamaba y el clic moría con un
+        ReferenceError, así que no pasaba nada y encima se comía el resto del
+        manejador. Va a la oferta en cualquier estado —se puede mirar siempre—;
+        si todavía no se puede mandar, esa pantalla dice por qué, que es
+        justamente lo que se viene a averiguar. */
+    function cotizar() {
+        const id = rfqAbierto;
+        cerrar();
+        APP.navigate('quote-review', { id });
     }
 
     async function verPdf() {

@@ -456,6 +456,9 @@ const APP = {
         Revision.init();
         // Los avisos en el teléfono: registra este dispositivo si ya lo estaba.
         if (typeof Push !== 'undefined') Push.init();
+        // El tono de los avisos: queda a la espera del primer clic, que es lo
+        // que el navegador pide para dejar sonar a un sitio.
+        if (typeof Sonido !== 'undefined') Sonido.init();
 
         // Controles del servicio.
         //
@@ -569,6 +572,9 @@ const APP = {
         // Qué página está en pantalla, para el CSS que depende de ella (en el
         // teléfono, la burbuja del asistente se esconde en Quoting).
         document.body.dataset.pagina = page;
+        // La fila de accesos rápidos del asistente es de la SECCIÓN: en
+        // Monitor no pinta nada un "Exportar a Excel".
+        if (typeof Assistant !== 'undefined') Assistant.alCambiarSeccion?.();
 
         // Renderizar la página
         try {

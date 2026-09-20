@@ -28,6 +28,7 @@ const Notificaciones = (() => {
     let datos = null;      // la cola de espera (/api/assistant/attention)
     let avisos = null;     // el buzón de avisos (/api/notificaciones)
     let cargando = false;
+    let vistos = null;     // los ids de avisos ya conocidos, para el sonido
 
     function esc(valor) {
         const nodo = document.createElement('span');
@@ -132,10 +133,16 @@ const Notificaciones = (() => {
                 ${botonCerrar()}
             </div>`;
 
-        // Al pie, siempre: los avisos en este dispositivo (Web Push). Lo pinta
-        // y lo maneja js/components/push.js; aquí sólo se le deja el hueco.
-        const pie = (typeof Push !== 'undefined' && API.puede('notificaciones:ver')) ? Push.pie() : '';
-        const pintarPie = () => { if (pie) Push.pintarPie(); };
+        // Al pie, siempre: el sonido de este equipo y los avisos en este
+        // dispositivo (Web Push). El de push lo pinta y lo maneja
+        // js/components/push.js; aquí sólo se le deja el hueco.
+        const hayPush = typeof Push !== 'undefined' && API.puede('notificaciones:ver');
+        const pie = pieSonido() + (hayPush ? Push.pie() : '');
+        // OJO: la condición es `hayPush`, no `pie`. Desde que el pie lleva
+        // también el sonido, `pie` nunca está vacío, y con `if (pie)` se
+        // llamaba a Push.pintarPie() en navegadores sin push: un
+        // TypeError que se llevaba por delante el repintado del panel.
+        const pintarPie = () => { if (hayPush) Push.pintarPie(); };
 
         if (cargando && !datos && !avisos) {
             p.innerHTML = cabecera('') + `<p class="notif-vacio">${
@@ -173,6 +180,30 @@ const Notificaciones = (() => {
     }
 
     /**
+     * El sonido, al pie del panel: interruptor y una prueba.
+     *
+     * Va aquí y no en Perfil porque es del EQUIPO, no de la cuenta: la misma
+     * persona quiere sonido en su máquina y silencio en la de la sala de
+     * juntas. Y porque se decide justo cuando molesta, que es mirando la
+     * campana.
+     */
+    function pieSonido() {
+        if (typeof Sonido === 'undefined') return '';
+        const activo = Sonido.encendido();
+        const icono = activo
+            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>`
+            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`;
+        return `<div class="notif-pie" id="notifSonidoPie">
+            ${icono}
+            <span class="notif-pie-texto">${esc(I18N.t(activo ? 'sonido.activo' : 'sonido.apagado'))}</span>
+            ${activo ? `<button type="button" class="notif-pie-boton" data-sonido="probar"
+                        title="${esc(I18N.t('sonido.probarTitulo'))}">${esc(I18N.t('sonido.probar'))}</button>` : ''}
+            <button type="button" class="notif-pie-boton${activo ? '' : ' notif-pie-boton--primario'}"
+                    data-sonido="alternar">${esc(I18N.t(activo ? 'sonido.apagar' : 'sonido.encender'))}</button>
+        </div>`;
+    }
+
+    /**
      * La ✕ del cajón. Sólo se pinta —y el CSS sólo la enseña— en el teléfono:
      * en computadora el panel se cierra pulsando fuera, como cualquier
      * desplegable, y una aspa ahí sobraría.
@@ -207,7 +238,7 @@ const Notificaciones = (() => {
             if (cola.status === 'fulfilled') datos = cola.value;
             else if (cola.reason && cola.reason.sesionExpirada) return;
 
-            if (buzon.status === 'fulfilled') avisos = buzon.value;
+            if (buzon.status === 'fulfilled') { avisos = buzon.value; sonarLoNuevo(); }
             else if (buzon.reason && buzon.reason.sesionExpirada) return;
 
             pintarGlobo();
@@ -219,6 +250,35 @@ const Notificaciones = (() => {
         } finally {
             cargando = false;
         }
+    }
+
+    /**
+     * Suena si ha llegado un aviso que no estaba en el sondeo anterior.
+     *
+     * Se comparan IDS y no el total: si alguien marca uno como leído y llega
+     * otro en el mismo minuto, el total no se mueve y el aviso nuevo pasaría
+     * callado. Con los ids eso no ocurre.
+     *
+     * La primera vuelta no suena. Al entrar por la mañana hay avisos
+     * esperando desde ayer y no son novedad; que la aplicación salude con un
+     * tono cada vez que se recarga la página es justo la forma de que alguien
+     * apague el sonido el primer día.
+     *
+     * De varios a la vez manda el más grave: un crítico entre tres normales
+     * tiene que sonar a crítico.
+     */
+    function sonarLoNuevo() {
+        const lista = (avisos && avisos.avisos) || [];
+        const ahora = new Set(lista.map(a => a.id));
+
+        if (vistos === null) { vistos = ahora; return; }
+
+        const nuevos = lista.filter(a => !vistos.has(a.id));
+        vistos = ahora;
+        if (!nuevos.length) return;
+        if (typeof Sonido === 'undefined') return;
+
+        Sonido.sonar(nuevos.some(a => a.nivel === 'crit') ? 'crit' : 'aviso');
     }
 
     // ------------------------------------------------------------- apertura
@@ -324,6 +384,20 @@ const Notificaciones = (() => {
             });
 
             panel()?.addEventListener('click', (ev) => {
+                const son = ev.target.closest('[data-sonido]');
+                if (son) {
+                    // Sin esto el panel se cierra solo: al repintarlo aquí,
+                    // el botón que se acaba de pulsar deja de estar en el
+                    // documento, y cuando el clic llega al manejador de
+                    // "clic fuera" su `closest('#notificaciones')` ya da null.
+                    ev.stopPropagation();
+                    // El clic ya es el gesto que el navegador pide para dejar
+                    // sonar, así que la prueba se oye en el mismo momento.
+                    if (son.dataset.sonido === 'probar') Sonido.probar('aviso');
+                    else if (Sonido.alternar()) Sonido.probar('aviso');
+                    pintarPanel();
+                    return;
+                }
                 if (ev.target.closest('[data-cerrar]')) { cerrar({ devolverFoco: true }); return; }
                 if (ev.target.closest('[data-leertodo]')) { leerTodo(); return; }
                 const item = ev.target.closest('.notif-item');
@@ -378,6 +452,7 @@ const Notificaciones = (() => {
         cerrar();
         datos = null;
         avisos = null;
+        vistos = null;      // otro usuario, otro buzón: nada es "nuevo" todavía
         const c = caja();
         if (c) c.hidden = true;
     }
