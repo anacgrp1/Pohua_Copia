@@ -604,6 +604,17 @@
         var css = document.createElement('style');
         css.id = 'nube-anclaje';
         css.textContent = [
+            /* EN EL TELÉFONO LA BARRA NO SE ENSEÑA.
+               Reset, Save, Ver PDF y Aprobar son los mismos cuatro botones
+               que la ventana de revisión de Pohua ya tiene —y ésa es la que
+               sigue el flujo de aprobación, avisa al cliente y deja rastro—.
+               Duplicados dentro del marco, en una pantalla de 390 px, eran
+               media pantalla de botones que hacían otra cosa parecida pero no
+               igual, y encima tapaban el final de la hoja. El borrador se
+               guarda solo (`queueDraft`), así que quitarla no pierde trabajo. */
+            '@media (max-width:820px){',
+            ' html:not(.nube-ventana) #botbar{display:none!important}',
+            '}',
             /* Sólo de tableta para arriba. En el teléfono esta barra NO se
                persigue con JavaScript: ver `anclarFijos`. */
             '@media (min-width:821px){',
@@ -642,8 +653,10 @@
          * camino. El hueco que se reserva al final se sigue publicando.
          */
         if (bot) {
-            var alto = bot.offsetHeight || 0;
-            if (alto && alto !== ultimoAlto) {
+            // Escondida en el teléfono: el hueco del final sobra.
+            var estrecho = window.innerWidth <= ANCHO_TELEFONO;
+            var alto = estrecho ? 0 : (bot.offsetHeight || 0);
+            if (alto !== ultimoAlto) {
                 ultimoAlto = alto;
                 document.documentElement.style.setProperty('--nube-barra', alto + 'px');
             }
@@ -800,11 +813,294 @@
         // apartado: la misma función, sin enseñar ninguna capa.
         window.addEventListener('message', function (ev) {
             var d = ev.data || {};
-            if (d.source !== 'pohua' || d.tipo !== 'pedir-resorte') return;
-            try { if (typeof openSpringCalc === 'function') openSpringCalc(false); } catch (e) {}
+            if (d.source !== 'pohua') return;
+            if (d.tipo === 'pedir-resorte') {
+                try { if (typeof openSpringCalc === 'function') openSpringCalc(false); } catch (e) {}
+            } else if (d.tipo === 'cargar-rfq') {
+                cargarRfq(d.datos);
+            }
         });
     }
 
+
+    // ----------------------------------------- abrir un RFQ en la calculadora
+
+    /**
+     * El RFQ del correo, puesto en la hoja.
+     *
+     * "Abrir cotización completa" traía a la calculadora en blanco: el PM
+     * acababa de ver el material, el diámetro, el peso y tres cantidades en la
+     * ventana de revisión, y aquí se encontraba un "Needs the customer, at
+     * least one quantity before it can be approved" y a teclearlo otra vez.
+     *
+     * Lo que llega de Pohua NO es una lista de campos que haya que ir
+     * colocando uno por uno: es el PN entero, con la forma exacta que la
+     * calculadora guarda en su borrador (`blankPn()`), porque lo arma el mismo
+     * código del servidor que se lo pasa al motor para costear. Aquí se
+     * adopta tal cual y se repinta. Si se copiara campo por campo desde el
+     * navegador, el día que el motor cambiara un nombre la hoja se abriría con
+     * un número distinto del que el PM acaba de aprobar.
+     *
+     * Lo que NO se hace: pisar trabajo de nadie. Si el borrador está en blanco
+     * se llena; si ya trae otra cotización a medias, se pregunta; y si ya es
+     * este mismo RFQ, no se toca nada —volver a entrar no puede deshacer lo
+     * que se lleve escrito—.
+     */
+    function cargarRfq(d) {
+        if (!d || !d.pn) return;
+        if (typeof Q !== 'function' || typeof blankQuote !== 'function') return;
+
+        var q = Q();
+        if (q && q.pohuaRfq === d.rfq_id) {       // ya está abierto: no se toca
+            avisarCargado(d.rfq_id, false);
+            return;
+        }
+
+        var vacio = !q || (!q.number && !q.header.customerCode &&
+                           !(q.pns && q.pns[0] && q.pns[0].pn));
+        if (vacio) { ponerRfq(d); return; }
+
+        var texto = 'La hoja tiene una cotización a medias. Se guarda en el ' +
+                    'registro y se abre ' + d.rfq_id + ' en su lugar.';
+        if (typeof confirmBox === 'function') {
+            confirmBox('Abrir ' + d.rfq_id, texto, function () { ponerRfq(d); });
+        } else if (window.confirm(texto)) {
+            ponerRfq(d);
+        }
+    }
+
+    /** Un paso que puede fallar sin llevarse los demás. */
+    function intentar(fn, que) {
+        try { fn(); return true; }
+        catch (e) {
+            console.warn('[nube] No se pudo ' + que + ': ' + e.message);
+            return false;
+        }
+    }
+
+    function ponerRfq(d) {
+        try {
+            var q = blankQuote();
+            q.pohuaRfq = d.rfq_id;              // para no volver a cargarlo encima
+            q.pns = [d.pn];
+            q.activePn = 0;
+
+            var cab = d.header || {};
+            q.header.customerCode = codigoDeCliente(cab.customer) ||
+                                    codigoDeCliente(cab.cliente_id) ||
+                                    altaDeCliente(cab.cliente);
+            // Lo que el comprador pidió y no tiene casilla propia, en las
+            // notas internas del PN: de dónde salió esta cotización, para
+            // cuándo la quiere, en qué moneda y con qué incoterm, y lo que
+            // escribiera de más. No se imprime en la oferta; se lee antes de
+            // cotizar, que es justo cuando hace falta.
+            d.pn.notes = notasDelCorreo(d, cab) || d.pn.notes || '';
+
+            // La geometría se cuelga del PN ANTES de guardarlo: `migrateQuote`
+            // devuelve una copia, así que lo que se le añada al objeto después
+            // ya no es el que queda en el borrador —y el plano del correo se
+            // perdía sin ruido—.
+            prepararResorte(d);
+
+            local.draft = (typeof migrateQuote === 'function')
+                ? migrateQuote(q) : q;
+            if (typeof saveLocal === 'function') saveLocal();
+
+            /* Cada paso en su propio intento, y no los tres en uno.
+               `renderQuote()` termina llamando a `recalc()`, y un RFQ al que
+               le falta el diámetro o la tarifa de la máquina —que es
+               exactamente el que se viene a completar aquí— puede hacerla
+               tropezar. Encadenados, ese tropiezo se llevaba por delante lo
+               que venía después: la hoja de resortes no recibía la geometría
+               y el aviso final tampoco salía. El borrador ya está guardado,
+               así que un fallo al pintar no pierde nada. */
+            intentar(function () {
+                if (typeof renderQuote === 'function') renderQuote();
+            }, 'pintar la hoja');
+            intentar(function () {
+                if (typeof updateSummaryTab === 'function') updateSummaryTab();
+            }, 'refrescar el resumen');
+
+            /* El número de cotización y las condiciones de pago los pone la
+               calculadora al ELEGIR cliente, no al tener uno: poniendo el
+               código en el modelo, la casilla quedaba con el cliente puesto y
+               el número en "(select customer)". Se dispara el mismo camino que
+               el desplegable, que además apunta la cotización en el registro
+               y deja las condiciones del cliente. */
+            intentar(function () {
+                var sel = document.getElementById('q-customer');
+                if (!sel || !q.header.customerCode) return;
+                sel.value = q.header.customerCode;
+                if (typeof sel.onchange === 'function') {
+                    sel.onchange({ target: { value: q.header.customerCode } });
+                }
+            }, 'numerar la cotización');
+
+            // Y ya con el borrador puesto, se le entrega a la hoja de resortes.
+            if (d.pn.drawing) {
+                intentar(function () {
+                    if (typeof openSpringCalc === 'function') openSpringCalc(false);
+                }, 'pasar la geometría a la hoja de resortes');
+            }
+            avisarCargado(d.rfq_id, true, cab.customer,
+                          !q.header.customerCode ? cab.customer : null,
+                          d.faltantes || []);
+        } catch (e) {
+            aviso('No se pudo abrir ' + d.rfq_id + ' en la hoja: ' + e.message);
+        }
+    }
+
+    /**
+     * Copiar al catálogo de la calculadora un cliente que Pohua YA tiene.
+     *
+     * Son dos catálogos distintos: el de Pohua —donde un cliente entra cuando
+     * se registra su dominio— y el de la calculadora, que vive en el documento
+     * compartido. Un cliente que está en el primero y no en el segundo deja la
+     * casilla "Customer" vacía, y sin cliente la cotización no se puede ni
+     * numerar ni aprobar: había que teclear a mano un nombre que el sistema ya
+     * conocía.
+     *
+     * Se copia SÓLO lo que Pohua ya dio de alta. Un remitente desconocido no
+     * crea nada: el nombre que el modelo leyó de un correo no es un alta, y
+     * un catálogo con "Re: quote request" dentro no se limpia solo.
+     */
+    function altaDeCliente(cliente) {
+        if (!cliente || !cliente.codigo || !cliente.razon_social) return '';
+        if (typeof shared === 'undefined' || !shared.dbs || !shared.dbs.customers) return '';
+
+        var codigo = String(cliente.codigo).trim().toUpperCase()
+                        .replace(/[^A-Z0-9-]/g, '').slice(0, 20);
+        if (!codigo) return '';
+        for (var i = 0; i < shared.dbs.customers.length; i++) {
+            if (String(shared.dbs.customers[i].code || '').toUpperCase() === codigo) {
+                return shared.dbs.customers[i].code;
+            }
+        }
+
+        shared.dbs.customers.push({
+            code: codigo,
+            name: String(cliente.razon_social).slice(0, 80),
+            terms: cliente.payment_terms || 'Net 30',
+        });
+        shared.dbs.customers.sort(function (a, b) {
+            return String(a.code).localeCompare(String(b.code));
+        });
+        intentar(function () {
+            if (typeof journal === 'function') {
+                journal('DB:customers', 'Cliente copiado desde Pohua: ' +
+                        codigo + ' — ' + cliente.razon_social);
+            }
+            if (typeof fillCustomers === 'function') fillCustomers();
+            if (typeof queueShared === 'function') queueShared();
+        }, 'apuntar el alta del cliente');
+        return codigo;
+    }
+
+    /** Las notas internas del PN, armadas con lo que trajo el correo. */
+    function notasDelCorreo(d, cab) {
+        var partes = [];
+        partes.push('RFQ ' + d.rfq_id + (cab.asunto ? ' — ' + cab.asunto : ''));
+        if (cab.contacto || cab.remitente) {
+            partes.push('Pide: ' + (cab.contacto || '') +
+                        (cab.remitente ? ' <' + cab.remitente + '>' : ''));
+        }
+        if (cab.entrega) partes.push('Entrega pedida: ' + cab.entrega);
+        if (cab.incoterm) partes.push('Incoterm: ' + cab.incoterm);
+        if (cab.moneda) partes.push('Moneda: ' + cab.moneda);
+        if (cab.notas) partes.push(cab.notas);
+        // Lo que el catálogo no pudo resolver se dice aquí y no sólo en un
+        // aviso que se va solo: es lo que hay que capturar a mano.
+        (d.faltantes || []).forEach(function (f) { partes.push('Falta: ' + f); });
+        return partes.join(' · ');
+    }
+
+    /**
+     * El cliente del correo, contra el catálogo de la calculadora.
+     *
+     * Se busca por código exacto y por nombre, sin distinguir mayúsculas ni
+     * espacios de más. Si no está, se devuelve vacío A PROPÓSITO: dar de alta
+     * un cliente es una decisión con términos de pago y representante detrás,
+     * y no la toma sola una pantalla porque llegó un correo.
+     */
+    function codigoDeCliente(nombre) {
+        var buscado = String(nombre || '').trim().toLowerCase();
+        if (!buscado) return '';
+        var lista = (typeof shared !== 'undefined' && shared.dbs &&
+                     shared.dbs.customers) || [];
+        for (var i = 0; i < lista.length; i++) {
+            var c = lista[i] || {};
+            if (String(c.code || '').trim().toLowerCase() === buscado) return c.code;
+        }
+        for (var j = 0; j < lista.length; j++) {
+            var c2 = lista[j] || {};
+            if (String(c2.name || '').trim().toLowerCase() === buscado) return c2.code;
+        }
+        return '';
+    }
+
+    /**
+     * La geometría, a la hoja de resortes.
+     *
+     * Se arma la MISMA carga que manda el lector de planos (`drawingData`),
+     * porque la hoja de resortes ya sabe recibirla: reparte diámetros, largo y
+     * espiras según el tipo, resuelve el material y deja el resorte listo para
+     * dimensionar. Lo que venga vacío no se manda, y lo que no se manda no se
+     * pisa allí.
+     */
+    function prepararResorte(d) {
+        var r = d.resorte || {};
+        var tipo = TIPOS_RESORTE[String(r.tipo || '').toLowerCase()] || null;
+        var campos = [];
+        var mm = function (clave, valor) {
+            if (valor || valor === 0) campos.push({ key: clave, value: valor, unit: 'mm' });
+        };
+        mm('wireDia', r.diametro_alambre_mm);
+        mm('od', r.diametro_exterior_mm);
+        mm('id', r.diametro_interior_mm);
+        mm('freeLength', r.longitud_libre_mm);
+        mm('bodyLength', r.longitud_cuerpo_mm);
+        if (r.espiras_totales) campos.push({ key: 'coils', value: r.espiras_totales, unit: '' });
+        if (r.acabado) campos.push({ key: 'finish', value: r.acabado, unit: '' });
+        if (r.material_texto || (d.pn.material && d.pn.material.code)) {
+            campos.push({ key: 'material', value: r.material_texto || '',
+                          code: (d.pn.material && d.pn.material.code) || '', unit: '' });
+        }
+        if (!tipo && !campos.length) return;
+
+        // Se guarda en el PN como si lo hubiera leído el plano: así la propia
+        // calculadora lo reenvía sola cada vez que se abre la hoja de
+        // resortes, sin que haya que repetir este camino.
+        d.pn.drawing = {
+            springType: tipo || undefined,
+            fields: campos,
+            title: { pn: d.pn.pn || '', customer: (d.header || {}).customer || '' },
+            origen: 'correo',
+            feasibility: [],
+            verdict: null,
+        };
+    }
+
+    var TIPOS_RESORTE = {
+        compresion: 'compression', compression: 'compression',
+        extension: 'extension', tension: 'extension', tracción: 'extension',
+        traccion: 'extension', torsion: 'torsion', torsión: 'torsion',
+    };
+
+    /** Lo que se le dice a quien acaba de pulsar "Abrir cotización completa". */
+    function avisarCargado(rfqId, lleno, cliente, sinCatalogo, faltantes) {
+        if (!lleno) return;
+        var partes = ['RFQ ' + rfqId + ' abierto en la hoja'];
+        if (sinCatalogo) {
+            partes.push('el cliente "' + sinCatalogo + '" no está en el catálogo: ' +
+                        'hay que elegirlo o darlo de alta');
+        } else if (cliente) {
+            partes.push('cliente ' + cliente);
+        }
+        if (faltantes && faltantes.length) {
+            partes.push(faltantes.length + ' dato(s) que el catálogo no resolvió');
+        }
+        aviso(partes.join(' · '));
+    }
 
     // ------------------------------------------------- la fecha del RFQ
 
@@ -1051,6 +1347,12 @@
     }
 
     esperarCalculadora(function () {
+        /* Pohua espera esta señal para mandar el RFQ que hay que abrir. Sin
+           ella tendría que adivinar cuándo terminó de arrancar la calculadora
+           —el `load` del marco llega mucho antes— y el mensaje se perdería. */
+        try {
+            window.parent.postMessage({ source: 'isc-nube', tipo: 'hoja-lista' }, '*');
+        } catch (e) {}
         fusionarBarras();
         desanidarResorte();
         fechaDeHoy();

@@ -1,16 +1,41 @@
 /**
- * RFQ Detail Page
+ * La ficha de un RFQ: lo que se extrajo del correo y del plano, y el dictamen.
+ *
+ * Dos caras, un mismo DOM:
+ *
+ *   - Compu: la cabecera en una fila —volver, el identificador y el estado,
+ *     y los botones a la derecha— y las dos tarjetas lado a lado.
+ *   - Teléfono: la cabecera en tres renglones y los botones a todo el ancho,
+ *     de 46 px. Antes era una sola fila flexible SIN salto: en 390 px medía
+ *     565 y la página entera se iba de lado, así que el identificador quedaba
+ *     debajo del botón de volver, el estado encima del título y "Approve
+ *     Feasibility" fuera de la pantalla. Una ficha que se lee desde el correo,
+ *     en el teléfono, no puede empezar con un desplazamiento horizontal.
+ *
+ * Todo lo que se pinta aquí viene de un correo de un cliente —el nombre, el
+ * remitente, los motivos, las notas—, así que TODO pasa por `esc()`. Un asunto
+ * con un `<img onerror=...>` no es un caso raro de laboratorio: es el primer
+ * correo raro que llegue.
  */
 const RFQDetailPage = {
     currentRfqId: null,
 
+    /** Texto de un correo dentro de HTML: nunca tal cual. */
+    esc(valor) {
+        const nodo = document.createElement('span');
+        nodo.textContent = valor == null ? '' : String(valor);
+        return nodo.innerHTML;
+    },
+
     async render(container, params) {
         this.currentRfqId = params.id;
-        container.innerHTML = `<div class="loading-overlay"><div class="spinner"></div> Loading details…</div>`;
+        container.innerHTML = `<div class="loading-overlay"><div class="spinner"></div> ${
+            this.esc(I18N.t('rev.cargando'))}</div>`;
         await this.loadData(container);
     },
 
     async loadData(container) {
+        const esc = this.esc;
         try {
             const rfq = await API.getRFQ(this.currentRfqId);
             const r = rfq.resorte || {};
@@ -19,54 +44,75 @@ const RFQDetailPage = {
             // Los botones de dictamen sólo existen si el usuario puede dictaminar.
             const puedeDictaminar = API.puede('rfq:dictaminar');
 
-            let flagsHtml = rfq.banderas.map(f => 
-                `<div class="badge badge-${f.nivel === 'ERROR' ? 'declined' : 'review'}" style="margin-right:8px;margin-bottom:8px">
-                    <span class="badge-dot"></span>${f.titulo}
-                 </div>`
-            ).join('');
+            // Los motivos, uno por línea y alineados a la izquierda. Eran
+            // "badges" —pastillas pensadas para una palabra— con frases
+            // enteras dentro: en el teléfono cada motivo salía como una
+            // píldora de tres renglones con el texto centrado.
+            const banderas = (rfq.banderas || []).map(f => `
+                <li class="rfqd-bandera rfqd-bandera--${f.nivel === 'ERROR' ? 'error' : 'aviso'}">
+                    ${esc(f.titulo)}
+                </li>`).join('');
+
+            const fila = (clave, valor, extra = '') => `
+                <div class="detail-row">
+                    <span class="detail-key">${esc(clave)}</span>
+                    <span class="detail-value${extra}">${esc(valor) || '—'}</span>
+                </div>`;
+
+            const mm = (v) => (v || v === 0) ? v + ' mm' : '';
 
             container.innerHTML = `
-                <div style="display:flex;gap:16px;margin-bottom:20px;align-items:center">
-                    <button class="btn btn-secondary" onclick="APP.navigate('quoting')">&larr; Back</button>
-                    <h2 style="margin:0">${rfq.rfq_id} <span style="font-weight:400;color:var(--text-muted);font-size:16px">v${rfq.version}</span></h2>
-                    <span class="badge ${RFQTable.badgeClass(rfq.estado)}"><span class="badge-dot"></span>${rfq.estado}</span>
-                    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-                        <button class="btn btn-secondary" onclick="Revision.abrir('${rfq.rfq_id}')">${I18N.t('rev.abrir')}</button>
+                <div class="rfqd-cab">
+                    <button class="btn btn-secondary rfqd-volver"
+                            onclick="APP.navigate('quoting')">&larr; Back</button>
+                    <div class="rfqd-ident">
+                        <h2 class="rfqd-id">${esc(rfq.rfq_id)}
+                            <span class="rfqd-version">v${esc(rfq.version)}</span></h2>
+                        <span class="badge ${RFQTable.badgeClass(rfq.estado)}"><span class="badge-dot"></span>${esc(rfq.estado)}</span>
+                    </div>
+                    <div class="rfqd-acciones">
+                        <button class="btn btn-secondary" onclick="Revision.abrir('${esc(rfq.rfq_id)}')">${esc(I18N.t('rev.abrir'))}</button>
                         ${puedeDictaminar && rfq.estado !== 'Declined' ? `<button class="btn btn-danger" onclick="RFQDetailPage.decline()">Decline</button>` : ''}
                         ${puedeDictaminar && (rfq.estado === 'RequiresReview' || rfq.estado === 'New') ? `<button class="btn btn-success" onclick="RFQDetailPage.approve()">Approve Feasibility</button>` : ''}
-                        ${rfq.estado === 'Approved' ? `<button class="btn btn-primary" onclick="APP.navigate('quote-review', {id: '${rfq.rfq_id}'})">Quote &rarr;</button>` : ''}
+                        ${rfq.estado === 'Approved' ? `<button class="btn btn-primary" onclick="APP.navigate('quote-review', {id: '${esc(rfq.rfq_id)}'})">Quote &rarr;</button>` : ''}
                     </div>
                 </div>
 
-                ${flagsHtml ? `<div class="detail-panel" style="border-color:var(--color-warning);background:rgba(245,158,11,0.05)"><div class="detail-panel-title" style="color:var(--color-warning)">Review Flags</div>${flagsHtml}</div>` : ''}
+                ${banderas ? `<div class="detail-panel rfqd-panel--aviso">
+                    <div class="detail-panel-title">Review Flags</div>
+                    <ul class="rfqd-banderas">${banderas}</ul>
+                </div>` : ''}
 
                 <div class="cards-grid cards-grid--dos">
                     <!-- Datos Comerciales -->
                     <div class="detail-panel">
                         <div class="detail-panel-title">Commercial Data</div>
-                        <div class="detail-row"><span class="detail-key">Customer</span><span class="detail-value">${rfq.cliente_id || d.customer || '—'}</span></div>
-                        <div class="detail-row"><span class="detail-key">Part Number</span><span class="detail-value">${rfq.part_number || '—'}</span></div>
-                        <div class="detail-row"><span class="detail-key">Volume (EAU)</span><span class="detail-value">${rfq.volumen || '—'}</span></div>
-                        <div class="detail-row"><span class="detail-key">Required Material</span><span class="detail-value">${rfq.material || '—'}</span></div>
-                        <div class="detail-row"><span class="detail-key">Sender</span><span class="detail-value" style="word-break:break-all">${d.remitente || '—'}</span></div>
+                        ${fila('Customer', rfq.cliente_id || d.customer)}
+                        ${fila('Part Number', rfq.part_number)}
+                        ${fila('Volume (EAU)', rfq.volumen)}
+                        ${fila('Required Material', rfq.material)}
+                        ${fila('Sender', d.remitente, ' detail-value--correo')}
                     </div>
 
                     <!-- Datos del Resorte (Visión) -->
                     <div class="detail-panel">
                         <div class="detail-panel-title">Spring Physics (AI Extracted)</div>
-                        <div class="detail-row"><span class="detail-key">Type</span><span class="detail-value" style="text-transform:capitalize">${r.tipo_resorte || '—'}</span></div>
-                        <div class="detail-row"><span class="detail-key">Wire Diameter</span><span class="detail-value">${r.diametro_alambre_mm ? r.diametro_alambre_mm + ' mm' : '—'}</span></div>
-                        <div class="detail-row"><span class="detail-key">Outer Diameter</span><span class="detail-value">${r.diametro_exterior_mm ? r.diametro_exterior_mm + ' mm' : '—'}</span></div>
-                        <div class="detail-row"><span class="detail-key">Free Length</span><span class="detail-value">${r.longitud_libre_mm ? r.longitud_libre_mm + ' mm' : '—'}</span></div>
-                        <div class="detail-row"><span class="detail-key">Total Coils</span><span class="detail-value">${r.numero_espiras_totales || '—'}</span></div>
-                        <div class="detail-row"><span class="detail-key">AI Confidence</span><span class="detail-value">${r.confianza ? (r.confianza * 100).toFixed(0) + '%' : '—'}</span></div>
+                        ${fila('Type', r.tipo_resorte, ' detail-value--tipo')}
+                        ${fila('Wire Diameter', mm(r.diametro_alambre_mm))}
+                        ${fila('Outer Diameter', mm(r.diametro_exterior_mm))}
+                        ${fila('Free Length', mm(r.longitud_libre_mm))}
+                        ${fila('Total Coils', r.numero_espiras_totales)}
+                        ${fila('AI Confidence', r.confianza ? (r.confianza * 100).toFixed(0) + '%' : '')}
                     </div>
                 </div>
 
-                ${rfq.notas ? `<div class="detail-panel"><div class="detail-panel-title">PM Notes</div><p style="white-space:pre-wrap">${rfq.notas}</p></div>` : ''}
+                ${rfq.notas ? `<div class="detail-panel">
+                    <div class="detail-panel-title">PM Notes</div>
+                    <p class="rfqd-notas">${esc(rfq.notas)}</p>
+                </div>` : ''}
             `;
         } catch (err) {
-            container.innerHTML = `<div class="detail-panel" style="color:var(--color-error)">Error: ${err.message}</div>`;
+            container.innerHTML = `<div class="detail-panel rfqd-error">Error: ${esc(err.message)}</div>`;
         }
     },
 

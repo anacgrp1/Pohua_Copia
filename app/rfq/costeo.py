@@ -97,22 +97,57 @@ def tramo_para_ventana(t: dict, objetivo_pct) -> dict:
 
 
 
-def costear(rfq_id: str, datos: dict, resorte: dict, material_rfq=None) -> dict:
-    """Costea el RFQ por tramos. Nunca lanza: el costeo no puede tumbar a quien lo pide.
+def datos_para_motor(datos: dict, resorte: dict, material_rfq=None) -> dict:
+    """Lo que se le pasa al motor: el resorte, con las cantidades del correo.
 
-    Devuelve ``{cantidades, tramos, costeo, comunes, error_costeo}``.
+    Vive aparte porque lo usan dos caminos que tienen que coincidir: el costeo
+    que enseña la ventana de revisión y el PN con el que se abre la calculadora
+    completa. Si se prepararan por separado, la calculadora podría abrirse con
+    un material o unas cantidades distintas de las del número que el PM acaba
+    de ver, y nadie sabría cuál de los dos creer.
     """
     datos = datos or {}
     resorte = resorte or {}
     cantidades = cantidades_del_rfq(datos)
 
-    # Lo que va al motor: el resorte extraído del plano, con las cantidades del
-    # correo. Si el plano no dio material y el correo sí, se usa el del correo.
+    # Si el plano no dio material y el correo sí, se usa el del correo.
     datos_resorte = dict(resorte)
     if not datos_resorte.get("material") and material_rfq:
         datos_resorte["material"] = material_rfq
     datos_resorte["cantidades"] = cantidades
     datos_resorte["cantidad"] = cantidades[0] if cantidades else None
+    return datos_resorte
+
+
+def pn_inicial(rfq_id: str, datos: dict, resorte: dict, material_rfq=None) -> dict:
+    """El PN con el que se abre la calculadora completa, ya relleno.
+
+    Es el MISMO que se le manda al motor para costear —mismo material, mismos
+    tramos, misma ruta—, y tiene la forma exacta que la calculadora guarda en
+    su borrador (`blankPn()`), así que allí se adopta tal cual en vez de
+    copiarse campo por campo desde el navegador.
+
+    Devuelve ``{pn, faltantes, error}``. Nunca lanza: si el catálogo no está,
+    se devuelve el PN en blanco con el motivo, y la calculadora abre vacía en
+    lugar de no abrir.
+    """
+    datos_resorte = datos_para_motor(datos, resorte, material_rfq)
+    try:
+        from pricing.rodea_adapter import build_pn_for_engine
+        pn, catalogo = build_pn_for_engine(rfq_id, datos_resorte)
+        return {"pn": pn, "faltantes": list(catalogo.faltantes), "error": None}
+    except Exception as err:      # el catálogo no puede impedir abrir la hoja
+        log.exception("RFQ %s: no se pudo armar el PN inicial: %s", rfq_id, err)
+        return {"pn": None, "faltantes": [], "error": str(err)}
+
+
+def costear(rfq_id: str, datos: dict, resorte: dict, material_rfq=None) -> dict:
+    """Costea el RFQ por tramos. Nunca lanza: el costeo no puede tumbar a quien lo pide.
+
+    Devuelve ``{cantidades, tramos, costeo, comunes, error_costeo}``.
+    """
+    datos_resorte = datos_para_motor(datos, resorte, material_rfq)
+    cantidades = datos_resorte.get("cantidades") or []
 
     tramos, costeo, comunes = [], {"completo": False, "faltantes": [], "origen": None}, {}
     error_costeo = None

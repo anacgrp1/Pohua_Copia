@@ -1613,10 +1613,14 @@ a:hover { color: var(--cgr-primary); }
     letter-spacing: 0.3px;
 }
 
-.badge-new        { background: rgba(59,130,246,0.15); color: #60A5FA; }
-.badge-review     { background: rgba(245,158,11,0.15); color: #FBBF24; }
-.badge-approved   { background: rgba(16,185,129,0.15); color: #34D399; }
-.badge-declined   { background: rgba(239,68,68,0.15); color: #F87171; }
+/* Del tema, no a mano. Estaban en colores fijos pensados para el fondo
+   oscuro (#FBBF24 sobre un ámbar al 15 %): en claro, esa misma pastilla
+   quedaba en amarillo pálido sobre papel —ilegible—, y encima ignoraba los
+   tokens --badge-* que ya existían justo para esto. */
+.badge-new        { background: var(--color-info-bg);    color: var(--badge-new); }
+.badge-review     { background: var(--color-warning-bg); color: var(--badge-review); }
+.badge-approved   { background: var(--color-success-bg); color: var(--badge-approved); }
+.badge-declined   { background: var(--color-error-bg);   color: var(--badge-declined); }
 
 .badge-dot {
     width: 6px;
@@ -1724,6 +1728,14 @@ a:hover { color: var(--cgr-primary); }
 }
 
 .detail-row:last-child { border-bottom: none; }
+
+/* La clave no se encoge; el valor sí, y parte por donde haga falta: un
+   material como "ASTM A228 music wire, zinc plated finish" o un correo largo
+   ensanchaban la tarjeta hasta sacar la página de la pantalla. */
+.detail-key   { flex: none; }
+.detail-value { min-width: 0; overflow-wrap: anywhere; }
+.detail-value--correo { word-break: break-all; }
+.detail-value--tipo   { text-transform: capitalize; }
 
 .detail-key {
     color: var(--text-muted);
@@ -3625,6 +3637,19 @@ body.menu-abierto { overflow: hidden; }
        detrás del velo y que aún respondieran a un toque sería peor que
        dejarlos delante. Vuelven solos al cerrar el cajón. */
     body.menu-abierto .barra-esquina {
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    /* El reloj, igual. Es hermano de .app-layout y estaba en z-index 300, así
+       que con el cajón abierto se quedaba flotando ENCIMA —opaco, sobre el
+       logo y las opciones del menú, y encima seguía siendo pulsable—. Mismo
+       tratamiento que la esquina: detrás del velo y sordo al toque, y vuelve
+       solo al cerrar.
+
+       No se esconde con `display:none`: quitarlo y devolverlo hace saltar la
+       maqueta y reinicia su animación cada vez que se abre el menú. */
+    body.menu-abierto .reloj {
         z-index: 0;
         pointer-events: none;
     }
@@ -5900,6 +5925,121 @@ body.revision-abierta { overflow: hidden; }
     .revision-acciones .btn { min-height: 46px; justify-content: center; white-space: normal; }
 }
 
+
+/* --------------------------------------------------------------------------
+   La ficha de un RFQ (js/pages/rfq-detail.js)
+   --------------------------------------------------------------------------
+   La cabecera era un `display:flex` sin salto de línea con cinco cosas
+   dentro: volver, el identificador, el estado y hasta tres botones. En una
+   compu cabe; en 390 px medía 565 y arrastraba a toda la página con ella
+   —desplazamiento horizontal, el título debajo del botón de volver, "Approve
+   Feasibility" fuera de la pantalla—. Aquí se parte en tres renglones y los
+   botones pasan a ocupar el ancho, que es como se toca con el pulgar.
+   -------------------------------------------------------------------------- */
+.rfqd-cab {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-3) var(--sp-4);
+    margin-bottom: var(--sp-5);
+}
+
+.rfqd-ident {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-2) var(--sp-3);
+    min-width: 0;
+}
+
+.rfqd-id {
+    margin: 0;
+    min-width: 0;
+    font-size: 22px;
+    line-height: 1.2;
+    /* Un identificador no tiene espacios por donde partir: sin esto, en el
+       teléfono empuja el ancho de la página él solo. */
+    overflow-wrap: anywhere;
+}
+.rfqd-version { font-weight: 400; color: var(--text-muted); font-size: 16px; }
+
+.rfqd-acciones {
+    margin-left: auto;
+    display: flex;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
+}
+
+/* Los motivos de revisión: una línea cada uno, con su punto, alineados a la
+   izquierda y en ámbar (rojo si el costeo falló). */
+.rfqd-panel--aviso {
+    border-color: var(--color-warning);
+    background: var(--color-warning-bg);
+}
+.rfqd-panel--aviso .detail-panel-title { color: var(--color-warning); }
+
+.rfqd-banderas { list-style: none; margin: 0; padding: 0; }
+
+.rfqd-bandera {
+    position: relative;
+    padding: 7px 0 7px 18px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--text-primary);
+}
+.rfqd-bandera:last-child { border-bottom: 0; }
+.rfqd-bandera::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 14px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-warning);
+}
+.rfqd-bandera--error::before { background: var(--color-error); }
+
+.rfqd-notas {
+    margin: 0;
+    white-space: pre-wrap;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.rfqd-error { color: var(--color-error); }
+
+/* --- Teléfono: la cabecera en tres renglones --------------------------- */
+@media (max-width: 768px) {
+    .rfqd-cab { gap: var(--sp-3); margin-bottom: var(--sp-4); }
+    /* Volver arriba del todo y solo: es el gesto de salir, no compite con
+       nada. */
+    .rfqd-volver { order: 1; }
+    .rfqd-ident  { order: 2; flex: 1 1 100%; }
+    .rfqd-id     { font-size: 19px; }
+    .rfqd-acciones {
+        order: 3;
+        flex: 1 1 100%;
+        margin-left: 0;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--sp-2);
+    }
+    .rfqd-acciones .btn {
+        min-height: 46px;
+        justify-content: center;
+        white-space: normal;
+    }
+    .detail-panel { padding: var(--sp-4); }
+
+    /* Un correo no cabe en media fila de 390 px: partido a la fuerza acaba
+       con una "m" sola en el segundo renglón. Se le da la línea entera y se
+       lee de izquierda a derecha como lo que es. */
+    .detail-row { flex-wrap: wrap; }
+    .detail-value--correo { flex: 1 1 100%; text-align: left; word-break: normal; overflow-wrap: anywhere; }
+}
 
 /* --- La pantalla de la oferta (js/pages/quote-review.js) ------------------ */
 .oferta-aviso {

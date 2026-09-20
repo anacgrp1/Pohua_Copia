@@ -286,6 +286,9 @@ def revision_rfq(
             "rfq_id": detalle.rfq_id, "version": detalle.version,
             "estado": detalle.estado, "part_number": detalle.part_number,
             "cliente_id": detalle.cliente_id,
+            # Dado de alta en Pohua: nombre y términos tal como están en la
+            # base. Si viene, la calculadora puede copiarlo a su catálogo.
+            "cliente": cliente,
             "customer": datos.get("customer") or detalle.cliente_id,
             "remitente": datos.get("remitente"),
             "asunto": datos.get("asunto"),
@@ -311,6 +314,98 @@ def revision_rfq(
         "costeo": costeado["costeo"],
         "error_costeo": costeado["error_costeo"],
         "puede_dictaminar": usuario.puede("rfq:dictaminar"),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Abrir la cotización completa con lo que trajo el correo
+# ---------------------------------------------------------------------------
+#
+# "Abrir cotización completa" lleva a la calculadora, y la calculadora tiene
+# que abrirse YA LLENA: cliente, número de parte, material, diámetro, peso y un
+# tramo por cada cantidad del correo. Antes abría en blanco y decía "Needs the
+# customer, at least one quantity before it can be approved" — es decir, había
+# que volver a teclear a mano lo que el sistema acababa de leer.
+#
+# Lo que se manda es el MISMO PN que se le pasa al motor para costear, y tiene
+# la forma exacta del borrador de la calculadora, así que allí se adopta tal
+# cual. Si el número que ve el PM y el que abre la hoja salieran de dos sitios
+# distintos, tarde o temprano no coincidirían.
+
+
+@router.get("/{rfq_id}/cotizacion-inicial")
+def cotizacion_inicial(
+    rfq_id: str,
+    usuario: UsuarioSesion = Depends(exige("rfq:leer")),
+):
+    """El PN y la cabecera con los que la calculadora abre este RFQ."""
+    detalle = get_rfq(rfq_id, None, usuario)          # reutiliza la carga y el 404
+    datos = detalle.datos_json or {}
+    resorte = detalle.resorte or {}
+
+    armado = costeo_rfq.pn_inicial(rfq_id, datos, resorte, detalle.material)
+    pn = armado["pn"]
+
+    # La ficha del cliente, si el dominio del remitente ya estaba dado de alta.
+    # La calculadora tiene su propio catálogo de clientes, y con esto puede
+    # darlo de alta allí sin que nadie teclee dos veces lo mismo: el alta la
+    # decidió Pohua cuando registró el dominio, aquí sólo se copia.
+    cliente = None
+    if detalle.cliente_id:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT razon_social, payment_terms FROM clientes "
+                    "WHERE cliente_id = %s;", (detalle.cliente_id,))
+                fila = cur.fetchone()
+        if fila:
+            cliente = {"codigo": detalle.cliente_id,
+                       "razon_social": fila[0], "payment_terms": fila[1]}
+
+    # El número de parte del correo manda sobre el identificador del RFQ: es lo
+    # que el cliente escribe en su pedido y lo que va impreso en la oferta.
+    if pn and detalle.part_number:
+        pn["pn"] = detalle.part_number
+
+    return {
+        "rfq_id": detalle.rfq_id,
+        "pn": pn,
+        "header": {
+            # El nombre tal como vino; la calculadora lo casa contra su
+            # catálogo de clientes y, si no está, lo deja dicho en vez de
+            # inventarse un código.
+            "customer": datos.get("customer") or detalle.cliente_id,
+            # Y el código con el que está dado de alta en Pohua: el catálogo de
+            # la calculadora a veces guarda el código y no el nombre, así que
+            # van los dos y allí se prueba con ambos.
+            "cliente_id": detalle.cliente_id,
+            "asunto": datos.get("asunto"),
+            "remitente": datos.get("remitente"),
+            "contacto": datos.get("contacto_nombre"),
+            # Lo que el comprador pidió y no cabe en ninguna casilla: va a las
+            # notas internas del PN, que es donde se lee antes de cotizar.
+            "notas": datos.get("notas"),
+            "entrega": datos.get("fecha_entrega_requerida"),
+            "moneda": datos.get("moneda"),
+            "incoterm": datos.get("incoterm"),
+        },
+        # La geometría, para la pestaña de resortes. En mm, como la guarda el
+        # extractor; la calculadora de resortes ya sabe convertir.
+        "resorte": {
+            "tipo": resorte.get("tipo_resorte"),
+            "diametro_alambre_mm": costeo_rfq.num(resorte.get("diametro_alambre_mm")),
+            "diametro_exterior_mm": costeo_rfq.num(resorte.get("diametro_exterior_mm")),
+            "diametro_interior_mm": costeo_rfq.num(resorte.get("diametro_interior_mm")),
+            "longitud_libre_mm": costeo_rfq.num(resorte.get("longitud_libre_mm")),
+            "longitud_cuerpo_mm": costeo_rfq.num(resorte.get("longitud_cuerpo_mm")),
+            "espiras_totales": costeo_rfq.num(resorte.get("numero_espiras_totales")),
+            "material_texto": resorte.get("material") or detalle.material,
+            "acabado": resorte.get("acabado"),
+        },
+        # Lo que el catálogo no pudo resolver: la calculadora lo enseña para
+        # que se capture allí, que es donde se captura.
+        "faltantes": armado["faltantes"],
+        "error": armado["error"],
     }
 
 

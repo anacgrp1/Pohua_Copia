@@ -43,10 +43,13 @@ const QuotingPage = {
     montado: false,           // ¿los marcos ya están puestos en el contenedor?
     pendiente: null,          // carga que espera a que el marco termine de cargar
     centralitaPuesta: false,
+    rfqPendiente: null,       // RFQ que hay que abrir en cuanto la hoja esté lista
+    rfqAbierto: null,         // el que ya se abrió, para no repetirlo
+    hojaLista: false,
 
     // ---------------------------------------------------------------- pintar
 
-    async render(contenedor) {
+    async render(contenedor, params) {
         /* Volver a Cotización NO vuelve a montar nada.
          *
          * Cada pantalla de Pohua se repinta al entrar, y para las demás está
@@ -60,9 +63,12 @@ const QuotingPage = {
          * Los marcos se quedan montados en su contenedor —que sigue en el
          * documento, sólo escondido— y al volver se enseña la pestaña que
          * estaba abierta. Nada que recargar. */
+        const pedido = params && params.rfq;
+
         if (this.montado && contenedor === this.contenedor &&
             contenedor.querySelector('#quotingMarcos')) {
-            this.cambiar(this.vista);
+            this.cambiar(pedido ? 'precio' : this.vista);
+            if (pedido) this.abrirRfq(pedido);
             return;
         }
 
@@ -71,6 +77,8 @@ const QuotingPage = {
         this.resortesListo = false;
         this.pendiente = null;
         this.montado = false;
+        this.hojaLista = false;
+        this.rfqAbierto = null;
 
         contenedor.innerHTML = `
             <div class="quoting">
@@ -107,6 +115,42 @@ const QuotingPage = {
         // calculadora (o falta el permiso) `montar()` lo quita y deja el
         // aviso, y eso SÍ conviene volver a intentarlo al entrar de nuevo.
         this.montado = !!contenedor.querySelector('#quotingMarco');
+        if (pedido) this.abrirRfq(pedido);
+    },
+
+    /**
+     * Abrir un RFQ en la hoja: se pide al servidor y se manda al marco.
+     *
+     * El momento importa. El `load` del marco llega mucho antes de que la
+     * calculadora exista de verdad —es un documento grande que se arma solo—,
+     * así que un mensaje mandado ahí se pierde sin ruido. Se espera a que
+     * `isc-nube.js` avise con "hoja-lista"; si ya avisó, se manda en el acto.
+     */
+    async abrirRfq(id) {
+        if (!id || this.rfqAbierto === id) return;
+        try {
+            const datos = await API.rfqCotizacionInicial(id);
+            if (datos && datos.error) {
+                Toast.warning(I18N.t('quoting.rfqParcial', { motivo: datos.error }));
+            }
+            this.rfqAbierto = id;
+            this.rfqPendiente = datos;
+            this.entregarRfq();
+        } catch (err) {
+            if (err && err.sesionExpirada) return;
+            Toast.error(I18N.t('quoting.rfqFallo', { motivo: err.message }));
+        }
+    },
+
+    entregarRfq() {
+        if (!this.hojaLista || !this.rfqPendiente) return;
+        const marco = this.contenedor && this.contenedor.querySelector('#quotingMarco');
+        if (!marco || !marco.contentWindow) return;
+        try {
+            marco.contentWindow.postMessage(
+                { source: 'pohua', tipo: 'cargar-rfq', datos: this.rfqPendiente }, '*');
+            this.rfqPendiente = null;
+        } catch (_) { /* el marco aún no está: se reintenta al próximo aviso */ }
     },
 
     icono(cual) {
@@ -267,6 +311,13 @@ const QuotingPage = {
             // el aviso de la calculadora se queda al final del documento —no
             // se persigue nada por el scroll, que era lo que parpadeaba—, así
             // que su texto sube aquí y se enseña donde se ven los demás.
+            // La calculadora terminó de arrancar: ya se le puede mandar el RFQ.
+            if (dePrecio && d.source === 'isc-nube' && d.tipo === 'hoja-lista') {
+                this.hojaLista = true;
+                this.entregarRfq();
+                return;
+            }
+
             if ((dePrecio || deResortes) && d.source === 'isc-nube' && d.tipo === 'aviso') {
                 if (d.texto) Toast.info(String(d.texto).slice(0, 300));
                 return;

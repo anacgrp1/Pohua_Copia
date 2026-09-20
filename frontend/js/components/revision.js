@@ -450,30 +450,58 @@ const Revision = (() => {
         } finally { bloquear(false); }
     }
 
-    /** La cotización entera: la pantalla de la oferta, con tramos y PDF.
+    /** La cotización entera: la calculadora, abierta con este RFQ dentro.
 
-        Esta función NO EXISTÍA: el botón la llamaba y el clic moría con un
-        ReferenceError, así que no pasaba nada y encima se comía el resto del
-        manejador. Va a la oferta en cualquier estado —se puede mirar siempre—;
-        si todavía no se puede mandar, esa pantalla dice por qué, que es
-        justamente lo que se viene a averiguar. */
+        "Completa" es literal: las dos hojas —Quote y Spring Calc— con lo que
+        el sistema sacó del correo y del plano ya puesto en cada casilla. Antes
+        llevaba a la pantalla de la oferta, que es el resultado y no el
+        trabajo; y antes de eso ni siquiera existía —el botón la llamaba, el
+        clic moría con un ReferenceError y no pasaba nada—.
+
+        La oferta sigue estando: se llega a ella desde la propia calculadora al
+        aprobar, y desde la ficha del RFQ. */
     function cotizar() {
         const id = rfqAbierto;
         cerrar();
-        APP.navigate('quote-review', { id });
+        APP.navigate('quoting', { rfq: id });
     }
 
+    /**
+     * El PDF de lo que se está mirando.
+     *
+     * Hay DOS PDF distintos y se estaban confundiendo:
+     *
+     *   - La OFERTA del RFQ: la hace el servidor con los tramos costeados que
+     *     esta misma ventana acaba de enseñar. Lleva el número del RFQ, el
+     *     cliente, el material del correo y las tres cantidades con su precio.
+     *   - El borrador de la CALCULADORA: lo que haya ahora mismo en la hoja.
+     *
+     * Se miraba primero si existía el marco de la calculadora y, de existir,
+     * se le pedía el suyo. Pero el marco existe siempre que alguien haya
+     * pasado por Cotización en esta sesión —se queda montado a propósito, para
+     * no perder el trabajo al navegar—, así que revisando un RFQ salía el PDF
+     * del borrador ajeno: "2026-CUST-001 (DRAFT)", sin cliente, "Material: SS"
+     * y "No priced quantities". Nada de eso era del RFQ que se estaba
+     * dictaminando.
+     *
+     * Ahora manda de DÓNDE se abrió la ventana, no qué marcos hay en la
+     * página: desde la calculadora, su PDF; desde un RFQ, la oferta. Es la
+     * misma distinción que ya hacía "Aprobar".
+     */
     async function verPdf() {
-        const marco = document.getElementById('quotingMarco');
-        if (marco && marco.contentWindow && typeof marco.contentWindow.previewPdf === 'function') {
-            try {
-                await marco.contentWindow.previewPdf();
-                return;
-            } catch (_) {}
+        if (datos && datos.esCotizacion) {
+            const marco = document.getElementById('quotingMarco');
+            if (marco && marco.contentWindow &&
+                typeof marco.contentWindow.previewPdf === 'function') {
+                try {
+                    await marco.contentWindow.previewPdf();
+                    return;
+                } catch (_) { /* si su PDF falla, se intenta el del servidor */ }
+            }
         }
         const id = rfqAbierto || (datos && datos.rfq && datos.rfq.rfq_id);
         if (!id || id === 'quote') {
-            Toast.warning('No quote available to preview.');
+            Toast.warning(I18N.t('rev.sinPdf'));
             return;
         }
         const w = window.open('', '_blank');

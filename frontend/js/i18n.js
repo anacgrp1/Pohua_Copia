@@ -229,6 +229,11 @@ const I18N = (() => {
 
         // Los accesos rápidos que sólo salen en su sección (Monitor, Mail,
         // Quoting, Overview): los decide js/components/assistant.js.
+        // Abrir un RFQ dentro de la calculadora (js/pages/quoting.js).
+        'rev.sinPdf':        { en: 'There is no quote to preview yet.', es: 'Todavía no hay cotización que previsualizar.', fr: 'Aucune cotation à prévisualiser pour l’instant.' },
+        'quoting.rfqFallo':  { en: 'Could not open the RFQ in the calculator: {motivo}', es: 'No se pudo abrir el RFQ en la calculadora: {motivo}', fr: 'Impossible d’ouvrir la RFQ dans le calculateur : {motivo}' },
+        'quoting.rfqParcial':{ en: 'The RFQ opens with what could be read: {motivo}', es: 'El RFQ abre con lo que se pudo leer: {motivo}', fr: 'La RFQ s’ouvre avec ce qui a pu être lu : {motivo}' },
+
         'asis.errores':   { en: 'Errors', es: 'Errores', fr: 'Erreurs' },
         'asis.estado':    { en: 'Service status', es: 'Estado del servicio', fr: 'État du service' },
         'asis.registro':  { en: 'Download log', es: 'Descargar registro', fr: 'Télécharger le journal' },

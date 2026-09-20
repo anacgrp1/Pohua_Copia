@@ -39,7 +39,10 @@ const QuoteReviewPage = {
 
     async loadData(container) {
         const id = this.currentRfqId;
-        const volver = `<button class="btn btn-secondary" onclick="APP.navigate('rfq-detail', {id: '${this.esc(id)}'})">&larr; ${I18N.t('oferta.volver')}</button>`;
+        // Las clases .rfqd-* son las de la ficha del RFQ, a propósito: es la
+        // misma cabecera —volver, identificador, estado y botones— y en el
+        // teléfono tiene que partirse igual, en tres renglones.
+        const volver = `<button class="btn btn-secondary rfqd-volver" onclick="APP.navigate('rfq-detail', {id: '${this.esc(id)}'})">&larr; ${I18N.t('oferta.volver')}</button>`;
         try {
             const o = await API.rfqOferta(id);
             this.oferta = o;
@@ -61,11 +64,13 @@ const QuoteReviewPage = {
             const fila = (k, v) => `<div class="detail-row"><span class="detail-key">${e(k)}</span><span class="detail-value" style="word-break:break-word">${v}</span></div>`;
 
             container.innerHTML = `
-                <div style="display:flex;gap:16px;margin-bottom:20px;align-items:center;flex-wrap:wrap">
+                <div class="rfqd-cab">
                     ${volver}
-                    <h2 style="margin:0">${I18N.t('oferta.titulo')}: ${e(id)}</h2>
-                    <span class="badge ${aprobado ? 'badge-approved' : 'badge-review'}"><span class="badge-dot"></span>${e(o.estado)}</span>
-                    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+                    <div class="rfqd-ident">
+                        <h2 class="rfqd-id">${I18N.t('oferta.titulo')}: ${e(id)}</h2>
+                        <span class="badge ${aprobado ? 'badge-approved' : 'badge-review'}"><span class="badge-dot"></span>${e(o.estado)}</span>
+                    </div>
+                    <div class="rfqd-acciones">
                         <button class="btn btn-secondary" onclick="QuoteReviewPage.verPdf()" ${tramos.length ? '' : 'disabled'}>${I18N.t('oferta.verPdf')}</button>
                         ${puedeEnviar ? `<button class="btn btn-primary" onclick="QuoteReviewPage.enviar()" ${aprobado && tramos.length ? '' : 'disabled'}>${I18N.t('oferta.enviar')}</button>` : ''}
                     </div>
@@ -107,9 +112,11 @@ const QuoteReviewPage = {
         } catch (err) {
             if (err.sesionExpirada) return;
             container.innerHTML = `
-                <div style="display:flex;gap:16px;margin-bottom:20px;align-items:center">
+                <div class="rfqd-cab">
                     ${volver}
-                    <h2 style="margin:0">${I18N.t('oferta.titulo')}: ${this.esc(id)}</h2>
+                    <div class="rfqd-ident">
+                        <h2 class="rfqd-id">${I18N.t('oferta.titulo')}: ${this.esc(id)}</h2>
+                    </div>
                 </div>
                 <div class="detail-panel" style="color:var(--color-error);border-color:var(--color-error)">${this.esc(err.message)}</div>`;
         }

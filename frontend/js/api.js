@@ -207,6 +207,10 @@ const API = {
     },
     // La ventana de revisión del PM: el RFQ ya costeado por tramos.
     rfqRevision(rfqId) { return this.request('GET', `/api/rfqs/${rfqId}/revision`); },
+    // Con lo que la calculadora abre este RFQ: el PN ya armado.
+    rfqCotizacionInicial(rfqId) {
+        return this.request('GET', `/api/rfqs/${rfqId}/cotizacion-inicial`);
+    },
     // Devolver con nota: ni aprueba ni declina, y no sale correo al cliente.
     rfqSendBack(rfqId, nota) {
         return this.request('POST', `/api/rfqs/${rfqId}/send-back`, { nota });
