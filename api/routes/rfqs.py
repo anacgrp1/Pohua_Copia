@@ -286,9 +286,6 @@ def revision_rfq(
             "rfq_id": detalle.rfq_id, "version": detalle.version,
             "estado": detalle.estado, "part_number": detalle.part_number,
             "cliente_id": detalle.cliente_id,
-            # Dado de alta en Pohua: nombre y términos tal como están en la
-            # base. Si viene, la calculadora puede copiarlo a su catálogo.
-            "cliente": cliente,
             "customer": datos.get("customer") or detalle.cliente_id,
             "remitente": datos.get("remitente"),
             "asunto": datos.get("asunto"),
@@ -379,6 +376,9 @@ def cotizacion_inicial(
             # la calculadora a veces guarda el código y no el nombre, así que
             # van los dos y allí se prueba con ambos.
             "cliente_id": detalle.cliente_id,
+            # Dado de alta en Pohua: nombre y términos tal como están en la
+            # base. Si viene, la calculadora puede copiarlo a su catálogo.
+            "cliente": cliente,
             "asunto": datos.get("asunto"),
             "remitente": datos.get("remitente"),
             "contacto": datos.get("contacto_nombre"),

@@ -6108,18 +6108,21 @@ body.revision-abierta { overflow: hidden; }
 /* --------------------------------------------------------------------------
    Teléfono: nada flota encima de la calculadora
    --------------------------------------------------------------------------
-   En Quoting la calculadora llena la pantalla y tiene su propia barra de
-   acciones abajo. Lo que Pohua dejaba FIJO en el teléfono —los controles de
-   la esquina, el reloj, el botón del menú y la burbuja del asistente— se le
-   ponía encima: el reloj sobre los campos, la burbuja sobre "Approve". Así
-   que en el teléfono los controles de arriba se van con la página al
-   desplazar (están en la cabecera; para volver a ellos se sube), el botón del
-   menú sólo se queda fijo mientras el menú está abierto (es la ✕ que lo
-   cierra), y la burbuja del asistente no se enseña en Quoting.
+   En Quoting la calculadora llena la pantalla. Lo que Pohua dejaba FIJO en el
+   teléfono —los controles de la esquina, el reloj, el botón del menú— se le
+   ponía encima: el reloj sobre los campos. Así que en el teléfono esos
+   controles se van con la página al desplazar (están en la cabecera; para
+   volver a ellos se sube) y el botón del menú sólo se queda fijo mientras el
+   menú está abierto, que es cuando es la ✕ que lo cierra.
+
+   La burbuja del asistente SÍ se enseña aquí. Estaba escondida porque se
+   ponía sobre el "Approve" de la barra de la calculadora; esa barra ya no
+   sale en el teléfono —Aprobar y Ver PDF viven en la ventana de revisión—,
+   así que el sitio está libre. Y es justo la pantalla donde más se pregunta:
+   quien está cotizando quiere saber qué RFQ esperan sin salir de la hoja.
    -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
     .barra-esquina, .reloj { position: absolute; }
     body:not(.menu-abierto) .mobile-toggle { position: absolute; }
-    body[data-pagina="quoting"] .assistant-dock:not(.assistant-dock--abierto) { display: none; }
 }
 
