@@ -290,11 +290,17 @@ def validar(datos, campos_requeridos=None):
 # Etapa 4: dibujos
 # --------------------------------------------------------------------------- #
 
-def procesar_dibujos(correo, rfq_id):
+def procesar_dibujos(correo, rfq_id, informe=None):
     """
-    Si el correo trae dibujos adjuntos soportados (.pdf/.png; .stp/.step se
-    omiten por ahora), los envia al modelo de vision, interpreta el JSON y
+    Si el correo trae dibujos adjuntos soportados (.pdf/.png/.jpg; .stp/.step
+    se omiten por ahora), los envia al modelo de vision, interpreta el JSON y
     persiste las variables fisicas del resorte.
+
+    ``informe`` es un dict opcional que se rellena con POR QUÉ no salió nada:
+    sin adjuntos, adjuntos en un formato que no se lee, o una lectura que
+    falló. Esa respuesta acaba en la ficha del RFQ, donde antes sólo había
+    seis rayas y nadie podía saber si el correo no traía plano o si traía uno
+    y ni se miró.
 
     Espera correo["adjuntos"] = [{"nombre": str, "contenido": bytes}, ...],
     que es lo que ya entregan dev_provider (walk del MIME) y token_provider
@@ -303,9 +309,12 @@ def procesar_dibujos(correo, rfq_id):
     Los imports son perezosos para no exigir anthropic al importar
     este modulo, y para que un fallo de vision no rompa el ciclo de correos.
     """
+    anotar = informe.update if isinstance(informe, dict) else (lambda _d: None)
+
     adjuntos = correo.get("adjuntos") or []
     if not adjuntos:
         log.info("RFQ=%s sin dibujos adjuntos; nada que analizar.", rfq_id)
+        anotar({"estado": "sin_adjunto"})
         return []
 
     # Import perezoso (solo cuando hay algo que analizar)
@@ -318,7 +327,11 @@ def procesar_dibujos(correo, rfq_id):
         if (a.get("nombre", "").lower().endswith(pipeline.EXTENSIONES_SOPORTADAS))
     ]
     if not soportados:
-        log.info("RFQ=%s: adjuntos presentes pero sin formatos soportados.", rfq_id)
+        nombres_todos = [a.get("nombre", "?") for a in adjuntos]
+        log.info("RFQ=%s: adjuntos presentes pero sin formatos soportados (%s).",
+                 rfq_id, ", ".join(nombres_todos))
+        anotar({"estado": "formato_no_leido", "ficheros": nombres_todos,
+                "soportados": list(pipeline.EXTENSIONES_SOPORTADAS)})
         return []
 
     resultados = []
@@ -329,11 +342,14 @@ def procesar_dibujos(correo, rfq_id):
         spring_repository.guardar(
             rfq_id, correo.get("message_id", ""), nombres, datos)
         resultados.append(datos)
+        anotar({"estado": "leido", "ficheros": [a.get("nombre", "?") for a in soportados]})
         log.info("RFQ=%s: resorte extraido (listo_para_cotizar=%s).",
                  rfq_id, datos.get("listo_para_cotizar"))
     except Exception as error:  # no romper el ciclo de correos por un dibujo
         log.error("RFQ=%s: fallo al procesar dibujos (%s): %s",
                   rfq_id, nombres, error)
+        anotar({"estado": "fallo", "ficheros": [a.get("nombre", "?") for a in soportados],
+                "motivo": str(error)})
     return resultados
 
 
@@ -682,10 +698,10 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
     thread_validator.registrar_en_historial(
         rfq_id, correo.get("message_id", ""), correo.get("asunto", ""))
 
-    resultado = {
+    resultado: dict = {
         "rfq_id": rfq_id,
         "clasificacion": clasificacion,
-        "etapa": "",
+        "etapa": None,
         "es_valido": False,
         "campos_faltantes": [],
         "cliente_id": None,
@@ -746,8 +762,13 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
         return resultado
 
     # 4. Dibujos + fusión de ambas fuentes
-    resortes = procesar_dibujos(correo, rfq_id)
+    lectura_plano = {}
+    resortes = procesar_dibujos(correo, rfq_id, lectura_plano)
     datos = fusionar(datos, resortes)
+    # Por qué el resorte salió (o no) del plano. Se guarda con el RFQ para que
+    # la ficha lo pueda decir en vez de enseñar seis rayas.
+    if lectura_plano:
+        datos["lectura_plano"] = lectura_plano
     resultado["resorte"] = datos.get("resorte")
 
     # 5. Validación completa (correo + dibujo)

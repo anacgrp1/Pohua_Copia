@@ -230,7 +230,14 @@ const I18N = (() => {
         // Los accesos rápidos que sólo salen en su sección (Monitor, Mail,
         // Quoting, Overview): los decide js/components/assistant.js.
         // Abrir un RFQ dentro de la calculadora (js/pages/quoting.js).
+        // Por qué la ficha del RFQ no tiene cotas del resorte (rfq-detail.js).
+        'plano.sinAdjunto':  { en: 'The email brought no drawing — these values are read from one.', es: 'El correo no traía ningún plano: estos datos salen del dibujo.', fr: 'Le courriel n’apportait aucun plan : ces valeurs viennent du dessin.' },
+        'plano.sinFormato':  { en: 'It brought {ficheros}, a format the reader does not open. It reads: {soportados}.', es: 'Traía {ficheros}, que no es un formato que el lector abra. Lee: {soportados}.', fr: 'Il apportait {ficheros}, un format que le lecteur n’ouvre pas. Il lit : {soportados}.' },
+        'plano.fallo':       { en: 'Reading {ficheros} failed: {motivo}', es: 'Se intentó leer {ficheros} y falló: {motivo}', fr: 'La lecture de {ficheros} a échoué : {motivo}' },
+        'plano.leidoVacio':  { en: 'The drawing ({ficheros}) was read and gave no dimensions.', es: 'El plano ({ficheros}) se leyó y no dio ninguna cota.', fr: 'Le plan ({ficheros}) a été lu et n’a donné aucune cote.' },
+
         'rev.sinPdf':        { en: 'There is no quote to preview yet.', es: 'Todavía no hay cotización que previsualizar.', fr: 'Aucune cotation à prévisualiser pour l’instant.' },
+        'quoting.volverRevision': { en: '\u2190 Back to review \u00b7 {rfq}', es: '\u2190 Volver a la revisi\u00f3n \u00b7 {rfq}', fr: '\u2190 Retour \u00e0 la revue \u00b7 {rfq}' },
         'quoting.rfqFallo':  { en: 'Could not open the RFQ in the calculator: {motivo}', es: 'No se pudo abrir el RFQ en la calculadora: {motivo}', fr: 'Impossible d’ouvrir la RFQ dans le calculateur : {motivo}' },
         'quoting.rfqParcial':{ en: 'The RFQ opens with what could be read: {motivo}', es: 'El RFQ abre con lo que se pudo leer: {motivo}', fr: 'La RFQ s’ouvre avec ce qui a pu être lu : {motivo}' },
 

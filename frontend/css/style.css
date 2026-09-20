@@ -1235,6 +1235,7 @@ a:hover { color: var(--cgr-primary); }
     color: var(--text-muted);
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -5236,6 +5237,27 @@ body.menu-abierto { overflow: hidden; }
    marco, con el aspecto de otra aplicación, y el resorte se abría anidado.
    Aquí son dos pestañas de verdad, con los colores del tema y el mismo trato
    en claro y en oscuro. */
+/* La fila de arriba de Cotización: las pestañas a la izquierda y, cuando se
+   entró desde un RFQ, la vuelta a la ventana de revisión a la derecha. */
+.quoting-barra {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+}
+
+.quoting-volver {
+    margin-left: auto;
+    min-height: 38px;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    /* Debajo y a todo el ancho: al lado de las pestañas no cabe, y es un
+       botón que se toca con el pulgar al terminar de cotizar. */
+    .quoting-volver { margin-left: 0; flex: 1 1 100%; min-height: 44px; }
+}
+
 .quoting-tabs {
     display: inline-flex;
     align-items: center;
@@ -6000,6 +6022,19 @@ body.revision-abierta { overflow: hidden; }
     background: var(--color-warning);
 }
 .rfqd-bandera--error::before { background: var(--color-error); }
+
+/* Por qué la tarjeta del resorte está vacía. Va antes de las filas, en tono
+   apagado: es una explicación, no un dato más. */
+.rfqd-sinplano {
+    margin: 0 0 var(--sp-3);
+    padding: 8px 10px;
+    border-left: 3px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
 
 .rfqd-notas {
     margin: 0;

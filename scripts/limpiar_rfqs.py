@@ -36,6 +36,10 @@ _TABLAS = (
     "recordatorios_revision",
     "resortes_cotizacion",
     "cotizaciones",
+    # Los planos del correo (migración 021). Van con su RFQ: si el RFQ se
+    # borra y el plano se queda, el siguiente con el mismo identificador
+    # abriría la calculadora con el dibujo de otra pieza.
+    "rfq_planos",
     "rfq_historial",
     "rfqs",
 )

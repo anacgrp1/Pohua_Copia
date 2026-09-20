@@ -68,6 +68,7 @@ const QuotingPage = {
         if (this.montado && contenedor === this.contenedor &&
             contenedor.querySelector('#quotingMarcos')) {
             this.cambiar(pedido ? 'precio' : this.vista);
+            this.pintarVolver();
             if (pedido) this.abrirRfq(pedido);
             return;
         }
@@ -83,16 +84,23 @@ const QuotingPage = {
         contenedor.innerHTML = `
             <div class="quoting">
                 <div id="quotingAviso"></div>
-                <nav class="quoting-tabs" role="tablist" id="quotingTabs" hidden>
-                    <button type="button" class="quoting-tab active" data-vista="precio"
-                            role="tab" aria-selected="true">
-                        ${this.icono('precio')}<span>Quote</span>
-                    </button>
-                    <button type="button" class="quoting-tab" data-vista="resortes"
-                            role="tab" aria-selected="false">
-                        ${this.icono('resortes')}<span>Spring Calc</span>
-                    </button>
-                </nav>
+                <div class="quoting-barra">
+                    <nav class="quoting-tabs" role="tablist" id="quotingTabs" hidden>
+                        <button type="button" class="quoting-tab active" data-vista="precio"
+                                role="tab" aria-selected="true">
+                            ${this.icono('precio')}<span>Quote</span>
+                        </button>
+                        <button type="button" class="quoting-tab" data-vista="resortes"
+                                role="tab" aria-selected="false">
+                            ${this.icono('resortes')}<span>Spring Calc</span>
+                        </button>
+                    </nav>
+                    <!-- La vuelta a la ventana de revisión. Sólo sale cuando se
+                         entró desde un RFQ: en una cotización a mano no hay
+                         ningún sitio al que volver. -->
+                    <button type="button" class="btn btn-secondary quoting-volver"
+                            id="quotingVolver" hidden></button>
+                </div>
                 <div class="quoting-marcos" id="quotingMarcos">
                     <iframe class="quoting-marco" id="quotingMarco"
                             title="${this.esc(I18N.t('quoting.tab.precio'))}"
@@ -105,6 +113,10 @@ const QuotingPage = {
             if (b) this.cambiar(b.dataset.vista);
         });
 
+        contenedor.querySelector('#quotingVolver').addEventListener('click', () => {
+            if (this.rfqAbierto) Revision.abrir(this.rfqAbierto);
+        });
+
         this.centralita();
         this.seguirTema();
         contenedor.querySelector('#quotingMarco')
@@ -115,6 +127,7 @@ const QuotingPage = {
         // calculadora (o falta el permiso) `montar()` lo quita y deja el
         // aviso, y eso SÍ conviene volver a intentarlo al entrar de nuevo.
         this.montado = !!contenedor.querySelector('#quotingMarco');
+        this.pintarVolver();
         if (pedido) this.abrirRfq(pedido);
     },
 
@@ -134,6 +147,7 @@ const QuotingPage = {
                 Toast.warning(I18N.t('quoting.rfqParcial', { motivo: datos.error }));
             }
             this.rfqAbierto = id;
+            this.pintarVolver();
             datos.ficheros = await this.bajarPlanos(id, datos.planos);
             this.rfqPendiente = datos;
             this.entregarRfq();
@@ -167,6 +181,25 @@ const QuotingPage = {
             }
         }
         return fuera;
+    },
+
+    /**
+     * El botón de volver a la ventana de revisión.
+     *
+     * "Abrir cotización completa" es un viaje de ida: se sale de la ventana
+     * donde se dictamina y se entra en la hoja. Para aprobar, devolver o
+     * rechazar hay que volver, y hasta ahora el camino de vuelta era
+     * acordarse del RFQ y buscarlo en la lista.
+     *
+     * La ventana se vuelve a pedir al servidor al abrirse, así que si el
+     * costeo cambió mientras tanto, lo que se ve al volver es lo nuevo.
+     */
+    pintarVolver() {
+        const b = this.contenedor && this.contenedor.querySelector('#quotingVolver');
+        if (!b) return;
+        if (!this.rfqAbierto) { b.hidden = true; return; }
+        b.textContent = I18N.t('quoting.volverRevision', { rfq: this.rfqAbierto });
+        b.hidden = false;
     },
 
     entregarRfq() {

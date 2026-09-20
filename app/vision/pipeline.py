@@ -1,15 +1,16 @@
 """
-Pipeline del modelo multimodal de visión para la
+SUBTAREA 1 [Código - IA]
+Pipeline del modelo multimodal de visión (Anthropic Claude) para la
 extracción de información de dibujos técnicos de resortes.
 
 Recibe los archivos en BYTES y soporta las extensiones:
-    .pdf  -> bloque "document" (el modelo lee el PDF de forma nativa)
+    .pdf  -> bloque "document" (Claude lee el PDF de forma nativa)
     .png  -> bloque "image"
     .stp / .step -> STUB (CAD ISO-10303 de texto, no es imagen) -> pendiente
 
 Diseña el PROMPT TÉCNICO enfocado en resortes de compresión, torsión y
 extensión, y solicita una respuesta en JSON estricto que luego interpreta
-src/spring_extractor.py.
+src/spring_extractor.py (Subtarea 2).
 """
 import base64
 import logging
@@ -19,13 +20,19 @@ import app.core.config as config
 log = logging.getLogger("cotizador.vision")
 
 # ===== Extensiones soportadas y sus media types =====
-EXT_IMAGEN = {".png": "image/png"}
+# JPEG entra aquí porque el modelo lo lee igual que un PNG y porque los planos
+# que llegan por correo vienen tantas veces en .jpg como en .pdf —una foto del
+# dibujo, un escaneo—. Quedaban fuera de la lista y se descartaban en silencio:
+# el RFQ entraba sin una sola cota y la ficha decía "—" en todo sin explicar
+# que el dibujo estaba ahí y ni se había mirado.
+EXT_IMAGEN = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
 EXT_DOCUMENTO = {".pdf": "application/pdf"}
 EXT_CAD_STUB = {".stp", ".step"}            # ISO-10303 (texto), aún no soportado
-EXTENSIONES_SOPORTADAS = (".pdf", ".png", ".stp", ".step")
+EXTENSIONES_SOPORTADAS = (".pdf", ".png", ".jpg", ".jpeg", ".stp", ".step")
 
 # Firmas (magic bytes) para detección por contenido cuando falta el nombre
 _FIRMA_PNG = b"\x89PNG\r\n\x1a\n"
+_FIRMA_JPEG = b"\xff\xd8\xff"
 _FIRMA_PDF = b"%PDF"
 _FIRMA_STEP = b"ISO-10303-21"
 
@@ -128,7 +135,7 @@ def detectar_tipo(nombre="", contenido=b""):
 
     # Respaldo por contenido (magic bytes) cuando no hay extensión fiable
     cabecera = contenido[:16] if contenido else b""
-    if cabecera.startswith(_FIRMA_PNG):
+    if cabecera.startswith(_FIRMA_PNG) or cabecera.startswith(_FIRMA_JPEG):
         return "imagen"
     if cabecera.startswith(_FIRMA_PDF):
         return "documento"
@@ -252,7 +259,7 @@ def _crear_cliente():
 
 def analizar_dibujos(archivos, cliente=None):
     """
-    Punto de entrada del pipeline.
+    Punto de entrada del pipeline (Subtarea 1).
 
     Recibe los archivos en bytes, construye el contenido multimodal, llama al
     modelo de visión y devuelve un dict:

@@ -97,6 +97,7 @@ const RFQDetailPage = {
                     <!-- Datos del Resorte (Visión) -->
                     <div class="detail-panel">
                         <div class="detail-panel-title">Spring Physics (AI Extracted)</div>
+                        ${this.porQueVacio(r, d.lectura_plano)}
                         ${fila('Type', r.tipo_resorte, ' detail-value--tipo')}
                         ${fila('Wire Diameter', mm(r.diametro_alambre_mm))}
                         ${fila('Outer Diameter', mm(r.diametro_exterior_mm))}
@@ -114,6 +115,39 @@ const RFQDetailPage = {
         } catch (err) {
             container.innerHTML = `<div class="detail-panel rfqd-error">Error: ${esc(err.message)}</div>`;
         }
+    },
+
+    /**
+     * Por qué esta tarjeta está vacía.
+     *
+     * Estos valores no salen del correo: salen de LEER EL PLANO. Vacía, la
+     * tarjeta enseñaba seis rayas y la pregunta que dejaba —"¿el correo no
+     * traía dibujo, o traía uno y no se miró?"— sólo se podía contestar
+     * abriendo el registro del servidor. La respuesta ya se guarda con el RFQ
+     * (`lectura_plano`, en app/rfq/flow.py); aquí sólo se dice.
+     *
+     * Con cotas no se dice nada: los datos hablan solos.
+     */
+    porQueVacio(resorte, lectura) {
+        const esc = this.esc;
+        const hayAlgo = resorte && Object.keys(resorte).some(
+            (k) => k !== 'tipo_resorte' && resorte[k] !== null && resorte[k] !== undefined && resorte[k] !== '');
+        if (hayAlgo || !lectura || !lectura.estado) return '';
+
+        const ficheros = (lectura.ficheros || []).join(', ');
+        let texto = '';
+        if (lectura.estado === 'sin_adjunto') {
+            texto = I18N.t('plano.sinAdjunto');
+        } else if (lectura.estado === 'formato_no_leido') {
+            texto = I18N.t('plano.sinFormato', {
+                ficheros, soportados: (lectura.soportados || []).join(', ') });
+        } else if (lectura.estado === 'fallo') {
+            texto = I18N.t('plano.fallo', { ficheros, motivo: lectura.motivo || '' });
+        } else if (lectura.estado === 'leido') {
+            texto = I18N.t('plano.leidoVacio', { ficheros });
+        }
+        if (!texto) return '';
+        return `<p class="rfqd-sinplano">${esc(texto)}</p>`;
     },
 
     async approve() {
