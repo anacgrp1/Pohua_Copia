@@ -31,6 +31,35 @@ const QuoteReviewPage = {
         return '$' + v.toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec });
     },
 
+    /**
+     * Por qué la oferta no está lista, en el idioma de Pohua.
+     *
+     * El servidor manda cada motivo con su CÓDIGO y sus datos además de la
+     * frase en español (app/rfq/oferta.py → pricing/mensajes.py). Aquí se
+     * arma la frase, y los motivos del costeo que van dentro —"El costeo es
+     * orientativo: <esto>"— se traducen uno a uno en vez de pegarse tal cual,
+     * que era lo que dejaba media pantalla en español.
+     */
+    motivos(o) {
+        const lista = o.motivos_i18n;
+        if (!Array.isArray(lista) || !lista.length) return o.motivos || [];
+        return lista.map((m) => {
+            const dentro = (m.faltantes || []).map(f => this.unMotivo(f)).join('; ');
+            const datos = Object.assign({}, m.datos || {});
+            if (dentro) datos.detalle = dentro;
+            return this.unMotivo(m, datos);
+        });
+    },
+
+    /** Un motivo: por su código si se conoce, y si no, tal como vino. */
+    unMotivo(m, datos) {
+        if (!m) return '';
+        if (typeof m === 'string') return m;
+        const clave = 'costeo.' + m.codigo;
+        const texto = I18N.t(clave, datos || m.datos || {});
+        return texto === clave ? (m.texto || m.codigo || '') : texto;
+    },
+
     async render(container, params) {
         this.currentRfqId = params.id;
         container.innerHTML = `<div class="loading-overlay"><div class="spinner"></div> ${I18N.t('oferta.cargando')}</div>`;
@@ -60,7 +89,7 @@ const QuoteReviewPage = {
                     <div class="card-label">USD / ${I18N.t('oferta.pieza')} · ${this.dinero(t.qty * t.price, 2)} ${I18N.t('oferta.lote')}</div>
                 </div>`).join('');
 
-            const motivos = (o.motivos || []).map(m => `<li>${e(m)}</li>`).join('');
+            const motivos = this.motivos(o).map(m => `<li>${e(m)}</li>`).join('');
             const fila = (k, v) => `<div class="detail-row"><span class="detail-key">${e(k)}</span><span class="detail-value" style="word-break:break-word">${v}</span></div>`;
 
             container.innerHTML = `
@@ -166,10 +195,14 @@ const QuoteReviewPage = {
         };
 
         // Si el costeo es orientativo, se pregunta a sabiendas antes de forzar.
-        if (!o.listo && (o.motivos || []).some(m => /orientativo|indicative/i.test(m))) {
+        // Se mira el CÓDIGO y no el texto: buscar la palabra "orientativo" en
+        // una frase sólo funcionaba mientras esa frase viniera en español.
+        const orientativa = (o.motivos_i18n || []).some(m => m && m.codigo === 'OFERTA_ORIENTATIVA')
+            || (o.motivos || []).some(m => /orientativo|indicative/i.test(m));
+        if (!o.listo && orientativa) {
             const forzar = await Confirmar.pedir({
                 titulo: I18N.t('oferta.dlg.forzarTitulo'),
-                mensaje: I18N.t('oferta.dlg.forzarMensaje') + '\n\n' + (o.motivos || []).join('\n'),
+                mensaje: I18N.t('oferta.dlg.forzarMensaje') + '\n\n' + this.motivos(o).join('\n'),
                 aceptar: I18N.t('oferta.dlg.forzarSi'),
                 peligro: true,
             });

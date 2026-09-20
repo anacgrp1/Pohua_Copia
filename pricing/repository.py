@@ -28,6 +28,7 @@ from datetime import date
 from typing import Any, Dict, List, Optional
 
 import app.persistence.duplicates as duplicates
+import pricing.mensajes as mensajes
 
 log = logging.getLogger("cotizador.pricing.repository")
 
@@ -63,6 +64,9 @@ class Catalogo:
     material: Optional[Dict[str, Any]] = None
     empaque: Optional[Dict[str, Any]] = None
     faltantes: List[str] = field(default_factory=list)
+    # Los mismos motivos, con su código y sus datos, para que la web los
+    # pueda decir en el idioma que tenga puesto (pricing/mensajes.py).
+    faltantes_i18n: List[Dict[str, Any]] = field(default_factory=list)
     origen: Dict[str, str] = field(default_factory=dict)
 
     @property
@@ -290,48 +294,40 @@ def cargar_catalogo(tipo_resorte: str,
             cat.parametros = parametros_vigentes(conexion=conn)
             cat.origen["parametros"] = "bd" if cat.parametros else "defaults del motor"
             if not cat.parametros:
-                cat.faltantes.append(
-                    "No hay un juego de parámetros vigente en param_juegos/param_valores; "
-                    "se usan los del motor.")
+                mensajes.falta(cat, "PARAMETROS_SIN_JUEGO")
         except Exception as err:
             log.warning("No se pudieron leer los parámetros de costeo: %s", err)
-            cat.faltantes.append(f"Parámetros de costeo ilegibles: {err}")
+            mensajes.falta(cat, "PARAMETROS_ILEGIBLES", error=str(err))
             cat.origen["parametros"] = "defaults del motor"
 
         if diametro_alambre_mm is None:
-            cat.faltantes.append(
-                "Falta el diámetro de alambre: sin él no se puede elegir máquina "
-                "ni buscar el precio del material.")
+            mensajes.falta(cat, "SIN_DIAMETRO_ALAMBRE")
 
         try:
             cat.maquina = elegir_maquina(tipo_resorte, diametro_alambre_mm,
                                          diametro_exterior_mm, conexion=conn)
             if cat.maquina is None:
-                cat.faltantes.append(
-                    f"Ninguna máquina activa del catálogo puede hacer un resorte de "
-                    f"{tipo_resorte} con alambre de {diametro_alambre_mm} mm.")
+                mensajes.falta(cat, "SIN_MAQUINA_CAPAZ", tipo=tipo_resorte,
+                               diametro=diametro_alambre_mm)
                 cat.origen["maquina"] = "sin dato"
             else:
                 cat.origen["maquina"] = f"bd: {cat.maquina['nombre']}"
                 if cat.maquina["costo_hora"] is None:
-                    cat.faltantes.append(
-                        f"La máquina {cat.maquina['nombre']} no tiene tarifa vigente "
-                        "en maquina_tarifas.")
+                    mensajes.falta(cat, "MAQUINA_SIN_TARIFA",
+                                   maquina=cat.maquina["nombre"])
         except Exception as err:
             log.warning("No se pudo elegir máquina: %s", err)
-            cat.faltantes.append(f"Selección de máquina fallida: {err}")
+            mensajes.falta(cat, "MAQUINA_FALLO", error=str(err))
             cat.origen["maquina"] = "sin dato"
 
         if material_codigo:
             try:
                 cat.material = precio_material(material_codigo, diam_pulg, conexion=conn)
                 if cat.material is None:
-                    cat.faltantes.append(
-                        f"El material '{material_codigo}' no está en el catálogo de materiales.")
+                    mensajes.falta(cat, "MATERIAL_SIN_CATALOGO", material=material_codigo)
                     cat.origen["material"] = "sin dato"
                 elif cat.material["precio_lb"] is None:
-                    cat.faltantes.append(
-                        f"El material '{material_codigo}' no tiene precio en material_precios.")
+                    mensajes.falta(cat, "MATERIAL_SIN_PRECIO", material=material_codigo)
                     cat.origen["material"] = f"bd: {cat.material['codigo']} sin precio"
                 else:
                     cat.origen["material"] = (
@@ -339,20 +335,20 @@ def cargar_catalogo(tipo_resorte: str,
                         f"(cotizado {cat.material['fecha_cotizado']})")
             except Exception as err:
                 log.warning("No se pudo leer el precio del material: %s", err)
-                cat.faltantes.append(f"Precio de material ilegible: {err}")
+                mensajes.falta(cat, "MATERIAL_ILEGIBLE", error=str(err))
                 cat.origen["material"] = "sin dato"
         else:
-            cat.faltantes.append("No se indicó material: no se puede costear el alambre.")
+            mensajes.falta(cat, "SIN_MATERIAL")
             cat.origen["material"] = "sin dato"
 
         try:
             cat.empaque = empaque(empaque_codigo, conexion=conn)
             cat.origen["empaque"] = f"bd: {cat.empaque['codigo']}" if cat.empaque else "sin dato"
             if cat.empaque is None:
-                cat.faltantes.append("No hay empaques activos en el catálogo.")
+                mensajes.falta(cat, "SIN_EMPAQUES")
         except Exception as err:
             log.warning("No se pudo leer el empaque: %s", err)
-            cat.faltantes.append(f"Empaque ilegible: {err}")
+            mensajes.falta(cat, "EMPAQUE_ILEGIBLE", error=str(err))
             cat.origen["empaque"] = "sin dato"
 
     return cat

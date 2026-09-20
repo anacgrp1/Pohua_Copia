@@ -106,7 +106,7 @@ const Revision = (() => {
 
         if (d.error_costeo) lista.push({ nivel: 'error', texto: t('rev.aviso.errorCosteo') + ' ' + d.error_costeo });
         if (!c.completo) {
-            for (const m of (c.faltantes || [])) lista.push({ nivel: 'warn', texto: m });
+            for (const m of motivosDelCosteo(c)) lista.push({ nivel: 'warn', texto: m });
             if (!(c.faltantes || []).length && (d.tramos || []).length) {
                 lista.push({ nivel: 'warn', texto: t('rev.aviso.incompleto') });
             }
@@ -128,6 +128,33 @@ const Revision = (() => {
             lista.push({ nivel: 'warn', texto: t('rev.aviso.campoFalta', { campo }) });
         }
         return lista;
+    }
+
+    /**
+     * Los motivos del costeo, en el idioma de Pohua.
+     *
+     * El servidor los manda de dos formas: la frase ya armada (siempre en
+     * español, que es la que va al registro) y la misma con su CÓDIGO y sus
+     * datos. Él no sabe en qué idioma está la pantalla —y el mismo RFQ lo
+     * abren personas distintas—, así que la frase se arma aquí. Sin la lista
+     * con códigos, o con un código que esta versión no conozca, se usa la
+     * frase del servidor: mejor en español que un hueco.
+     */
+    function motivosDelCosteo(costeo) {
+        const conCodigo = costeo.faltantes_i18n;
+        if (!Array.isArray(conCodigo) || !conCodigo.length) {
+            return costeo.faltantes || [];
+        }
+        return conCodigo.map((m) => traducirMotivo(m));
+    }
+
+    /** Un motivo suelto: por código si se conoce, y si no, tal como vino. */
+    function traducirMotivo(m) {
+        if (!m) return '';
+        if (typeof m === 'string') return m;
+        const clave = 'costeo.' + m.codigo;
+        const texto = I18N.t(clave, m.datos || {});
+        return texto === clave ? (m.texto || m.codigo || '') : texto;
     }
 
     function qtyCorta(v) {

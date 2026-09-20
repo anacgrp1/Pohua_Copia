@@ -153,18 +153,36 @@ def preparar(rfq_id: str, opciones: Optional[dict] = None, conexion=None) -> Dic
     costeado = costeo_rfq.costear(rfq_id, datos, resorte, rfq["material"])
     tramos = costeado["tramos"]
 
+    # Los motivos van por duplicado: la frase de siempre —que es la que se
+    # registra y la que entiende cualquier versión de la web— y la misma con
+    # su código, para que la pantalla la diga en su idioma. Los dos salen de
+    # pricing/mensajes.py, así que no pueden decir cosas distintas.
+    import pricing.mensajes as mensajes
+
     motivos = []
+    motivos_i18n = []
+
+    def _motivo(codigo, faltantes=None, **datos):
+        motivos.append(mensajes.texto(codigo, **datos))
+        entrada = mensajes.entrada(codigo, **datos)
+        if faltantes:
+            entrada["faltantes"] = list(faltantes)
+        motivos_i18n.append(entrada)
+
+    faltantes_i18n = costeado["costeo"].get("faltantes_i18n") or []
     if rfq["estado"] != repository.ESTADO_APROBADO:
-        motivos.append(f"El RFQ está en '{rfq['estado']}': sólo se oferta un RFQ aprobado.")
+        _motivo("OFERTA_NO_APROBADA", estado=rfq["estado"])
     if not tramos:
-        motivos.append("No hay tramos costeados: " + "; ".join(
-            costeado["costeo"].get("faltantes") or [costeado.get("error_costeo") or "sin motivo"]))
+        _motivo("OFERTA_SIN_TRAMOS", faltantes=faltantes_i18n,
+                detalle="; ".join(costeado["costeo"].get("faltantes")
+                                  or [costeado.get("error_costeo") or "sin motivo"]))
     elif not costeado["costeo"].get("completo"):
-        motivos.append("El costeo es orientativo: " + "; ".join(
-            costeado["costeo"].get("faltantes") or ["al catálogo le faltan datos"]))
+        _motivo("OFERTA_ORIENTATIVA", faltantes=faltantes_i18n,
+                detalle="; ".join(costeado["costeo"].get("faltantes")
+                                  or ["al catálogo le faltan datos"]))
     destino = opciones.get("destinatario") or datos.get("remitente")
     if not destino:
-        motivos.append("No hay a quién mandarla: el RFQ no trae remitente.")
+        _motivo("OFERTA_SIN_DESTINO")
 
     hoy = _dt.date.today()
     validez_dias = int(opciones.get("validez_dias") or VALIDEZ_DIAS_POR_DEFECTO)
@@ -215,7 +233,8 @@ def preparar(rfq_id: str, opciones: Optional[dict] = None, conexion=None) -> Dic
     }
 
     return {"rfq": rfq, "costeado": costeado, "pdf": pdf, "correo": correo,
-            "listo": not motivos, "motivos": motivos}
+            "listo": not motivos, "motivos": motivos,
+            "motivos_i18n": motivos_i18n}
 
 
 def generar_pdf(rfq_id: str, opciones: Optional[dict] = None,
@@ -302,4 +321,5 @@ def enviar(rfq_id: str, usuario: Optional[str] = None,
     return {"rfq_id": rfq_id, "archivo": str(archivo), "nombre_archivo": archivo.name,
             "destinatario": params["destinatario"], "enviado": enviado,
             "envio_habilitado": habilitado, "listo": prep["listo"],
-            "motivos": prep["motivos"]}
+            "motivos": prep["motivos"],
+            "motivos_i18n": prep.get("motivos_i18n") or []}

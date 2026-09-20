@@ -97,6 +97,13 @@ def tramo_para_ventana(t: dict, objetivo_pct) -> dict:
 
 
 
+def _motivo(costeo: dict, codigo: str, **datos) -> None:
+    """Un motivo del costeo, en las dos formas: la de siempre y la traducible."""
+    import pricing.mensajes as mensajes
+    costeo["faltantes"] = [mensajes.texto(codigo, **datos)]
+    costeo["faltantes_i18n"] = [mensajes.entrada(codigo, **datos)]
+
+
 def datos_para_motor(datos: dict, resorte: dict, material_rfq=None) -> dict:
     """Lo que se le pasa al motor: el resorte, con las cantidades del correo.
 
@@ -149,7 +156,8 @@ def costear(rfq_id: str, datos: dict, resorte: dict, material_rfq=None) -> dict:
     datos_resorte = datos_para_motor(datos, resorte, material_rfq)
     cantidades = datos_resorte.get("cantidades") or []
 
-    tramos, costeo, comunes = [], {"completo": False, "faltantes": [], "origen": None}, {}
+    tramos, costeo, comunes = [], {"completo": False, "faltantes": [],
+                                   "faltantes_i18n": [], "origen": None}, {}
     error_costeo = None
     if cantidades and (datos_resorte.get("diametro_alambre_mm") or datos_resorte.get("material")):
         try:
@@ -173,16 +181,18 @@ def costear(rfq_id: str, datos: dict, resorte: dict, material_rfq=None) -> dict:
             }
             costeo = {"completo": bool(catalogo.completo),
                       "faltantes": list(catalogo.faltantes),
+                      # Los mismos motivos con su código, para que la web los
+                      # diga en el idioma que tenga puesto (pricing/mensajes.py).
+                      "faltantes_i18n": list(getattr(catalogo, "faltantes_i18n", [])),
                       "origen": catalogo.origen,
                       "banderas_motor": [f.get("m") for f in (resultado.get("flags") or [])]}
         except Exception as err:      # el costeo no puede tumbar la ventana
             log.exception("RFQ %s: no se pudo costear: %s", rfq_id, err)
             error_costeo = str(err)
     elif not cantidades:
-        costeo["faltantes"] = ["El RFQ no trae ninguna cantidad: no hay tramos que costear."]
+        _motivo(costeo, "SIN_CANTIDADES_RFQ")
     else:
-        costeo["faltantes"] = ["Sin material ni diámetro de alambre no se puede costear: "
-                               "hay que capturarlos en la cotización completa."]
+        _motivo(costeo, "SIN_MATERIAL_NI_DIAMETRO")
 
     return {"cantidades": cantidades, "tramos": tramos, "costeo": costeo,
             "comunes": comunes, "error_costeo": error_costeo}

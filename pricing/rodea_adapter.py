@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
+import pricing.mensajes as mensajes
 from pricing import repository
 
 log = logging.getLogger("cotizador.pricing.adapter")
@@ -192,8 +193,7 @@ def build_pn_for_engine(
     )
 
     if not cantidades:
-        catalogo.faltantes.append(
-            "No se indicó cantidad: el costeo por escalones necesita un volumen.")
+        mensajes.falta(catalogo, "SIN_CANTIDAD")
 
     maquina = catalogo.maquina or {}
     material = catalogo.material or {}
@@ -210,13 +210,9 @@ def build_pn_for_engine(
     dev_len = longitud_desarrollada_pulg(spring_data)
     peso_lb = peso_alambre_lb(dev_len, diam_mm, material.get("codigo") or material_codigo)
     if peso_lb is None:
-        catalogo.faltantes.append(
-            "No se pudo calcular el peso del alambre (faltan diámetro, diámetro medio "
-            "o número de espiras): el costo de material saldría en cero.")
+        mensajes.falta(catalogo, "SIN_PESO_ALAMBRE")
     elif tipo.startswith(("extension", "tension", "torsion")):
-        catalogo.faltantes.append(
-            "El peso sólo cubre el cuerpo del resorte; faltan ganchos o patas por "
-            "capturar, así que el material está subestimado.")
+        mensajes.falta(catalogo, "PESO_SOLO_CUERPO")
 
     routing = []
     if maquina:

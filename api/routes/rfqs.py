@@ -461,6 +461,8 @@ def ver_oferta(
     return {
         "rfq_id": rfq_id, "estado": rfq["estado"],
         "listo": prep["listo"], "motivos": prep["motivos"],
+        # Los mismos motivos con su código, para decirlos en el idioma puesto.
+        "motivos_i18n": prep.get("motivos_i18n") or [],
         "correo": prep["correo"],
         "pdf": prep["pdf"],
         "costeo": prep["costeado"]["costeo"],
