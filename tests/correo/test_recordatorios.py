@@ -62,14 +62,29 @@ class TestInterruptores(unittest.TestCase):
 
 class TestEnvio(unittest.TestCase):
 
-    def _revisar(self, enviar, marcar):
+    def _revisar(self, enviar, marcar, envio=True):
         with mock.patch.object(config.settings, "RECORDATORIO_HORAS", 4), \
              mock.patch.object(config.settings, "APP_URL", "https://pohua.example"), \
              mock.patch.object(recordatorios, "pendientes", return_value=CASOS), \
              mock.patch.object(recordatorios, "_quien_dictamina", return_value=PERSONAS), \
              mock.patch.object(recordatorios, "marcar", marcar), \
+             mock.patch("app.email.outbound.envio_habilitado", return_value=envio), \
              mock.patch("app.email.outbound.enviar", enviar):
             return recordatorios.revisar()
+
+    def test_con_el_envio_apagado_no_sale_nada(self):
+        """Durante una prueba controlada no sale correo, ni siquiera el de casa.
+
+        Y no se apunta como mandado: el día que se encienda el envío, el
+        recordatorio de ese caso saldrá igual.
+        """
+        enviar, marcar = mock.MagicMock(return_value=True), mock.MagicMock()
+        r = self._revisar(enviar, marcar, envio=False)
+        enviar.assert_not_called()
+        marcar.assert_not_called()
+        self.assertEqual(r["pendientes"], 2)
+        self.assertEqual(r["avisados"], 0)
+        self.assertIn("apagado", r["motivo"])
 
     def test_uno_por_persona_y_el_texto_que_toca(self):
         enviar, marcar = mock.MagicMock(return_value=True), mock.MagicMock()

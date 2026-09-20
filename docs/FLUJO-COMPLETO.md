@@ -176,6 +176,11 @@ está llegando dice quién lee y desde cuándo, y entonces las credenciales que 
 falten al servidor son un aviso, no un fallo. Si deja de latir más de un
 intervalo, vuelven a ser un fallo: el buzón se habría quedado sin nadie.
 
+> Para una pasada entera con el freno de mano puesto —dos vueltas, primero
+> leyendo la aplicación de escritorio y después comprobando el relevo al
+> servidor, sin que salga un solo correo—, el paso a paso está en
+> [PRUEBA-CONTROLADA.md](PRUEBA-CONTROLADA.md).
+
 ### 3.2 Los avisos, en cada aparato
 
 Una vez por dispositivo, y antes de lanzar el ciclo: abre Pohua, entra en la

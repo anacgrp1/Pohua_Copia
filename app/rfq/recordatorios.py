@@ -200,6 +200,18 @@ def revisar(conexion=None) -> Dict[str, Any]:
     import app.email.outbound as outbound
     import app.email.templates as templates
 
+    # El mismo interruptor que para todo lo que sale solo. El recordatorio va a
+    # los de casa y no al cliente, pero sigue siendo correo que manda la
+    # máquina sin que nadie lo pulse: durante una prueba controlada, con
+    # ENVIO_AUTOMATICO apagado, no tiene por qué salir. No se apunta como
+    # mandado, así que el día que se encienda el envío saldrá igual.
+    if not outbound.envio_habilitado():
+        log.info("%d caso(s) llevan más de %d h esperando dictamen. El "
+                 "recordatorio queda preparado pero NO sale: ENVIO_AUTOMATICO "
+                 "está apagado.", len(casos), horas())
+        resultado["motivo"] = "envío automático apagado"
+        return resultado
+
     for caso in casos:
         rfq_id = caso["rfq_id"]
         tipo = _CORREO_DE_ESTADO.get(caso.get("estado") or "")

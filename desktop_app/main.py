@@ -28,6 +28,7 @@ Arrancarla:
 
 from __future__ import annotations
 
+import os
 import sys
 import time
 from pathlib import Path
@@ -37,6 +38,17 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
+
+# Y se trabaja DESDE la carpeta del proyecto, pase lo que pase.
+#
+# La configuración busca el `.env` en la carpeta desde la que se lanzó el
+# programa. Al abrir la aplicación con un doble clic, o escribiendo la ruta
+# entera desde otro sitio, esa carpeta es cualquier otra: no encuentra el
+# `.env`, arranca con los valores por defecto —INBOX, IMAP, base en
+# localhost— y la comprobación de arranque dice que falta TODO aunque no
+# falte nada. Esto se pone ANTES de importar la configuración, que es cuando
+# se lee el fichero.
+os.chdir(RAIZ)
 
 from PySide6.QtCore import Qt, QThread, QTimer, Signal          # noqa: E402
 from PySide6.QtGui import QFont                                  # noqa: E402
