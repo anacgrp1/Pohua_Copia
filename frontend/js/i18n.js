@@ -143,6 +143,16 @@ const I18N = (() => {
         'monitor.vacio':     { en: 'The log is empty.', es: 'El registro está vacío.', fr: 'Le journal est vide.' },
         'monitor.sinFichero': { en: 'No log file yet.', es: 'Todavía no hay fichero de registro.', fr: 'Pas encore de fichier journal.' },
 
+        // --- Comprobación del flujo (Perfil → Sistema) --------------------
+        'flujo.titulo':     { en: 'Ready to run the flow?', es: '¿Listo para el flujo?', fr: 'Prêt pour le flux ?' },
+        'flujo.comprobar':  { en: 'Check again', es: 'Comprobar de nuevo', fr: 'Vérifier à nouveau' },
+        'flujo.comprobando':{ en: 'Checking…', es: 'Comprobando…', fr: 'Vérification…' },
+        'flujo.listo':      { en: 'Nothing missing: the flow can run.', es: 'No falta nada: el flujo puede correr.', fr: 'Rien ne manque : le flux peut tourner.' },
+        'flujo.faltan':     { en: '{n} thing(s) missing before it can run', es: 'Faltan {n} cosa(s) para poder probar', fr: '{n} élément(s) manquant(s) avant de pouvoir tester' },
+        'flujo.avisos':     { en: '{n} to look at', es: '{n} para mirar', fr: '{n} à regarder' },
+        'flujo.cuando':     { en: 'Checked at {hora}', es: 'Comprobado a las {hora}', fr: 'Vérifié à {hora}' },
+        'flujo.fallo':      { en: 'The check could not run: {motivo}', es: 'No se pudo comprobar: {motivo}', fr: 'Vérification impossible : {motivo}' },
+
         // --- Cotización --------------------------------------------------
         'quoting.enObras': { en: 'Quoting is being rebuilt.', es: 'La pantalla de cotización se está rehaciendo.', fr: "L'écran de chiffrage est en refonte." },
 

@@ -1,5 +1,4 @@
 """
-SUBTAREA 2 [Lógica]
 Control de duplicados: conteo rápido en PostgreSQL usando el
 message-id del correo entrante ANTES de evaluar el contenido.
 

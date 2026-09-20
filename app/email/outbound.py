@@ -35,6 +35,7 @@ import os
 log = logging.getLogger("cotizador.correo_saliente")
 
 _MODOS_TOKEN = ("graph", "token", "prod")
+_MODOS_OUTLOOK = ("outlook", "com", "escritorio")
 
 
 def envio_habilitado() -> bool:
@@ -59,14 +60,47 @@ def envio_habilitado() -> bool:
 
 
 def enviar(contenido) -> bool:
-    """Envía el correo por el canal del modo activo: SMTP o Graph."""
+    """Envía el correo por el canal del modo activo: SMTP, Graph u Outlook.
+
+    `getattr(config, ...)` miraba el MÓDULO, donde `MAIL_MODE` no existe: se
+    quedaba siempre con "imap" y mandaba por SMTP aunque estuviera configurado
+    Graph. El ajuste vive en `config.settings`.
+    """
     import app.core.config as config
-    modo = str(getattr(config, "MAIL_MODE", "imap")).lower()
+    modo = str(getattr(config.settings, "MAIL_MODE", "imap") or "imap").lower()
+
+    if modo in _MODOS_OUTLOOK:
+        # Por el Outlook que ya está abierto: mismo remitente y misma firma
+        # que si lo hubiera escrito una persona.
+        from app.email.factory import EmailProviderFactory
+        proveedor = EmailProviderFactory.get_provider()
+        return proveedor.send_email(
+            to=contenido["destinatario"],
+            subject=contenido["asunto"],
+            body=contenido.get("cuerpo_html") or contenido.get("cuerpo_texto", ""),
+            attachments=_adjuntos(contenido),
+        )
     if modo in _MODOS_TOKEN:
         import app.email.graph_sender as graph_sender
         return graph_sender.enviar_correo_graph(contenido)
     import app.email.smtp_sender as smtp_sender
     return smtp_sender.enviar_correo_smtp(contenido)
+
+
+def _adjuntos(contenido):
+    """Las rutas del correo, leídas a bytes para el proveedor de Outlook."""
+    from app.email.base_provider import EmailAttachment
+    import os
+
+    fuera = []
+    for ruta in (contenido.get("adjuntos") or []):
+        try:
+            with open(ruta, "rb") as fichero:
+                fuera.append(EmailAttachment(filename=os.path.basename(ruta),
+                                             content=fichero.read()))
+        except OSError as error:
+            log.warning("No se pudo adjuntar %s: %s", ruta, error)
+    return fuera
 
 
 def nombre_comprador(datos) -> str:

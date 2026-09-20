@@ -15,37 +15,53 @@ class EmailProviderFactory:
     según el entorno de ejecución configurado centralizadamente.
     """
 
+    # Cómo se entra al buzón, por nombre. `local`/`token` son los nombres
+    # viejos de `imap`/`graph`, que la configuración sigue aceptando.
+    _MODOS = {
+        "imap": "imap", "local": "imap",
+        "graph": "graph", "token": "graph", "prod": "graph",
+        "outlook": "outlook", "com": "outlook", "escritorio": "outlook",
+    }
+
     @staticmethod
     def get_provider() -> BaseEmailProvider:
-        """Determina, inicializa y retorna el proveedor de correo correspondiente
-        según el valor de settings.APP_ENV.
+        """El proveedor de correo que toca, según ``MAIL_MODE``.
 
-        Returns:
-            BaseEmailProvider: Instancia del proveedor concreta que implementa la interfaz base.
+        Antes se elegía por ``APP_ENV``: dev → IMAP, prod → Graph. Eso ataba
+        dos cosas que no tienen por qué ir juntas —dónde corre y por dónde lee
+        el correo— y llevaba a la contradicción de tener ``AUTH_METHOD=local``
+        configurado y estar usando Graph por haber puesto ``APP_ENV=prod``.
+        Ahora manda ``MAIL_MODE`` (``AUTH_METHOD`` es su nombre viejo y la
+        configuración los sincroniza), y ``APP_ENV`` sólo decide si no hay
+        ninguno puesto.
 
-        Raises:
-            FactoryConfigurationError: Si el valor del entorno no está soportado.
+        Tres puertas:
+
+          imap     usuario y contraseña. En Microsoft 365 ya no vale: la
+                   autenticación básica está retirada.
+          graph    aplicación registrada en Entra ID (AZURE_* + GRAPH_USER).
+          outlook  el Outlook de escritorio que ya tiene el buzón abierto.
+                   Sin credenciales propias; es el de ``desktop_app/``.
         """
-        env = settings.APP_ENV.lower() if settings.APP_ENV else ""
+        modo = (getattr(settings, "MAIL_MODE", "") or "").strip().lower()
+        origen = "MAIL_MODE"
 
-        logger.info(f"Fábrica evaluando el entorno del sistema (APP_ENV: '{env}')...")
+        if modo not in EmailProviderFactory._MODOS:
+            env = (settings.APP_ENV or "").lower()
+            modo, origen = ("graph" if env == "prod" else "imap"), f"APP_ENV={env}"
 
-        if env == "dev":
-            logger.info("Resolución de fábrica: Entorno de desarrollo local detectado (@Local@).")
-            provider = ImapEmailProvider()
-            logger.info("Instancia de ImapEmailProvider creada y lista.")
-            return provider
+        elegido = EmailProviderFactory._MODOS[modo]
+        logger.info("Fábrica: modo de correo '%s' (por %s).", elegido, origen)
 
-        elif env == "prod":
-            logger.info("Resolución de fábrica: Entorno de producción seguro detectado (@Token@).")
-            provider = GraphEmailProvider()
-            logger.info("Instancia de GraphEmailProvider creada y lista.")
-            return provider
+        if elegido == "imap":
+            return ImapEmailProvider()
+        if elegido == "graph":
+            return GraphEmailProvider()
+        if elegido == "outlook":
+            from app.email.outlook_provider import OutlookEmailProvider
+            return OutlookEmailProvider()
 
-        else:
-            error_message = (
-                f"El entorno configurado '{settings.APP_ENV}' no es válido para la fábrica. "
-                "Debe ser 'dev' (desarrollo) o 'prod' (producción)."
-            )
-            logger.critical(error_message)
-            raise FactoryConfigurationError(error_message)
+        error_message = (
+            f"Modo de correo '{modo}' no soportado. Usa imap, graph u outlook.")
+        logger.critical(error_message)
+        raise FactoryConfigurationError(error_message)

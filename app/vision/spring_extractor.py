@@ -1,6 +1,5 @@
 """
-SUBTAREA 2 [Lógica]
-Interpreta el JSON devuelto por el modelo de visión (Subtarea 1) y AÍSLA las
+Interpreta el JSON devuelto por el modelo de visión y AÍSLA las
 variables físicas del resorte: los datos necesarios para la cotización en el
 entorno de ejecución. Los datos se pueden entregar como MATRIZ (a_matriz).
 
@@ -353,7 +352,7 @@ def a_matriz(datos, incluir_encabezado=True):
 
 
 # ============================================================================
-# Punto de entrada (Subtarea 2)
+# Punto de entrada
 # ============================================================================
 def interpretar(respuesta_texto, como_matriz=False):
     """

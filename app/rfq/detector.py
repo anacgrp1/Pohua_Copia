@@ -1,5 +1,4 @@
 """
-SUBTAREA 1 [Código - Filtro]
 Detección de patrones clave de RFQ (RFQ, Cotización, Quote, Resorte)
 en el asunto y el cuerpo usando expresiones regulares.
 """

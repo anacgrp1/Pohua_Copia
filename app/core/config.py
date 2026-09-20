@@ -41,6 +41,11 @@ class Settings:
     # se mueve un correo a esa carpeta, se corre el ciclo, y lo que pasa pasa
     # ahí. Cuando el flujo esté validado, se quita la variable y vuelve a INBOX.
     MAIL_FOLDER: str = "INBOX"
+
+    # Con MAIL_MODE=outlook: qué buzón de los que tiene abiertos el Outlook de
+    # escritorio hay que leer (sales.isc@cgr-international.com). Vacío = el
+    # primero, que en una computadora con un solo buzón es el correcto.
+    OUTLOOK_BUZON: str = ""
     SMTP_SERVER: Optional[str] = None
     SMTP_PORT: int = 587
     SMTP_USE_TLS: bool = True
@@ -110,7 +115,7 @@ class Settings:
     # Vacío = mismo origen únicamente (la PWA se sirve desde el propio FastAPI).
     CORS_ORIGINS: str = ""
 
-    # --- Multimodal Vision Model (Anthropic Claude) ---
+    # --- Multimodal Vision Model ---
     ANTHROPIC_API_KEY: str = ""
     VISION_MODEL: str = "claude-opus-4-8"
     VISION_MAX_TOKENS: int = 2048

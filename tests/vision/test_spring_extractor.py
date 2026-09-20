@@ -1,4 +1,4 @@
-"""Pruebas de src/spring_extractor.py (Subtarea 2). Sin llamadas a la API."""
+"""Pruebas de src/spring_extractor.py. Sin llamadas a la API."""
 import unittest
 
 import app.vision.spring_extractor as ext

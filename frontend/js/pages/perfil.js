@@ -733,10 +733,91 @@ const PerfilPage = (() => {
     // ====================================================================
 
     let configuracion = null;
+    let flujo = null;              // el informe de la comprobación
+    let flujoCargando = false;
+
+    /**
+     * La comprobación del flujo, pedida al SERVIDOR.
+     *
+     * Es la misma que `python scripts/comprobar_flujo.py`, pero contestada por
+     * quien de verdad va a leer el correo. Esa es la gracia: para probar en el
+     * servidor desplegado, lo que importa no es lo que hay en la computadora
+     * de quien mira, sino lo que ve Render.
+     */
+    async function cargarFlujo() {
+        if (flujoCargando) return;
+        flujoCargando = true;
+        if (seccion === 'sistema') pintar();
+        try {
+            flujo = await API.comprobarFlujo(true);
+        } catch (err) {
+            if (err && err.sesionExpirada) return;
+            flujo = { error: err.message };
+        } finally {
+            flujoCargando = false;
+            if (seccion === 'sistema') pintar();
+        }
+    }
+
+    const ICONO_ESTADO = { ok: '✓', falta: '!', ojo: '·' };
+
+    function vistaFlujo() {
+        const boton = `
+            <button type="button" class="btn btn-secondary btn-sm" id="btnComprobarFlujo"
+                    ${flujoCargando ? 'disabled' : ''}>
+                ${esc(I18N.t(flujoCargando ? 'flujo.comprobando' : 'flujo.comprobar'))}
+            </button>`;
+
+        let cuerpo;
+        if (flujoCargando && !flujo) {
+            cuerpo = `<p class="perfil-nota">${esc(I18N.t('flujo.comprobando'))}</p>`;
+        } else if (!flujo) {
+            cuerpo = '';
+        } else if (flujo.error) {
+            cuerpo = `<p class="perfil-nota perfil-nota--alerta">${
+                esc(I18N.t('flujo.fallo', { motivo: flujo.error }))}</p>`;
+        } else {
+            const resumen = flujo.listo
+                ? `<p class="perfil-nota perfil-nota--ok">${esc(I18N.t('flujo.listo'))}</p>`
+                : `<p class="perfil-nota perfil-nota--alerta">${
+                    esc(I18N.t('flujo.faltan', { n: flujo.bloqueantes }))}</p>`;
+
+            let grupo = null;
+            const puntos = (flujo.puntos || []).map((p) => {
+                const cabecera = p.grupo !== grupo
+                    ? `<li class="flujo-grupo">${esc(p.grupo)}</li>` : '';
+                grupo = p.grupo;
+                return cabecera + `
+                    <li class="flujo-punto flujo-punto--${esc(p.estado)}">
+                        <span class="flujo-marca" aria-hidden="true">${ICONO_ESTADO[p.estado] || '·'}</span>
+                        <span class="flujo-texto">
+                            <strong>${esc(p.titulo)}</strong>
+                            ${p.detalle ? `<small>${esc(p.detalle)}</small>` : ''}
+                        </span>
+                    </li>`;
+            }).join('');
+
+            const hora = (flujo.cuando || '').slice(11, 16);
+            cuerpo = resumen
+                + `<ul class="flujo-lista">${puntos}</ul>`
+                + `<p class="perfil-nota">${esc(I18N.t('flujo.cuando', { hora }))}`
+                + (flujo.avisos ? ` · ${esc(I18N.t('flujo.avisos', { n: flujo.avisos }))}` : '')
+                + '</p>';
+        }
+
+        return `
+        <section class="panel">
+            <h3 class="panel-titulo panel-titulo--con-accion">
+                <span>${esc(I18N.t('flujo.titulo'))}</span>${boton}
+            </h3>
+            ${cuerpo}
+        </section>`;
+    }
 
     function vistaSistema() {
         if (!configuracion) {
-            return `<section class="panel"><p class="perfil-nota">${esc(I18N.t('sistema.cargando'))}</p></section>`;
+            return vistaFlujo()
+                 + `<section class="panel"><p class="perfil-nota">${esc(I18N.t('sistema.cargando'))}</p></section>`;
         }
         const filas = configuracion.entradas.map(e => `
             <tr>
@@ -767,7 +848,7 @@ const PerfilPage = (() => {
                 esc(I18N.t('sistema.esquemaAlDia', { n: esquema.aplicadas.length }))}</p>`;
         }
 
-        return `
+        return vistaFlujo() + `
         <section class="panel">
             <h3 class="panel-titulo">${esc(I18N.t('sistema.titulo'))}</h3>
             ${aviso}
@@ -873,10 +954,12 @@ const PerfilPage = (() => {
                 seccion = tab.dataset.seccion;
                 if (seccion === 'usuarios' && !usuarios.length) await cargar();
                 if (seccion === 'sistema' && !configuracion) await cargarConfiguracion();
+                if (seccion === 'sistema' && !flujo && !flujoCargando) cargarFlujo();
                 pintar();
                 return;
             }
             if (ev.target.closest('#btnNuevoUsuario')) return nuevoUsuario();
+            if (ev.target.closest('#btnComprobarFlujo')) return cargarFlujo();
 
             const menu = ev.target.closest('[data-menu]');
             if (menu) { ev.preventDefault(); return abrirMenu(menu); }

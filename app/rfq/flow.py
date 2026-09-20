@@ -61,8 +61,8 @@ CAMPOS_DEPENDIENTES_EXTRACCION = ("volumen",)
 def clasificar(correo):
     """
     Clasifica el correo entrante:
-      - RESPUESTA_RFQ: pertenece al hilo de un RFQ existente (Subtarea 2)
-      - RFQ_NUEVO:     contiene patrones clave de RFQ (Subtarea 1)
+      - RESPUESTA_RFQ: pertenece al hilo de un RFQ existente
+      - RFQ_NUEVO:     contiene patrones clave de RFQ
       - TRASH:         no cumple ningun criterio
     Retorna (clasificacion, rfq_id).
     """

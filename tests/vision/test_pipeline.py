@@ -1,4 +1,4 @@
-"""Pruebas de src/pipeline.py (Subtarea 1). No llama a la API de Claude."""
+"""Pruebas de src/pipeline.py. No llama a la API real."""
 import unittest
 
 import app.vision.pipeline as vp

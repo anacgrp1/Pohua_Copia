@@ -18,6 +18,18 @@
  * inglés sigue queriendo ver 16h40 para Sevran. Por eso las plantillas de
  * abajo están junto a la zona horaria y no en i18n.js.
  *
+ * La fecha se escribe de dos maneras y se enseña la que quepa:
+ *
+ *   completa   Fri, Sep 11, 2026   vie, 11 sept 2026   ven. 11 sept. 2026
+ *   corta      09/11/2026          11/09/2026          11/09/2026
+ *
+ * La completa lleva el día de la semana, que es lo que de verdad se busca
+ * cuando se mira la fecha del otro lado del Atlántico: con seis horas de por
+ * medio, en Sevran puede ser ya mañana. La corta aparece cuando la pastilla
+ * empieza a estorbar al título de la página, y de ahí para abajo lo siguiente
+ * que se encoge es el nombre de la ciudad, que pasa a su código: la fecha ya
+ * no se va nunca, porque era justo lo que faltaba.
+ *
  * Relación con el selector de idioma: el reloj arranca en la casa que
  * corresponde al idioma (en→Kansas City, es→Querétaro, fr→Sevran) y la sigue
  * mientras nadie lo toque. En cuanto alguien pulsa el reloj, la elección es
@@ -41,6 +53,10 @@ const Reloj = (() => {
             zona: 'America/Chicago',
             ciudad: 'Kansas City',
             codigo: 'KC',
+            // Para los nombres del día y del mes en la fecha completa. Es el
+            // idioma DEL LUGAR, por lo mismo que el formato: en Missouri la
+            // fecha se lee en inglés aunque la app esté en francés.
+            local: 'en-US',
             // Missouri: mes/día/año y 12 horas con AM/PM.
             fecha: p => `${p.month}/${p.day}/${p.year}`,
             hora:  p => `${doce(p)}:${p.minute}:${p.second} ${p.hour < 12 ? 'AM' : 'PM'}`,
@@ -51,6 +67,7 @@ const Reloj = (() => {
             zona: 'America/Mexico_City',
             ciudad: 'Querétaro',
             codigo: 'QRO',
+            local: 'es-MX',
             // México: día/mes/año y 12 horas en su forma conversacional,
             // "a. m." / "p. m." con punto y espacio, que es como se escribe.
             fecha: p => `${p.day}/${p.month}/${p.year}`,
@@ -62,6 +79,7 @@ const Reloj = (() => {
             zona: 'Europe/Paris',
             ciudad: 'Sevran',
             codigo: 'SEV',
+            local: 'fr-FR',
             // Francia: día/mes/año y 24 horas. La "h" separa hora y minuto
             // (16h40, nunca 16:40); los segundos van detrás con dos puntos,
             // que es lo que hace un reloj digital francés cuando los enseña.
@@ -85,6 +103,7 @@ const Reloj = (() => {
 
     const boton  = () => document.getElementById('btnReloj');
     const elFecha  = () => document.getElementById('relojFecha');
+    const elFechaLarga = () => document.getElementById('relojFechaLarga');
     const elHora   = () => document.getElementById('relojHora');
     const elCiudad = () => document.getElementById('relojCiudad');
     const elCodigo = () => document.getElementById('relojCodigo');
@@ -113,6 +132,28 @@ const Reloj = (() => {
         return p;
     }
 
+    /**
+     * La fecha completa de una casa: día de la semana, día, mes y año.
+     *
+     * Aquí sí se le pide a Intl que escriba, y no sólo que calcule, porque
+     * "miércoles" y "mercredi" no se sacan de unas cifras. Se le pide en el
+     * idioma del lugar, que es quien manda en el formato, y él pone además su
+     * puntuación: la coma del inglés, los puntos de las abreviaturas
+     * francesas. Si el motor no conociera ese idioma —no pasa en ningún
+     * navegador de hoy— se cae a la fecha corta, que siempre se puede
+     * escribir.
+     */
+    function larga(fecha, casa, p) {
+        try {
+            return new Intl.DateTimeFormat(casa.local, {
+                timeZone: casa.zona,
+                weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+            }).format(fecha);
+        } catch (err) {
+            return casa.fecha(p);
+        }
+    }
+
     /** "GMT-05:00" de la zona, para el globito de ayuda. */
     function desfase(fecha, zona) {
         try {
@@ -129,9 +170,11 @@ const Reloj = (() => {
         const ahora = new Date();
         const p = partes(ahora, casa.zona);
         const fecha = casa.fecha(p);
+        const completa = larga(ahora, casa, p);
         const hora = casa.hora(p);
 
         const f = elFecha(); if (f) f.textContent = fecha;
+        const fl = elFechaLarga(); if (fl) fl.textContent = completa;
         const h = elHora();  if (h) h.textContent = hora;
         const c = elCiudad(); if (c) c.textContent = casa.ciudad;
         const k = elCodigo(); if (k) k.textContent = casa.codigo;
@@ -144,7 +187,7 @@ const Reloj = (() => {
             // data-i18n-titulo, que pondría el mismo texto en las dos.
             const off = desfase(ahora, casa.zona);
             b.setAttribute('title', `${I18N.t('reloj.boton')} — ${casa.ciudad}${off ? ' (' + off + ')' : ''}`);
-            b.setAttribute('aria-label', `${casa.ciudad}: ${fecha}, ${hora}`);
+            b.setAttribute('aria-label', `${casa.ciudad}: ${completa}, ${hora}`);
         }
     }
 

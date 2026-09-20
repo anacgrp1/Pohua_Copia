@@ -1,5 +1,4 @@
 """
-SUBTAREA 2 [Lógica - Hilos]
 Validación de respuestas: analiza in-reply-to y references, o busca
 el ID del RFQ en el asunto, para asociar el correo al historial.
 """

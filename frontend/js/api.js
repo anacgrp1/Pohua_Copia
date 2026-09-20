@@ -327,6 +327,10 @@ const API = {
     },
 
     configuracionSistema() { return this.request('GET', '/api/system/config'); },
+    /** La comprobación del flujo, tal y como la ve el servidor desplegado. */
+    comprobarFlujo(conBuzon = true) {
+        return this.request('GET', `/api/system/preflight?buzon=${conBuzon ? 'true' : 'false'}`);
+    },
 
     // Registro del servicio
     getLogs(lines = 300) { return this.request('GET', `/api/logs?lines=${lines}`); },

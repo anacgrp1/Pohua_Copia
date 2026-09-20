@@ -1,16 +1,15 @@
 """
-SUBTAREA 1 [Código - IA]
-Pipeline del modelo multimodal de visión (Anthropic Claude) para la
+Pipeline del modelo multimodal de visión para la
 extracción de información de dibujos técnicos de resortes.
 
 Recibe los archivos en BYTES y soporta las extensiones:
-    .pdf  -> bloque "document" (Claude lee el PDF de forma nativa)
+    .pdf  -> bloque "document" (el modelo lee el PDF de forma nativa)
     .png  -> bloque "image"
     .stp / .step -> STUB (CAD ISO-10303 de texto, no es imagen) -> pendiente
 
 Diseña el PROMPT TÉCNICO enfocado en resortes de compresión, torsión y
 extensión, y solicita una respuesta en JSON estricto que luego interpreta
-src/spring_extractor.py (Subtarea 2).
+src/spring_extractor.py.
 """
 import base64
 import logging
@@ -253,7 +252,7 @@ def _crear_cliente():
 
 def analizar_dibujos(archivos, cliente=None):
     """
-    Punto de entrada del pipeline (Subtarea 1).
+    Punto de entrada del pipeline.
 
     Recibe los archivos en bytes, construye el contenido multimodal, llama al
     modelo de visión y devuelve un dict:

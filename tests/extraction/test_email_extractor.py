@@ -1,6 +1,6 @@
 """COT-66 / COT-67 — Extracción de datos comerciales del cuerpo del correo.
 
-No se llama al modelo real: el cliente de Anthropic se inyecta como doble.
+No se llama al modelo real: el cliente LLM se inyecta como doble.
 """
 import os
 import unittest

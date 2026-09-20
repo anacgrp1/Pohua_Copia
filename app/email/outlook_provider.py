@@ -1,0 +1,405 @@
+"""El correo leído desde el Outlook que ya está abierto en la computadora.
+
+Por qué existe
+--------------
+El buzón de ventas vive en Microsoft 365, y ahí Microsoft retiró la
+autenticación básica de IMAP y POP: usuario y contraseña ya no abren nada, y
+no se puede volver a activar. La otra puerta, Microsoft Graph, necesita
+registrar una aplicación en Entra ID, y eso depende de quien administre el
+tenant.
+
+Pero hay una tercera puerta que no depende de nadie más: el Outlook de
+escritorio de la planta, que ya tiene el buzón abierto y autenticado. Esta
+clase entra por ahí —automatización COM, la misma que usan las macros de
+siempre— y lee la carpeta configurada sin pedir una sola credencial.
+
+Es el proveedor de la aplicación de escritorio (``desktop_app/``), y se elige
+con ``MAIL_MODE=outlook``.
+
+Lo que hay que saber
+--------------------
+* Necesita Windows, ``pywin32`` y el Outlook **clásico** abierto (el "nuevo
+  Outlook" no expone COM). Fuera de ahí, `connect()` dice qué falta.
+* Cada hilo que use COM tiene que inicializarlo; `connect()` lo hace por su
+  cuenta, así que la aplicación puede leer desde su hilo de trabajo sin saber
+  nada de esto.
+* El identificador de cada correo es su ``EntryID``: es estable dentro del
+  buzón y es lo que se usa para volver a buscarlo al marcarlo como leído.
+* El `Message-ID` de internet —el que usa el sistema para no procesar dos
+  veces el mismo correo— no está en la interfaz normal de Outlook: se saca por
+  ``PropertyAccessor`` con su etiqueta MAPI. Sin él, cada relectura sería un
+  correo nuevo.
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+import tempfile
+from email.utils import format_datetime
+from typing import Any, List, Optional
+
+from app.core.config import settings
+from app.email.base_provider import BaseEmailProvider, EmailAttachment, EmailMessage
+
+logger = logging.getLogger("OutlookEmailProvider")
+
+# Etiquetas MAPI de las cabeceras de internet. Outlook no las expone como
+# propiedades normales; se piden por su "esquema" con el PropertyAccessor.
+PR_INTERNET_MESSAGE_ID = "http://schemas.microsoft.com/mapi/proptag/0x1035001F"
+PR_IN_REPLY_TO_ID = "http://schemas.microsoft.com/mapi/proptag/0x1042001F"
+PR_INTERNET_REFERENCES = "http://schemas.microsoft.com/mapi/proptag/0x1039001F"
+PR_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x39FE001E"
+
+CLASE_CORREO = 43          # olMail: lo demás (citas, avisos) no se procesa
+MAX_BYTES_ADJUNTO = 25 * 1024 * 1024
+
+
+class OutlookEmailProvider(BaseEmailProvider):
+    """Lee (y manda) por el Outlook de escritorio, sin credenciales propias."""
+
+    def __init__(self) -> None:
+        self._outlook = None
+        self._mapi = None
+        self._carpeta = None
+
+    # ---------------------------------------------------------------- COM
+
+    def _iniciar_com(self) -> None:
+        """COM se inicializa POR HILO. La aplicación lee en un hilo aparte."""
+        try:
+            import pythoncom
+            pythoncom.CoInitialize()
+        except Exception as error:          # ya inicializado, o no es Windows
+            logger.debug("CoInitialize no hizo falta o no aplica: %s", error)
+
+    def connect(self) -> bool:
+        """Se engancha al Outlook abierto y localiza el buzón y la carpeta."""
+        buzon = (getattr(settings, "OUTLOOK_BUZON", "") or
+                 getattr(settings, "IMAP_USER", "") or "").strip()
+        carpeta = (getattr(settings, "MAIL_FOLDER", "") or "INBOX").strip()
+
+        self._iniciar_com()
+        try:
+            import win32com.client
+        except ImportError:
+            logger.error("Falta pywin32: pip install -r requirements-desktop.txt")
+            return False
+
+        try:
+            self._outlook = win32com.client.Dispatch("Outlook.Application")
+            self._mapi = self._outlook.GetNamespace("MAPI")
+        except Exception as error:
+            logger.error("No se pudo hablar con Outlook (¿está abierto, y es el "
+                         "Outlook clásico?): %s", error)
+            return False
+
+        raiz = self._raiz_del_buzon(buzon)
+        if raiz is None:
+            logger.error("No encuentro el buzón '%s' en este Outlook. Buzones "
+                         "abiertos: %s", buzon, ", ".join(self._buzones()))
+            return False
+
+        self._carpeta = (raiz if carpeta.upper() == "INBOX" and raiz is not None
+                         and self._es_bandeja(raiz) else self._buscar_carpeta(raiz, carpeta))
+        if self._carpeta is None:
+            logger.error("El buzón '%s' no tiene una carpeta '%s'.", buzon, carpeta)
+            return False
+
+        logger.info("Leyendo '%s' del buzón '%s' por el Outlook de escritorio.",
+                    carpeta, buzon)
+        return True
+
+    # ------------------------------------------------------- buzón y carpeta
+
+    def _buzones(self) -> List[str]:
+        try:
+            return [self._mapi.Folders.Item(i + 1).Name
+                    for i in range(self._mapi.Folders.Count)]
+        except Exception:
+            return []
+
+    def _raiz_del_buzon(self, buzon: str):
+        """La carpeta raíz del buzón pedido.
+
+        Outlook nombra cada buzón abierto como una carpeta de primer nivel, y
+        ese nombre puede ser la dirección ("sales.isc@…") o el nombre para
+        mostrar ("ISC Sales"). Se acepta cualquiera de los dos, y si sólo hay
+        un buzón abierto se usa ése: en la computadora de la planta es lo
+        normal y ahorra tener que configurar nada.
+        """
+        try:
+            carpetas = [self._mapi.Folders.Item(i + 1)
+                        for i in range(self._mapi.Folders.Count)]
+        except Exception as error:
+            logger.error("No se pudieron listar los buzones de Outlook: %s", error)
+            return None
+
+        if not carpetas:
+            return None
+        if not buzon:
+            return carpetas[0]
+
+        objetivo = buzon.lower()
+        for carpeta in carpetas:
+            nombre = (carpeta.Name or "").lower()
+            if objetivo == nombre or objetivo in nombre:
+                return carpeta
+
+        # Segundo intento: por la dirección SMTP de la cuenta, que no siempre
+        # coincide con el nombre que se ve en la lista de carpetas.
+        try:
+            for i in range(self._mapi.Stores.Count):
+                almacen = self._mapi.Stores.Item(i + 1)
+                correo = ""
+                try:
+                    correo = (almacen.PropertyAccessor
+                              .GetProperty(PR_SMTP_ADDRESS) or "")
+                except Exception:
+                    pass
+                if correo and correo.lower() == objetivo:
+                    return almacen.GetRootFolder()
+        except Exception as error:
+            logger.debug("No se pudo recorrer los almacenes: %s", error)
+        return None
+
+    def _es_bandeja(self, carpeta) -> bool:
+        try:
+            return (carpeta.Name or "").lower() in ("bandeja de entrada", "inbox")
+        except Exception:
+            return False
+
+    def _buscar_carpeta(self, raiz, nombre: str, profundidad: int = 0):
+        """La carpeta por su nombre, buscando hacia abajo desde la raíz.
+
+        Se busca en todo el árbol porque TEST puede estar colgada de la bandeja
+        de entrada o del propio buzón, y quien la creó no tiene por qué
+        acordarse de dónde la puso.
+        """
+        if profundidad > 4:
+            return None
+        objetivo = nombre.lower()
+        try:
+            hijas = [raiz.Folders.Item(i + 1) for i in range(raiz.Folders.Count)]
+        except Exception:
+            return None
+
+        for hija in hijas:
+            try:
+                if (hija.Name or "").lower() == objetivo:
+                    return hija
+            except Exception:
+                continue
+        for hija in hijas:
+            encontrada = self._buscar_carpeta(hija, nombre, profundidad + 1)
+            if encontrada is not None:
+                return encontrada
+        return None
+
+    # ------------------------------------------------------------- lectura
+
+    def fetch_unread_messages(self) -> List[EmailMessage]:
+        """Los correos sin leer de la carpeta, del más viejo al más nuevo."""
+        if self._carpeta is None and not self.connect():
+            return []
+
+        try:
+            items = self._carpeta.Items
+            items.Sort("[ReceivedTime]", False)          # los viejos primero
+            sin_leer = items.Restrict("[Unread] = True")
+        except Exception as error:
+            logger.error("No se pudo consultar la carpeta: %s", error)
+            return []
+
+        correos: List[EmailMessage] = []
+        try:
+            total = sin_leer.Count
+        except Exception:
+            total = 0
+
+        for i in range(total):
+            try:
+                item = sin_leer.Item(i + 1)
+                if getattr(item, "Class", CLASE_CORREO) != CLASE_CORREO:
+                    continue
+                correos.append(self._a_mensaje(item))
+            except Exception as error:
+                # Un correo que no se deja leer no puede parar a los demás.
+                logger.exception("No se pudo leer un correo de la carpeta: %s", error)
+
+        logger.info("Se encontraron %d correo(s) sin leer.", len(correos))
+        return correos
+
+    def _propiedad(self, item, esquema: str) -> str:
+        try:
+            return str(item.PropertyAccessor.GetProperty(esquema) or "").strip()
+        except Exception:
+            return ""
+
+    def _remitente(self, item) -> str:
+        """La dirección SMTP del remitente, no el galimatías de Exchange.
+
+        Dentro de una organización, `SenderEmailAddress` devuelve la ruta
+        interna (`/O=EXCHANGELABS/OU=…`), que no sirve ni para responder ni
+        para reconocer al cliente. La de verdad está en el usuario de Exchange.
+        """
+        try:
+            if (item.SenderEmailType or "").upper() == "EX":
+                try:
+                    usuario = item.Sender.GetExchangeUser()
+                    if usuario and usuario.PrimarySmtpAddress:
+                        return str(usuario.PrimarySmtpAddress)
+                except Exception:
+                    pass
+                smtp = self._propiedad(item, PR_SMTP_ADDRESS)
+                if smtp:
+                    return smtp
+            return str(item.SenderEmailAddress or "")
+        except Exception:
+            return ""
+
+    def _fecha(self, item) -> str:
+        try:
+            recibido = item.ReceivedTime
+            import datetime as _dt
+            if isinstance(recibido, _dt.datetime):
+                return format_datetime(recibido)
+            return str(recibido)
+        except Exception:
+            return ""
+
+    def _adjuntos(self, item) -> List[EmailAttachment]:
+        fuera: List[EmailAttachment] = []
+        try:
+            cuantos = item.Attachments.Count
+        except Exception:
+            return fuera
+
+        for i in range(cuantos):
+            ruta = None
+            try:
+                adjunto = item.Attachments.Item(i + 1)
+                nombre = str(adjunto.FileName or f"adjunto-{i + 1}")
+                if getattr(adjunto, "Size", 0) > MAX_BYTES_ADJUNTO:
+                    logger.warning("Adjunto '%s' demasiado grande: se omite.", nombre)
+                    continue
+                # Outlook no entrega los bytes: los escribe en disco.
+                carpeta = tempfile.mkdtemp(prefix="pohua-adj-")
+                ruta = os.path.join(carpeta, os.path.basename(nombre))
+                adjunto.SaveAsFile(ruta)
+                with open(ruta, "rb") as fichero:
+                    fuera.append(EmailAttachment(filename=nombre, content=fichero.read()))
+            except Exception as error:
+                logger.warning("No se pudo guardar un adjunto: %s", error)
+            finally:
+                if ruta and os.path.exists(ruta):
+                    try:
+                        os.remove(ruta)
+                        os.rmdir(os.path.dirname(ruta))
+                    except OSError:
+                        pass
+        return fuera
+
+    def _a_mensaje(self, item) -> EmailMessage:
+        cuerpo_html = ""
+        try:
+            cuerpo_html = str(item.HTMLBody or "")
+        except Exception:
+            pass
+        cuerpo = cuerpo_html or str(getattr(item, "Body", "") or "")
+
+        cabeceras = {}
+        mensaje_id = self._propiedad(item, PR_INTERNET_MESSAGE_ID)
+        if mensaje_id:
+            cabeceras["Message-ID"] = mensaje_id
+        respuesta_a = self._propiedad(item, PR_IN_REPLY_TO_ID)
+        if respuesta_a:
+            cabeceras["In-Reply-To"] = respuesta_a
+        referencias = self._propiedad(item, PR_INTERNET_REFERENCES)
+        if referencias:
+            cabeceras["References"] = referencias
+
+        return EmailMessage(
+            id=str(item.EntryID),
+            sender=self._remitente(item),
+            subject=str(getattr(item, "Subject", "") or ""),
+            body=cuerpo,
+            date=self._fecha(item),
+            attachments=self._adjuntos(item),
+            raw_headers=cabeceras,
+            body_is_html=bool(cuerpo_html),
+        )
+
+    # -------------------------------------------------------------- marcar
+
+    def mark_as_read(self, message_id: str) -> bool:
+        """Marca como leído el correo, buscándolo por su EntryID."""
+        if self._mapi is None and not self.connect():
+            return False
+        try:
+            item = self._mapi.GetItemFromID(message_id)
+            item.UnRead = False
+            item.Save()
+            return True
+        except Exception as error:
+            logger.error("No se pudo marcar como leído (%s): %s", message_id, error)
+            return False
+
+    # --------------------------------------------------------------- envío
+
+    def send_email(self, to: str, subject: str, body: str,
+                   attachments: Optional[List[EmailAttachment]] = None) -> bool:
+        """Manda el correo POR OUTLOOK, desde el buzón que ya está abierto.
+
+        Así la respuesta al cliente sale con la firma y el remitente de
+        siempre, sin SMTP ni tokens: el mismo camino que si alguien la hubiera
+        escrito a mano.
+        """
+        if self._outlook is None and not self.connect():
+            return False
+
+        temporales = []
+        try:
+            correo = self._outlook.CreateItem(0)      # olMailItem
+            correo.To = to
+            correo.Subject = subject
+            if "<" in body and ">" in body:
+                correo.HTMLBody = body
+            else:
+                correo.Body = body
+
+            for adjunto in (attachments or []):
+                carpeta = tempfile.mkdtemp(prefix="pohua-env-")
+                ruta = os.path.join(carpeta, os.path.basename(adjunto.filename))
+                with open(ruta, "wb") as fichero:
+                    fichero.write(adjunto.content)
+                temporales.append(ruta)
+                correo.Attachments.Add(ruta)
+
+            # Desde el buzón compartido, no desde la cuenta personal de quien
+            # tenga Outlook abierto: el cliente contesta a ventas.
+            buzon = (getattr(settings, "OUTLOOK_BUZON", "") or "").strip()
+            if buzon:
+                try:
+                    correo.SentOnBehalfOfName = buzon
+                except Exception:
+                    logger.debug("No se pudo fijar el remitente a %s.", buzon)
+
+            correo.Send()
+            logger.info("Correo enviado por Outlook a %s.", to)
+            return True
+        except Exception as error:
+            logger.error("No se pudo enviar por Outlook: %s", error)
+            return False
+        finally:
+            for ruta in temporales:
+                try:
+                    os.remove(ruta)
+                    os.rmdir(os.path.dirname(ruta))
+                except OSError:
+                    pass
+
+    def disconnect(self) -> bool:
+        """No hay nada que cerrar: Outlook sigue abierto, es de quien lo usa."""
+        self._carpeta = None
+        return True

@@ -8,3 +8,9 @@
 #     pip install -r requirements.txt -r requirements-desktop.txt
 
 PySide6>=6.6
+
+# Automatización COM de Windows: es lo que deja leer el buzón por el Outlook
+# que ya está abierto en la computadora, sin credenciales propias
+# (app/email/outlook_provider.py, MAIL_MODE=outlook). Sólo instala en Windows;
+# en Linux o macOS pip la salta sola por el marcador de plataforma.
+pywin32>=306; sys_platform == "win32"

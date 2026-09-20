@@ -1,6 +1,13 @@
 # Entorno y Secretos - NUNCA subir
+#
+# `.env` y `.env.*` cubren el archivo de siempre, pero NO uno llamado
+# `ISC_BY_CGR.env` o `produccion.env`: esos no empiezan por ".env" y git los
+# habría subido tan contento con un `git add -A`. Por eso va también `*.env`,
+# en cualquier carpeta. `.env.example` no termina en ".env", así que sigue
+# entrando (y la excepción de abajo lo asegura).
 .env
 .env.*
+*.env
 !.env.example
 
 # Cache de Python

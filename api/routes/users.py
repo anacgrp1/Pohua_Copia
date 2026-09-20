@@ -364,6 +364,53 @@ def _notificar_temporal(usuario_id: int, temporal: str) -> dict:
 # Configuración del sistema (sólo lectura)
 # --------------------------------------------------------------------------- #
 
+# Cuánto se espera a que el buzón conteste antes de dar el informe sin él. Un
+# IMAP que no responde puede tardar un minuto en rendirse, y quien abre esta
+# pantalla está esperando delante.
+TOPE_BUZON_SEGUNDOS = 20
+
+
+@router.get("/api/system/preflight")
+def preflight(buzon: bool = True,
+              usuario: UsuarioSesion = Depends(exige("usuario:gestionar"))):
+    """¿Está todo puesto para que el flujo funcione? (Perfil → Sistema)
+
+    Es la misma comprobación que ``python scripts/comprobar_flujo.py``, pero
+    servida desde la propia aplicación, que es lo que hace falta para probar
+    en el SERVIDOR DESPLEGADO: en Render no siempre hay una consola a mano, y
+    lo que importa es lo que ve el servidor que de verdad lee el correo, no lo
+    que hay en la computadora de quien pregunta.
+
+    Sólo mira: no manda correos, no marca nada como leído y no escribe nada.
+    """
+    import concurrent.futures
+
+    import app.core.preflight as preflight
+
+    if not buzon:
+        return preflight.revisar(con_buzon=False)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        tarea = pool.submit(preflight.revisar, True)
+        try:
+            return tarea.result(timeout=TOPE_BUZON_SEGUNDOS)
+        except concurrent.futures.TimeoutError:
+            # El hilo sigue por su cuenta hasta que el proveedor se rinda; lo
+            # que no puede es dejar esperando a quien mira la pantalla.
+            log.warning("El buzón no contestó en %ds: informe sin él.",
+                        TOPE_BUZON_SEGUNDOS)
+            informe = preflight.revisar(con_buzon=False)
+            informe["puntos"].append({
+                "grupo": "El buzón", "estado": "ojo",
+                "titulo": f"El buzón no contestó en {TOPE_BUZON_SEGUNDOS} s",
+                "detalle": "Puede ser lentitud del servidor de correo o unas "
+                           "credenciales que no dejan entrar. Vuelve a "
+                           "comprobar, y si sigue igual mira el registro.",
+            })
+            informe["avisos"] += 1
+            return informe
+
+
 @router.get("/api/system/config")
 def configuracion(usuario: UsuarioSesion = Depends(exige("usuario:gestionar"))):
     """La configuración efectiva del servidor, con los secretos tapados.

@@ -15,7 +15,7 @@ lxml>=5.0                   # Parser HTML rápido para BeautifulSoup (COT-53)
 python-dotenv>=1.0          # Variables de entorno (.env)
 
 # --- IA ---
-anthropic>=0.39             # Claude: visión de planos y extracción del correo
+anthropic>=0.39             # Visión de planos y extracción del correo
 
 # --- Almacenamiento de planos ---
 azure-storage-blob>=12.19   # Persistencia de planos en modo <Token> (COT-56)

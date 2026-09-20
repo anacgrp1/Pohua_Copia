@@ -167,7 +167,13 @@ class TestCicloRespetaElHorario(unittest.TestCase):
         main = self._main()
         proveedor = mock.MagicMock()
         proveedor.fetch_unread_messages.return_value = []
+        # El recordatorio de dictamen va al final del ciclo y habla con la base
+        # de datos. Aquí no se está probando eso: sin taparlo, esta prueba
+        # acabaría esperando a un servidor que en la máquina de pruebas no
+        # tiene por qué existir.
         with mock.patch("app.rfq.horario.abierto", return_value=False), \
+             mock.patch("app.rfq.recordatorios.revisar",
+                        return_value={"avisados": 0, "correos": 0}), \
              mock.patch("app.email.factory.EmailProviderFactory.get_provider",
                         return_value=proveedor):
             resultado = main.ciclo_deteccion(forzar=True)

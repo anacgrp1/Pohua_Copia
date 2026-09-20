@@ -1,6 +1,6 @@
 """
 COTIZADOR - Detección de nuevos correos (Outlook)
-Integra las 3 subtareas:
+Integra los 3 componentes:
   1. Filtro de no leídos (imaplib UNSEEN / Graph isRead eq false)
   2. Control de duplicados por message-id en PostgreSQL
   3. Ejecución periódica con la librería schedule
@@ -139,7 +139,7 @@ def ciclo_deteccion(*, forzar: bool = False) -> ResultadoCiclo:
         try:
             correo = map_email_message(msg)
 
-            # SUBTAREA 2: conteo rápido por message-id ANTES de evaluar contenido
+            # Conteo rápido por message-id ANTES de evaluar contenido
             if duplicates.es_duplicado(correo["message_id"]):
                 log.debug("Duplicado ignorado: %s", correo["message_id"])
                 resultado.detalles.append(f"Duplicado omitido: {correo['message_id']}")
@@ -208,7 +208,7 @@ def main():
     # Primera ejecución inmediata
     ciclo_deteccion()
 
-    # SUBTAREA 3: ejecución periódica con schedule
+    # Ejecución periódica con schedule
     schedule.every(config.settings.INTERVALO_MINUTOS).minutes.do(ciclo_deteccion)
 
     # Bucle de control con retraso

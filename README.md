@@ -34,7 +34,7 @@
 │  │  ┌────────────────────┐   ┌─────────────────┐   ┌─────────────┐  │  │
 │  │  │ app/vision/ &      │   │ app/feasibility/│   │ app/core/   │  │  │
 │  │  │ app/extraction/    │   │ Motor de Reglas │   │ Config, Log │  │  │
-│  │  │ (Claude AI Multim.)│   │ & Decisión PM   │   │ Exceptions  │  │  │
+│  │  │ (IA Multimodal)    │   │ & Decisión PM   │   │ Exceptions  │  │  │
 │  │  └────────────────────┘   └─────────────────┘   └─────────────┘  │  │
 │  │                                                                  │  │
 │  │  ┌────────────────────────────────────────────────────────────┐  │  │
@@ -83,7 +83,7 @@ Cotizador/
 │   │   └── thread_validator.py      ← Asocia correos a hilos de RFQ existentes
 │   │
 │   ├── 📁 vision/                   ← IA — Lectura de dibujos técnicos
-│   │   ├── pipeline.py              ← Pipeline multimodal (PDF/PNG → Claude)
+│   │   ├── pipeline.py              ← Pipeline multimodal (PDF/PNG → Modelo de visión)
 │   │   └── spring_extractor.py      ← Extrae variables de resortes del dibujo
 │   │
 │   ├── 📁 extraction/               ← IA — Extracción del cuerpo del correo
@@ -127,8 +127,9 @@ Cotizador/
 │   ├── 📁 js/                       ← Lógica del frontend
 │   └── 📁 assets/                   ← Recursos estáticos
 │
-├── 📁 desktop_app/                  ← App de escritorio (Qt)
-│   └── main.py                      ← GUI + heartbeat al servidor web
+├── 📁 desktop_app/                  ← App de escritorio (PySide6)
+│   └── main.py                      ← Lee el buzón por el Outlook de la máquina
+│                                      (MAIL_MODE=outlook) + latido al servidor
 │
 ├── 📁 sql/                          ← Esquema de la BD
 │   ├── schema.sql                   ← DDL principal (6 tablas + roles PostgREST)
@@ -162,7 +163,7 @@ Cotizador/
 ├── postgrest.conf                   ← Config PostgREST (solo dev local)
 ├── Makefile                         ← Atajos: db-up, test, lint, usuario
 ├── requirements.txt                 ← Dependencias del servidor
-├── requirements-desktop.txt         ← Sólo para la app de escritorio (PySide6)
+├── requirements-desktop.txt         ← Sólo para la app de escritorio (PySide6 + pywin32)
 ├── requirements-dev.txt             ← Tests y linters
 ├── .env                             ← Variables de entorno (local, nunca al repo)
 └── .env.example                     ← Plantilla documentada
@@ -176,7 +177,7 @@ Cotizador/
 |---|---|---|
 | **Web App** | Render | Servidor FastAPI + Frontend PWA + Background Worker |
 | **Base de datos** | Neon | PostgreSQL serverless (`Cotizador`) |
-| **IA Multimodal** | Anthropic API | Claude para análisis de planos técnicos (visión) y extracción de correo |
+| **IA Multimodal** | Anthropic API | Análisis de planos técnicos (visión) y extracción de correo |
 | **Correo** | IMAP / Microsoft Graph | Ingesta de solicitudes y despacho de respuestas (configurable) |
 | **Planos** | Local / Azure Blob | Repositorio de almacenamiento para archivos técnicos y planos |
 ```

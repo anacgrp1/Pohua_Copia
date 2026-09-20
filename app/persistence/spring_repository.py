@@ -1,5 +1,4 @@
 """
-SUBTAREA 2 [Lógica - Persistencia]
 Almacena en PostgreSQL las variables físicas del resorte extraídas del dibujo,
 asociadas a un RFQ y al correo (message-id) de origen.
 

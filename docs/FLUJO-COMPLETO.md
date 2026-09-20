@@ -67,20 +67,28 @@ tocar el correo de ventas y sin que salga nada al cliente.
 
 ### 3.1 Antes de empezar: comprobarlo todo de una vez
 
-```
-python scripts/comprobar_flujo.py
-```
+**Desde la propia aplicación** (es lo que hace falta para probar en el servidor
+desplegado): entra en Pohua como administrador y abre **Perfil → Sistema**.
+Arriba hay una lista de comprobaciones con su estado, y un botón para volver a
+pasarlas. La contesta el servidor que de verdad lee el correo, así que dice lo
+que ve RENDER, no lo que hay en la computadora de quien mira.
 
 Dice, pieza por pieza, qué está puesto y qué falta: la base y sus migraciones,
-qué carpeta se va a leer y cuántos correos sin leer hay ahí, si estamos en
-horario, si el envío al cliente está apagado, si hay claves VAPID y cuántos
-dispositivos suscritos, quién recibiría el recordatorio y si están el lector y
-las calculadoras. No manda nada ni marca nada: sólo mira. Devuelve 1 si falta
-algo que impida la prueba.
+qué carpeta se va a leer y si se puede abrir —con cuántos correos sin leer hay
+dentro—, si estamos en horario, si el worker arranca solo, si el envío al
+cliente está apagado, si hay claves VAPID y cuántos dispositivos suscritos,
+quién recibiría el recordatorio, y si están el lector y las calculadoras. No
+manda nada, no marca nada como leído y no escribe en la base: sólo mira.
 
-Se corre donde estén las credenciales: en tu computadora con el `.env`, o en la
-consola de Render (*Shell*) para comprobar **lo desplegado**, que es lo que de
-verdad va a correr.
+La misma comprobación, en la consola:
+
+```
+python scripts/comprobar_flujo.py              # comprueba también el buzón
+python scripts/comprobar_flujo.py --sin-buzon  # sin tocar la red
+```
+
+Devuelve 1 si falta algo que impida la prueba. Las dos puertas llaman al mismo
+código (`app/core/preflight.py`), así que no pueden decir cosas distintas.
 
 Lo que tiene que estar en Render (*Environment*):
 
@@ -90,7 +98,83 @@ ENVIO_AUTOMATICO=false           nada sale al cliente todavía
 ANTHROPIC_API_KEY=...            sin ella no hay extracción ni lectura de plano
 APP_URL=https://<tu servicio>.onrender.com
 VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY      (python scripts/generar_vapid.py)
+WORKER_AUTOSTART=true            para que el buzón se lea solo, cada INTERVALO_MINUTOS
 ```
+
+### Quién lee el buzón: el servidor o la aplicación de escritorio
+
+Hay dos formas, y las dos valen. **No hacen falta las dos.**
+
+**El servidor lee.** Con un buzón de Microsoft 365 ya no valen usuario y
+contraseña: Microsoft retiró la autenticación básica de IMAP y POP en Exchange
+Online y no se puede volver a activar. El camino es Graph, que el sistema ya
+habla (`AUTH_METHOD=token`): se registra una aplicación en Entra ID, se le dan
+permisos de aplicación `Mail.ReadWrite` y `Mail.Send` con consentimiento del
+administrador, y de ahí salen `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
+`AZURE_CLIENT_SECRET` y `GRAPH_USER`. Conviene limitar la aplicación a ESE
+buzón con una *ApplicationAccessPolicy*; si no, podría leer todos los del
+dominio.
+
+**La aplicación de escritorio lee.** Es el respaldo cuando no hay credenciales
+de Azure: corre en una computadora que ya tiene acceso al buzón y manda su
+latido a `POST /api/worker/heartbeat` con `WORKER_SECRET_KEY`. Mientras ese
+latido llegue, el worker del servidor **se aparta a propósito** —si no, los dos
+leerían el mismo buzón y se pisarían—, y el servidor no necesita ninguna
+credencial de correo. Para esto hacen falta dos cosas, y sólo dos: el mismo
+`WORKER_SECRET_KEY` en los dos lados, y que la aplicación apunte a la dirección
+de Render.
+
+Lo que hace especial a este camino es **por dónde entra al buzón**: por el
+Outlook que ya está abierto en esa computadora, con automatización COM —la
+misma que usan las macros de toda la vida—. Outlook ya está autenticado contra
+Microsoft 365, así que aquí no hay contraseña que caducar, ni aplicación que
+registrar, ni administrador a quien pedirle nada. Se enciende con
+`MAIL_MODE=outlook`, y lo que sale del buzón entra al mismo ciclo que en la
+nube: se clasifica, se extrae, se lee el plano, se da de alta el RFQ y se
+avisa.
+
+```
+MAIL_MODE=outlook                             por el Outlook de escritorio
+OUTLOOK_BUZON=sales.isc@cgr-international.com el buzón, tal como se ve en Outlook
+MAIL_FOLDER=TEST                              la carpeta que se lee
+APP_URL=https://<tu servicio>.onrender.com    a dónde manda el latido
+WORKER_SECRET_KEY=...                         el mismo que en Render
+DATABASE_URL=...                              la MISMA base que el servidor
+ANTHROPIC_API_KEY=...
+```
+
+En la computadora de la planta, una vez:
+
+```
+pip install -r requirements.txt -r requirements-desktop.txt
+python desktop_app/main.py
+```
+
+Y tres cosas que conviene saber antes de que fallen:
+
+* Tiene que ser el **Outlook clásico de escritorio**, abierto y con el buzón
+  cargado. El "nuevo Outlook" —el que se parece a la versión web— no tiene COM
+  y la aplicación lo dirá así de claro al arrancar.
+* `OUTLOOK_BUZON` es el nombre con el que ese buzón aparece en la columna de
+  carpetas de Outlook: vale la dirección (`sales.isc@…`) o el nombre para
+  mostrar. Si sólo hay un buzón abierto se usa ése sin preguntar.
+* La carpeta se busca por su nombre en todo el árbol, así que da igual si
+  **TEST** cuelga de la bandeja de entrada o del buzón.
+
+Las respuestas al cliente también salen por ahí —`SentOnBehalfOfName` con el
+buzón de ventas—, así que el correo sale del mismo sitio del que saldría si
+alguien lo escribiera a mano, sin SMTP ni tokens.
+
+La ventana enseña siempre, arriba, de dónde está leyendo
+(`sales.isc@cgr-international.com · carpeta TEST · por el Outlook de
+escritorio`), respeta el **horario de atención** igual que el servidor, y trae
+la misma comprobación de Perfil → Sistema: al abrirla revisa lo que le falta
+antes de leer nada.
+
+La comprobación de **Perfil → Sistema** distingue los dos casos: si el latido
+está llegando dice quién lee y desde cuándo, y entonces las credenciales que le
+falten al servidor son un aviso, no un fallo. Si deja de latir más de un
+intervalo, vuelven a ser un fallo: el buzón se habría quedado sin nadie.
 
 ### 3.2 Los avisos, en cada aparato
 

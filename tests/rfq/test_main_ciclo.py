@@ -71,6 +71,12 @@ class TestCicloDeteccion(unittest.TestCase):
                        return_value=self.provider),
             mock.patch("app.persistence.duplicates.es_duplicado", return_value=False),
             mock.patch("app.persistence.duplicates.registrar_correo"),
+            # Al final del ciclo va el recordatorio de lo que lleva demasiado
+            # tiempo esperando dictamen, y eso abre la base de datos por su
+            # cuenta. Estas pruebas son sobre el lote de correos, así que se
+            # tapa: si no, dependerían de que haya una base de datos delante.
+            mock.patch("app.rfq.recordatorios.revisar",
+                       return_value={"avisados": 0, "correos": 0}),
         ]
         for parche in parches:
             parche.start()

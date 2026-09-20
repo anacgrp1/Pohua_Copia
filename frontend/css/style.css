@@ -3817,6 +3817,68 @@ body.menu-abierto { overflow: hidden; }
 
 .panel-cabecera .panel-titulo { margin: 0; margin-right: auto; }
 
+/* --- La comprobación del flujo (Perfil → Sistema) ------------------------
+   Una lista de puntos con su estado. Se lee de arriba abajo como un parte:
+   lo que está bien no distrae —marca discreta— y lo que falta salta. */
+.panel-titulo--con-accion {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+}
+
+.flujo-lista {
+    list-style: none;
+    margin: var(--sp-4) 0 var(--sp-3);
+    padding: 0;
+}
+
+.flujo-grupo {
+    margin-top: var(--sp-4);
+    padding-bottom: 2px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.flujo-lista .flujo-grupo:first-child { margin-top: 0; }
+
+.flujo-punto {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-3);
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.flujo-punto:last-child { border-bottom: 0; }
+
+.flujo-marca {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.flujo-punto--ok    .flujo-marca { background: var(--color-success-bg, rgba(164,174,45,.16)); color: var(--color-success); }
+.flujo-punto--falta .flujo-marca { background: var(--color-error-bg,   rgba(179,22,113,.16)); color: var(--color-error); }
+.flujo-punto--ojo   .flujo-marca { background: var(--color-warning-bg, rgba(214,124,47,.16)); color: var(--color-warning); }
+
+.flujo-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.flujo-texto strong { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.flujo-texto small  { font-size: 12px; color: var(--text-muted); line-height: 1.35; }
+
+.flujo-punto--falta .flujo-texto strong { color: var(--color-error); }
+
 .perfil-form { display: flex; flex-direction: column; gap: var(--sp-4); }
 
 .perfil-nota {
@@ -4467,6 +4529,12 @@ body.menu-abierto { overflow: hidden; }
 
 .reloj-fecha { color: var(--text-muted); }
 
+/* Dos fechas escritas, una enseñada: la completa —con el día de la semana— y
+   la corta en cifras. Se cambia de una a otra con `display`, y no borrando y
+   reescribiendo el mismo hueco, para que el cambio lo decida el ancho de la
+   ventana y no haga falta que el JavaScript se entere de nada. */
+.reloj-fecha--corta { display: none; }
+
 .reloj-hora {
     color: var(--text-primary);
     font-weight: 600;
@@ -4518,19 +4586,24 @@ body.menu-abierto { overflow: hidden; }
 .instalar-barra ~ .reloj { top: calc(var(--alto-instalar, 0px) + var(--sp-4)); }
 
 /* --- Cómo se encoge ------------------------------------------------------
-   Por orden de lo que menos falta hace: primero la fecha (casi siempre se
-   sabe qué día es), después el nombre de la ciudad, que pasa a su código. La
-   hora, que es a lo que se viene, no se va nunca. */
-/* Los cortes van holgados a propósito. El reloj se centra respecto a la
+   Por orden de lo que menos falta hace: primero la fecha completa, que pasa a
+   la corta en cifras; después el nombre de la ciudad, que pasa a su código.
+   La hora, que es a lo que se viene, no se va nunca — y la fecha tampoco:
+   antes desaparecía del todo en cuanto la ventana bajaba de 1400, y lo que se
+   quedaba era una pastilla que decía la hora de una ciudad sin decir su día,
+   que es la mitad del dato cuando entre dos casas hay siete horas.
+
+   Los cortes van holgados a propósito. El reloj se centra respecto a la
    VENTANA, pero el título de la página empieza después de la barra lateral,
    así que el hueco libre no está centrado: al estrecharse, el título sube
    hacia el reloj antes de lo que sugeriría la cuenta. */
-@media (max-width: 1400px) {
-    .reloj-fecha,
-    .reloj-fecha + .reloj-punto { display: none; }
-}
-
+/* Las dos cosas que se encogen lo hacen a la vez, y a propósito: la vista con
+   el nombre entero de la ciudad es la vista completa, y ahí la fecha va
+   completa también. En cuanto la ciudad pasa a su código, la fecha pasa a
+   cifras: es la misma pastilla apretada, no una a medias. */
 @media (max-width: 1200px) {
+    .reloj-fecha--larga { display: none; }
+    .reloj-fecha--corta { display: inline; }
     .reloj-ciudad,
     .reloj-punto--ciudad { display: none; }
     .reloj-codigo { display: inline; }
