@@ -211,6 +211,20 @@ const API = {
     rfqCotizacionInicial(rfqId) {
         return this.request('GET', `/api/rfqs/${rfqId}/cotizacion-inicial`);
     },
+    /** Un plano de los que llegaron en el correo, tal cual, como Blob. */
+    async descargarPlano(rfqId, nombre) {
+        const token = this.getToken();
+        const res = await fetch(
+            `${this.base}/api/rfqs/${rfqId}/planos/${encodeURIComponent(nombre)}`,
+            { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        if (!res.ok) {
+            const error = new Error(`HTTP ${res.status}`);
+            error.status = res.status;
+            if (res.status === 401) { this.limpiarSesion(); error.sesionExpirada = true; }
+            throw error;
+        }
+        return res.blob();
+    },
     // Devolver con nota: ni aprueba ni declina, y no sale correo al cliente.
     rfqSendBack(rfqId, nota) {
         return this.request('POST', `/api/rfqs/${rfqId}/send-back`, { nota });

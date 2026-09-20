@@ -84,6 +84,16 @@ def guardar_planos(
         log.info("RFQ %s sin planos que persistir.", rfq_id)
         return []
 
+    # Además del disco, a la base. El disco es de quien leyó el correo: si lo
+    # leyó el lector de escritorio, el plano se queda en ESA computadora y la
+    # web no lo tiene; si lo leyó el servidor, se borra en el siguiente
+    # despliegue. En la base lo ve todo el mundo y dura lo que dure el RFQ,
+    # que es lo que hace falta para abrir la cotización con el dibujo puesto.
+    #
+    # Va aparte y no puede tumbar el guardado de siempre: si la base no está,
+    # el plano sigue yendo a disco como hasta ahora.
+    guardar_en_base(rfq_id, adjuntos)
+
     modo = (modo or _modo_por_defecto()).lower()
 
     if modo in _MODOS_LOCAL:
@@ -92,6 +102,94 @@ def guardar_planos(
         return _guardar_en_blob(rfq_id, adjuntos, cliente_blob)
 
     raise AlmacenPlanosError(f"Modo de almacenamiento desconocido: {modo!r}")
+
+
+# --------------------------------------------------------------------------- #
+# La base: el único sitio que ven los dos lados
+# --------------------------------------------------------------------------- #
+
+# Tope por fichero. Un plano de ingeniería son cientos de KB; por encima de
+# esto casi siempre es un PDF con fotos dentro, y no compensa moverlo por la
+# base cada vez. Ése se queda en disco y se sube a mano.
+_MAX_BYTES = 8 * 1024 * 1024
+
+_TIPOS = {".pdf": "application/pdf", ".png": "image/png",
+          ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
+
+
+def guardar_en_base(rfq_id: str, adjuntos: list) -> int:
+    """Guarda (o sustituye) los planos de este RFQ en la base. Nunca lanza."""
+    guardados = 0
+    try:
+        import app.persistence.duplicates as duplicates
+        with duplicates.conexion_bd() as conexion:
+            with conexion.cursor() as cur:
+                for adjunto in (adjuntos or []):
+                    contenido = adjunto.get("contenido") or b""
+                    nombre = os.path.basename(adjunto.get("nombre") or "adjunto")
+                    if not contenido or len(contenido) > _MAX_BYTES:
+                        if contenido:
+                            log.info("RFQ %s: %s pesa %d bytes y no va a la base.",
+                                     rfq_id, nombre, len(contenido))
+                        continue
+                    ext = os.path.splitext(nombre)[1].lower()
+                    cur.execute(
+                        """
+                        INSERT INTO rfq_planos (rfq_id, nombre, tipo, bytes, contenido)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ON CONFLICT (rfq_id, nombre) DO UPDATE
+                           SET contenido = EXCLUDED.contenido,
+                               bytes = EXCLUDED.bytes,
+                               tipo = EXCLUDED.tipo,
+                               guardado_en = NOW();
+                        """,
+                        (rfq_id, nombre, _TIPOS.get(ext, "application/octet-stream"),
+                         len(contenido), memoryview(contenido)),
+                    )
+                    guardados += 1
+        if guardados:
+            log.info("RFQ %s: %d plano(s) guardado(s) en la base.", rfq_id, guardados)
+    except Exception as error:
+        log.warning("RFQ %s: no se pudieron guardar los planos en la base: %s",
+                    rfq_id, error)
+    return guardados
+
+
+def listar_de_base(rfq_id: str) -> list:
+    """Los planos de este RFQ que hay en la base: nombre, tipo y tamaño."""
+    try:
+        import app.persistence.duplicates as duplicates
+        with duplicates.conexion_bd() as conexion:
+            with conexion.cursor() as cur:
+                cur.execute(
+                    "SELECT nombre, tipo, bytes FROM rfq_planos "
+                    "WHERE rfq_id = %s ORDER BY nombre;", (rfq_id,))
+                return [{"nombre": n, "tipo": t, "bytes": int(b or 0)}
+                        for n, t, b in cur.fetchall()]
+    except Exception as error:
+        log.warning("RFQ %s: no se pudieron listar los planos de la base: %s",
+                    rfq_id, error)
+        return []
+
+
+def leer_de_base(rfq_id: str, nombre: str):
+    """Un plano concreto: ``(bytes, tipo)``, o ``None`` si no está."""
+    try:
+        import app.persistence.duplicates as duplicates
+        with duplicates.conexion_bd() as conexion:
+            with conexion.cursor() as cur:
+                cur.execute(
+                    "SELECT contenido, tipo FROM rfq_planos "
+                    "WHERE rfq_id = %s AND nombre = %s;",
+                    (rfq_id, os.path.basename(nombre or "")))
+                fila = cur.fetchone()
+        if not fila:
+            return None
+        return bytes(fila[0]), (fila[1] or "application/octet-stream")
+    except Exception as error:
+        log.warning("RFQ %s: no se pudo leer el plano %s de la base: %s",
+                    rfq_id, nombre, error)
+        return None
 
 
 # --------------------------------------------------------------------------- #

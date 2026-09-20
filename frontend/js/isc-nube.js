@@ -882,13 +882,15 @@
         try {
             var q = blankQuote();
             q.pohuaRfq = d.rfq_id;              // para no volver a cargarlo encima
+            d.pn = completarPn(d.pn);
             q.pns = [d.pn];
             q.activePn = 0;
 
             var cab = d.header || {};
             q.header.customerCode = codigoDeCliente(cab.customer) ||
                                     codigoDeCliente(cab.cliente_id) ||
-                                    altaDeCliente(cab.cliente);
+                                    altaDeCliente(cab.cliente) ||
+                                    altaDelCorreo(cab.customer);
             // Lo que el comprador pidió y no tiene casilla propia, en las
             // notas internas del PN: de dónde salió esta cotización, para
             // cuándo la quiere, en qué moneda y con qué incoterm, y lo que
@@ -935,6 +937,10 @@
                     sel.onchange({ target: { value: q.header.customerCode } });
                 }
             }, 'numerar la cotización');
+
+            // El plano del correo, puesto en la casilla de "AI Read Drawing"
+            // —y leído solo si quien mira es el PM—.
+            intentar(function () { ponerPlanos(d.ficheros, q); }, 'poner el plano');
 
             // Y ya con el borrador puesto, se le entrega a la hoja de resortes.
             if (d.pn.drawing) {
@@ -994,6 +1000,196 @@
             if (typeof queueShared === 'function') queueShared();
         }, 'apuntar el alta del cliente');
         return codigo;
+    }
+
+    /**
+     * El PN del servidor, completado con la forma que espera la hoja.
+     *
+     * El servidor manda lo que sabe: el material, las cantidades y la ruta que
+     * salió del catálogo —una o dos operaciones—. La hoja, en cambio, cuenta
+     * con que TODO esté: cinco tramos, ocho renglones de ruta en cada uno, y
+     * dentro de cada tramo su utillaje, su subcontrato y su empaque.
+     *
+     * Con un hueco, `renderQuote()` revienta a mitad de pintar —`t.tooling` no
+     * existe y se cae leyendo `.desc`— y lo que falta detrás no se dibuja: las
+     * casillas de arriba salían llenas y de la ruta para abajo no había nada,
+     * sin un solo error a la vista. Y con dos renglones de ruta en vez de
+     * ocho, no hay dónde añadir la tercera operación.
+     *
+     * Así que lo que llega se funde SOBRE un PN en blanco de la propia hoja:
+     * manda el valor del servidor donde lo haya, y donde no, queda el hueco
+     * que la hoja espera. Vale para hoy y para el día que cualquiera de los
+     * dos lados añada un campo.
+     */
+    function completarPn(pn) {
+        if (!pn || typeof blankPn !== 'function') return pn;
+        var base = blankPn();
+
+        var fundir = function (destino, origen) {
+            if (!origen || typeof origen !== 'object') return destino;
+            Object.keys(origen).forEach(function (k) {
+                var v = origen[k];
+                if (v === undefined) return;
+                if (v && typeof v === 'object' && !Array.isArray(v) &&
+                    destino[k] && typeof destino[k] === 'object' && !Array.isArray(destino[k])) {
+                    fundir(destino[k], v);
+                } else {
+                    destino[k] = v;
+                }
+            });
+            return destino;
+        };
+
+        var tramos = Array.isArray(pn.tiers) ? pn.tiers : [];
+        var copia = fundir(base, pn);
+
+        copia.tiers = base.tiers.map(function (vacio, i) {
+            var suyo = tramos[i];
+            if (!suyo) return vacio;
+            var ruta = Array.isArray(suyo.routing) ? suyo.routing : [];
+            var tramo = fundir(vacio, suyo);
+            // La ruta, renglón a renglón sobre los ocho que la hoja dibuja.
+            tramo.routing = blankTier().routing.map(function (fila, j) {
+                return ruta[j] ? fundir(fila, ruta[j]) : fila;
+            });
+            return tramo;
+        });
+        return copia;
+    }
+
+    /**
+     * El cliente del correo, cuando no está en ningún catálogo.
+     *
+     * Sin cliente la cotización no se numera ni se aprueba, así que dejarlo
+     * vacío corta el flujo justo donde se abrió la hoja para no cortarlo. Se
+     * da de alta con el nombre que venía en el correo y un código sacado de
+     * ese mismo nombre, y se dice en voz alta —aviso y registro— que salió de
+     * ahí y hay que revisarlo: los términos de pago son una decisión, y aquí
+     * se pone el que la casa usa por defecto.
+     */
+    function altaDelCorreo(nombre) {
+        var limpio = String(nombre || '').trim();
+        if (!limpio) return '';
+        if (typeof shared === 'undefined' || !shared.dbs || !shared.dbs.customers) return '';
+
+        // El código: las primeras letras y números del nombre, sin acentos.
+        var codigo = limpio.normalize ? limpio.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : limpio;
+        codigo = codigo.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+        if (!codigo) return '';
+        for (var i = 0; i < shared.dbs.customers.length; i++) {
+            if (String(shared.dbs.customers[i].code || '').toUpperCase() === codigo) {
+                return shared.dbs.customers[i].code;
+            }
+        }
+
+        shared.dbs.customers.push({ code: codigo, name: limpio.slice(0, 80), terms: 'Net 30' });
+        shared.dbs.customers.sort(function (a, b) {
+            return String(a.code).localeCompare(String(b.code));
+        });
+        intentar(function () {
+            if (typeof journal === 'function') {
+                journal('DB:customers', 'Cliente creado desde el correo (revisar): ' +
+                        codigo + ' — ' + limpio);
+            }
+            if (typeof fillCustomers === 'function') fillCustomers();
+            if (typeof queueShared === 'function') queueShared();
+        }, 'apuntar el cliente nuevo');
+        aviso('El cliente "' + limpio + '" no estaba en el catálogo: se dio de alta como ' +
+              codigo + ' con Net 30. Revisa términos y representante.');
+        return codigo;
+    }
+
+    /**
+     * El plano del correo, dentro de la casilla del lector.
+     *
+     * El dibujo ya está guardado en Pohua desde que se dio de alta el RFQ;
+     * hasta ahora había que ir a buscarlo al buzón y subirlo a mano para
+     * poder pulsar "AI Read Drawing". Se le mete en el `<input type=file>`
+     * con un DataTransfer, que es la única forma de rellenar esa casilla, y
+     * se lanza el evento `change` para que la calculadora se entere igual que
+     * si lo hubiera elegido una persona.
+     *
+     * NO se lee solo: cada lectura es una llamada de pago y el lector puede
+     * estar apagado. Queda cargado y a un toque.
+     */
+    function ponerPlanos(ficheros, q) {
+        if (!ficheros || !ficheros.length) return;
+        var campo = document.getElementById('q-drawing');
+        if (!campo || typeof DataTransfer === 'undefined') return;
+
+        var dt = new DataTransfer();
+        for (var i = 0; i < ficheros.length; i++) dt.items.add(ficheros[i]);
+        campo.files = dt.files;
+        campo.dispatchEvent(new Event('change', { bubbles: true }));
+
+        if (esPlantManager() && ficheros.length === 1) {
+            leerPlanoSolo(ficheros[0], q);
+            return;
+        }
+        aviso(ficheros.length === 1
+            ? 'El plano del correo (' + ficheros[0].name + ') ya está puesto: pulsa "AI Read Drawing".'
+            : ficheros.length + ' planos del correo ya están puestos: pulsa "AI Read Drawing".');
+    }
+
+    /** Quien dictamina. El lector traduce ese permiso a ADMIN al servir la hoja. */
+    function esPlantManager() {
+        try {
+            return String((window.ISC_USER || {}).role || '').toUpperCase() === 'ADMIN';
+        } catch (e) { return false; }
+    }
+
+    /**
+     * Leer el plano sin que nadie pulse nada.
+     *
+     * Para el PM, "Abrir cotización completa" tiene que enseñar TODO lo que el
+     * sistema sabe de la pieza, y el plano es la mitad de eso: sin leerlo, el
+     * diámetro de alambre, el exterior y la longitud libre salen vacíos y la
+     * hoja de resortes no puede dimensionar nada. Dejarlo cargado y esperar un
+     * clic era pedirle que hiciera a mano el paso que vino a ver hecho.
+     *
+     * Se lee UNA vez por RFQ (`pohuaPlanoLeido`): cada lectura es una llamada
+     * de pago, y volver a entrar a mirar no puede volver a cobrarla. Si el
+     * lector está apagado y no hay clave, no se intenta: se dice que está
+     * cargado y a un toque, que es lo de antes.
+     *
+     * Y NO se llama al botón: su manejador termina preguntando si abrir la
+     * hoja de resortes. Aquí se hace lo mismo que hace él —leer, repintar, y
+     * pasar las cotas— sin preguntar nada, porque esto no lo pidió nadie en
+     * ese momento.
+     */
+    function leerPlanoSolo(fichero, q) {
+        if (q && q.pohuaPlanoLeido) return;
+        if (typeof parseOneFile !== 'function') return;
+
+        var puede = (typeof parserStatus === 'function')
+            ? parserStatus() : Promise.resolve(false);
+        Promise.resolve(puede).then(function (vivo) {
+            if (!vivo && !(typeof local !== 'undefined' && local.apiKey)) {
+                aviso('El plano del correo (' + fichero.name + ') ya está puesto. ' +
+                      'El lector está apagado: enciéndelo y pulsa "AI Read Drawing".');
+                return;
+            }
+            aviso('Leyendo el plano del correo (' + fichero.name + ')…');
+            if (typeof setParseUI === 'function') setParseUI(true);
+            return parseOneFile(fichero).then(function () {
+                var actual = (typeof Q === 'function') ? Q() : null;
+                if (actual) actual.pohuaPlanoLeido = true;
+                intentar(function () {
+                    if (typeof renderQuote === 'function') renderQuote();
+                    if (typeof queueDraft === 'function') queueDraft();
+                }, 'repintar tras leer el plano');
+                // Las cotas, a la hoja de resortes, sin abrirla ni preguntar.
+                intentar(function () {
+                    if (typeof openSpringCalc === 'function') openSpringCalc(false);
+                }, 'pasar las cotas del plano a la hoja de resortes');
+                aviso('Plano leído: revisa los campos marcados.');
+            }).catch(function (err) {
+                aviso('No se pudo leer el plano: ' + (err && err.message ? err.message : err) +
+                      '. Está cargado; puedes pulsar "AI Read Drawing".');
+            }).then(function () {
+                if (typeof setParseUI === 'function') setParseUI(false);
+            });
+        });
     }
 
     /** Las notas internas del PN, armadas con lo que trajo el correo. */

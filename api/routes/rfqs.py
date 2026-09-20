@@ -330,6 +330,27 @@ def revision_rfq(
 # distintos, tarde o temprano no coincidirían.
 
 
+def _planos_listados(rfq_id: str) -> list:
+    """Los planos guardados de este RFQ: primero la base, luego el disco.
+
+    La base manda porque es lo único que ven los dos lados: el lector de
+    escritorio guarda en SU computadora y el servidor en un disco que se borra
+    al desplegar. El disco se sigue mirando para los RFQ de antes de que esto
+    existiera.
+    """
+    import app.persistence.blueprint_store as almacen
+
+    de_base = almacen.listar_de_base(rfq_id)
+    if de_base:
+        return [{"nombre": p["nombre"], "bytes": p["bytes"]} for p in de_base]
+
+    carpeta = _carpeta_de_planos(rfq_id)
+    if carpeta is None:
+        return []
+    return [{"nombre": h.name, "bytes": h.stat().st_size}
+            for h in sorted(carpeta.iterdir()) if h.is_file()]
+
+
 @router.get("/{rfq_id}/cotizacion-inicial")
 def cotizacion_inicial(
     rfq_id: str,
@@ -402,6 +423,9 @@ def cotizacion_inicial(
             "material_texto": resorte.get("material") or detalle.material,
             "acabado": resorte.get("acabado"),
         },
+        # Los dibujos que venían en el correo, para dejarlos puestos en la
+        # casilla de "AI Read Drawing" sin ir a buscarlos otra vez al buzón.
+        "planos": _planos_listados(rfq_id),
         # Lo que el catálogo no pudo resolver: la calculadora lo enseña para
         # que se capture allí, que es donde se captura.
         "faltantes": armado["faltantes"],
@@ -444,6 +468,84 @@ def ver_oferta(
         "envio_habilitado": __import__("app.email.outbound", fromlist=["x"]).envio_habilitado(),
         "puede_enviar": usuario.puede("rfq:dictaminar"),
     }
+
+
+# ---------------------------------------------------------------------------
+# Los planos que venían en el correo
+# ---------------------------------------------------------------------------
+#
+# El comprador manda el dibujo adjunto y el sistema lo guarda al dar de alta el
+# RFQ (app/persistence/blueprint_store.py: PLANOS_DIR/<rfq_id>/<nombre>). Hasta
+# ahora ese fichero no volvía a salir de ahí: para leerlo en la calculadora
+# había que ir a buscarlo al correo y subirlo a mano, teniendo el sistema el
+# mismo fichero guardado.
+
+
+def _carpeta_de_planos(rfq_id: str):
+    """La carpeta donde quedaron los planos de este RFQ, si existe."""
+    from pathlib import Path as _Path
+    import app.core.config as config
+    import app.persistence.blueprint_store as almacen
+
+    base = getattr(config.settings, "PLANOS_DIR", None) or "planos"
+    # El mismo saneado con el que se guardaron; y además se comprueba que la
+    # carpeta resultante cuelgue de la base, para que un rfq_id con ".." no
+    # pueda apuntar a otro sitio del disco.
+    carpeta = (_Path(base) / almacen._slug(rfq_id)).resolve()
+    raiz = _Path(base).resolve()
+    if raiz not in carpeta.parents and carpeta != raiz:
+        return None
+    return carpeta if carpeta.is_dir() else None
+
+
+@router.get("/{rfq_id}/planos")
+def planos_del_rfq(
+    rfq_id: str,
+    usuario: UsuarioSesion = Depends(exige("rfq:leer")),
+):
+    """Qué dibujos llegaron con este RFQ y cuánto pesan.
+
+    Lista vacía cuando no hay ninguno: un RFQ puede llegar sin plano, y eso no
+    es un error. Tampoco lo es que el fichero ya no esté —el disco del
+    servidor es de usar y tirar—; en ese caso se dice, que es distinto de
+    decir que el correo no traía nada.
+    """
+    planos = _planos_listados(rfq_id)
+    return {"planos": planos, "guardados": bool(planos)}
+
+
+@router.get("/{rfq_id}/planos/{nombre}")
+def plano_del_rfq(
+    rfq_id: str,
+    nombre: str,
+    usuario: UsuarioSesion = Depends(exige("rfq:leer")),
+):
+    """Un plano concreto, tal cual llegó en el correo."""
+    from fastapi.responses import FileResponse, Response
+    import os.path
+    import app.persistence.blueprint_store as almacen
+
+    # `basename` y nada más: el nombre viene de la URL y no puede salirse de
+    # la carpeta de este RFQ.
+    limpio = os.path.basename(nombre or "")
+    if not limpio:
+        raise HTTPException(status_code=404, detail="Ese plano no está guardado.")
+
+    guardado = almacen.leer_de_base(rfq_id, limpio)
+    if guardado:
+        contenido, tipo = guardado
+        return Response(content=contenido, media_type=tipo,
+                        headers={"Content-Disposition": f'inline; filename="{limpio}"'})
+
+    carpeta = _carpeta_de_planos(rfq_id)
+    ruta = (carpeta / limpio) if carpeta else None
+    if not ruta or not ruta.is_file():
+        raise HTTPException(status_code=404, detail="Ese plano no está guardado.")
+
+    tipos = {".pdf": "application/pdf", ".png": "image/png",
+             ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
+    tipo = tipos.get(ruta.suffix.lower(), "application/octet-stream")
+    return FileResponse(str(ruta), media_type=tipo, filename=ruta.name)
 
 
 @router.get("/{rfq_id}/oferta/pdf")

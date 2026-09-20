@@ -134,12 +134,39 @@ const QuotingPage = {
                 Toast.warning(I18N.t('quoting.rfqParcial', { motivo: datos.error }));
             }
             this.rfqAbierto = id;
+            datos.ficheros = await this.bajarPlanos(id, datos.planos);
             this.rfqPendiente = datos;
             this.entregarRfq();
         } catch (err) {
             if (err && err.sesionExpirada) return;
             Toast.error(I18N.t('quoting.rfqFallo', { motivo: err.message }));
         }
+    },
+
+    /**
+     * Los planos del correo, bajados aquí y no dentro del marco.
+     *
+     * La calculadora vive en un marco que no tiene la sesión de Pohua —su
+     * `fetch` no lleva el token—, así que los ficheros los baja esta página,
+     * que sí la tiene, y se los pasa ya hechos `File` por `postMessage`. El
+     * clon estructurado mueve ficheros sin convertirlos a texto.
+     *
+     * Si uno falla no se cancela nada: la hoja abre igual y el plano se sube
+     * a mano, que es lo que se hacía antes con todos.
+     */
+    async bajarPlanos(id, lista) {
+        const fuera = [];
+        for (const p of (lista || [])) {
+            try {
+                const blob = await API.descargarPlano(id, p.nombre);
+                fuera.push(new File([blob], p.nombre,
+                                    { type: blob.type || 'application/octet-stream' }));
+            } catch (err) {
+                if (err && err.sesionExpirada) return fuera;
+                console.warn('No se pudo bajar el plano ' + p.nombre + ': ' + err.message);
+            }
+        }
+        return fuera;
     },
 
     entregarRfq() {
