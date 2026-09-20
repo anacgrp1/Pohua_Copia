@@ -9,6 +9,8 @@ import sys
 import unittest
 from unittest import mock
 
+import app.core.config as config
+
 RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 os.environ.setdefault("IMAP_SERVER", "smtp.test.local")
@@ -100,6 +102,52 @@ class TestCicloDeteccion(unittest.TestCase):
             main.ciclo_deteccion()
 
         self.assertEqual(self.provider.leidos, [])
+
+    def test_el_repetido_se_salta(self):
+        """Lo normal: el mismo correo no se procesa dos veces."""
+        with mock.patch("app.persistence.duplicates.es_duplicado", return_value=True), \
+             mock.patch.object(main, "procesar_correo") as procesar:
+            resultado = main.ciclo_deteccion()
+        procesar.assert_not_called()
+        self.assertEqual(resultado.procesados, 0)
+        self.assertTrue(any("Duplicado omitido" in d for d in resultado.detalles))
+
+    def test_en_modo_prueba_el_repetido_se_vuelve_a_procesar(self):
+        """Con REPROCESAR_REPETIDOS se repite el MISMO correo a propósito.
+
+        Es lo que hace falta para ensayar el recorrido entero sin tener que
+        mandar un correo nuevo en cada intento. Y se anuncia en el resultado,
+        para que nadie se lo encuentre encendido sin querer.
+        """
+        with mock.patch.object(config.settings, "REPROCESAR_REPETIDOS", True), \
+             mock.patch("app.persistence.duplicates.es_duplicado", return_value=True), \
+             mock.patch.object(main, "procesar_correo", return_value="RFQ_NUEVO"):
+            resultado = main.ciclo_deteccion()
+        self.assertEqual(resultado.procesados, 3)
+        self.assertTrue(any("repetidos" in d for d in resultado.detalles))
+
+    def test_no_se_contesta_a_si_mismo(self):
+        """Una respuesta del propio buzón no es un RFQ del cliente.
+
+        El buzón de ventas manda las respuestas; si una acaba en la carpeta
+        vigilada —una regla de Outlook, un reenvío, alguien que la movió—, sin
+        este filtro el sistema la trataría como correo entrante y se pondría a
+        contestarse a sí mismo.
+        """
+        propio = FakeMensaje("PROPIO")
+        propio.sender = "sales.isc@cgr-international.com"
+        self.provider._mensajes = [propio, FakeMensaje("A")]
+
+        with mock.patch.object(config.settings, "OUTLOOK_BUZON",
+                               "sales.isc@cgr-international.com"), \
+             mock.patch.object(main, "procesar_correo", return_value="RFQ_NUEVO") as procesar:
+            resultado = main.ciclo_deteccion()
+
+        procesados = [c.args[0]["remitente"] for c in procesar.call_args_list]
+        self.assertEqual(procesados, ["comprador+A@neogen.com"])
+        # Y se marca como leído: si no, volvería a mirarse en cada ciclo.
+        self.assertIn("PROPIO", self.provider.leidos)
+        self.assertTrue(any("propio buzón" in d for d in resultado.detalles))
 
     def test_lote_sano_marca_todo_como_leido(self):
         with mock.patch.object(main, "procesar_correo", return_value="RFQ_NUEVO"):

@@ -263,6 +263,7 @@ def enviar(rfq_id: str, usuario: Optional[str] = None,
     archivo = generar_pdf(rfq_id, opciones, preparado=prep, conexion=conexion)
 
     params = dict(prep["correo"])
+    params["rfq_id"] = rfq_id          # va en el asunto, para el hilo
     params["nombre_comprador"] = outbound.nombre_comprador({"remitente": params["destinatario"]})
     params["adjuntos"] = [str(archivo)]
     contenido = templates.construir_correo("oferta_cliente", params)

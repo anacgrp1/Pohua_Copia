@@ -5,7 +5,7 @@ Cuatro endpoints, y la diferencia entre ellos importa:
     GET  /api/assistant/pipeline    → SQL puro
     GET  /api/assistant/summary     → SQL puro
     GET  /api/assistant/attention   → SQL puro
-    GET  /api/assistant/export      → SQL puro, devuelto como CSV
+    GET  /api/assistant/export      → SQL puro, devuelto como Excel
     POST /api/assistant/ask         → ÚNICO que llama al modelo de Anthropic
 
 Los tres primeros son agregados de la base de datos: no cuestan API, no
@@ -18,9 +18,9 @@ preguntar por ellas ni exportarlas.
 
 from __future__ import annotations
 
-import csv
 import io
 import logging
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -204,42 +204,136 @@ def atencion(
     return AssistantAttention(**_atencion(limit))
 
 
+# --------------------------------------------------------------------------- #
+# La hoja de cálculo del resumen
+# --------------------------------------------------------------------------- #
+
+# Ancho de cada columna, en caracteres. Se fija a mano y no se calcula del
+# contenido: una hoja cuyas columnas cambian de ancho según el lote no se puede
+# comparar de un vistazo con la de la semana pasada.
+_COLUMNAS = (
+    ("RFQ", 16),
+    ("Versión", 8),
+    ("Cliente", 30),
+    ("¿Nuevo?", 10),
+    ("Contacto", 32),
+    ("Proyecto", 22),
+    ("N° de parte", 18),
+    ("Volumen", 12),
+    ("Material", 34),
+    ("Estado", 18),
+    ("Veredicto del sistema", 22),
+    ("Dictamen final", 18),
+    ("Score", 8),
+    ("Entró", 18),
+)
+
+
+def _cliente_de(fila) -> tuple:
+    """El nombre del cliente y si es nuevo, para una fila de la consulta.
+
+    Un RFQ trae el cliente por dos caminos: el catálogo, cuando el dominio del
+    remitente ya está dado de alta (`cliente_id` → `clientes.razon_social`), y
+    lo que el modelo leyó del correo, que es lo único que hay cuando el
+    comprador escribe por primera vez. La columna miraba sólo el primero, así
+    que un cliente nuevo salía en blanco — justo el caso en el que hace falta
+    saber quién es.
+    """
+    cliente_id, razon_social, datos = fila[2], fila[12], fila[13] or {}
+    if razon_social:
+        return razon_social, "No"          # ya está en el catálogo
+    delcorreo = (datos.get("customer") or "").strip()
+    dominio = (datos.get("dominio") or "").strip()
+    remitente = (datos.get("remitente") or "").strip()
+    nombre = delcorreo or dominio or (remitente.split("@")[-1] if remitente else "")
+    return (nombre or cliente_id or "—"), "Sí"
+
+
 @router.get("/export")
 def exportar(
     limit: int = Query(1000, ge=1, le=5000),
     usuario: UsuarioSesion = Depends(exige("rfq:leer")),
 ):
-    """La lista de RFQs en CSV, para abrirla en Excel."""
+    """La lista de RFQs como hoja de Excel, lista para leerse.
+
+    Era un CSV en crudo: columnas del ancho de fábrica, fechas con
+    microsegundos y zona horaria, y el cliente en blanco siempre que no
+    estuviera en el catálogo. Ahora es un .xlsx con la cabecera fija, filtros,
+    los anchos puestos y una columna que dice si el cliente es nuevo.
+    """
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT r.rfq_id, r.version, r.cliente_id, r.nombre_proyecto,
                        r.part_number, r.volumen, r.material, r.estado,
                        r.veredicto_sistema, r.veredicto_final, r.score,
-                       r.fecha_registro::text
+                       r.fecha_registro, c.razon_social, r.datos_json
                 FROM rfqs r
+                LEFT JOIN clientes c ON c.cliente_id = r.cliente_id
                 ORDER BY r.fecha_registro DESC
                 LIMIT %s;
             """, (limit,))
             filas = cur.fetchall()
 
-    buffer = io.StringIO()
-    # Excel en Windows espera CRLF; con \n solo mete todo en una fila.
-    escritor = csv.writer(buffer, lineterminator="\r\n")
-    escritor.writerow([
-        "RFQ", "Version", "Customer", "Project", "Part number", "Volume",
-        "Material", "State", "System verdict", "Final verdict", "Score",
-        "Registered",
-    ])
-    escritor.writerows(filas)
+    libro = Workbook()
+    hoja = libro.active
+    hoja.title = "RFQs"
 
-    # El BOM es lo que hace que Excel abra el CSV en UTF-8; sin él, un nombre
-    # con acento llega roto.
-    datos = "﻿" + buffer.getvalue()
+    cabecera = Font(bold=True, color="FFFFFF")
+    fondo = PatternFill("solid", fgColor="1B3D79")      # el navy de la casa
+    for i, (titulo, ancho) in enumerate(_COLUMNAS, start=1):
+        celda = hoja.cell(row=1, column=i, value=titulo)
+        celda.font = cabecera
+        celda.fill = fondo
+        celda.alignment = Alignment(vertical="center")
+        hoja.column_dimensions[get_column_letter(i)].width = ancho
+    hoja.row_dimensions[1].height = 22
+
+    for fila in filas:
+        cliente, nuevo = _cliente_de(fila)
+        datos = fila[13] or {}
+        volumen = fila[5]
+        try:
+            volumen = int(str(volumen).replace(",", "")) if volumen else None
+        except (TypeError, ValueError):
+            pass                                        # se queda como texto
+        fecha = fila[11]
+        if fecha is not None and getattr(fecha, "tzinfo", None):
+            # Excel no guarda zonas horarias; con una dentro, openpyxl falla.
+            fecha = fecha.replace(tzinfo=None)
+        hoja.append([
+            fila[0], fila[1], cliente, nuevo,
+            (datos.get("remitente") or ""), fila[3], fila[4], volumen,
+            fila[6], fila[7], fila[8], fila[9],
+            float(fila[10]) if fila[10] is not None else None,
+            fecha,
+        ])
+
+    ultima = max(hoja.max_row, 1)
+    for f in range(2, ultima + 1):
+        hoja.cell(row=f, column=8).number_format = "#,##0"          # volumen
+        hoja.cell(row=f, column=13).number_format = "0"             # score
+        # Sin microsegundos: la fecha se lee, no se audita.
+        hoja.cell(row=f, column=14).number_format = "yyyy-mm-dd hh:mm"
+
+    # La cabecera se queda a la vista al bajar, y con filtros para ordenar por
+    # cliente o por estado sin tener que preparar nada.
+    hoja.freeze_panes = "A2"
+    hoja.auto_filter.ref = f"A1:{get_column_letter(len(_COLUMNAS))}{ultima}"
+
+    buffer = io.BytesIO()
+    libro.save(buffer)
+    buffer.seek(0)
+    nombre = f"rfqs-{datetime.now().strftime('%Y-%m-%d')}.xlsx"
     return StreamingResponse(
-        io.BytesIO(datos.encode("utf-8")),
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="rfqs.csv"'},
+        buffer,
+        media_type=("application/vnd.openxmlformats-officedocument."
+                    "spreadsheetml.sheet"),
+        headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
     )
 
 

@@ -156,6 +156,21 @@ class Settings:
     # por defecto: el correo se construye y se registra, pero no sale.
     ENVIO_AUTOMATICO: bool = False
 
+    # Volver a procesar un correo que ya se procesó (mismo Message-ID).
+    #
+    # Apagado siempre, salvo en una prueba de flujo. Normalmente, que un
+    # correo se procese dos veces significaría dos RFQ del mismo pedido y dos
+    # respuestas al mismo comprador; por eso el sistema se lo salta y lo
+    # apunta como "duplicado omitido". Pero al probar el recorrido entero se
+    # quiere justo lo contrario: repetir el MISMO correo de prueba las veces
+    # que haga falta sin tener que mandar uno nuevo cada vez.
+    REPROCESAR_REPETIDOS: bool = False
+
+    # Logo de la firma de los correos al cliente. Vacío = el que trae el
+    # proyecto (app/email/assets/firma.png, el logo de la casa a 320 px).
+    # Se manda incrustado en el mensaje, no enlazado.
+    FIRMA_IMAGEN: str = ""
+
     def __init__(self, env_file_path: Optional[str] = None) -> None:
         """Inicializa las configuraciones cargando el archivo .env si existe."""
         # Ruta del archivo .env (por defecto el directorio actual de ejecución o raíz del proyecto)

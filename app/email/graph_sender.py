@@ -89,6 +89,19 @@ def _adjunto_a_fileattachment(ruta: str) -> dict:
     }
 
 
+def _imagen_incrustada(imagen: dict) -> dict:
+    """El logo de la firma, como adjunto en línea de Graph.
+
+    Es un fileAttachment más, con dos marcas: ``isInline`` y el ``contentId``
+    que el HTML busca en ``<img src="cid:...">``. Sin ellas el logo llegaría
+    como un archivo suelto y la firma saldría con un hueco.
+    """
+    adjunto = _adjunto_a_fileattachment(imagen["ruta"])
+    adjunto["isInline"] = True
+    adjunto["contentId"] = imagen.get("cid") or os.path.basename(imagen["ruta"])
+    return adjunto
+
+
 def construir_payload(correo: dict, guardar_enviados: bool = True) -> dict:
     """Arma el cuerpo JSON de la petición ``sendMail`` a partir del dict COT-59.
 
@@ -105,6 +118,12 @@ def construir_payload(correo: dict, guardar_enviados: bool = True) -> dict:
 
     adjuntos: List[str] = correo.get("adjuntos") or []
     attachments = [_adjunto_a_fileattachment(ruta) for ruta in adjuntos]
+    for imagen in (correo.get("imagenes") or []):
+        try:
+            attachments.append(_imagen_incrustada(imagen))
+        except GraphSenderError as error:
+            # Sin logo el correo sale igual; sin el plano, no.
+            log.warning("No se pudo incrustar la imagen de la firma: %s", error)
 
     return {
         "message": {

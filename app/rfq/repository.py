@@ -124,6 +124,28 @@ def _ultima_version_id(rfq_id: str, conexion=None) -> Optional[dict]:
             conn.close()
 
 
+def datos_anteriores(rfq_id: str, conexion=None) -> dict:
+    """Lo que ya se sabía de ese RFQ: los datos de su última versión.
+
+    Un RFQ es una conversación, no un correo suelto: el comprador manda el
+    plano el lunes y el material el martes, y en el martes no vuelve a
+    adjuntar nada. Sin esto, cada respuesta se juzga como si llegara sola y el
+    sistema le pide otra vez lo que ya tiene guardado.
+
+    Devuelve ``{}`` si el RFQ no existe o si no se pudo leer: quedarse sin
+    memoria es peor atención, pero no puede tumbar el proceso del correo.
+    """
+    try:
+        ultima = _ultima_version_id(rfq_id, conexion=conexion)
+    except Exception as error:
+        log.warning("RFQ=%s: no se pudo leer la versión anterior (%s).",
+                    rfq_id, error)
+        return {}
+    if not ultima:
+        return {}
+    return _a_dict(ultima.get("datos_json")) or {}
+
+
 def guardar_rfq(
     rfq_id: str,
     datos: dict,

@@ -174,7 +174,9 @@ class TestRespuestaDatosFaltantes(unittest.TestCase):
         self.assertTrue(enviado)
         contenido = despachar.call_args[0][0]
         self.assertEqual(contenido["destinatario"], "roberto.perez@neogen.com")
-        self.assertEqual(contenido["asunto"], "RFQ 4500")
+        # El asunto lleva la etiqueta del RFQ: es lo que deja reconocer la
+        # respuesta del comprador como parte de esta misma conversación.
+        self.assertEqual(contenido["asunto"], "RFQ 4500 [RFQ RFQ-1]")
         self.assertIn("Roberto Perez", contenido["cuerpo_texto"])
         # Lo que falta se dice como en el machote, no con el nombre del campo:
         # "volumen" no significa nada para quien recibe el correo.
@@ -494,3 +496,101 @@ class TestPersistir(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestEscaleraComoVolumen(unittest.TestCase):
+    """Unas cantidades escalonadas SON el volumen; no un dato que falte.
+
+    "The volumes are: 10000, 22000, 50000" es un RFQ de manual en resortes. El
+    modelo las lee como `escalones_cantidad`, y antes el validador pedía
+    además un `volumen` suelto: el sistema le escribía al comprador para
+    pedirle lo que acababa de mandar.
+    """
+
+    def test_se_toma_el_escalon_mayor(self):
+        campos = {"escalones_cantidad": [10000, 22000, 50000]}
+        self.assertEqual(flow.volumen_de_escalones(campos), 50000)
+
+    def test_si_ya_hay_volumen_no_se_toca(self):
+        campos = {"volumen": 8000, "escalones_cantidad": [10000, 50000]}
+        self.assertIsNone(flow.volumen_de_escalones(campos))
+
+    def test_aguanta_la_escalera_escrita_a_mano(self):
+        campos = {"escalones_cantidad": "10,000, 25000 y 50.000"}
+        self.assertEqual(flow.volumen_de_escalones(campos), 50000)
+
+    def test_sin_escalera_no_inventa_nada(self):
+        self.assertIsNone(flow.volumen_de_escalones({"notas": "urge"}))
+        self.assertIsNone(flow.volumen_de_escalones({}))
+
+    def test_con_la_escalera_el_filtro_temprano_deja_pasar(self):
+        """La prueba de verdad: ese correo ya no rebota al cliente."""
+        campos = {"part_number": "1060-022",
+                  "escalones_cantidad": [10000, 22000, 50000]}
+        datos = {"tiene_adjunto": True, "customer": "neogen.com"}
+        datos.update(campos)
+        datos["volumen"] = flow.volumen_de_escalones(datos)
+
+        veredicto = flow.validar(datos, flow.campos_gate_temprano(campos))
+        self.assertTrue(veredicto["es_valido"], veredicto["campos_faltantes"])
+
+
+class TestLaRespuestaHeredaElHilo(unittest.TestCase):
+    """Un RFQ es una conversación: la respuesta no llega desnuda.
+
+    El comprador mandó el plano y las cantidades el primer día; al contestar
+    con el material, su cliente de correo no reenvía el adjunto. Sin memoria
+    del hilo, esa respuesta se juzgaba sola —sin plano, sin volumen— y el
+    sistema volvía a pedir lo que ya tenía. Era el bucle que dejaba la
+    conversación parada.
+    """
+
+    PREVIOS = {
+        "tiene_adjunto": True,
+        "customer": "neogen.com",
+        "part_number": "1060-022",
+        "volumen": 50000,
+        "escalones_cantidad": [10000, 22000, 50000],
+        "asunto": "test rfq",          # de esto NO se hereda nada
+        "cuerpo": "el correo viejo",
+        "message_id": "<viejo@cliente.com>",
+    }
+
+    def test_hereda_lo_que_falta_y_nada_mas(self):
+        datos = {"material": "music wire ASTM A228", "asunto": "RE: test rfq"}
+        with mock.patch("app.rfq.repository.datos_anteriores",
+                        return_value=self.PREVIOS):
+            heredados = flow.heredar_del_hilo(datos, "COT-75")
+
+        self.assertEqual(datos["part_number"], "1060-022")
+        self.assertEqual(datos["volumen"], 50000)
+        self.assertTrue(datos["tiene_adjunto"])
+        # Lo de este correo se respeta, y lo que es de cada correo no viaja.
+        self.assertEqual(datos["material"], "music wire ASTM A228")
+        self.assertEqual(datos["asunto"], "RE: test rfq")
+        self.assertNotIn("cuerpo", datos)
+        self.assertNotIn("message_id", datos)
+        self.assertIn("part_number", heredados)
+
+    def test_lo_que_corrige_el_comprador_no_se_pisa(self):
+        datos = {"part_number": "1060-023", "material": "SAE 1070"}
+        with mock.patch("app.rfq.repository.datos_anteriores",
+                        return_value=self.PREVIOS):
+            flow.heredar_del_hilo(datos, "COT-75")
+        self.assertEqual(datos["part_number"], "1060-023")
+
+    def test_con_lo_heredado_la_respuesta_ya_completa_el_rfq(self):
+        """La prueba que importa: deja de pedir lo que ya le dieron."""
+        datos = {"material": "music wire ASTM A228"}
+        with mock.patch("app.rfq.repository.datos_anteriores",
+                        return_value=self.PREVIOS):
+            flow.heredar_del_hilo(datos, "COT-75")
+
+        self.assertTrue(flow.validar(datos)["es_valido"],
+                        flow.validar(datos)["campos_faltantes"])
+
+    def test_sin_rfq_previo_no_se_inventa_nada(self):
+        datos = {"material": "SAE 1070"}
+        with mock.patch("app.rfq.repository.datos_anteriores", return_value={}):
+            self.assertEqual(flow.heredar_del_hilo(datos, "COT-99"), [])
+        self.assertEqual(datos, {"material": "SAE 1070"})

@@ -108,13 +108,24 @@ def suscribir(usuario_id: int, correo: Optional[str], suscripcion: Dict[str, Any
                         auth = EXCLUDED.auth,
                         navegador = EXCLUDED.navegador,
                         fallos = 0
-                RETURNING id;
+                RETURNING id, (xmax = 0) AS es_nuevo;
                 """,
                 (usuario_id, correo, s["endpoint"], s["p256dh"], s["auth"],
                  (navegador or "")[:200] or None),
             )
-            nuevo = cur.fetchone()[0]
-        log.info("Push: dispositivo %s suscrito para %s.", nuevo, correo or usuario_id)
+            nuevo, es_nuevo = cur.fetchone()
+        # Cada vez que alguien abre Pohua, su dispositivo se vuelve a
+        # registrar: así sobrevive un cambio de usuario en el mismo teléfono o
+        # una suscripción renovada por el navegador. Eso está bien, pero
+        # anunciarlo como novedad en cada recarga llenaba el registro de líneas
+        # idénticas y tapaba lo que sí pasa. Alta nueva: se cuenta. Refresco de
+        # una que ya estaba: se apunta, pero abajo.
+        if es_nuevo:
+            log.info("Push: dispositivo %s suscrito para %s.", nuevo,
+                     correo or usuario_id)
+        else:
+            log.debug("Push: dispositivo %s ya estaba suscrito (%s); se refresca.",
+                      nuevo, correo or usuario_id)
         return nuevo
     finally:
         if propia:

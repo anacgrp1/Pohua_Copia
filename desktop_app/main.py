@@ -304,11 +304,21 @@ class Ventana(QMainWindow):
     # -------------------------------------------------------------- decir
 
     def escribir(self, nivel, texto):
+        """Una línea en el registro, con su hora y su color.
+
+        El texto se escapa antes de entrar. El registro se pinta con texto
+        enriquecido para poder darle color, y eso significa que cualquier cosa
+        entre < y > se toma por una etiqueta y desaparece de la pantalla: un
+        "Duplicado omitido: <abc@cliente.com>" se veía como "Duplicado
+        omitido:" a secas, justo cuando lo que hacía falta era el dato.
+        """
+        import html as _html
+
         color = COLOR_NIVEL.get(nivel, APAGADO)
         hora = time.strftime("%H:%M:%S")
         self.registro.append(
             f'<span style="color:#64748b">{hora}</span> '
-            f'<span style="color:{color}">{texto}</span>')
+            f'<span style="color:{color}">{_html.escape(str(texto))}</span>')
         barra = self.registro.verticalScrollBar()
         barra.setValue(barra.maximum())
 

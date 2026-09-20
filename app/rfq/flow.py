@@ -61,8 +61,8 @@ CAMPOS_DEPENDIENTES_EXTRACCION = ("volumen",)
 def clasificar(correo):
     """
     Clasifica el correo entrante:
-      - RESPUESTA_RFQ: pertenece al hilo de un RFQ existente
-      - RFQ_NUEVO:     contiene patrones clave de RFQ
+      - RESPUESTA_RFQ: pertenece al hilo de un RFQ existente (Subtarea 2)
+      - RFQ_NUEVO:     contiene patrones clave de RFQ (Subtarea 1)
       - TRASH:         no cumple ningun criterio
     Retorna (clasificacion, rfq_id).
     """
@@ -204,6 +204,80 @@ def campos_gate_temprano(extraccion_correo):
     if extraccion_correo:
         return campos
     return tuple(c for c in campos if c not in CAMPOS_DEPENDIENTES_EXTRACCION)
+
+
+# Lo que una respuesta hereda del RFQ al que contesta. Es una lista cerrada a
+# propósito: el asunto, el cuerpo, el remitente o los adjuntos son de ESTE
+# correo y no se heredan nunca; lo que se arrastra son los datos de la pieza,
+# que es lo que la conversación va reuniendo.
+_SE_HEREDA_DEL_HILO = (
+    "cliente_id", "customer", "nombre_proyecto",
+    "part_number", "volumen", "material", "escalones_cantidad",
+    "tiene_adjunto", "resorte",
+    "moneda", "incoterm", "fecha_entrega_requerida",
+    "contacto_nombre", "contacto_correo",
+)
+
+
+def heredar_del_hilo(datos: dict, rfq_id: str) -> list:
+    """Rellena lo que la respuesta no trae con lo que el RFQ ya sabía.
+
+    El comprador manda el plano el lunes y el material el martes, y en el
+    martes no vuelve a adjuntar nada —los clientes de correo ni siquiera
+    adjuntan el original al responder—. Sin memoria, esa respuesta se juzgaba
+    sola: sin plano y sin volumen, así que el sistema volvía a pedir lo que ya
+    tenía guardado y la conversación no avanzaba nunca.
+
+    Lo que trae el correo nuevo MANDA: si el comprador corrige el material,
+    vale el nuevo. Lo de antes sólo rellena huecos.
+
+    Devuelve los nombres de los campos que se heredaron, para el registro.
+    """
+    import app.rfq.repository as repository
+
+    previos = repository.datos_anteriores(rfq_id) or {}
+    heredados = []
+    for clave in _SE_HEREDA_DEL_HILO:
+        if datos.get(clave) not in (None, "", [], False):
+            continue
+        valor = previos.get(clave)
+        if valor in (None, "", [], False):
+            continue
+        datos[clave] = valor
+        heredados.append(clave)
+    return heredados
+
+
+def volumen_de_escalones(campos):
+    """El EAU cuando el comprador mandó una escalera y ningún volumen suelto.
+
+    "The volumes are: 10000, 22000, 50000" es un RFQ con precio por escalones,
+    que en resortes es lo normal: no es un correo al que le falte el volumen.
+    El modelo lo lee bien y lo guarda en ``escalones_cantidad``; el que se
+    ponía estricto era el validador, que exigía ``volumen`` y mandaba al
+    comprador a dar un dato que ya había dado.
+
+    Se toma el **escalón mayor** como estimación anual: es el techo de la
+    escalera y lo que suele significar el último peldaño. El costeo no se
+    entera de nada —ése ya cotizaba la escalera entera, no este número—, así
+    que esto sólo llena el hueco del validador y la ficha del RFQ.
+
+    Devuelve ``None`` si ya hay volumen o si no hay escalera que leer.
+    """
+    if not campos:
+        return None
+    if campos.get("volumen") not in (None, ""):
+        return None
+    import app.rfq.costeo as costeo
+    # El mismo lector que usa el costeo: aguanta listas, y también cadenas
+    # como "10,000, 25000 y 50.000".
+    cantidades = costeo.cantidades_del_rfq(campos)
+    if not cantidades:
+        return None
+    mayor = max(cantidades)
+    # El lector del costeo trabaja con decimales; una cantidad de piezas no
+    # se enseña como "50000.0" en la ficha del RFQ.
+    return int(mayor) if float(mayor).is_integer() else mayor
 
 
 def validar(datos, campos_requeridos=None):
@@ -543,6 +617,9 @@ def responder_datos_faltantes(datos, faltantes, rfq_id):
         contenido = templates.construir_correo("datos_faltantes", {
             "destinatario": datos["remitente"],
             "asunto_original": datos.get("asunto") or f"RFQ {rfq_id}",
+            # Va en el asunto para que su respuesta se reconozca como parte
+            # de este RFQ (app/rfq/thread_validator.py).
+            "rfq_id": rfq_id,
             "nombre_comprador": _nombre_comprador(datos),
             "campos_faltantes": list(faltantes),
         })
@@ -629,6 +706,21 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
     if en_revision:
         datos["en_revision"] = en_revision
         resultado["en_revision"] = en_revision
+
+    escalera = volumen_de_escalones(datos)
+    if escalera:
+        datos["volumen"] = escalera
+        log.info("RFQ=%s: el correo trae escalones y ningún volumen suelto; "
+                 "se toma el mayor (%s) como EAU.", rfq_id, escalera)
+
+    # Si esto es una respuesta, el RFQ ya sabe cosas: el plano que vino el
+    # primer día, las cantidades, el número de parte. Se heredan antes de
+    # juzgar si falta algo.
+    if clasificacion == RESPUESTA_RFQ:
+        heredados = heredar_del_hilo(datos, rfq_id)
+        if heredados:
+            log.info("RFQ=%s: la respuesta hereda del hilo: %s.",
+                     rfq_id, ", ".join(heredados))
 
     # 3. Gate temprano: no gastar la llamada de visión si ni siquiera sabemos
     #    quién escribe, no vino un plano, o (con COT-61 listo) falta el volumen.

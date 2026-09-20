@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import unittest
+from unittest import mock
 
 os.environ.setdefault("IMAP_SERVER", "smtp.test.local")
 os.environ.setdefault("IMAP_USER", "remitente@cgr.com")
@@ -171,3 +172,39 @@ class TestDispatcher(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestFirmaConLogo(unittest.TestCase):
+    """La firma lleva el logo de la casa, y va DENTRO del correo.
+
+    Enlazado a un servidor no vale: los clientes de correo bloquean las
+    imágenes remotas y la firma llega con un cuadrito roto.
+    """
+
+    def _correo(self):
+        return templates.construir_correo("datos_faltantes", {
+            "destinatario": "ana.ramirez@cgr-international.com",
+            "asunto_original": "test rfq",
+            "nombre_comprador": "Ana",
+            "campos_faltantes": ["material"],
+        })
+
+    def test_el_html_pinta_el_logo_por_su_cid(self):
+        cuerpo = self._correo()["cuerpo_html"]
+        self.assertIn(f'src="cid:{templates.FIRMA_CID}"', cuerpo)
+        # Y la firma de texto sigue ahí para quien no pinte HTML.
+        self.assertIn("INDUSTRIAL SPRING CORPORATION", cuerpo)
+
+    def test_la_imagen_viaja_con_el_correo(self):
+        imagenes = self._correo()["imagenes"]
+        self.assertEqual(len(imagenes), 1)
+        self.assertEqual(imagenes[0]["cid"], templates.FIRMA_CID)
+        self.assertTrue(os.path.isfile(imagenes[0]["ruta"]))
+
+    def test_sin_archivo_la_firma_se_queda_en_texto(self):
+        """Que falte el logo no puede impedir que salga la respuesta."""
+        with mock.patch.object(templates, "imagen_firma", return_value=None):
+            correo = self._correo()
+        self.assertEqual(correo["imagenes"], [])
+        self.assertNotIn("cid:", correo["cuerpo_html"])
+        self.assertIn("INDUSTRIAL SPRING CORPORATION", correo["cuerpo_html"])

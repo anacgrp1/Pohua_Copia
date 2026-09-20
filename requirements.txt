@@ -15,7 +15,7 @@ lxml>=5.0                   # Parser HTML rápido para BeautifulSoup (COT-53)
 python-dotenv>=1.0          # Variables de entorno (.env)
 
 # --- IA ---
-anthropic>=0.39             # Visión de planos y extracción del correo
+anthropic>=0.39             # Claude: visión de planos y extracción del correo
 
 # --- Almacenamiento de planos ---
 azure-storage-blob>=12.19   # Persistencia de planos en modo <Token> (COT-56)
@@ -55,6 +55,7 @@ Flask>=3.0.0,<4.0.0         # El lector de planos del núcleo
 a2wsgi>=1.10                # Puente WSGI->ASGI para montarlo (el de Starlette está deprecado)
 PyMuPDF>=1.24.0,<2.0.0      # Lectura de planos PDF (isc_extractor y quote_pdf)
 Pillow>=10.0.0,<13.0.0      # Recortes de las cotas leídas
+openpyxl>=3.1,<4.0          # La hoja de Excel del resumen (/api/assistant/export)
 jsonschema>=4.20.0,<5.0.0   # Valida lo que devuelve el modelo contra el esquema
 
 # El PDF de la oferta llega como multipart/form-data (POST /quoting/oferta).

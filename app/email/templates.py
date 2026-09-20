@@ -37,6 +37,8 @@ Función pública
 from __future__ import annotations
 
 from html import escape
+from pathlib import Path
+from typing import Optional
 
 # --------------------------------------------------------------------------- #
 # Firmas
@@ -55,11 +57,52 @@ _FIRMA_CLIENTE = (
 _DESPEDIDA = "Best regards,"
 
 _FIRMA_CLIENTE_TEXTO = _DESPEDIDA + "\n\n" + "\n".join(_FIRMA_CLIENTE)
-_FIRMA_CLIENTE_HTML = (
-    f"<p>{_DESPEDIDA}</p>\n<p>"
-    + "<br>".join(escape(linea) for linea in _FIRMA_CLIENTE)
-    + "</p>"
-)
+
+# --------------------------------------------------------------------------- #
+# El logo de la firma
+# --------------------------------------------------------------------------- #
+#
+# Va DENTRO del correo, no enlazado a un servidor: los clientes de correo
+# bloquean las imágenes remotas por defecto y la firma llegaría con un
+# cuadrito roto. Se manda como parte del mensaje con un identificador
+# ("cid"), que es como se pone una firma de toda la vida.
+#
+# El archivo es una versión a 320 px del logo de la casa; el original mide
+# 6250 px y pesa 1.3 MB, que en una firma es absurdo. Se puede apuntar a otro
+# con FIRMA_IMAGEN en el .env.
+
+FIRMA_CID = "firma-cgr-isc"
+_FIRMA_POR_DEFECTO = Path(__file__).resolve().parent / "assets" / "firma.png"
+
+
+def imagen_firma() -> Optional[str]:
+    """La ruta del logo de la firma, o None si no hay ninguno que mandar."""
+    import app.core.config as config
+
+    ruta = (getattr(config.settings, "FIRMA_IMAGEN", "") or "").strip()
+    candidata = Path(ruta) if ruta else _FIRMA_POR_DEFECTO
+    if not candidata.is_absolute():
+        candidata = Path.cwd() / candidata
+    return str(candidata) if candidata.is_file() else None
+
+
+def _firma_html() -> str:
+    """La firma: el logo (si está) y las cinco líneas de siempre."""
+    logo = (f'<p><img src="cid:{FIRMA_CID}" width="220" '
+            f'alt="CGR · Industrial Spring Corporation" '
+            f'style="max-width:220px;height:auto"></p>\n'
+            if imagen_firma() else "")
+    return (f"<p>{_DESPEDIDA}</p>\n"
+            + logo
+            + "<p>"
+            + "<br>".join(escape(linea) for linea in _FIRMA_CLIENTE)
+            + "</p>")
+
+
+def _imagenes_de_la_firma() -> list:
+    """Las imágenes incrustadas del correo, para que el proveedor las mande."""
+    ruta = imagen_firma()
+    return [{"cid": FIRMA_CID, "ruta": ruta}] if ruta else []
 
 
 # --------------------------------------------------------------------------- #
@@ -158,6 +201,24 @@ def _documento(cuerpo_interno: str, firma_html: str = "") -> str:
     return "\n".join(partes)
 
 
+def asunto_con_rfq(asunto: str, rfq_id: str = "") -> str:
+    """El asunto del cliente, con el número de RFQ entre corchetes.
+
+    Es lo que convierte una respuesta en parte de la conversación. Cuando el
+    comprador contesta a NUESTRO correo, la cabecera que encadena los mensajes
+    apunta a un correo que el sistema nunca leyó —lo mandó él—, así que por ahí
+    no hay hilo que seguir. La etiqueta del asunto sí viaja en cualquier
+    respuesta, y es la que deja reconocer el RFQ al que pertenece.
+
+    Si el asunto ya la lleva (porque es la segunda ida y vuelta) no se repite.
+    """
+    asunto = (asunto or "").strip()
+    rfq_id = (rfq_id or "").strip()
+    if not rfq_id or rfq_id.lower() in asunto.lower():
+        return asunto
+    return f"{asunto} [RFQ {rfq_id}]".strip()
+
+
 def _correo_cliente(destinatario, asunto, intro, puntos, cierre, adjuntos=None) -> dict:
     """Arma un correo al cliente: párrafos, lista opcional y la firma de ISC."""
     texto = "\n\n".join(intro)
@@ -176,9 +237,10 @@ def _correo_cliente(destinatario, asunto, intro, puntos, cierre, adjuntos=None) 
     return {
         "destinatario": destinatario,
         "asunto": asunto,
-        "cuerpo_html": _documento(html, _FIRMA_CLIENTE_HTML),
+        "cuerpo_html": _documento(html, _firma_html()),
         "cuerpo_texto": texto,
         "adjuntos": list(adjuntos or []),
+        "imagenes": _imagenes_de_la_firma(),
     }
 
 
@@ -222,7 +284,8 @@ def _construir_datos_faltantes(params: dict) -> dict:
     ]
 
     return _correo_cliente(
-        params["destinatario"], params["asunto_original"],
+        params["destinatario"],
+        asunto_con_rfq(params["asunto_original"], params.get("rfq_id")),
         intro, _sin_repetir(campos), cierre)
 
 
@@ -245,7 +308,9 @@ def _construir_declinar_rfq(params: dict) -> dict:
     ]
 
     return _correo_cliente(
-        params["destinatario"], params["asunto_original"], intro, [], [])
+        params["destinatario"],
+        asunto_con_rfq(params["asunto_original"], params.get("rfq_id")),
+        intro, [], [])
 
 
 # --------------------------------------------------------------------------- #
@@ -286,7 +351,8 @@ def _construir_oferta_cliente(params: dict) -> dict:
     ]
 
     return _correo_cliente(
-        params["destinatario"], params["asunto_original"],
+        params["destinatario"],
+        asunto_con_rfq(params["asunto_original"], params.get("rfq_id")),
         intro, condiciones, cierre, adjuntos)
 
 

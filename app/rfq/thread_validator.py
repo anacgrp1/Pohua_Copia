@@ -1,8 +1,10 @@
 """
+SUBTAREA 2 [Lógica - Hilos]
 Validación de respuestas: analiza in-reply-to y references, o busca
 el ID del RFQ en el asunto, para asociar el correo al historial.
 """
 import logging
+import re
 
 import app.persistence.duplicates as duplicates
 import app.rfq.detector as detector
@@ -80,4 +82,73 @@ def validar_respuesta(correo):
                              id_en_asunto)
                     return id_en_asunto
 
+    # 4. Mismo remitente y mismo asunto que un correo ya visto
+    rfq_id = _por_remitente_y_asunto(correo)
+    if rfq_id:
+        log.info("Respuesta asociada por remitente y asunto al RFQ %s", rfq_id)
+        return rfq_id
+
+    return None
+
+
+# Prefijos que los clientes de correo ponen delante al responder o reenviar.
+_PREFIJOS = ("re:", "rv:", "fwd:", "fw:", "res:", "tr:", "aw:")
+
+
+def asunto_base(asunto: str) -> str:
+    """El asunto sin los "RE:" ni la etiqueta [RFQ ...], en minúsculas.
+
+    Sirve para reconocer que "RE: test rfq [RFQ INT-1A2B]" y "test rfq" son la
+    misma conversación.
+    """
+    texto = (asunto or "").strip()
+    texto = re.sub(r"\[\s*RFQ[^\]]*\]", " ", texto, flags=re.IGNORECASE)
+    cambiado = True
+    while cambiado:
+        cambiado = False
+        for prefijo in _PREFIJOS:
+            if texto.lower().startswith(prefijo):
+                texto = texto[len(prefijo):].lstrip()
+                cambiado = True
+    return re.sub(r"\s+", " ", texto).strip().lower()
+
+
+def _por_remitente_y_asunto(correo):
+    """El RFQ de un correo anterior del MISMO remitente con el MISMO asunto.
+
+    Es la red de seguridad del hilo. Cuando el comprador contesta a nuestra
+    respuesta, la cabecera que encadena los mensajes apunta a un correo que el
+    sistema mandó y nunca leyó, así que por ahí no hay nada; y si además borra
+    o cambia la etiqueta del asunto, tampoco hay identificador. Lo que casi
+    nunca cambia es el par remitente + asunto, y con eso basta para saber de
+    qué conversación se trata.
+
+    Se mira sólo lo que escribió ESA persona, y lo más reciente primero: dos
+    compradores distintos con el mismo asunto no se mezclan.
+    """
+    remitente = (correo.get("remitente") or "").strip().lower()
+    base = asunto_base(correo.get("asunto"))
+    if not remitente or not base:
+        return None
+
+    sql = """
+    SELECT h.rfq_id, c.asunto
+    FROM rfq_historial h
+    JOIN correos_procesados c ON c.message_id = h.message_id
+    WHERE lower(c.remitente) = %s
+    ORDER BY c.fecha_registro DESC
+    LIMIT 20;
+    """
+    try:
+        with duplicates.conexion_bd() as conexion:
+            with conexion.cursor() as cursor:
+                cursor.execute(sql, (remitente,))
+                filas = cursor.fetchall()
+    except Exception as error:
+        log.warning("No se pudo buscar el hilo por remitente y asunto: %s", error)
+        return None
+
+    for rfq_id, asunto in filas:
+        if asunto_base(asunto) == base:
+            return rfq_id
     return None

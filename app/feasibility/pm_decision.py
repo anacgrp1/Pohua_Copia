@@ -149,6 +149,7 @@ def notificar_declinacion(rfq_id, datos, destinatario=None) -> bool:
         contenido = templates.construir_correo("declinar_rfq", {
             "destinatario": destino,
             "asunto_original": datos.get("asunto") or f"RFQ {rfq_id}",
+            "rfq_id": rfq_id,
             "nombre_comprador": outbound.nombre_comprador(
                 {"remitente": destino}),
         })

@@ -124,8 +124,14 @@ ciclo sólo mira los no leídos, y al terminar lo marca como leído. Apunta el
 asunto y la hora; es como lo vas a reconocer en las pantallas.
 
 > Un correo sólo se procesa una vez: se apunta su `Message-ID` y el siguiente
-> ciclo lo salta ("duplicado omitido"). Para repetir la prueba, manda uno
-> **nuevo**; volver a marcarlo como no leído no sirve.
+> ciclo lo salta ("duplicado omitido"). Volver a marcarlo como no leído no
+> sirve de nada.
+>
+> Para ensayar el recorrido con el MISMO correo las veces que haga falta, pon
+> `REPROCESAR_REPETIDOS=true` en el `.env` y vuelve a abrir la aplicación:
+> entonces no se salta ninguno, y el registro lo avisa en cada ciclo. Apágalo
+> al terminar — en operación, repetir un correo son dos RFQ del mismo pedido y
+> dos respuestas al mismo comprador.
 
 ---
 

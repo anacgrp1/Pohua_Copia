@@ -294,6 +294,104 @@ class TestMarcarYEnviar(_Base):
         self.assertFalse(correo.UnRead)
         self.assertTrue(correo.guardado)
 
+    def _cuentas(self, *direcciones):
+        """Las cuentas del perfil de Outlook, como las ve COM."""
+        cuentas = []
+        for direccion in direcciones:
+            cuenta = mock.MagicMock()
+            cuenta.SmtpAddress = direccion
+            cuentas.append(cuenta)
+        return _Coleccion(cuentas)
+
+    def test_sale_como_ventas_si_ese_buzon_es_una_cuenta(self):
+        """Lo que quiere el cliente: que conteste ventas, no un desconocido.
+
+        Con la cuenta en el perfil se manda CON ella. Es la diferencia entre
+        que el correo llegue de sales.isc y que llegue de "System
+        Administrator" con la ruta interna de Exchange, sin poder contestar.
+        """
+        proveedor = self._proveedor([])
+        proveedor.connect()
+        proveedor._outlook.Session.Accounts = self._cuentas(
+            "ana.ramirez@cgr-international.com", "sales.isc@cgr-international.com")
+        nuevo = mock.MagicMock()
+        proveedor._outlook.CreateItem.return_value = nuevo
+
+        self.assertTrue(proveedor.send_email("comprador@neogen.com", "Re: RFQ", "hola"))
+        self.assertEqual(nuevo.SendUsingAccount.SmtpAddress,
+                         "sales.isc@cgr-international.com")
+
+    def test_si_la_asignacion_no_agarra_se_pone_por_el_camino_largo(self):
+        """El fallo silencioso que mandaba los correos desde la cuenta personal.
+
+        `SendUsingAccount` guarda un objeto, y esa clase de asignación en COM
+        unas veces se aplica y otras se ignora sin avisar. Si se ignora y nadie
+        lo comprueba, el correo sale desde la cuenta de quien tenga Outlook
+        abierto —el cliente recibe una respuesta de una dirección personal— y
+        en el registro no aparece ni un error.
+        """
+        class _CorreoTerco:
+            """No hace caso a la asignación normal; sólo a propertyputref."""
+
+            def __init__(self):
+                self.SendUsingAccount = None
+                self._oleobj_ = mock.MagicMock()
+                self._oleobj_.Invoke.side_effect = self._invocado
+
+            def _invocado(self, *args):
+                if args[0] == 64209:
+                    object.__setattr__(self, "SendUsingAccount", args[-1])
+
+            def __setattr__(self, nombre, valor):
+                if nombre == "SendUsingAccount" and valor is not None:
+                    return          # se lo traga, como hace COM a veces
+                object.__setattr__(self, nombre, valor)
+
+        proveedor = self._proveedor([])
+        proveedor.connect()
+        proveedor._outlook.Session.Accounts = self._cuentas(
+            "sales.isc@cgr-international.com")
+
+        correo = _CorreoTerco()
+        proveedor._fijar_remitente(correo)
+
+        self.assertIsNotNone(correo.SendUsingAccount)
+        self.assertEqual(correo.SendUsingAccount.SmtpAddress,
+                         "sales.isc@cgr-international.com")
+        correo._oleobj_.Invoke.assert_called()
+
+    def test_si_no_es_una_cuenta_se_manda_en_su_nombre(self):
+        proveedor = self._proveedor([])
+        proveedor.connect()
+        proveedor._outlook.Session.Accounts = self._cuentas(
+            "ana.ramirez@cgr-international.com")
+        nuevo = mock.MagicMock()
+        proveedor._outlook.CreateItem.return_value = nuevo
+
+        self.assertTrue(proveedor.send_email("comprador@neogen.com", "Re: RFQ", "hola"))
+        self.assertEqual(nuevo.SentOnBehalfOfName, "sales.isc@cgr-international.com")
+
+    def test_la_firma_se_incrusta_y_no_sale_como_adjunto(self):
+        """El logo tiene que pintarse dentro del correo, no colgar como archivo."""
+        proveedor = self._proveedor([])
+        proveedor.connect()
+        nuevo = mock.MagicMock()
+        puesto = mock.MagicMock()
+        nuevo.Attachments.Add.return_value = puesto
+        proveedor._outlook.CreateItem.return_value = nuevo
+
+        from app.email.base_provider import EmailAttachment
+        from app.email.outlook_provider import (PR_ATTACH_CONTENT_ID,
+                                                PR_ATTACHMENT_HIDDEN)
+        proveedor.send_email(
+            "comprador@neogen.com", "Re: RFQ", "<p>hola</p>",
+            [EmailAttachment("firma.png", b"\x89PNG", content_id="firma-cgr-isc")])
+
+        puestas = {c.args[0]: c.args[1]
+                   for c in puesto.PropertyAccessor.SetProperty.call_args_list}
+        self.assertEqual(puestas.get(PR_ATTACH_CONTENT_ID), "firma-cgr-isc")
+        self.assertIs(puestas.get(PR_ATTACHMENT_HIDDEN), True)
+
     def test_enviar_sale_por_outlook_desde_el_buzon(self):
         proveedor = self._proveedor([])
         proveedor.connect()

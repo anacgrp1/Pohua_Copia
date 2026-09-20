@@ -60,6 +60,23 @@ def procesar_correo(correo):
     return clasificacion
 
 
+def buzon_propio() -> str:
+    """La dirección del buzón que se está leyendo.
+
+    Sirve para no contestarse a uno mismo: el buzón de ventas manda las
+    respuestas, y esas respuestas —o los avisos internos, que van al mismo
+    sitio— pueden acabar en la carpeta vigilada por una regla de Outlook, por
+    un reenvío o porque alguien las movió a mano. Procesarlas sería tratar la
+    propia respuesta como un RFQ del cliente y contestarle a la máquina.
+    """
+    ajustes = config.settings
+    for clave in ("OUTLOOK_BUZON", "GRAPH_USER", "IMAP_USER"):
+        valor = (getattr(ajustes, clave, "") or "").strip()
+        if valor:
+            return valor
+    return ""
+
+
 def map_email_message(msg):
     """Mapea un objeto EmailMessage al formato de diccionario requerido por el cotizador."""
     headers = {k.lower(): v for k, v in msg.raw_headers.items()}
@@ -132,6 +149,16 @@ def ciclo_deteccion(*, forzar: bool = False) -> ResultadoCiclo:
 
     resultado.encontrados = len(mensajes)
 
+    propio = buzon_propio().lower()
+    repetidos_permitidos = bool(getattr(config.settings, "REPROCESAR_REPETIDOS", False))
+    if repetidos_permitidos:
+        # Una vez por ciclo, y en WARNING: un interruptor así no puede quedarse
+        # encendido sin que nadie se entere.
+        log.warning("REPROCESAR_REPETIDOS está encendido: un correo ya "
+                    "procesado se vuelve a procesar. Es para pruebas de "
+                    "flujo; apágalo cuando termines.")
+        resultado.detalles.append("Modo prueba: se permiten correos repetidos.")
+
     for msg in mensajes:
         # Un correo que truena no debe tumbar el ciclo: se registra, se deja
         # SIN marcar como leído (para reintentarlo) y se sigue con el resto
@@ -139,10 +166,28 @@ def ciclo_deteccion(*, forzar: bool = False) -> ResultadoCiclo:
         try:
             correo = map_email_message(msg)
 
-            # Conteo rápido por message-id ANTES de evaluar contenido
-            if duplicates.es_duplicado(correo["message_id"]):
+            # Conteo rápido por message-id ANTES de evaluar contenido.
+            #
+            # Con REPROCESAR_REPETIDOS encendido no se salta nada: es el modo
+            # de prueba, donde se quiere repetir el MISMO correo una y otra
+            # vez. Fuera de una prueba eso da dos RFQ del mismo pedido y dos
+            # respuestas al mismo comprador, así que se avisa en el registro
+            # cada ciclo: un interruptor así no puede quedarse encendido sin
+            # que nadie se entere.
+            if not repetidos_permitidos and duplicates.es_duplicado(correo["message_id"]):
                 log.debug("Duplicado ignorado: %s", correo["message_id"])
                 resultado.detalles.append(f"Duplicado omitido: {correo['message_id']}")
+                continue
+
+            # Correo salido de este mismo buzón: no se contesta. Se marca
+            # como leído porque no hay nada que hacer con él, y si se dejara
+            # sin leer volvería a mirarse en cada ciclo, para siempre.
+            if propio and (correo.get("remitente") or "").strip().lower() == propio:
+                log.info("Correo del propio buzón (%s): no se procesa.",
+                         correo.get("asunto") or "sin asunto")
+                resultado.detalles.append(
+                    f"Del propio buzón, omitido: {correo.get('asunto', '?')}")
+                provider.mark_as_read(msg.id)
                 continue
 
             clasificacion = procesar_correo(correo)

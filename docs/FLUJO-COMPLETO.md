@@ -16,6 +16,8 @@ clasificar ──── trash ──▶ se ignora
 leer el cuerpo (modelo)  →  customer, PN, volumen, escalones, material…
    │
    ├─ falta plano o volumen ──▶ Incomplete + correo "datos faltantes" al comprador
+   │     (una escalera de cantidades —"10000, 22000, 50000"— ES el volumen:
+   │      se toma el escalón mayor como EAU y el RFQ sigue adelante)
    ▼
 leer el plano (visión)   →  resorte: Ø alambre, OD, L0, espiras…
    │

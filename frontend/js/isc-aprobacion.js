@@ -59,8 +59,21 @@
     function estilos() {
         if ($('nube-aprobacion-css')) return;
         var css = [
+            /* El velo es oscuro en los dos temas, a propósito. Antes se
+               mezclaba con el fondo de la página: en claro quedaba un gris
+               azulado del mismo tono que la ventana, y la ventana dejaba de
+               despegarse del fondo. Oscurecer por detrás funciona igual en
+               claro que en oscuro, que es lo que hace cualquier diálogo.
+
+               --ap-relieve es el gris de los botones neutros: se calcula
+               desde la tinta y el papel del tema, así que en claro sale un
+               poco más oscuro que la ventana y en oscuro un poco más claro.
+               Con el fondo de la página (--n-sutil) los botones se perdían en
+               claro, porque ese color ES el de la página. */
             '#' + ID + '{position:fixed;inset:0;z-index:9500;display:flex;align-items:center;justify-content:center;',
-            ' padding:16px;background:color-mix(in srgb,var(--n-sutil,#0f172a) 55%,rgba(2,6,23,.6));backdrop-filter:blur(3px);font-family:inherit}',
+            ' padding:16px;background:rgba(2,6,23,.55);backdrop-filter:blur(3px);font-family:inherit;',
+            ' --ap-relieve:var(--n-sutil,#f8fafc);',
+            ' --ap-relieve:color-mix(in srgb,var(--n-tinta,#0f172a) 8%,var(--n-papel,#fff))}',
             '#' + ID + ' .ap-caja{width:min(820px,100%);max-height:calc(100vh - 32px);overflow:auto;display:flex;flex-direction:column;',
             ' background:var(--n-papel,#fff);color:var(--n-tinta,#0f172a);border:1px solid var(--n-linea,#cbd5e1);border-radius:14px;',
             ' box-shadow:0 24px 64px rgba(0,0,0,.45);font-size:13px}',
@@ -75,7 +88,7 @@
             '#' + ID + ' .ap-chips{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}',
             '#' + ID + ' .ap-chips span{white-space:nowrap}',
             '#' + ID + ' .ap-tramos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}',
-            '#' + ID + ' .ap-tramo{text-align:left;border:1px solid var(--n-linea,#cbd5e1);background:var(--n-sutil,#f8fafc);color:inherit;',
+            '#' + ID + ' .ap-tramo{text-align:left;border:1px solid var(--n-linea,#cbd5e1);background:var(--ap-relieve);color:inherit;',
             ' border-radius:10px;padding:8px 10px;cursor:pointer;font:inherit}',
             '#' + ID + ' .ap-tramo.on{border-color:var(--n-info-solido,#148ec2);box-shadow:0 0 0 2px var(--n-info-linea,rgba(20,142,194,.38));',
             ' background:var(--n-info-fondo,rgba(20,142,194,.14))}',
@@ -101,18 +114,22 @@
             '#' + ID + ' .ap-panel td{padding:3px 0;vertical-align:top}',
             '#' + ID + ' .ap-panel td:last-child{text-align:right;font-weight:700;white-space:nowrap}',
             '#' + ID + ' .ap-panel td small{color:var(--n-apagado,#64748b);font-weight:400}',
-            '#' + ID + ' .ap-pie{display:flex;align-items:center;gap:8px;padding:10px 16px 14px;flex-wrap:wrap}',
-            '#' + ID + ' .ap-nota{font-size:11px;color:var(--n-apagado,#64748b);margin-right:auto;flex:1 1 160px;min-width:0}',
-            '#' + ID + ' .ap-btn{font:inherit;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid var(--n-linea,#cbd5e1);',
-            ' background:var(--n-sutil,#f8fafc);color:inherit;cursor:pointer}',
+            '#' + ID + ' .ap-pie{display:flex;flex-direction:column;gap:10px;padding:12px 16px 16px;',
+            ' border-top:1px solid var(--n-linea,#cbd5e1)}',
+            '#' + ID + ' .ap-pie-ver{display:flex;align-items:center;gap:12px}',
+            '#' + ID + ' .ap-pie-acciones{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}',
+            '#' + ID + ' .ap-nota{font-size:11px;line-height:1.35;color:var(--n-apagado,#64748b);flex:1 1 auto;min-width:0}',
+            '#' + ID + ' .ap-btn{font:inherit;font-weight:600;min-height:40px;padding:9px 18px;border-radius:10px;',
+            ' border:1px solid var(--n-linea,#cbd5e1);',
+            ' background:var(--ap-relieve);color:inherit;cursor:pointer}',
             '#' + ID + ' .ap-btn:hover{filter:brightness(1.08)}',
             '#' + ID + ' .ap-btn:focus-visible{outline:2px solid var(--n-info-solido,#148ec2);outline-offset:2px}',
             '#' + ID + ' .ap-btn[disabled]{opacity:.5;cursor:not-allowed}',
             '#' + ID + ' .ap-btn.primario{background:var(--navy,#1b3d79);border-color:transparent;color:#fff}',
             '#' + ID + ' .ap-btn.aprobar{background:var(--n-ok-solido,#16a34a);border-color:transparent;color:#fff}',
-            '#' + ID + ' .ap-devolver{display:flex;gap:8px;width:100%;margin-top:4px}',
+            '#' + ID + ' .ap-devolver{display:flex;gap:8px;width:100%;margin-top:2px;flex-wrap:wrap}',
             '#' + ID + ' .ap-devolver textarea{flex:1;font:inherit;padding:8px;border-radius:8px;border:1px solid var(--n-linea,#cbd5e1);',
-            ' background:var(--n-papel,#fff);color:inherit;resize:vertical;min-height:56px}',
+            ' background:var(--n-papel,#fff);color:var(--n-tinta,inherit);resize:vertical;min-height:56px}',
             '@media (max-width:820px){',
             ' #' + ID + '{padding:0;align-items:stretch}',
             ' #' + ID + ' .ap-caja{width:100%;max-height:100vh;border-radius:0;border:0}',
@@ -124,10 +141,15 @@
             ' #' + ID + ' .ap-celda:first-child{border-top:0}',
             ' #' + ID + ' .ap-celda b{margin:0}',
             ' #' + ID + ' .ap-tres{grid-template-columns:1fr}',
-            ' #' + ID + ' .ap-pie{position:sticky;bottom:0;background:var(--n-papel,#fff);border-top:1px solid var(--n-linea,#cbd5e1)}',
-            ' #' + ID + ' .ap-pie .ap-btn{flex:1 1 45%;text-align:center}',
-            ' #' + ID + ' .ap-pie .ap-btn.primario{flex-basis:100%;order:-1}',
-            ' #' + ID + ' .ap-nota{flex-basis:100%;text-align:center;margin:4px 0 0;order:9}',
+            ' #' + ID + ' .ap-pie{position:sticky;bottom:0;background:var(--n-papel,#fff)}',
+            ' #' + ID + ' .ap-cab{background:var(--navy,#1b3d79)}',
+            // En el teléfono cada botón ocupa su línea: son decisiones, y una
+            // fila de tres del ancho de un pulgar es una equivocación
+            // esperando a pasar.
+            ' #' + ID + ' .ap-pie-ver{flex-direction:column;align-items:stretch;gap:6px}',
+            ' #' + ID + ' .ap-pie-acciones{flex-direction:column;gap:8px}',
+            ' #' + ID + ' .ap-pie .ap-btn{width:100%;text-align:center;min-height:44px}',
+            ' #' + ID + ' .ap-nota{text-align:center;margin:0}',
             '}',
         ].join('');
         var s = document.createElement('style');
@@ -293,11 +315,20 @@
             '<button type="button" class="ap-x" data-ap="cerrar" title="Close" aria-label="Close">×</button></div>' +
             '<div class="ap-cuerpo"></div>' +
             '<div class="ap-pie">' +
-            '<span class="ap-nota">Approve locks the quote and files the PDF. Send back keeps it as a draft with your note.</span>' +
+            // Arriba lo de MIRAR, que no cambia nada y se usa antes de
+            // decidir; abajo, juntas y separadas de ella, las tres que sí
+            // deciden. Mezcladas en una sola fila, "Preview PDF" quedaba al
+            // lado de "Approve" y la mano se equivocaba.
+            '<div class="ap-pie-ver">' +
             '<button type="button" class="ap-btn" data-ap="pdf">Preview PDF</button>' +
+            '<span class="ap-nota">Approve locks the quote and files the PDF. ' +
+            'Send back keeps it as a draft with your note.</span>' +
+            '</div>' +
+            '<div class="ap-pie-acciones">' +
             '<button type="button" class="ap-btn" data-ap="devolver">Send back</button>' +
-            '<button type="button" class="ap-btn aprobar" data-ap="aprobar">Approve</button>' +
             '<button type="button" class="ap-btn primario" data-ap="cerrar">Open full quote</button>' +
+            '<button type="button" class="ap-btn aprobar" data-ap="aprobar">Approve</button>' +
+            '</div>' +
             '</div></div>';
         document.body.appendChild(raiz);
         abierta = { raiz: raiz, tramo: null };

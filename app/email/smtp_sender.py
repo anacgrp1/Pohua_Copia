@@ -38,6 +38,7 @@ import mimetypes
 import os
 import smtplib
 from email.mime.application import MIMEApplication
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import List, Optional
@@ -113,6 +114,30 @@ def _cuerpo_alternativo(correo: dict) -> MIMEMultipart:
     return alternativa
 
 
+def _incrustar_imagen(relacionado: MIMEMultipart, imagen: dict) -> None:
+    """Mete el logo de la firma dentro del mensaje, con su Content-ID.
+
+    Va en un bloque ``multipart/related`` junto al HTML: así el
+    ``<img src="cid:...">`` encuentra la imagen dentro del propio correo y no
+    hay que enlazarla a ningún servidor —las imágenes remotas llegan
+    bloqueadas de serie en casi todos los clientes—. Además se marca como
+    ``inline``, para que no aparezca en la lista de adjuntos.
+    """
+    ruta = imagen.get("ruta") or ""
+    if not os.path.isfile(ruta):
+        log.warning("No se pudo incrustar la firma: no está %s", ruta)
+        return
+
+    tipo, _ = mimetypes.guess_type(ruta)
+    subtype = (tipo.split("/", 1)[1] if tipo and "/" in tipo else "png")
+    with open(ruta, "rb") as fh:
+        parte = MIMEImage(fh.read(), _subtype=subtype)
+    parte.add_header("Content-ID", f"<{imagen.get('cid')}>")
+    parte.add_header("Content-Disposition", "inline",
+                     filename=os.path.basename(ruta))
+    relacionado.attach(parte)
+
+
 def construir_mensaje(correo: dict, remitente: str) -> MIMEMultipart:
     """Arma el objeto MIME completo a partir del dict de COT-59.
 
@@ -123,15 +148,25 @@ def construir_mensaje(correo: dict, remitente: str) -> MIMEMultipart:
     _validar_correo(correo)
 
     adjuntos: List[str] = correo.get("adjuntos") or []
-    alternativa = _cuerpo_alternativo(correo)
+    imagenes: List[dict] = correo.get("imagenes") or []
+    cuerpo = _cuerpo_alternativo(correo)
+
+    # Con imágenes de firma, el cuerpo entero se envuelve en multipart/related:
+    # el HTML y las imágenes que él nombra viajan juntos y en el mismo bloque.
+    if imagenes:
+        relacionado = MIMEMultipart("related")
+        relacionado.attach(cuerpo)
+        for imagen in imagenes:
+            _incrustar_imagen(relacionado, imagen)
+        cuerpo = relacionado
 
     if adjuntos:
         raiz = MIMEMultipart("mixed")
-        raiz.attach(alternativa)
+        raiz.attach(cuerpo)
         for ruta in adjuntos:
             _adjuntar_archivo(raiz, ruta)
     else:
-        raiz = alternativa
+        raiz = cuerpo
 
     raiz["Subject"] = correo.get("asunto", "")
     raiz["From"] = remitente

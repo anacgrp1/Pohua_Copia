@@ -10,6 +10,17 @@ class EmailAttachment:
     content: bytes
     content_type: Optional[str] = None
 
+    # Imágenes incrustadas (la firma, el logo). Un adjunto con ``content_id``
+    # no se enseña en la lista de adjuntos: el HTML lo pinta con
+    # ``<img src="cid:...">``. Es como se manda una firma con logo sin
+    # enlazarla a un servidor —las imágenes remotas llegan bloqueadas— y sin
+    # que el cliente vea un archivo suelto que no pidió.
+    content_id: Optional[str] = None
+
+    @property
+    def en_linea(self) -> bool:
+        return bool(self.content_id)
+
 
 @dataclass
 class EmailMessage:
@@ -54,12 +65,6 @@ class BaseEmailProvider(ABC):
 
         Raises:
             Exception: Si ocurre un error de conexión, autenticación o configuración.
-        """
-        pass
-
-    @abstractmethod
-    def disconnect(self) -> None:
-        """Cierra la sesión y desconecta del servidor de correo.
         """
         pass
 

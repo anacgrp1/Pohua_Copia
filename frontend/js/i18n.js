@@ -222,7 +222,7 @@ const I18N = (() => {
         'asis.chat':           { en: 'Assistant', es: 'Asistente', fr: 'Assistant' },
         'asis.resumen':   { en: 'Summarize', es: 'Resumen', fr: 'Résumé' },
         'asis.atencion':  { en: 'Needs attention', es: 'Requiere atención', fr: 'À traiter' },
-        'asis.exportar':  { en: 'Export CSV', es: 'Exportar CSV', fr: 'Exporter en CSV' },
+        'asis.exportar':  { en: 'Export to Excel', es: 'Exportar a Excel', fr: 'Exporter vers Excel' },
         'asis.cerrar':    { en: 'Close', es: 'Cerrar', fr: 'Fermer' },
         'asis.pensando':  { en: 'Thinking…', es: 'Pensando…', fr: 'Réflexion…' },
         'asis.deLaBase':  { en: 'Counted in the database', es: 'Contado en la base de datos', fr: 'Compté dans la base de données' },

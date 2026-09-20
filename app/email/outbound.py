@@ -88,7 +88,13 @@ def enviar(contenido) -> bool:
 
 
 def _adjuntos(contenido):
-    """Las rutas del correo, leídas a bytes para el proveedor de Outlook."""
+    """Los archivos del correo, leídos a bytes para el proveedor de Outlook.
+
+    Van dos clases en la misma lista: los adjuntos de verdad —el plano, el PDF
+    de la oferta— y las imágenes incrustadas de la firma, que se distinguen
+    porque llevan ``content_id``. El proveedor las trata distinto: la firma no
+    se enseña como archivo, se pinta dentro del mensaje.
+    """
     from app.email.base_provider import EmailAttachment
     import os
 
@@ -100,6 +106,19 @@ def _adjuntos(contenido):
                                              content=fichero.read()))
         except OSError as error:
             log.warning("No se pudo adjuntar %s: %s", ruta, error)
+
+    for imagen in (contenido.get("imagenes") or []):
+        ruta = imagen.get("ruta")
+        if not ruta:
+            continue
+        try:
+            with open(ruta, "rb") as fichero:
+                fuera.append(EmailAttachment(filename=os.path.basename(ruta),
+                                             content=fichero.read(),
+                                             content_id=imagen.get("cid")))
+        except OSError as error:
+            # Sin logo el correo sale igual: la firma queda en texto.
+            log.warning("No se pudo incrustar la imagen %s: %s", ruta, error)
     return fuera
 
 

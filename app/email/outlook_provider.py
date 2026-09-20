@@ -50,6 +50,10 @@ PR_INTERNET_MESSAGE_ID = "http://schemas.microsoft.com/mapi/proptag/0x1035001F"
 PR_IN_REPLY_TO_ID = "http://schemas.microsoft.com/mapi/proptag/0x1042001F"
 PR_INTERNET_REFERENCES = "http://schemas.microsoft.com/mapi/proptag/0x1039001F"
 PR_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x39FE001E"
+# Para incrustar la firma: el "cid" del HTML y la marca de "no la
+# enseñes como archivo adjunto".
+PR_ATTACH_CONTENT_ID = "http://schemas.microsoft.com/mapi/proptag/0x3712001F"
+PR_ATTACHMENT_HIDDEN = "http://schemas.microsoft.com/mapi/proptag/0x7FFE000B"
 
 CLASE_CORREO = 43          # olMail: lo demás (citas, avisos) no se procesa
 MAX_BYTES_ADJUNTO = 25 * 1024 * 1024
@@ -388,6 +392,118 @@ class OutlookEmailProvider(BaseEmailProvider):
             logger.error("No se pudo marcar como leído (%s): %s", message_id, error)
             return False
 
+    def _cuenta(self, buzon: str):
+        """La cuenta de Outlook que corresponde a ese buzón, si la hay.
+
+        Importa de verdad para el remitente. Con `SentOnBehalfOfName` el correo
+        sale "en nombre de" el buzón de ventas, y eso pide un permiso concreto
+        en Exchange; si no se tiene, el mensaje llega con el remitente sin
+        resolver —"System Administrator", con la ruta interna
+        `/o=ExchangeLabs/...`— y el cliente ni siquiera puede contestar.
+
+        Si ese buzón está añadido como CUENTA en el perfil de Outlook, se manda
+        con ella y el correo sale COMO ventas, que es lo que se quiere. La otra
+        vía se queda de respaldo.
+        """
+        try:
+            cuentas = self._outlook.Session.Accounts
+            for i in range(cuentas.Count):
+                cuenta = cuentas.Item(i + 1)
+                direccion = str(getattr(cuenta, "SmtpAddress", "") or "")
+                if direccion.lower() == buzon.lower():
+                    return cuenta
+        except Exception as error:
+            logger.debug("No se pudieron listar las cuentas de Outlook: %s", error)
+        return None
+
+    def _poner_cuenta(self, correo, cuenta) -> bool:
+        """Deja el correo colgado de esa cuenta. Devuelve si de verdad quedó.
+
+        `SendUsingAccount` no es una propiedad normal: guarda un OBJETO, y eso
+        en COM se asigna con "propertyputref". La asignación de toda la vida
+        (`correo.SendUsingAccount = cuenta`) unas veces funciona y otras se
+        traga en silencio según la versión de pywin32 — y cuando se la traga,
+        el correo sale por la cuenta personal de quien tenga Outlook abierto
+        sin que nada falle. Por eso se comprueba después, y si no quedó se
+        pone por el camino largo: 64209 es el identificador de la propiedad en
+        el modelo de Outlook, y 8 es "guarda una referencia".
+        """
+        def puesta():
+            try:
+                actual = correo.SendUsingAccount
+                return str(getattr(actual, "SmtpAddress", "") or "").lower()
+            except Exception:
+                return ""
+
+        objetivo = str(getattr(cuenta, "SmtpAddress", "") or "").lower()
+        try:
+            correo.SendUsingAccount = cuenta
+        except Exception as error:
+            logger.debug("Asignación directa de la cuenta rechazada: %s", error)
+        if puesta() == objetivo:
+            return True
+
+        try:
+            correo._oleobj_.Invoke(*(64209, 0, 8, 0, cuenta))
+        except Exception as error:
+            logger.debug("Tampoco por propertyputref: %s", error)
+        return puesta() == objetivo
+
+    def _fijar_remitente(self, correo) -> None:
+        """De quién sale el correo: del buzón de ventas, no de quien lo manda.
+
+        Tres intentos, de mejor a peor: la cuenta de ese buzón si está en el
+        perfil (sale COMO ventas), "en nombre de" si no está (necesita permiso
+        en Exchange), y si nada de eso agarra, se dice en el registro — porque
+        el correo saldrá con el remitente personal de quien tenga Outlook
+        abierto, y eso el cliente lo ve.
+        """
+        buzon = (getattr(settings, "OUTLOOK_BUZON", "") or "").strip()
+        if not buzon:
+            return
+
+        cuenta = self._cuenta(buzon)
+        if cuenta is not None and self._poner_cuenta(correo, cuenta):
+            logger.info("El correo sale como %s.", buzon)
+            return
+
+        if cuenta is not None:
+            logger.warning("La cuenta %s está en Outlook, pero no se pudo "
+                           "colgar el correo de ella; se intenta en su nombre.",
+                           buzon)
+        else:
+            logger.info("%s no está como cuenta en este perfil de Outlook "
+                        "(cuentas: %s); se manda en su nombre.",
+                        buzon, ", ".join(self._cuentas_del_perfil()) or "ninguna")
+
+        try:
+            correo.SentOnBehalfOfName = buzon
+        except Exception as error:
+            logger.error("No se pudo fijar el remitente a %s (%s). El correo "
+                         "saldría desde la cuenta personal del perfil.",
+                         buzon, error)
+            return
+
+        puesto = str(getattr(correo, "SentOnBehalfOfName", "") or "")
+        if not puesto:
+            logger.error("Outlook no aceptó el remitente %s: el correo saldría "
+                         "desde la cuenta personal del perfil. Hace falta el "
+                         "permiso de 'enviar en nombre de' ese buzón, o "
+                         "añadirlo como cuenta en Outlook.", buzon)
+
+    def _cuentas_del_perfil(self):
+        """Las direcciones de las cuentas del perfil, para poder decirlo."""
+        fuera = []
+        try:
+            cuentas = self._outlook.Session.Accounts
+            for i in range(cuentas.Count):
+                direccion = str(getattr(cuentas.Item(i + 1), "SmtpAddress", "") or "")
+                if direccion:
+                    fuera.append(direccion)
+        except Exception:
+            pass
+        return fuera
+
     # --------------------------------------------------------------- envío
 
     def send_email(self, to: str, subject: str, body: str,
@@ -417,16 +533,25 @@ class OutlookEmailProvider(BaseEmailProvider):
                 with open(ruta, "wb") as fichero:
                     fichero.write(adjunto.content)
                 temporales.append(ruta)
-                correo.Attachments.Add(ruta)
+                puesto = correo.Attachments.Add(ruta)
+
+                # La firma se incrusta: se le pone el mismo "cid" que lleva el
+                # <img> del cuerpo y se esconde de la lista de adjuntos. Si
+                # Outlook no deja marcarla, el correo sale igual —con el logo
+                # como archivo adjunto, que es feo pero no roto—.
+                if adjunto.content_id:
+                    try:
+                        propiedades = puesto.PropertyAccessor
+                        propiedades.SetProperty(PR_ATTACH_CONTENT_ID,
+                                                adjunto.content_id)
+                        propiedades.SetProperty(PR_ATTACHMENT_HIDDEN, True)
+                    except Exception as error:
+                        logger.debug("No se pudo incrustar %s: %s",
+                                     adjunto.filename, error)
 
             # Desde el buzón compartido, no desde la cuenta personal de quien
             # tenga Outlook abierto: el cliente contesta a ventas.
-            buzon = (getattr(settings, "OUTLOOK_BUZON", "") or "").strip()
-            if buzon:
-                try:
-                    correo.SentOnBehalfOfName = buzon
-                except Exception:
-                    logger.debug("No se pudo fijar el remitente a %s.", buzon)
+            self._fijar_remitente(correo)
 
             correo.Send()
             logger.info("Correo enviado por Outlook a %s.", to)

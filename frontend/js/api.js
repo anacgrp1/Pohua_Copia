@@ -390,7 +390,7 @@ const API = {
         const url = URL.createObjectURL(blob);
         const enlace = document.createElement('a');
         enlace.href = url;
-        enlace.download = `rfqs-${new Date().toISOString().slice(0, 10)}.csv`;
+        enlace.download = `rfqs-${new Date().toISOString().slice(0, 10)}.xlsx`;
         document.body.appendChild(enlace);
         enlace.click();
         enlace.remove();

@@ -1,4 +1,5 @@
 """
+SUBTAREA 1 [Código - Filtro]
 Detección de patrones clave de RFQ (RFQ, Cotización, Quote, Resorte)
 en el asunto y el cuerpo usando expresiones regulares.
 """
@@ -14,8 +15,17 @@ PATRONES_RFQ = [
     re.compile(r"\bresortes?\b", re.IGNORECASE),
 ]
 
-# ID de RFQ en el asunto, ej: "RFQ-2024-001", "RFQ #123", "RFQ 456"
-PATRON_ID_RFQ = re.compile(r"\bRFQ[\s#:-]*([A-Z0-9][A-Z0-9-]*\d)", re.IGNORECASE)
+# ID de RFQ en el asunto, ej: "RFQ-2024-001", "RFQ #123", "[RFQ INT-AABD575F]".
+#
+# El identificador puede acabar en letra: los internos son "INT-" y ocho
+# caracteres de hexadecimal, así que la mitad de las veces terminan en letra.
+# El patrón anterior exigía que acabara en dígito y cortaba "INT-AABD575F" en
+# "INT-AABD575" — un identificador que no existe, así que la respuesta del
+# comprador no se asociaba a nada. Se sigue exigiendo que el token tenga al
+# menos UN dígito (el adelanto `(?=...)`), para no confundir "RFQ quote" con
+# un número de RFQ.
+PATRON_ID_RFQ = re.compile(
+    r"\bRFQ[\s#:-]*((?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]*[A-Z0-9])", re.IGNORECASE)
 
 
 def encontrar_patrones(asunto, cuerpo=""):
