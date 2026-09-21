@@ -39,6 +39,7 @@ error pero no rompe el ciclo de lectura del buzón.
 """
 import logging
 import uuid
+from typing import Any
 
 import app.rfq.detector as detector
 import app.rfq.thread_validator as thread_validator
@@ -704,7 +705,7 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
     thread_validator.registrar_en_historial(
         rfq_id, correo.get("message_id", ""), correo.get("asunto", ""))
 
-    resultado = {
+    resultado: dict[str, Any] = {
         "rfq_id": rfq_id,
         "clasificacion": clasificacion,
         "etapa": None,
