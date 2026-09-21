@@ -29,6 +29,8 @@ const RFQDetailPage = {
 
     async render(container, params) {
         this.currentRfqId = params.id;
+        // Se guarda para poder repintar sin volver a navegar (releerPlano).
+        this.contenedor = container;
         container.innerHTML = `<div class="loading-overlay"><div class="spinner"></div> ${
             this.esc(I18N.t('rev.cargando'))}</div>`;
         await this.loadData(container);
@@ -79,36 +81,37 @@ const RFQDetailPage = {
                 </div>
 
                 ${banderas ? `<div class="detail-panel rfqd-panel--aviso">
-                    <div class="detail-panel-title">Review Flags</div>
+                    <div class="detail-panel-title">${esc(I18N.t('ficha.banderas'))}</div>
                     <ul class="rfqd-banderas">${banderas}</ul>
                 </div>` : ''}
 
                 <div class="cards-grid cards-grid--dos">
                     <!-- Datos Comerciales -->
                     <div class="detail-panel">
-                        <div class="detail-panel-title">Commercial Data</div>
-                        ${fila('Customer', rfq.cliente_id || d.customer)}
-                        ${fila('Part Number', rfq.part_number)}
-                        ${fila('Volume (EAU)', rfq.volumen)}
-                        ${fila('Required Material', rfq.material)}
-                        ${fila('Sender', d.remitente, ' detail-value--correo')}
+                        <div class="detail-panel-title">${esc(I18N.t('ficha.comercial'))}</div>
+                        ${fila(I18N.t('ficha.cliente'), rfq.cliente_id || d.customer)}
+                        ${fila(I18N.t('ficha.parte'), rfq.part_number)}
+                        ${fila(I18N.t('ficha.volumen'), rfq.volumen)}
+                        ${fila(I18N.t('ficha.material'), rfq.material)}
+                        ${fila(I18N.t('ficha.remitente'), d.remitente, ' detail-value--correo')}
                     </div>
 
                     <!-- Datos del Resorte (Visión) -->
                     <div class="detail-panel">
-                        <div class="detail-panel-title">Spring Physics (AI Extracted)</div>
+                        <div class="detail-panel-title">${esc(I18N.t('ficha.fisica'))}</div>
                         ${this.porQueVacio(r, d.lectura_plano)}
-                        ${fila('Type', r.tipo_resorte, ' detail-value--tipo')}
-                        ${fila('Wire Diameter', mm(r.diametro_alambre_mm))}
-                        ${fila('Outer Diameter', mm(r.diametro_exterior_mm))}
-                        ${fila('Free Length', mm(r.longitud_libre_mm))}
-                        ${fila('Total Coils', r.numero_espiras_totales)}
-                        ${fila('AI Confidence', r.confianza ? (r.confianza * 100).toFixed(0) + '%' : '')}
+                        ${this.botonReleer(r, puedeDictaminar)}
+                        ${fila(I18N.t('ficha.tipo'), r.tipo_resorte, ' detail-value--tipo')}
+                        ${fila(I18N.t('ficha.alambre'), mm(r.diametro_alambre_mm))}
+                        ${fila(I18N.t('ficha.exterior'), mm(r.diametro_exterior_mm))}
+                        ${fila(I18N.t('ficha.libre'), mm(r.longitud_libre_mm))}
+                        ${fila(I18N.t('ficha.espiras'), r.numero_espiras_totales)}
+                        ${fila(I18N.t('ficha.confianza'), r.confianza ? (r.confianza * 100).toFixed(0) + '%' : '')}
                     </div>
                 </div>
 
                 ${rfq.notas ? `<div class="detail-panel">
-                    <div class="detail-panel-title">PM Notes</div>
+                    <div class="detail-panel-title">${esc(I18N.t('ficha.notasPm'))}</div>
                     <p class="rfqd-notas">${esc(rfq.notas)}</p>
                 </div>` : ''}
             `;
@@ -166,6 +169,64 @@ const RFQDetailPage = {
         }
         if (!texto) return '';
         return `<p class="rfqd-sinplano">${esc(texto)}</p>`;
+    },
+
+    /**
+     * El botón de volver a leer el plano con la IA.
+     *
+     * Sólo aparece cuando hace falta: si ya hay diámetro de alambre, el plano
+     * se leyó y no hay nada que repetir. Y sólo para quien dictamina, porque
+     * cada pulsación gasta una llamada al modelo.
+     */
+    botonReleer(resorte, puedeDictaminar) {
+        const esc = this.esc;
+        if (!puedeDictaminar) return '';
+        const d = resorte ? resorte.diametro_alambre_mm : null;
+        if (d || d === 0) return '';
+        return `<p class="rfqd-releer">
+            <button class="btn btn-secondary btn-sm" id="btnReleerPlano"
+                    onclick="RFQDetailPage.releerPlano()">${esc(I18N.t('plano.releer'))}</button>
+        </p>`;
+    },
+
+    /**
+     * Manda releer el plano guardado y repinta la ficha con lo que salga.
+     *
+     * No vuelve a pedir el fichero a nadie: el sistema ya lo tiene desde que
+     * entró el correo. Lo que cambia es que ahora se lee con la API de visión
+     * otra vez, con el lector ya arreglado.
+     */
+    async releerPlano() {
+        if (!API.puede('rfq:dictaminar')) {
+            Toast.error(I18N.t('aviso.sinPermisoRfq'));
+            return;
+        }
+        const boton = document.getElementById('btnReleerPlano');
+        const antes = boton ? boton.textContent : '';
+        if (boton) { boton.disabled = true; boton.textContent = I18N.t('plano.releyendo'); }
+        try {
+            const r = await API.releerPlano(this.currentRfqId);
+            const ficheros = (r.ficheros || []).join(', ');
+            if (r.estado === 'leido') {
+                const hayCotas = r.resorte && r.resorte.diametro_alambre_mm;
+                if (hayCotas) Toast.success(I18N.t('plano.releido', { ficheros }));
+                else Toast.error(I18N.t('plano.sinCotas'));
+                if (this.contenedor) await this.loadData(this.contenedor);
+                return;
+            }
+            if (r.estado === 'sin_adjunto') Toast.error(I18N.t('plano.sinAdjunto'));
+            else if (r.estado === 'formato_no_leido') {
+                Toast.error(I18N.t('plano.sinFormato', {
+                    ficheros, soportados: (r.soportados || []).join(', ') }));
+            } else {
+                Toast.error(I18N.t('plano.fallo', {
+                    ficheros, motivo: this.motivoCorto(r.motivo) }));
+            }
+        } catch (err) {
+            Toast.error(err.message);
+        } finally {
+            if (boton) { boton.disabled = false; boton.textContent = antes; }
+        }
     },
 
     async approve() {

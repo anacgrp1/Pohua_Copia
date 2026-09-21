@@ -57,6 +57,14 @@ def _num(valor: Any) -> Optional[float]:
 # (SS177 y 316 no están, igual que en el motor: caen al valor por defecto.
 # Si en ISC miden una densidad distinta para los inoxidables, hay que
 # añadirlas en LOS DOS sitios a la vez.)
+#
+# Tampoco está INCX750, y es a propósito: la calculadora de ISC cotiza el
+# Inconel X-750 con el código del Hastelloy ("codigo": "HAST" en su entrada
+# "inconel"), así que `reglas/factibilidad.json` hace lo mismo y un RFQ de
+# Inconel se pesa con .321. Si algún día ISC le da código propio, hay que
+# sembrar la fila en `materiales` con 8250 kg/m³ y añadir INCX750: .298 en
+# CUATRO sitios a la vez: aquí, pricing/engine.js, el HTML de la calculadora
+# y la tabla `materiales`.
 _DENSIDAD_LB_IN3 = {
     "MW": .284, "CSI": .284, "HD": .284, "OT": .284, "GMW": .284,
     "GHD": .284, "SG": .284, "BB": .284,

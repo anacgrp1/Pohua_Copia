@@ -223,6 +223,50 @@ def listar_de_base(rfq_id: str) -> list:
         return []
 
 
+def carpeta_de(rfq_id: str):
+    """La carpeta de disco donde quedaron los planos de este RFQ, si existe.
+
+    Vive aquí y no en la ruta de la API porque ya son tres los sitios que la
+    necesitan —listar, descargar y releer el plano— y el saneado del nombre
+    no puede tener tres copias: un ``rfq_id`` con ``..`` dentro apuntaría
+    fuera de la carpeta base.
+    """
+    from pathlib import Path
+    import app.core.config as config
+
+    base = getattr(config.settings, "PLANOS_DIR", None) or "planos"
+    carpeta = (Path(base) / _slug(rfq_id)).resolve()
+    raiz = Path(base).resolve()
+    if raiz not in carpeta.parents and carpeta != raiz:
+        return None
+    return carpeta if carpeta.is_dir() else None
+
+
+def leer_plano(rfq_id: str, nombre: str):
+    """Los bytes de un plano, venga de la base o del disco.
+
+    La base manda: es lo único que ven a la vez el lector de escritorio y el
+    servidor. El disco es el respaldo para lo que se guardó antes de que
+    existiera ``rfq_planos``.
+    """
+    de_base = leer_de_base(rfq_id, nombre)
+    if de_base:
+        return de_base
+
+    carpeta = carpeta_de(rfq_id)
+    if carpeta is None:
+        return None
+    ruta = carpeta / os.path.basename(nombre or "")
+    if not ruta.is_file():
+        return None
+    try:
+        return ruta.read_bytes(), "application/octet-stream"
+    except OSError as error:
+        log.warning("RFQ %s: no se pudo leer el plano %s del disco: %s",
+                    rfq_id, nombre, error)
+        return None
+
+
 def leer_de_base(rfq_id: str, nombre: str):
     """Un plano concreto: ``(bytes, tipo)``, o ``None`` si no está."""
     try:

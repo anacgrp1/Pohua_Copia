@@ -262,17 +262,44 @@ def _envio(inf):
     inf.en("Correo saliente")
     try:
         import app.email.outbound as outbound
-        encendido = outbound.envio_habilitado()
+        automatico = outbound.envio_habilitado()
+        manual = outbound.envio_habilitado(manual=True)
+        diag = outbound.diagnostico_envio()
     except Exception as error:
-        inf.ojo("No se pudo leer el interruptor de envío", str(error))
+        inf.ojo("No se pudo leer el estado del envío", str(error))
         return
 
-    if encendido:
-        inf.ojo("ENVIO_AUTOMATICO encendido: los correos salen de verdad",
-                "Con un remitente real, le llega al cliente.")
+    # Primero lo que hace IMPOSIBLE mandar, porque un interruptor encendido
+    # sobre un servidor sin cuenta emisora es un verde que engaña: así se
+    # quedó una oferta sin salir, con el PDF ya generado y el error saliendo
+    # recién al pulsar.
+    if not diag["puede"]:
+        inf.falta("El servidor no puede mandar correo: falta " +
+                  ", ".join(diag["faltan"]),
+                  "Modo %s, por %s. %s" % (diag["modo"].upper(),
+                                           diag["canal"].upper(), diag["nota"]))
+    else:
+        inf.ok("Hay cuenta para mandar (modo %s, por %s)"
+               % (diag["modo"].upper(), diag["canal"].upper()))
+
+    if automatico:
+        inf.ojo("ENVIO_AUTOMATICO encendido: el sistema escribe solo",
+                "Peticiones de datos, declinaciones y recordatorios salen sin "
+                "que nadie los mire. Con un buzón de clientes reales, llegan.")
     else:
         inf.ok("ENVIO_AUTOMATICO apagado",
-               "Los correos se construyen y se registran, pero no salen.")
+               "Lo que el sistema manda solo se construye y se registra, pero "
+               "no sale.")
+
+    # El de la oferta es OTRO interruptor, y es el que la gente busca cuando
+    # dice "no me llegó la cotización".
+    if manual:
+        inf.ok("ENVIO_MANUAL encendido: la oferta del PM sí sale",
+               "Es el botón «Enviar oferta», con el destinatario delante.")
+    else:
+        inf.ojo("ENVIO_MANUAL apagado: la oferta no saldrá",
+                "El PDF se genera y queda archivado, pero el correo al cliente "
+                "no se despacha.")
 
 
 def _avisos(inf):

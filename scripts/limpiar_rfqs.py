@@ -79,24 +79,47 @@ def main() -> int:
                             "WHERE estado = %s ORDER BY rfq_id;", (estado,))
             filas = cur.fetchall()
 
-        if not filas:
-            cual = ("rfq_id=" + uno if uno else
-                    "todos" if todos else "estado=" + estado)
+        if not filas and not todos:
+            cual = "rfq_id=" + uno if uno else "estado=" + estado
             print(f"No hay RFQ que borrar ({cual}).")
             return 0
 
         ids = [f[0] for f in filas]
-        print(f"RFQ afectados ({len(ids)}):")
-        for rfq_id, estado_actual in filas:
-            print(f"   {rfq_id:22} {estado_actual}")
+        if filas:
+            print(f"RFQ afectados ({len(ids)}):")
+            for rfq_id, estado_actual in filas:
+                print(f"   {rfq_id:22} {estado_actual}")
+        else:
+            # Con --todos se sigue aunque no quede ningún RFQ: las marcas de
+            # "correo ya procesado" sobreviven al borrado de los RFQ, y son
+            # justo las que dejan el embudo en 1 y hacen que el correo de
+            # prueba vuelva a entrar como duplicado. Salirse aquí dejaba la
+            # base a medio limpiar sin decirlo.
+            print("No queda ningún RFQ; se revisa lo que dejaron atrás.")
 
         # Los correos de esos RFQ: al borrar su marca de "procesado", el mismo
         # correo se puede volver a leer.
+        #
+        # Con --todos se vacía la tabla ENTERA, no sólo los correos que
+        # llegaron a ser RFQ. Un correo que se clasificó como basura, o que se
+        # quedó en el gate temprano antes de tener su fila en rfq_historial,
+        # deja su marca de "procesado" para siempre: el embudo lo sigue
+        # contando en "Customer email" —que cuenta correos_procesados, no
+        # RFQ— y el mismo correo de prueba no se puede volver a mandar porque
+        # entra como duplicado. Eso convertía "borrar todo y repetir la
+        # prueba" en algo que no dejaba la base como el primer día.
         with conexion.cursor() as cur:
-            cur.execute("SELECT message_id FROM rfq_historial "
-                        "WHERE rfq_id = ANY(%s);", (ids,))
-            correos = [f[0] for f in cur.fetchall() if f[0]]
-        print(f"\nCorreos que volverán a estar sin procesar: {len(correos)}")
+            if todos:
+                cur.execute("SELECT COUNT(*) FROM correos_procesados;")
+                cuantos = cur.fetchone()[0]
+                correos = None          # None = todos
+                print(f"\nCorreos que volverán a estar sin procesar: {cuantos} "
+                      f"(TODOS: también los que nunca llegaron a ser RFQ)")
+            else:
+                cur.execute("SELECT message_id FROM rfq_historial "
+                            "WHERE rfq_id = ANY(%s);", (ids,))
+                correos = [f[0] for f in cur.fetchall() if f[0]]
+                print(f"\nCorreos que volverán a estar sin procesar: {len(correos)}")
 
         if not borrar:
             print("\nNo se ha borrado nada. Con --borrar se hace de verdad.")
@@ -119,7 +142,10 @@ def main() -> int:
                     except Exception as error:
                         cur.execute("ROLLBACK TO SAVEPOINT paso;")
                         print(f"   {tabla:26} se omite ({str(error).strip()})")
-                if correos:
+                if correos is None:
+                    cur.execute("DELETE FROM correos_procesados;")
+                    print(f"   {'correos_procesados':26} {cur.rowcount} fila(s) (todas)")
+                elif correos:
                     cur.execute("DELETE FROM correos_procesados "
                                 "WHERE message_id = ANY(%s);", (correos,))
                     print(f"   {'correos_procesados':26} {cur.rowcount} fila(s)")

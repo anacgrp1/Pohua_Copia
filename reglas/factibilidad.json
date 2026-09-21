@@ -103,7 +103,7 @@
     },
     {
       "nombre": "Inconel X-750 (AMS 5698/5699)",
-      "codigo": "INCX750",
+      "codigo": "HAST",
       "rango_alambre_mm": {"min": 0.4, "max": 8.0},
       "alias": ["incx750", "inconel", "inconel x 750", "x 750", "ams 5698", "ams 5699"]
     },

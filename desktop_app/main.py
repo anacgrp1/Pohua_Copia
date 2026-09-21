@@ -175,6 +175,14 @@ class Lector(QThread):
                             f"{resultado.rfqs} RFQ · {resultado.errores} con error.")
                         for detalle in resultado.detalles[:6]:
                             self.dice.emit("info", f"   {detalle}")
+
+                    # La bandeja de salida. Esta computadora es la única que
+                    # tiene Outlook abierto sobre el buzón de ISC, así que las
+                    # ofertas que el servidor redactó y no pudo mandar salen
+                    # de aquí. Va DESPUÉS de leer y fuera del try de arriba
+                    # para que un correo que no sale no se confunda con un
+                    # ciclo de lectura fallido.
+                    self.despachar_salida()
                 except Exception as error:      # el ciclo nunca tumba la app
                     self.dice.emit("error", f"El ciclo falló: {error}")
 
@@ -187,6 +195,41 @@ class Lector(QThread):
 
         self.cambia_estado.emit("parado")
         self.dice.emit("info", "Lector detenido.")
+
+    def despachar_salida(self):
+        """Manda las ofertas que el servidor dejó esperando.
+
+        El servidor arma la oferta cuando el plant manager pulsa el botón,
+        pero no tiene cuenta emisora: el buzón se abre por el Outlook de ESTA
+        computadora. Las dos partes se encuentran en la tabla `correos_salida`
+        de la misma base en Neon, igual que ya se encuentran para no leer el
+        buzón dos veces.
+
+        Nunca lanza: un correo que no sale no puede impedir que entren los
+        RFQ, que es para lo que está esta ventana.
+        """
+        try:
+            import app.email.bandeja_salida as bandeja
+            resumen = bandeja.drenar()
+        except Exception as error:
+            self.dice.emit("error", f"La bandeja de salida falló: {error}")
+            return
+
+        if resumen["enviados"]:
+            self.dice.emit("ok", f"Bandeja de salida: {resumen['enviados']} "
+                                 f"correo/s enviado/s por Outlook.")
+        if resumen["fallidos"]:
+            self.dice.emit("error", f"Bandeja de salida: {resumen['fallidos']} "
+                                    f"no salieron; se reintentan el próximo ciclo.")
+        if resumen["pendientes"]:
+            self.dice.emit("info", f"   Quedan {resumen['pendientes']} esperando.")
+        if resumen.get("omitidos"):
+            # Pasa si esta computadora tampoco está configurada para mandar:
+            # decirlo aquí ahorra buscar el correo perdido en el servidor.
+            self.dice.emit("aviso",
+                           f"Hay {resumen['omitidos']} oferta/s esperando, pero "
+                           f"esta computadora no está configurada para mandar. "
+                           f"Falta MAIL_MODE=outlook y OUTLOOK_BUZON en el .env.")
 
 
 # --------------------------------------------------------------------------- #

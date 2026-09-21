@@ -211,6 +211,10 @@ const API = {
     rfqCotizacionInicial(rfqId) {
         return this.request('GET', `/api/rfqs/${rfqId}/cotizacion-inicial`);
     },
+    /** Volver a leer con la IA el plano que el RFQ ya tiene guardado. */
+    releerPlano(rfqId) {
+        return this.request('POST', `/api/rfqs/${rfqId}/releer-plano`);
+    },
     /** Un plano de los que llegaron en el correo, tal cual, como Blob. */
     async descargarPlano(rfqId, nombre) {
         const token = this.getToken();

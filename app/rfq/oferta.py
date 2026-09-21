@@ -298,12 +298,34 @@ def enviar(rfq_id: str, usuario: Optional[str] = None,
     # llegara una oferta, el sistema quedaba suelto contestando solo.
     habilitado = outbound.envio_habilitado(manual=True)
     enviado = False
+    encolada = False
     if habilitado:
-        try:
-            enviado = bool(outbound.enviar(contenido))
-        except Exception as error:      # el PDF y la constancia se quedan igual
-            log.error("RFQ=%s: la oferta no salió: %s", rfq_id, error)
-            raise RuntimeError(f"La oferta se generó pero el correo no salió: {error}") from error
+        # Quien arma la oferta no siempre es quien puede mandarla: el buzón de
+        # ISC se abre por el Outlook de una computadora y esto corre en Render.
+        # Antes eso terminaba en excepción con el PDF ya generado —la oferta
+        # existía para todos menos para el cliente—. Ahora el correo espera en
+        # la bandeja de salida a que pase el lector de escritorio.
+        diag = outbound.diagnostico_envio()
+        if not diag["puede"]:
+            import app.email.bandeja_salida as bandeja
+            try:
+                salida_id = bandeja.encolar(contenido, rfq_id=rfq_id, por=usuario)
+                encolada = True
+                log.info("RFQ=%s: este proceso no puede mandar (modo %s, falta "
+                         "%s); la oferta queda en la bandeja de salida (id=%s) "
+                         "para el lector de escritorio.",
+                         rfq_id, diag["modo"], ", ".join(diag["faltan"]), salida_id)
+            except Exception as error:
+                log.error("RFQ=%s: no se pudo encolar la oferta: %s", rfq_id, error)
+                raise RuntimeError(
+                    "La oferta se generó pero el correo no salió ni se pudo "
+                    f"dejar en la bandeja de salida: {error}") from error
+        else:
+            try:
+                enviado = bool(outbound.enviar(contenido))
+            except Exception as error:  # el PDF y la constancia se quedan igual
+                log.error("RFQ=%s: la oferta no salió: %s", rfq_id, error)
+                raise RuntimeError(f"La oferta se generó pero el correo no salió: {error}") from error
     else:
         log.info("RFQ=%s: oferta LISTA pero no enviada (ENVIO_MANUAL apagado). "
                  "Para: %s · %s", rfq_id, params["destinatario"], archivo)
@@ -313,6 +335,9 @@ def enviar(rfq_id: str, usuario: Optional[str] = None,
         "archivo": str(archivo),
         "destinatario": params["destinatario"],
         "enviada": enviado,
+        # Encolada = el correo está redactado y esperando a que el lector de
+        # escritorio lo despache por Outlook. No es lo mismo que "no se mandó".
+        "encolada": encolada,
         "fecha": ahora,
         "por": usuario,
         "lead_time": params["lead_time"],
@@ -329,6 +354,9 @@ def enviar(rfq_id: str, usuario: Optional[str] = None,
 
     return {"rfq_id": rfq_id, "archivo": str(archivo), "nombre_archivo": archivo.name,
             "destinatario": params["destinatario"], "enviado": enviado,
+            # Para que la pantalla no diga "no se envió" cuando lo que pasa es
+            # que está esperando a quien tiene Outlook abierto.
+            "encolada": encolada,
             "envio_habilitado": habilitado, "listo": prep["listo"],
             "motivos": prep["motivos"],
             "motivos_i18n": prep.get("motivos_i18n") or []}

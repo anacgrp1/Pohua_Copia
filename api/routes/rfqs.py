@@ -366,6 +366,21 @@ def cotizacion_inicial(
     datos = detalle.datos_json or {}
     resorte = detalle.resorte or {}
 
+    # Abrir la cotización completa tiene que abrirla COMPLETA. Si el resorte
+    # no trae diámetro de alambre —porque el día que entró el correo el
+    # formato no estaba soportado, o la firma se coló como si fuera el plano,
+    # o el modelo se atragantó— se vuelve a leer aquí el plano guardado con la
+    # API de visión, y el resultado queda persistido para la ficha y el
+    # costeo. El PM no tiene por qué saber que aquel día falló, ni volver a
+    # subir un archivo que el sistema ya tiene.
+    import app.rfq.relectura as relectura
+    asegurado = relectura.asegurar_resorte(
+        rfq_id, resorte, message_id=datos.get("message_id") or "")
+    resorte = asegurado["resorte"] or {}
+    # Sin el resorte entero dentro: ya va aparte en esta misma respuesta.
+    lectura = ({k: v for k, v in asegurado["lectura"].items() if k != "resorte"}
+               if asegurado["lectura"] else None)
+
     armado = costeo_rfq.pn_inicial(rfq_id, datos, resorte, detalle.material)
     pn = armado["pn"]
 
@@ -431,6 +446,9 @@ def cotizacion_inicial(
         # Los dibujos que venían en el correo, para dejarlos puestos en la
         # casilla de "AI Read Drawing" sin ir a buscarlos otra vez al buzón.
         "planos": _planos_listados(rfq_id),
+        # Si hizo falta releer el plano aquí mismo, qué salió. `None` cuando
+        # el resorte ya venía completo y no se gastó ninguna llamada.
+        "lectura_plano": lectura,
         # Lo que el catálogo no pudo resolver: la calculadora lo enseña para
         # que se capture allí, que es donde se captura.
         "faltantes": armado["faltantes"],
@@ -476,10 +494,19 @@ def ver_oferta(
         # interruptor MANUAL, que es el que decide este envío: con el del
         # robot apagado, la oferta sale igual y decir lo contrario sería
         # mentirle a quien está a punto de pulsar.
-        "envio_habilitado": __import__("app.email.outbound",
-                                       fromlist=["x"]).envio_habilitado(manual=True),
+        "envio_habilitado": _outbound().envio_habilitado(manual=True),
+        # Distinto del interruptor: esto es si el servidor TIENE con qué
+        # mandar. Va aquí para que se vea al abrir el diálogo y no al pulsar,
+        # que es cuando se veía —con el PDF ya generado y un error que
+        # nombraba las variables de SMTP aunque el modo fuera otro—.
+        "envio_posible": _outbound().diagnostico_envio(),
         "puede_enviar": usuario.puede("rfq:dictaminar"),
     }
+
+
+def _outbound():
+    import app.email.outbound as outbound
+    return outbound
 
 
 # ---------------------------------------------------------------------------
@@ -494,20 +521,13 @@ def ver_oferta(
 
 
 def _carpeta_de_planos(rfq_id: str):
-    """La carpeta donde quedaron los planos de este RFQ, si existe."""
-    from pathlib import Path as _Path
-    import app.core.config as config
-    import app.persistence.blueprint_store as almacen
+    """La carpeta donde quedaron los planos de este RFQ, si existe.
 
-    base = getattr(config.settings, "PLANOS_DIR", None) or "planos"
-    # El mismo saneado con el que se guardaron; y además se comprueba que la
-    # carpeta resultante cuelgue de la base, para que un rfq_id con ".." no
-    # pueda apuntar a otro sitio del disco.
-    carpeta = (_Path(base) / almacen._slug(rfq_id)).resolve()
-    raiz = _Path(base).resolve()
-    if raiz not in carpeta.parents and carpeta != raiz:
-        return None
-    return carpeta if carpeta.is_dir() else None
+    El saneado del nombre vive en el almacén: tres sitios lo necesitaban
+    —listar, descargar y releer el plano— y no puede tener tres copias.
+    """
+    import app.persistence.blueprint_store as almacen
+    return almacen.carpeta_de(rfq_id)
 
 
 @router.get("/{rfq_id}/planos")
@@ -524,6 +544,40 @@ def planos_del_rfq(
     """
     planos = _planos_listados(rfq_id)
     return {"planos": planos, "guardados": bool(planos)}
+
+
+@router.post("/{rfq_id}/releer-plano")
+def releer_plano_del_rfq(
+    rfq_id: str,
+    usuario: UsuarioSesion = Depends(exige("rfq:dictaminar")),
+):
+    """Vuelve a leer el plano guardado con la API de visión.
+
+    Existe porque la lectura del dibujo pasa UNA vez, cuando el correo entra,
+    y si aquel día falló —formato no soportado, la firma colada como plano, un
+    JSON a medias— el RFQ se queda sin cotas para siempre: sin diámetro de
+    alambre no hay máquina, no hay peso y el costeo sale orientativo aunque el
+    correo viniera completo. Reenviar el correo no sirve: el adjunto ya está
+    guardado y el message-id ya está registrado.
+
+    Pide ``rfq:dictaminar`` y no ``rfq:leer`` a propósito: cada pulsación
+    gasta una llamada al modelo, así que la tiene quien dictamina, no
+    cualquiera que pueda mirar la ficha.
+    """
+    import app.rfq.relectura as relectura
+
+    get_rfq(rfq_id, None, usuario)                     # 404 si no existe
+    lectura = relectura.releer(rfq_id)
+    log.info("RFQ %s: relectura del plano pedida por %s → %s.",
+             rfq_id, usuario.correo, lectura["estado"])
+    return {
+        "estado": lectura["estado"],
+        "ficheros": lectura.get("ficheros") or [],
+        "motivo": lectura.get("motivo"),
+        "soportados": lectura.get("soportados"),
+        # Lo que se sacó, para que la ficha se repinte sin recargar.
+        "resorte": lectura.get("resorte"),
+    }
 
 
 @router.get("/{rfq_id}/planos/{nombre}")

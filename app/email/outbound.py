@@ -80,6 +80,86 @@ def envio_habilitado(manual: bool = False) -> bool:
     return _interruptor("ENVIO_AUTOMATICO", False)
 
 
+class SinCuentaEmisora(RuntimeError):
+    """El modo activo no tiene con qué mandar el correo.
+
+    Es distinto de "el envío está apagado": ahí la decisión es de alguien. Esto
+    es que no hay cuenta, y por más que se pulse el botón no va a salir nunca.
+    """
+
+    def __init__(self, modo: str, faltan):
+        self.modo = modo
+        self.faltan = list(faltan)
+        super().__init__(
+            "El servidor no tiene cuenta para mandar correo en modo %s. "
+            "Falta: %s." % (modo.upper(), ", ".join(self.faltan)))
+
+
+def _puesto(c, *nombres) -> bool:
+    """¿Alguno de esos ajustes tiene valor?"""
+    return any((getattr(c, n, "") or "").strip() for n in nombres)
+
+
+def diagnostico_envio() -> dict:
+    """¿Puede este proceso mandar un correo, y si no, qué le falta?
+
+    Existe porque el fallo se veía tardísimo y decía lo que no era: el PM
+    pulsaba «Enviar oferta», se generaba el PDF, y sólo entonces saltaba «No
+    hay cuenta emisora configurada (SMTP_USER / IMAP_USER)» —los nombres de
+    SMTP— aunque el modo activo fuera Graph, donde esas dos variables no
+    pintan nada. Lo que hace falta saber es: en ESTE modo, ¿con qué cuenta se
+    manda, y qué falta para tenerla?
+
+    Devuelve ``{modo, canal, puede, faltan, nota}``. No lanza y no toca la
+    red: sólo mira la configuración, así que se puede llamar al pintar la
+    pantalla, antes de que nadie pulse nada.
+    """
+    import app.core.config as config
+    c = config.settings
+    modo = str(getattr(c, "MAIL_MODE", "imap") or "imap").lower()
+
+    if modo in _MODOS_OUTLOOK:
+        # Aquí no hay credenciales que comprobar: manda el Outlook que ya está
+        # abierto en esa computadora. Lo que sí se puede decir es que en un
+        # servidor Linux no hay tal Outlook, por muy bien puesto que esté.
+        import sys
+        en_windows = sys.platform == "win32"
+        return {
+            "modo": modo, "canal": "outlook",
+            "puede": en_windows, "faltan": [] if en_windows else ["Outlook"],
+            "nota": ("Manda el Outlook de escritorio de esta computadora."
+                     if en_windows else
+                     "MAIL_MODE=outlook necesita el Outlook de escritorio, y "
+                     "este proceso no corre en Windows. En el servidor hay que "
+                     "usar graph (o smtp)."),
+        }
+
+    if modo in _MODOS_TOKEN:
+        faltan = [n for n in ("AZURE_TENANT_ID", "AZURE_CLIENT_ID",
+                              "AZURE_CLIENT_SECRET")
+                  if not _puesto(c, n)]
+        if not _puesto(c, "GRAPH_USER", "IMAP_USER"):
+            faltan.append("GRAPH_USER")
+        return {"modo": modo, "canal": "graph", "puede": not faltan,
+                "faltan": faltan,
+                "nota": "La aplicación de Entra ID necesita el permiso "
+                        "Mail.Send sobre ese buzón."}
+
+    # Se nombran las dos: el emisor acepta las de SMTP y, si no, las del
+    # buzón IMAP —es la misma cuenta—, y con MAIL_MODE=imap lo natural es
+    # poner las segundas. Decir sólo "SMTP_USER" manda a crear una variable
+    # que no hacía falta.
+    faltan = []
+    if not _puesto(c, "SMTP_USER", "IMAP_USER"):
+        faltan.append("SMTP_USER (o IMAP_USER)")
+    if not _puesto(c, "SMTP_PASSWORD", "IMAP_PASSWORD"):
+        faltan.append("SMTP_PASSWORD (o IMAP_PASSWORD)")
+    return {"modo": modo, "canal": "smtp", "puede": not faltan, "faltan": faltan,
+            "nota": "En Microsoft 365 la autenticación básica está retirada: "
+                    "SMTP con usuario y contraseña ya no entra. Para mandar "
+                    "desde el servidor hay que usar MAIL_MODE=graph."}
+
+
 def enviar(contenido) -> bool:
     """Envía el correo por el canal del modo activo: SMTP, Graph u Outlook.
 
@@ -89,6 +169,12 @@ def enviar(contenido) -> bool:
     """
     import app.core.config as config
     modo = str(getattr(config.settings, "MAIL_MODE", "imap") or "imap").lower()
+
+    # Comprobarlo ANTES de abrir nada: así el mensaje nombra el modo activo y
+    # las variables de ESE modo, en vez del error de SMTP para todos.
+    diag = diagnostico_envio()
+    if not diag["puede"]:
+        raise SinCuentaEmisora(diag["modo"], diag["faltan"])
 
     if modo in _MODOS_OUTLOOK:
         # Por el Outlook que ya está abierto: mismo remitente y misma firma

@@ -71,19 +71,36 @@ class TestAplicacionDeEscritorio(unittest.TestCase):
         import sys
         return mock.patch.dict(sys.modules, {"api.server": _ServidorFalso(hace_segundos)})
 
-    def test_leyendo_ella_no_falta_nada_en_el_servidor(self):
+    def test_leyendo_ella_el_servidor_no_necesita_buzon(self):
         with _Parcheado(_todo_bien({"IMAP_PASSWORD": "", "IMAP_USER": ""})), \
              self._con_latido(60):
             informe = preflight.revisar(con_buzon=True)
 
-        self.assertTrue(informe["listo"], [p for p in informe["puntos"]
-                                           if p["estado"] == "falta"])
         self.assertTrue(any("aplicación de escritorio está leyendo" in p["titulo"]
                             for p in informe["puntos"] if p["estado"] == "ok"))
-        # Y las credenciales que faltan se dicen, pero como aviso, no como fallo.
+        # Las credenciales que faltan se dicen, pero como aviso, no como fallo:
+        # para LEER, el reparto de trabajo ya está resuelto.
         credenciales = [p for p in informe["puntos"]
                         if "credenciales del buzón" in p["titulo"]]
         self.assertEqual([p["estado"] for p in credenciales], ["ojo"])
+
+    def test_pero_mandar_no_se_delega_en_la_de_escritorio(self):
+        """Leer se puede repartir; mandar, no.
+
+        La oferta la despacha el proceso web cuando el PM pulsa el botón, así
+        que ese proceso necesita cuenta emisora propia aunque la aplicación de
+        escritorio esté leyendo el buzón. Sin ella el PDF se genera, se
+        archiva, y el correo al cliente no sale: exactamente lo que pasó.
+        """
+        with _Parcheado(_todo_bien({"IMAP_PASSWORD": "", "IMAP_USER": ""})), \
+             self._con_latido(60):
+            informe = preflight.revisar(con_buzon=True)
+
+        fallos = [p for p in informe["puntos"] if p["estado"] == "falta"]
+        self.assertEqual(len(fallos), 1, fallos)
+        self.assertIn("no puede mandar correo", fallos[0]["titulo"])
+        self.assertEqual(fallos[0]["grupo"], "Correo saliente")
+        self.assertFalse(informe["listo"])
 
     def test_un_latido_viejo_no_cuenta(self):
         """Si dejó de latir, el buzón se queda sin nadie: eso sí es un fallo."""
