@@ -526,6 +526,10 @@ def _motivo(codigo, nivel, campo, valor, limite, texto, nota=None,
         "nivel": nivel,
         "campo": campo,
         "valor": valor,
+        # La unidad del campo, para que quien rearme la frase en otro idioma
+        # no tenga que llevar una copia de la tabla de unidades. Va con el
+        # espacio delante, como se escribe: " mm".
+        "unidad": _unidad(campo),
         "limite": limite,
         "texto": texto,
         "nota": nota,

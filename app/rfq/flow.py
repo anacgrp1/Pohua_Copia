@@ -322,13 +322,19 @@ def procesar_dibujos(correo, rfq_id, informe=None):
     import app.vision.pipeline as pipeline
     import app.vision.spring_extractor as spring_extractor
 
+    # Lo que el modelo puede leer Y que además es un plano: la firma del
+    # correo llega como un adjunto más y por nombre no se distingue de un
+    # dibujo, pero mandársela al modelo cuesta una llamada y devuelve un
+    # resorte inventado a partir de un logo.
+    import app.persistence.blueprint_store as almacen
+
     soportados = [
-        a for a in adjuntos
+        a for a in almacen.solo_planos(adjuntos)
         if (a.get("nombre", "").lower().endswith(pipeline.EXTENSIONES_SOPORTADAS))
     ]
     if not soportados:
         nombres_todos = [a.get("nombre", "?") for a in adjuntos]
-        log.info("RFQ=%s: adjuntos presentes pero sin formatos soportados (%s).",
+        log.info("RFQ=%s: adjuntos presentes pero ninguno es un plano legible (%s).",
                  rfq_id, ", ".join(nombres_todos))
         anotar({"estado": "formato_no_leido", "ficheros": nombres_todos,
                 "soportados": list(pipeline.EXTENSIONES_SOPORTADAS)})
@@ -698,7 +704,7 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
     thread_validator.registrar_en_historial(
         rfq_id, correo.get("message_id", ""), correo.get("asunto", ""))
 
-    resultado: dict = {
+    resultado = {
         "rfq_id": rfq_id,
         "clasificacion": clasificacion,
         "etapa": None,

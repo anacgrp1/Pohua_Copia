@@ -437,6 +437,30 @@ const Hero = (() => {
             zona.addEventListener('pointerleave', () => { puntero.activo = false; });
         }
 
+        /* El lienzo se vuelve a medir cuando cambia SU CAJA, no sólo cuando
+           cambia la ventana.
+
+           En el teléfono la ventana no se redimensiona nunca, así que el
+           `resize` de abajo no llegaba: el lienzo se quedaba con el ancho que
+           tenía en el primer fotograma —antes de que las tarjetas de arriba
+           terminaran de repartirse y la ficha creciera— y como su tamaño se
+           fija en píxeles, el resorte quedaba centrado en ESE ancho viejo, o
+           sea pegado a la izquierda dentro de una ficha ya más ancha.
+
+           El observador vive con el lienzo: al salir de la pantalla, el
+           elemento desaparece y el observador con él. */
+        const caja = lienzo.parentElement;
+        if (caja && window.ResizeObserver && !caja.dataset.medidaConectada) {
+            caja.dataset.medidaConectada = '1';
+            new ResizeObserver(() => {
+                // Sólo si de verdad cambió: el observador también dispara al
+                // conectarse, y rehacer por nada es un parpadeo gratis.
+                if (caja.clientWidth === ancho && caja.clientHeight === alto) return;
+                clearTimeout(temporizadorTamano);
+                temporizadorTamano = setTimeout(() => rehacer(), 120);
+            }).observe(caja);
+        }
+
         if (!init.conectado) {
             init.conectado = true;
 

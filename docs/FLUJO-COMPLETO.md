@@ -40,7 +40,10 @@ OFERTA  (Quote → Send offer)
    constancia en el RFQ: datos_json.oferta y una nota "OFERTA ENVIADA/GENERADA"
 ```
 
-Todo lo que sale hacia el comprador pasa por `ENVIO_AUTOMATICO`: apagado
+Lo que sale hacia el comprador pasa por uno de dos interruptores. Lo que
+manda el sistema SOLO —petición de datos, declinación, recordatorios— va por
+`ENVIO_AUTOMATICO`; lo que manda una persona pulsando un botón —la oferta— va
+por `ENVIO_MANUAL`, encendido por defecto. `ENVIO_AUTOMATICO` apagado
 (el valor por defecto), el correo se construye y se registra en el log, pero
 no sale. Los avisos al PM y los cambios de estado ocurren igual.
 
@@ -96,7 +99,8 @@ Lo que tiene que estar en Render (*Environment*):
 
 ```
 MAIL_FOLDER=TEST                 la carpeta de pruebas, no la bandeja
-ENVIO_AUTOMATICO=false           nada sale al cliente todavía
+ENVIO_AUTOMATICO=false           el sistema no escribe solo
+ENVIO_MANUAL=false               ni siquiera la oferta que se manda a mano
 ANTHROPIC_API_KEY=...            sin ella no hay extracción ni lectura de plano
 APP_URL=https://<tu servicio>.onrender.com
 VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY      (python scripts/generar_vapid.py)
@@ -225,7 +229,7 @@ del registro, la insignia dice de qué buzón se está leyendo: **IMAP · TEST**
    Pohua, y **Spring Calc** es la otra pestaña — se pasa el plano leído, y
    *Usar el peso en la cotización* lo devuelve y vuelve solo a Quote.
 5. **Ver PDF** abre la oferta. **Send offer** pide destinatario, plazo,
-   incoterm, validez y observaciones. Con `ENVIO_AUTOMATICO=false` el PDF queda
+   incoterm, validez y observaciones. Con `ENVIO_MANUAL=false` el PDF queda
    en `vendor/Quotes/` (o `QUOTES_DIR`) y el log dice "oferta LISTA pero no
    enviada".
 6. **Si nadie entra a revisar**, a las `RECORDATORIO_HORAS` (4 por defecto)

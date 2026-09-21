@@ -38,25 +38,46 @@ _MODOS_TOKEN = ("graph", "token", "prod")
 _MODOS_OUTLOOK = ("outlook", "com", "escritorio")
 
 
-def envio_habilitado() -> bool:
-    """
-    Interruptor del envío real de correo.
-
-    Por defecto está **apagado**: el correo se construye y se registra en el
-    log, pero no sale. Para habilitarlo, ``ENVIO_AUTOMATICO=true`` en el .env.
-    Es un buzón de clientes reales; el envío automático se enciende a
-    propósito, no por arrastre del cableado.
+def _interruptor(nombre: str, por_defecto: bool) -> bool:
+    """Lee un interruptor de envío de la configuración o del entorno.
 
     ``config`` ya lo entrega convertido a bool (COT-56); el resto del cuerpo
     cubre que se inyecte a mano en pruebas o por variable de entorno.
     """
     import app.core.config as config
-    valor = getattr(config, "ENVIO_AUTOMATICO", None)
+    valor = getattr(config, nombre, None)
     if isinstance(valor, bool):
         return valor
     if valor is None:
-        valor = os.environ.get("ENVIO_AUTOMATICO", "false")
+        valor = os.environ.get(nombre)
+    if valor is None:
+        return por_defecto
     return str(valor).strip().lower() in ("1", "true", "yes", "on")
+
+
+def envio_habilitado(manual: bool = False) -> bool:
+    """
+    ¿Sale el correo de verdad?
+
+    Hay DOS interruptores porque son dos decisiones distintas:
+
+    * Lo que el sistema manda SOLO —la petición de datos al comprador, la
+      declinación, los recordatorios— va con ``ENVIO_AUTOMATICO``, apagado por
+      defecto. Es un buzón de clientes reales: el robot no escribe por
+      arrastre del cableado.
+
+    * Lo que manda UNA PERSONA pulsando un botón, con el destinatario y las
+      condiciones delante —hoy, la oferta— va con ``ENVIO_MANUAL``, encendido
+      por defecto. Ahí ya hay alguien decidiendo; exigirle además encender el
+      envío automático significaba que, para que llegara UNA oferta, el robot
+      quedaba suelto contestándole a cualquiera.
+
+    Con los dos apagados no sale un solo correo, que es lo que hace falta para
+    ensayar el recorrido entero sin molestar a nadie.
+    """
+    if manual:
+        return _interruptor("ENVIO_MANUAL", True)
+    return _interruptor("ENVIO_AUTOMATICO", False)
 
 
 def enviar(contenido) -> bool:

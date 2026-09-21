@@ -236,6 +236,40 @@ const I18N = (() => {
         'plano.fallo':       { en: 'Reading {ficheros} failed: {motivo}', es: 'Se intentó leer {ficheros} y falló: {motivo}', fr: 'La lecture de {ficheros} a échoué : {motivo}' },
         'plano.leidoVacio':  { en: 'The drawing ({ficheros}) was read and gave no dimensions.', es: 'El plano ({ficheros}) se leyó y no dio ninguna cota.', fr: 'Le plan ({ficheros}) a été lu et n’a donné aucune cote.' },
 
+        // --- Los motivos del dictamen de factibilidad --------------------
+        // El motor (app/feasibility/engine.py) razona con un código, el campo,
+        // el valor y el límite; desde la migración 022 eso se guarda con la
+        // bandera y la frase se arma aquí, en el idioma puesto.
+        'factib.tipo_desconocido':      { en: 'The spring type could not be determined; it is judged only against the common ranges.', es: 'No se pudo determinar el tipo de resorte; se evalúa sólo con los rangos comunes.', fr: 'Le type de ressort n’a pas pu être déterminé ; il est jugé seulement sur les plages communes.' },
+        'factib.tipo_no_fabricable':    { en: 'Spring type not manufacturable: {valor}. The plant makes {limite}.', es: 'Tipo de resorte no fabricable: {valor}. La planta fabrica {limite}.', fr: 'Type de ressort non fabricable : {valor}. L’usine fabrique {limite}.' },
+        'factib.material_ausente':      { en: 'The drawing does not state a material.', es: 'El plano no declara material.', fr: 'Le plan ne déclare pas de matière.' },
+        'factib.material_no_soportado': { en: 'Material not supported: {valor}. It matches none of the plant materials.', es: 'Material no soportado: {valor}. No coincide con ninguno de los materiales de la planta.', fr: 'Matière non prise en charge : {valor}. Elle ne correspond à aucune matière de l’usine.' },
+        'factib.material_fuera_de_rango': { en: 'Wire of {valor} mm falls outside the gauges in which this material is available.', es: 'El alambre de {valor} mm queda fuera de los calibres en que se consigue este material.', fr: 'Le fil de {valor} mm sort des calibres dans lesquels cette matière est disponible.' },
+        'factib.dato_ausente':          { en: '{Campo} is missing and is needed to decide.', es: 'Falta {campo} para dictaminar.', fr: '{Campo} manque et est nécessaire pour décider.' },
+        'factib.dato_no_numerico':      { en: '{Campo} is not a number: {valor}.', es: '{Campo} no es un número: {valor}.', fr: '{Campo} n’est pas un nombre : {valor}.' },
+        'factib.fuera_de_rango':        { en: '{Campo} out of range: {valor}{unidad} (manufacturable {limite}).', es: '{Campo} fuera de rango: {valor}{unidad} (fabricable {limite}).', fr: '{Campo} hors plage : {valor}{unidad} (fabricable {limite}).' },
+        'factib.fuera_del_preferido':   { en: '{Campo} at {valor}{unidad}: manufacturable, but outside the usual range ({limite}).', es: '{Campo} en {valor}{unidad}: fabricable, pero fuera del rango habitual ({limite}).', fr: '{Campo} à {valor}{unidad} : fabricable, mais hors de la plage habituelle ({limite}).' },
+        'factib.tolerancia_mas_fina':   { en: 'The drawing asks for ±{valor} mm and the plant\'s minimum tolerance is ±{limite} mm.', es: 'El plano pide ±{valor} mm y la tolerancia mínima de la planta es ±{limite} mm.', fr: 'Le plan demande ±{valor} mm et la tolérance minimale de l’usine est ±{limite} mm.' },
+        'factib.confianza_baja':        { en: 'The drawing was read with {valor} confidence, below the {limite} minimum.', es: 'La extracción del plano quedó en {valor} de confianza, por debajo del mínimo de {limite}.', fr: 'La lecture du plan est à {valor} de confiance, sous le minimum de {limite}.' },
+
+        // Los campos del resorte, para poder nombrarlos dentro de los motivos.
+        'campo.diametro_alambre_mm':    { en: 'wire diameter', es: 'diámetro de alambre', fr: 'diamètre du fil' },
+        'campo.diametro_exterior_mm':   { en: 'outer diameter', es: 'diámetro exterior', fr: 'diamètre extérieur' },
+        'campo.diametro_interior_mm':   { en: 'inner diameter', es: 'diámetro interior', fr: 'diamètre intérieur' },
+        'campo.diametro_medio_mm':      { en: 'mean diameter', es: 'diámetro medio', fr: 'diamètre moyen' },
+        'campo.longitud_libre_mm':      { en: 'free length', es: 'longitud libre', fr: 'longueur libre' },
+        'campo.longitud_cuerpo_mm':     { en: 'body length', es: 'longitud del cuerpo', fr: 'longueur du corps' },
+        'campo.numero_espiras_totales': { en: 'number of coils', es: 'número de espiras', fr: 'nombre de spires' },
+        'campo.numero_espiras_activas': { en: 'active coils', es: 'espiras activas', fr: 'spires actives' },
+        'campo.angulo_brazos_grados':   { en: 'angle between legs', es: 'ángulo entre brazos', fr: 'angle entre les branches' },
+        'campo.longitud_gancho_mm':     { en: 'hook length', es: 'longitud del gancho', fr: 'longueur du crochet' },
+        'campo.constante_resorte_N_mm': { en: 'spring rate', es: 'constante del resorte', fr: 'raideur du ressort' },
+        'campo.material':               { en: 'material', es: 'material', fr: 'matière' },
+        'campo.indice_resorte':         { en: 'spring index (Dm/d)', es: 'índice del resorte (Dm/d)', fr: 'indice du ressort (Dm/d)' },
+        'campo.tipo_resorte':           { en: 'spring type', es: 'tipo de resorte', fr: 'type de ressort' },
+        'campo.tolerancias':            { en: 'tolerances', es: 'tolerancias', fr: 'tolérances' },
+        'campo.confianza':              { en: 'reading confidence', es: 'confianza de la lectura', fr: 'confiance de la lecture' },
+
         // Los motivos de un costeo incompleto y de una oferta que no está
         // lista. El servidor los manda con su CÓDIGO (pricing/mensajes.py)
         // porque él no sabe en qué idioma está Pohua: la frase se arma aquí.
@@ -504,7 +538,7 @@ const I18N = (() => {
         'oferta.titulo':       { en: 'Offer', es: 'Oferta', fr: 'Offre' },
         'oferta.verPdf':       { en: 'View PDF', es: 'Ver PDF', fr: 'Voir le PDF' },
         'oferta.enviar':       { en: 'Send offer', es: 'Enviar oferta', fr: 'Envoyer l’offre' },
-        'oferta.envioApagado': { en: 'Outgoing mail is off (ENVIO_AUTOMATICO): the PDF is generated and the email is built and logged, but nothing reaches the customer.', es: 'El envío de correo está apagado (ENVIO_AUTOMATICO): el PDF se genera y el correo se construye y se registra, pero al cliente no le llega nada.', fr: 'L’envoi de courriel est désactivé (ENVIO_AUTOMATICO) : le PDF est généré et le courriel construit et journalisé, mais rien ne part au client.' },
+        'oferta.envioApagado': { en: 'Sending is off (ENVIO_MANUAL): the PDF is generated and the email is built and logged, but nothing reaches the customer.', es: 'El envío está apagado (ENVIO_MANUAL): el PDF se genera y el correo se construye y se registra, pero al cliente no le llega nada.', fr: 'L’envoi est désactivé (ENVIO_MANUAL) : le PDF est généré et le courriel construit et journalisé, mais rien ne part au client.' },
         'oferta.pendiente':    { en: 'Before sending', es: 'Antes de mandarla', fr: 'Avant l’envoi' },
         'oferta.yaEnviada':    { en: 'Offer already sent to', es: 'Oferta ya enviada a', fr: 'Offre déjà envoyée à' },
         'oferta.yaGenerada':   { en: 'Offer already generated (not sent) for', es: 'Oferta ya generada (sin enviar) para', fr: 'Offre déjà générée (non envoyée) pour' },
@@ -804,7 +838,42 @@ const I18N = (() => {
         fijar(guardado || delNavegador(), { guardarlo: !guardado });
     }
 
-    return { t, aplicar, fijar, alCambiar, init, IDIOMAS,
+    /**
+     * Un motivo que llegó del servidor, dicho en el idioma puesto.
+     *
+     * El servidor manda `{codigo, datos, texto|titulo}`: él no sabe en qué
+     * idioma está Pohua —y el mismo RFQ lo abren personas distintas—, así que
+     * la frase se arma aquí. Si el código no se conoce (una bandera guardada
+     * antes de que esto existiera, o una versión más nueva del servidor), se
+     * usa la frase que vino: mejor en español que un hueco.
+     *
+     * `campo` se traduce también, en dos formas: {campo} en minúscula, para
+     * meterlo en medio de una frase, y {Campo} para empezarla.
+     */
+    function motivo(prefijo, m) {
+        if (!m) return '';
+        if (typeof m === 'string') return m;
+        const respaldo = m.texto || m.titulo || '';
+        if (!m.codigo) return respaldo;
+
+        const clave = prefijo + m.codigo;
+        const datos = Object.assign({}, m.datos || {});
+        if (datos.campo) {
+            const etiqueta = t('campo.' + datos.campo);
+            const nombre = etiqueta === 'campo.' + datos.campo
+                ? String(datos.campo).replace(/_/g, ' ') : etiqueta;
+            datos.campo = nombre;
+            datos.Campo = nombre.charAt(0).toUpperCase() + nombre.slice(1);
+        }
+        if (Array.isArray(datos.limite)) datos.limite = datos.limite.join(', ');
+        // Una bandera guardada antes de que la unidad viajara no la trae: se
+        // pone vacía para que no salga el hueco "{unidad}" en la frase.
+        if (datos.unidad === undefined) datos.unidad = '';
+        const texto = t(clave, datos);
+        return texto === clave ? respaldo : texto;
+    }
+
+    return { t, motivo, aplicar, fijar, alCambiar, init, IDIOMAS,
              get idioma() { return actual; } };
 })();
 

@@ -290,15 +290,22 @@ def guardar_veredicto(
                         (rfq_row_id,))
 
             if motivos:
+                # El título se guarda como siempre —es el respaldo y lo que
+                # lee cualquier versión anterior—, y con él el CÓDIGO del
+                # motivo y los datos con los que se armó. Con eso la pantalla
+                # puede decirlo en el idioma que tenga puesto en vez de
+                # enseñar la frase en español dentro de una vista en inglés.
                 sql_bandera = """
-                INSERT INTO rfq_banderas (rfq_version_id, nivel, titulo)
-                VALUES (%s, %s, %s);
+                INSERT INTO rfq_banderas (rfq_version_id, nivel, titulo, codigo, datos)
+                VALUES (%s, %s, %s, %s, %s);
                 """
                 for motivo in motivos:
                     cur.execute(sql_bandera, (
                         rfq_row_id,
                         motivo["nivel"],
                         _titulo_de_motivo(motivo),
+                        motivo.get("codigo"),
+                        json.dumps(_datos_de_motivo(motivo), ensure_ascii=False),
                     ))
     finally:
         if propia:
@@ -402,6 +409,17 @@ def _a_dict(datos_json) -> dict:
     except (TypeError, ValueError):
         return {}
     return cargado if isinstance(cargado, dict) else {}
+
+
+def _datos_de_motivo(motivo: dict) -> dict:
+    """Los datos con los que se armó el motivo, para rearmarlo en otro idioma.
+
+    Sólo lo que hace falta para escribir la frase: el campo, el valor y el
+    límite. La nota larga y la penalización no se pintan, así que no viajan.
+    """
+    return {clave: motivo.get(clave)
+            for clave in ("campo", "valor", "limite", "unidad")
+            if motivo.get(clave) is not None}
 
 
 def _titulo_de_motivo(motivo: dict) -> str:

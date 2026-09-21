@@ -121,7 +121,11 @@ const Revision = (() => {
             lista.push({ nivel: 'info', texto: t('rev.aviso.moq') });
         }
         for (const m of (f.motivos || [])) {
-            const texto = typeof m === 'string' ? m : (m && (m.texto || m.motivo || m.mensaje)) || JSON.stringify(m);
+            // Los del motor de factibilidad vienen con su código; se dicen en
+            // el idioma puesto igual que los del costeo.
+            const texto = typeof m === 'string' ? m
+                : (m && m.codigo) ? I18N.motivo('factib.', m)
+                : ((m && (m.texto || m.motivo || m.mensaje)) || JSON.stringify(m));
             lista.push({ nivel: 'info', texto });
         }
         for (const campo of (d.campos_faltantes || [])) {

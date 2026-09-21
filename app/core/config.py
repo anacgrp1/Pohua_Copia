@@ -152,9 +152,22 @@ class Settings:
     VAPID_SUBJECT: str = ""
 
     # --- Correo saliente (COT-36) ---
-    # Interruptor del envío automático de respuestas al comprador. Apagado
-    # por defecto: el correo se construye y se registra, pero no sale.
+    # Dos interruptores, porque son dos cosas distintas y se decidían con una.
+    #
+    # ENVIO_AUTOMATICO — lo que el sistema manda SOLO: la petición de datos al
+    # comprador, la declinación, los recordatorios. Apagado por defecto: es un
+    # buzón de clientes reales y el robot no escribe por arrastre del cableado.
+    #
+    # ENVIO_MANUAL — lo que manda UNA PERSONA pulsando un botón, con el
+    # destinatario y las condiciones delante: hoy, la oferta. Encendido por
+    # defecto, porque ahí ya hay alguien decidiendo. Con los dos apagados no
+    # sale un solo correo, que es lo que hace falta para ensayar el recorrido.
+    #
+    # Estaban juntos bajo ENVIO_AUTOMATICO, así que para que la oferta llegara
+    # había que encender también las respuestas automáticas del robot: o no
+    # sale nada, o sale todo.
     ENVIO_AUTOMATICO: bool = False
+    ENVIO_MANUAL: bool = True
 
     # Volver a procesar un correo que ya se procesó (mismo Message-ID).
     #

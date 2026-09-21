@@ -50,7 +50,7 @@ const RFQDetailPage = {
             // píldora de tres renglones con el texto centrado.
             const banderas = (rfq.banderas || []).map(f => `
                 <li class="rfqd-bandera rfqd-bandera--${f.nivel === 'ERROR' ? 'error' : 'aviso'}">
-                    ${esc(f.titulo)}
+                    ${esc(I18N.motivo('factib.', f))}
                 </li>`).join('');
 
             const fila = (clave, valor, extra = '') => `
@@ -118,6 +118,24 @@ const RFQDetailPage = {
     },
 
     /**
+     * El porqué de un fallo, en una línea que se pueda leer.
+     *
+     * Lo que llega es la excepción tal cual, y cuando falla el modelo eso es
+     * un volcado JSON entero —"Error code: 400 - {'type': 'error', 'error':
+     * {'type': 'invalid_request_error', 'message': …"— que llenaba la tarjeta
+     * de ruido sin decir más que la primera frase. El volcado completo sigue
+     * en el registro del servidor, que es donde se va a buscar de verdad.
+     */
+    motivoCorto(motivo) {
+        let texto = String(motivo || '').trim();
+        if (!texto) return '';
+        // Lo que va antes del volcado: "… failed: Error code: 400" y basta.
+        const corte = texto.search(/\s*[-–]\s*[{[]/);
+        if (corte > 20) texto = texto.slice(0, corte);
+        return texto.length > 160 ? texto.slice(0, 157) + '…' : texto;
+    },
+
+    /**
      * Por qué esta tarjeta está vacía.
      *
      * Estos valores no salen del correo: salen de LEER EL PLANO. Vacía, la
@@ -142,7 +160,7 @@ const RFQDetailPage = {
             texto = I18N.t('plano.sinFormato', {
                 ficheros, soportados: (lectura.soportados || []).join(', ') });
         } else if (lectura.estado === 'fallo') {
-            texto = I18N.t('plano.fallo', { ficheros, motivo: lectura.motivo || '' });
+            texto = I18N.t('plano.fallo', { ficheros, motivo: this.motivoCorto(lectura.motivo) });
         } else if (lectura.estado === 'leido') {
             texto = I18N.t('plano.leidoVacio', { ficheros });
         }

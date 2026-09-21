@@ -1122,8 +1122,23 @@
         campo.files = dt.files;
         campo.dispatchEvent(new Event('change', { bubbles: true }));
 
-        if (esPlantManager() && ficheros.length === 1) {
+        /* Se lee SIEMPRE uno solo, el primero, aunque el correo trajera
+           varios.
+
+           El botón "AI Read Drawing" de la calculadora, con más de un
+           fichero en la casilla, entra en su modo por lotes: UN NÚMERO DE
+           PARTE POR FICHERO. Con el plano y una segunda imagen dentro, eso
+           abría un "PN 2" con la segunda imagen y dejaba la hoja mirando a
+           esa pieza inventada —sin descripción, sin cotas y sin resorte—,
+           que es exactamente lo que no se quería ver al abrir la cotización.
+
+           Los demás se quedan cargados para quien quiera leerlos a mano. */
+        if (esPlantManager()) {
             leerPlanoSolo(ficheros[0], q);
+            if (ficheros.length > 1) {
+                aviso('Hay ' + ficheros.length + ' ficheros del correo en la casilla; ' +
+                      'se lee el primero (' + ficheros[0].name + '). Los demás, a mano.');
+            }
             return;
         }
         aviso(ficheros.length === 1

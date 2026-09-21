@@ -56,6 +56,51 @@ def _modo_por_defecto() -> str:
     return str(modo).lower()
 
 
+# Lo que puede ser un plano y lo que no.
+_EXT_PLANO = (".pdf", ".png", ".jpg", ".jpeg", ".stp", ".step")
+
+# Una imagen más pequeña que esto no es un dibujo de ingeniería: es un logo.
+# Los PDF no pasan por aquí —uno de una página pesa lo que pesa— y los planos
+# de verdad, escaneados o exportados, no bajan de este tamaño.
+_MINIMO_IMAGEN = 20 * 1024
+
+
+def es_plano(adjunto: dict) -> bool:
+    """¿Este adjunto es un plano, o es la firma del correo?
+
+    Un correo de trabajo trae la firma con su logo como un adjunto más, y por
+    nombre y extensión (image.png) es indistinguible de un dibujo. Colarla
+    costaba caro: se guardaba como plano del RFQ, se le pasaba al modelo para
+    que la leyera, y al abrir la cotización completa aparecía en la casilla
+    del lector junto al plano de verdad —y al pulsar "AI Read Drawing", la
+    calculadora abría un SEGUNDO número de parte con el logo dentro—.
+
+    Se descarta por dos señales, en este orden:
+
+    1. Va incrustada en el cuerpo (tiene Content-ID). Es la señal buena: el
+       HTML la pinta con <img src="cid:...">, o sea que es parte de la firma,
+       no un archivo que alguien adjuntó.
+    2. Es una imagen diminuta. Respaldo para cuando el proveedor de correo no
+       marca lo incrustado.
+    """
+    if adjunto.get("en_linea"):
+        return False
+    nombre = str(adjunto.get("nombre") or "").lower()
+    ext = os.path.splitext(nombre)[1]
+    if ext not in _EXT_PLANO:
+        return False
+    if ext in (".png", ".jpg", ".jpeg"):
+        contenido = adjunto.get("contenido") or b""
+        if len(contenido) < _MINIMO_IMAGEN:
+            return False
+    return True
+
+
+def solo_planos(adjuntos) -> list:
+    """Los adjuntos que sí son planos, en el mismo orden."""
+    return [a for a in (adjuntos or []) if es_plano(a)]
+
+
 def guardar_planos(
     rfq_id: str,
     adjuntos: Optional[list],
@@ -79,7 +124,13 @@ def guardar_planos(
         Lista de ubicaciones (rutas de disco o nombres de blob). Vacía si no
         hay adjuntos.
     """
-    adjuntos = adjuntos or []
+    # La firma del correo no es un plano: se queda fuera del almacén y, por
+    # tanto, fuera de la casilla del lector cuando se abra la cotización.
+    descartados = len(adjuntos or []) - len(solo_planos(adjuntos))
+    adjuntos = solo_planos(adjuntos)
+    if descartados:
+        log.info("RFQ %s: %d adjunto(s) no son planos (firma o imagen "
+                 "incrustada); no se guardan.", rfq_id, descartados)
     if not adjuntos:
         log.info("RFQ %s sin planos que persistir.", rfq_id)
         return []

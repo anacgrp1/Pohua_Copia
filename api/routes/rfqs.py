@@ -109,7 +109,7 @@ def get_rfq(
     params = [rfq_id] + ([version] if version else [])
 
     sql_banderas = """
-        SELECT b.nivel, b.titulo
+        SELECT b.nivel, b.titulo, b.codigo, b.datos
         FROM rfq_banderas b
         WHERE b.rfq_version_id = %s
         ORDER BY b.id;
@@ -143,7 +143,12 @@ def get_rfq(
             banderas = []
             try:
                 cur.execute(sql_banderas, (rfq_row_id,))
-                banderas = [{"nivel": r[0], "titulo": r[1]} for r in cur.fetchall()]
+                # `codigo` y `datos` pueden venir vacíos: son de las banderas
+                # guardadas a partir de la migración 022. Sin ellos la
+                # pantalla usa el título, que es el de siempre.
+                banderas = [{"nivel": r[0], "titulo": r[1],
+                             "codigo": r[2], "datos": r[3] or {}}
+                            for r in cur.fetchall()]
             except Exception:
                 pass  # Table might not have rfq_banderas yet
 
@@ -467,7 +472,12 @@ def ver_oferta(
         "pdf": prep["pdf"],
         "costeo": prep["costeado"]["costeo"],
         "oferta_anterior": (rfq["datos"] or {}).get("oferta"),
-        "envio_habilitado": __import__("app.email.outbound", fromlist=["x"]).envio_habilitado(),
+        # El aviso de "no va a salir" que enseña el diálogo mira el
+        # interruptor MANUAL, que es el que decide este envío: con el del
+        # robot apagado, la oferta sale igual y decir lo contrario sería
+        # mentirle a quien está a punto de pulsar.
+        "envio_habilitado": __import__("app.email.outbound",
+                                       fromlist=["x"]).envio_habilitado(manual=True),
         "puede_enviar": usuario.puede("rfq:dictaminar"),
     }
 

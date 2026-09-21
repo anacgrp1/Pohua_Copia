@@ -167,6 +167,27 @@ class Reglas:
                 return nombre
         return None
 
+    def codigo_material(self, texto: Optional[str]) -> Optional[str]:
+        """Código de catálogo del material, a partir del texto libre del RFQ.
+
+        El correo y el plano hablan como habla un comprador —"ASTM A228 music
+        wire, zinc plated finish"—, y el catálogo de costeo guarda códigos
+        ("MW"). Sin esta traducción el costeo buscaba en ``materiales`` una
+        fila cuyo código fuera esa frase entera, nunca la encontraba, y daba
+        por faltante un material que sí está en la planta.
+
+        Se apoya en el mismo índice de alias que ``material_soportado``, así
+        que declarar un alias nuevo en ``reglas/factibilidad.json`` arregla a
+        la vez el dictamen y el precio.
+        """
+        nombre = self.material_soportado(texto)
+        if nombre is None:
+            return None
+        for material in self._materiales:
+            if material["nombre"] == nombre:
+                return material.get("codigo")
+        return None
+
     def rango_alambre_material(self, nombre: Optional[str]) -> Optional[dict]:
         """Calibres en los que se consigue ese material, si el archivo lo declara.
 

@@ -330,12 +330,19 @@ class OutlookEmailProvider(BaseEmailProvider):
                 if getattr(adjunto, "Size", 0) > MAX_BYTES_ADJUNTO:
                     logger.warning("Adjunto '%s' demasiado grande: se omite.", nombre)
                     continue
+                # ¿Va incrustado en el cuerpo? La firma con logo llega como un
+                # adjunto más y Outlook no lo dice en ninguna propiedad
+                # normal: hay que preguntarle a MAPI por el Content-ID, que es
+                # justo lo que la distingue de un plano de verdad.
+                cid = self._propiedad(adjunto, PR_ATTACH_CONTENT_ID)
                 # Outlook no entrega los bytes: los escribe en disco.
                 carpeta = tempfile.mkdtemp(prefix="pohua-adj-")
                 ruta = os.path.join(carpeta, os.path.basename(nombre))
                 adjunto.SaveAsFile(ruta)
                 with open(ruta, "rb") as fichero:
-                    fuera.append(EmailAttachment(filename=nombre, content=fichero.read()))
+                    fuera.append(EmailAttachment(filename=nombre,
+                                                 content=fichero.read(),
+                                                 content_id=cid or None))
             except Exception as error:
                 logger.warning("No se pudo guardar un adjunto: %s", error)
             finally:

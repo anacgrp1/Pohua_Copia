@@ -270,9 +270,14 @@ def enviar(rfq_id: str, usuario: Optional[str] = None,
     import app.rfq.repository as repository
 
     prep = preparar(rfq_id, opciones, conexion=conexion)
-    bloqueos = [m for m in prep["motivos"]
-                if m.startswith("El RFQ está en") or m.startswith("No hay tramos")
-                or m.startswith("No hay a quién")]
+    # Lo que impide mandar pase lo que pase, por CÓDIGO. Se miraba cómo
+    # empezaba la frase ("El RFQ está en…"), así que el día que esa frase
+    # cambie —o se diga en otro idioma— dejarían de detectarse y la oferta
+    # saldría sin tramos o sin destinatario.
+    _BLOQUEAN = ("OFERTA_NO_APROBADA", "OFERTA_SIN_TRAMOS", "OFERTA_SIN_DESTINO")
+    bloqueos = [m.get("texto") or m.get("codigo")
+                for m in prep.get("motivos_i18n") or []
+                if m.get("codigo") in _BLOQUEAN]
     if bloqueos:
         raise ValueError(" ".join(bloqueos))
     if prep["motivos"] and not forzar:
@@ -287,7 +292,11 @@ def enviar(rfq_id: str, usuario: Optional[str] = None,
     params["adjuntos"] = [str(archivo)]
     contenido = templates.construir_correo("oferta_cliente", params)
 
-    habilitado = outbound.envio_habilitado()
+    # La oferta la manda una PERSONA desde la pantalla, con el destinatario y
+    # las condiciones delante, así que va por el interruptor manual y no por
+    # el del robot: pedir ENVIO_AUTOMATICO para esto significaba que, para que
+    # llegara una oferta, el sistema quedaba suelto contestando solo.
+    habilitado = outbound.envio_habilitado(manual=True)
     enviado = False
     if habilitado:
         try:
@@ -296,7 +305,7 @@ def enviar(rfq_id: str, usuario: Optional[str] = None,
             log.error("RFQ=%s: la oferta no salió: %s", rfq_id, error)
             raise RuntimeError(f"La oferta se generó pero el correo no salió: {error}") from error
     else:
-        log.info("RFQ=%s: oferta LISTA pero no enviada (ENVIO_AUTOMATICO apagado). "
+        log.info("RFQ=%s: oferta LISTA pero no enviada (ENVIO_MANUAL apagado). "
                  "Para: %s · %s", rfq_id, params["destinatario"], archivo)
 
     ahora = _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds")

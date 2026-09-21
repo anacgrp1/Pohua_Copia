@@ -209,9 +209,58 @@ _SQL_SURCHARGE = """
 """
 
 
+_SQL_MATERIAL_POR_TEXTO = """
+    SELECT m.id, m.codigo, m.nombre, m.lleva_surcharge,
+           mp.precio_lb, mp.diam_pulg, mp.fecha_cotizado
+    FROM materiales m
+    LEFT JOIN LATERAL (
+        SELECT precio_lb, diam_pulg, fecha_cotizado
+        FROM material_precios p
+        WHERE p.material_id = m.id
+        ORDER BY abs(p.diam_pulg - %(diam_pulg)s) ASC, p.fecha_cotizado DESC
+        LIMIT 1
+    ) mp ON true
+    WHERE m.activo
+      AND (upper(m.nombre) = upper(%(texto)s)
+           OR (m.astm IS NOT NULL AND upper(m.astm) = upper(%(texto)s)))
+    LIMIT 1;
+"""
+
+
+def codigo_de_material(texto: Optional[str]) -> Optional[str]:
+    """Código de catálogo para el material tal como viene escrito en el RFQ.
+
+    El comprador no escribe códigos: escribe "ASTM A228 music wire, zinc
+    plated finish". El catálogo de costeo guarda "MW". Sin traducir, la
+    consulta buscaba una fila cuyo código fuera esa frase entera, no la
+    encontraba y el costeo declaraba faltante un material que la planta tiene
+    en existencia.
+
+    La tabla de equivalencias es la de factibilidad
+    (``reglas/factibilidad.json``), a propósito: es donde ya están los alias
+    del material, y así el dictamen y el precio no pueden opinar distinto
+    sobre si un material existe. Si las reglas no se pueden leer, se devuelve
+    ``None`` y se sigue con el texto crudo: traducir es una mejora, no un
+    requisito para costear.
+    """
+    if not texto or not str(texto).strip():
+        return None
+    try:
+        import app.feasibility.rules as reglas_mod
+        return reglas_mod.cargar_reglas().codigo_material(texto)
+    except Exception as err:
+        log.debug("No se pudo traducir el material %r a código: %s", texto, err)
+        return None
+
+
 def precio_material(codigo: str, diametro_pulg: Optional[float] = None,
                     conexion=None, en_fecha: Optional[date] = None) -> Optional[Dict[str, Any]]:
     """Material y su precio por libra más cercano al calibre pedido.
+
+    ``codigo`` admite tanto el código del catálogo ("MW") como el texto libre
+    del correo o del plano ("ASTM A228 music wire, zinc plated finish"): se
+    prueba primero tal cual, luego el código al que lo traducen los alias de
+    factibilidad, y por último el nombre o la norma ASTM completos.
 
     Se elige el precio del diámetro más próximo al del resorte, y entre varios
     del mismo diámetro, el más reciente. Si el material lleva surcharge de
@@ -222,10 +271,28 @@ def precio_material(codigo: str, diametro_pulg: Optional[float] = None,
     hoy = en_fecha or date.today()
     diam = diametro_pulg if diametro_pulg is not None else 0.0
 
+    crudo = str(codigo).strip()
+    candidatos = [crudo]
+    canonico = codigo_de_material(crudo)
+    if canonico and canonico.upper() != crudo.upper():
+        candidatos.append(canonico)
+
     with _conexion(conexion) as conn:
         with conn.cursor() as cur:
-            cur.execute(_SQL_MATERIAL, {"codigo": codigo.strip(), "diam_pulg": diam})
-            fila = cur.fetchone()
+            fila = None
+            for candidato in candidatos:
+                cur.execute(_SQL_MATERIAL, {"codigo": candidato, "diam_pulg": diam})
+                fila = cur.fetchone()
+                if fila:
+                    if candidato != crudo:
+                        log.info("Material %r resuelto al código de catálogo %r.",
+                                 crudo, candidato)
+                    break
+            if not fila:
+                # Último intento: el RFQ trae el nombre del catálogo o la norma
+                # tal cual ("Stainless Steel 316 (ASTM A313 Type 316)", "A228").
+                cur.execute(_SQL_MATERIAL_POR_TEXTO, {"texto": crudo, "diam_pulg": diam})
+                fila = cur.fetchone()
             if not fila:
                 return None
 

@@ -105,11 +105,21 @@ class ImapEmailProvider(BaseEmailProvider):
                                         "utf-8", errors="replace"
                                     )
 
+                            # La firma con logo llega como un adjunto más,
+                            # pero el MIME la distingue: trae Content-ID (el
+                            # cuerpo la pinta con <img src="cid:...">) o se
+                            # declara "inline". Se apunta para no confundirla
+                            # con un plano.
+                            cid = str(part.get("Content-ID") or "").strip("<> ")
+                            if not cid and "inline" in content_disposition:
+                                cid = str(decoded_filename)
+
                             attachments.append(
                                 EmailAttachment(
                                     filename=str(decoded_filename),
                                     content=payload,
-                                    content_type=content_type
+                                    content_type=content_type,
+                                    content_id=cid or None,
                                 )
                             )
                     except Exception as ex:

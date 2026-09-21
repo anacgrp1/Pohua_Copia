@@ -103,7 +103,11 @@ def map_email_message(msg):
             {
                 "nombre": att.filename,
                 "contenido": att.content,
-                "content_type": att.content_type
+                "content_type": att.content_type,
+                # Incrustado en el cuerpo (la firma, el logo) o adjuntado de
+                # verdad. Un logo de firma no es un plano y no puede acabar
+                # en el lector ni en la casilla de la calculadora.
+                "en_linea": bool(getattr(att, "content_id", None)),
             }
             for att in msg.attachments
         ]
