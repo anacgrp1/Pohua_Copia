@@ -215,6 +215,10 @@ const API = {
     releerPlano(rfqId) {
         return this.request('POST', `/api/rfqs/${rfqId}/releer-plano`);
     },
+    /** Rehacer el dictamen con lo que el PM corrigió (y el plano, si lo pide). */
+    recalcularRfq(rfqId, cuerpo) {
+        return this.request('POST', `/api/rfqs/${rfqId}/recalcular`, cuerpo || {});
+    },
     /** Un plano de los que llegaron en el correo, tal cual, como Blob. */
     async descargarPlano(rfqId, nombre) {
         const token = this.getToken();

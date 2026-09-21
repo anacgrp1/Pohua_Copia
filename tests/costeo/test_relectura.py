@@ -151,8 +151,13 @@ def test_un_fallo_del_modelo_no_lanza(almacen_falso):
 
     assert r["estado"] == "fallo"
     assert r["resorte"] is None
-    assert "400" in r["motivo"]
     assert almacen_falso["guardados"] == []
+    # El motivo ya no es el volcado de la librería, sino algo que se puede
+    # leer y sobre lo que se puede actuar (app/core/modelo_errores.py).
+    import app.core.modelo_errores as modelo_errores
+    assert r["codigo"] == modelo_errores.PETICION_MALA
+    assert "400" not in r["motivo"]
+    assert r["reintentar"] is False
 
 
 def test_un_plano_listado_pero_ilegible_se_omite(almacen_falso, monkeypatch):

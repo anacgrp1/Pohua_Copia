@@ -413,6 +413,67 @@ const Revision = (() => {
             </div>`;
     }
 
+    /**
+     * La geometría con la que se está dictaminando, y editable.
+     *
+     * Por qué editable y por qué AQUÍ: el veredicto se calculaba una sola vez,
+     * al entrar el correo, y se quedaba grabado. El PM mira el dibujo, ve que
+     * el modelo leyó 1.6 donde dice 1.8, y antes esa corrección no tenía
+     * dónde ir: o dictaminaba sobre un dato que sabe malo, o lo corregía en la
+     * calculadora y el RFQ se quedaba con el valor viejo.
+     *
+     * Los campos son los que mueven el dictamen y el costeo. Nada más: por
+     * aquí entra lo que alguien escribe en un formulario, y la lista de lo que
+     * puede tocar la cierra el servidor (app/rfq/recalculo.py).
+     */
+    function geometria(d) {
+        const g = d.resorte || {};
+        const puede = d.puede_dictaminar && API.puede('rfq:dictaminar');
+        const lec = d.lectura_plano;
+
+        const campo = (clave, etiqueta, valor, unidad) => `
+            <label class="revision-campo">
+                <span class="revision-campo-et">${esc(etiqueta)}${unidad ? ` <i>${esc(unidad)}</i>` : ''}</span>
+                <input type="text" inputmode="decimal" data-campo="${esc(clave)}"
+                       value="${valor === null || valor === undefined ? '' : esc(valor)}"
+                       ${puede ? '' : 'disabled'}>
+            </label>`;
+
+        // Por qué la tarjeta está vacía, cuando lo está: es la diferencia
+        // entre "el correo no traía plano" y "traía uno y ni se miró".
+        let nota = '';
+        if (lec && lec.estado && lec.estado !== 'leido') {
+            const ficheros = (lec.ficheros || []).join(', ');
+            if (lec.estado === 'sin_adjunto') nota = t('plano.sinAdjunto');
+            else if (lec.estado === 'formato_no_leido') {
+                nota = t('plano.sinFormato', { ficheros, soportados: (lec.soportados || []).join(', ') });
+            } else if (lec.estado === 'fallo') {
+                nota = t('plano.fallo', { ficheros, motivo: lec.motivo || '' });
+            }
+        }
+
+        const ajustado = g.ajustado_por
+            ? `<span class="revision-ajustado">${esc(t('rev.ajustadoPor', { quien: g.ajustado_por }))}</span>` : '';
+
+        return `
+            <section class="revision-bloque revision-geo">
+                <h4>${esc(t('rev.geometria'))}${ajustado}</h4>
+                ${nota ? `<p class="revision-geo-nota">${esc(nota)}</p>` : ''}
+                <div class="revision-campos">
+                    ${campo('diametro_alambre_mm', t('ficha.alambre'), g.diametro_alambre_mm, 'mm')}
+                    ${campo('diametro_exterior_mm', t('ficha.exterior'), g.diametro_exterior_mm, 'mm')}
+                    ${campo('longitud_libre_mm', t('ficha.libre'), g.longitud_libre_mm, 'mm')}
+                    ${campo('numero_espiras_totales', t('ficha.espiras'), g.espiras_totales, '')}
+                    ${campo('material', t('ficha.material'), g.material_texto || '', '')}
+                </div>
+                ${puede ? `<div class="revision-geo-acciones">
+                    <button type="button" class="btn btn-secondary revision-btn" data-accion="leerPlano">${esc(t('plano.releer'))}</button>
+                    <button type="button" class="btn btn-primary revision-btn" data-accion="recalcular">${esc(t('rev.recalcular'))}</button>
+                </div>
+                <p class="revision-geo-pie">${esc(t('rev.recalcularNota'))}</p>` : ''}
+            </section>`;
+    }
+
     function plantilla(d) {
         const tr = (d.tramos || [])[tramoActivo];
         const r = d.rfq || {};
@@ -424,6 +485,7 @@ const Revision = (() => {
                     ${pestanas(d)}
                     ${franja(avisos(d))}
                     ${tr ? cascada(tr) + columnas(tr) : ''}
+                    ${geometria(d)}
                     ${r.notas ? `<section class="revision-bloque revision-notas"><h4>${esc(t('rev.notas'))}</h4><pre>${esc(r.notas)}</pre></section>` : ''}
                 </div>
                 ${pie(d)}
@@ -438,6 +500,68 @@ const Revision = (() => {
         if (!capa) return;
         capa.querySelectorAll('.revision-btn').forEach(b => { b.disabled = si; });
         capa.classList.toggle('ocupado', si);
+    }
+
+    /**
+     * Rehace el dictamen con lo que haya escrito el PM.
+     *
+     * `conPlano` es el botón «Leer el plano con IA»: relee el dibujo aunque el
+     * resorte ya tenga cotas, porque el PM puede querer las del dibujo
+     * justamente porque duda de las que hay.
+     *
+     * Lo que se manda son SÓLO los campos que cambiaron. Mandar el formulario
+     * entero haría que cada recálculo marcara el resorte como "ajustado por
+     * una persona" aunque nadie tocara nada, y se perdería la distinción entre
+     * lo que leyó la IA y lo que corrigió el PM.
+     */
+    async function recalcular(conPlano) {
+        if (!API.puede('rfq:dictaminar')) { Toast.error(I18N.t('aviso.sinPermisoRfq')); return; }
+        if (!rfqAbierto || (datos && datos.esCotizacion)) return;
+
+        const previo = (datos && datos.resorte) || {};
+        const equivalencias = { numero_espiras_totales: 'espiras_totales',
+                                material: 'material_texto' };
+        const ajustes = {};
+        capa.querySelectorAll('[data-campo]').forEach((entrada) => {
+            const clave = entrada.dataset.campo;
+            const escrito = entrada.value.trim();
+            const antes = previo[equivalencias[clave] || clave];
+            const antesTexto = (antes === null || antes === undefined) ? '' : String(antes);
+            if (escrito === antesTexto) return;
+            // Vaciar un campo a propósito se dice con "-": una cadena vacía es
+            // "no lo mandé", y borraría sin querer lo que el modelo sí leyó.
+            ajustes[clave] = escrito === '' ? '-' : escrito;
+        });
+
+        bloquear(true);
+        const boton = capa.querySelector(conPlano ? '[data-accion="leerPlano"]' : '[data-accion="recalcular"]');
+        const antesTexto = boton ? boton.textContent : '';
+        if (boton) boton.textContent = I18N.t(conPlano ? 'plano.releyendo' : 'rev.recalculando');
+        try {
+            const nuevo = await API.recalcularRfq(rfqAbierto, {
+                ajustes, leer_plano: !!conPlano });
+            datos = nuevo;
+            if (tramoActivo >= (datos.tramos || []).length) tramoActivo = 0;
+            pintar();
+
+            const rec = nuevo.recalculo || {};
+            const lec = nuevo.lectura_plano;
+            if (conPlano && lec && lec.estado !== 'leido') {
+                Toast.error(I18N.t('plano.fallo', {
+                    ficheros: (lec.ficheros || []).join(', '), motivo: lec.motivo || '' }));
+            } else if (rec.error) {
+                Toast.error(rec.error);
+            } else if ((rec.tocados || []).length) {
+                Toast.success(I18N.t('rev.recalculado', { n: rec.tocados.length }));
+            } else {
+                Toast.success(I18N.t('rev.recalculadoSinCambios'));
+            }
+        } catch (err) {
+            Toast.error(err.message);
+        } finally {
+            if (boton) boton.textContent = antesTexto;
+            bloquear(false);
+        }
     }
 
     async function aprobar() {
@@ -711,6 +835,8 @@ const Revision = (() => {
             else if (accion === 'devolver') devolver();
             else if (accion === 'declinar') declinar();
             else if (accion === 'cotizar') cotizar();
+            else if (accion === 'recalcular') recalcular(false);
+            else if (accion === 'leerPlano') recalcular(true);
             return;
         }
         // Clic en el velo, fuera de la caja: se cierra. En el teléfono la caja

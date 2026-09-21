@@ -521,10 +521,18 @@ def preguntar(
         )
     except Exception as err:
         # El mensaje de la librería puede llevar detalles de la cuenta: se
-        # registra entero y al navegador va sólo lo justo.
-        log.exception("Fallo al consultar el modelo.")
-        raise HTTPException(status_code=502,
-                            detail="No se pudo consultar el modelo. Inténtalo de nuevo.") from err
+        # registra entero y al navegador va sólo lo justo. Pero «inténtalo de
+        # nuevo» a secas era peor que inútil cuando la causa no se arregla
+        # reintentando —sin saldo, clave revocada, modelo retirado—: se podía
+        # pulsar cien veces y fallar las cien, sin una pista de por qué.
+        import app.core.modelo_errores as modelo_errores
+        motivo = modelo_errores.explicar(err)
+        log.exception("Fallo al consultar el modelo (%s).", motivo["codigo"])
+        raise HTTPException(
+            status_code=502 if motivo["reintentar"] else 503,
+            detail=motivo["texto"],
+            headers={"X-Motivo": motivo["codigo"]},
+        ) from err
 
     partes = [b.text for b in respuesta.content if getattr(b, "text", None)]
     uso = getattr(respuesta, "usage", None)

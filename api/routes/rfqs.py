@@ -19,6 +19,7 @@ from api.models.schemas import (
     OfertaRequest,
     PMDecisionRequest,
     PMDecisionResponse,
+    RecalculoRequest,
     RFQDetail,
     RFQListResponse,
     RFQSummary,
@@ -280,9 +281,54 @@ def revision_rfq(
 ):
     """Todo lo que necesita la ventana de revisión del PM, ya costeado."""
     detalle = get_rfq(rfq_id, None, usuario)          # reutiliza la carga y el 404
-    datos = detalle.datos_json or {}
     resorte = detalle.resorte or {}
-    factibilidad = datos.get("factibilidad") or {}
+
+    # Esta es la ventana donde se APRUEBA o se DECLINA. Si el resorte no trae
+    # diámetro de alambre y hay plano guardado, se lee aquí con la API antes
+    # de enseñar nada: dictaminar factibilidad sobre un RFQ cuyo dibujo nunca
+    # se leyó es dictaminar sobre seis rayas. Leerlo después de aprobar no
+    # sirve —la decisión ya está tomada—.
+    #
+    # Sólo se gasta la llamada cuando falta el calibre Y hay plano, así que
+    # abrir la ventana de un RFQ ya leído no cuesta nada.
+    import app.rfq.relectura as relectura
+    asegurado = relectura.asegurar_resorte(
+        rfq_id, resorte, message_id=detalle.message_id or "")
+
+    return _ventana(detalle, usuario,
+                    resorte=asegurado["resorte"] or {},
+                    lectura=asegurado["lectura"])
+
+
+def _ventana(detalle, usuario, resorte=None, lectura=None, recalculo=None):
+    """La respuesta de la ventana de revisión, en un solo sitio.
+
+    La arman dos caminos —abrirla y recalcularla— y tienen que devolver lo
+    mismo: si el PM pulsa «Recalcular» y recibe una respuesta con otra forma,
+    la pantalla tendría que saber repintarse de dos maneras distintas, y tarde
+    o temprano una de las dos se queda atrás.
+    """
+    rfq_id = detalle.rfq_id
+    datos = detalle.datos_json or {}
+    resorte = resorte if resorte is not None else (detalle.resorte or {})
+    # El dictamen recién hecho manda sobre el que estaba guardado: es el que
+    # corresponde a las cotas que el PM tiene delante.
+    factibilidad = ((recalculo or {}).get("factibilidad")
+                    or datos.get("factibilidad") or {})
+    banderas = detalle.banderas
+    veredicto_sistema = detalle.veredicto_sistema
+    score_rfq = detalle.score
+    if recalculo and recalculo.get("factibilidad"):
+        veredicto_sistema = factibilidad.get("veredicto") or veredicto_sistema
+        score_rfq = factibilidad.get("score", score_rfq)
+        banderas = [{"nivel": m.get("nivel"), "titulo": m.get("texto"),
+                     "codigo": m.get("codigo"),
+                     "datos": {k: v for k, v in m.items()
+                               if k not in ("nivel", "texto", "codigo")}}
+                    for m in (factibilidad.get("motivos") or [])]
+
+    lectura = ({k: v for k, v in lectura.items() if k != "resorte"}
+               if lectura else None)
 
     costeado = costeo_rfq.costear(rfq_id, datos, resorte, detalle.material)
 
@@ -296,9 +342,9 @@ def revision_rfq(
             "asunto": datos.get("asunto"),
             "fecha": detalle.fecha_registro,
             "tipo_resorte": resorte.get("tipo_resorte"),
-            "veredicto_sistema": detalle.veredicto_sistema,
+            "veredicto_sistema": veredicto_sistema,
             "veredicto_final": detalle.veredicto_final,
-            "score": costeo_rfq.num(detalle.score),
+            "score": costeo_rfq.num(score_rfq),
             "notas": detalle.notas,
         },
         "comunes": costeado["comunes"],
@@ -310,13 +356,79 @@ def revision_rfq(
             "banda": factibilidad.get("banda"),
             "motivos": factibilidad.get("motivos") or [],
         },
-        "banderas": detalle.banderas,
+        "banderas": banderas,
+        # La geometría con la que se está dictaminando, para que se vea en la
+        # ventana y no haya que abrir la ficha para saber si hay cotas.
+        "resorte": {
+            "tipo": resorte.get("tipo_resorte"),
+            "diametro_alambre_mm": costeo_rfq.num(resorte.get("diametro_alambre_mm")),
+            "diametro_exterior_mm": costeo_rfq.num(resorte.get("diametro_exterior_mm")),
+            "longitud_libre_mm": costeo_rfq.num(resorte.get("longitud_libre_mm")),
+            "espiras_totales": costeo_rfq.num(resorte.get("numero_espiras_totales")),
+            "confianza": costeo_rfq.num(resorte.get("confianza")),
+        },
+        # Si hizo falta leer el plano al abrir esta ventana, qué salió.
+        # `None` = no hizo falta, el resorte ya estaba completo.
+        "lectura_plano": lectura,
         "en_revision": datos.get("en_revision") or {},
         "campos_faltantes": datos.get("campos_faltantes") or [],
         "costeo": costeado["costeo"],
         "error_costeo": costeado["error_costeo"],
         "puede_dictaminar": usuario.puede("rfq:dictaminar"),
     }
+
+
+@router.post("/{rfq_id}/recalcular")
+def recalcular_rfq(
+    rfq_id: str,
+    body: RecalculoRequest,
+    usuario: UsuarioSesion = Depends(exige("rfq:dictaminar")),
+):
+    """Rehace el dictamen con lo que el PM corrija, y con el plano si lo pide.
+
+    El veredicto de factibilidad se calculaba una sola vez, al entrar el
+    correo, y se quedaba grabado. Eso dejaba al PM dictaminando sobre datos
+    viejos en dos casos que pasan a diario: el plano se lee después y aparecen
+    cotas que antes no estaban, o el PM mira el dibujo y corrige un valor que
+    el modelo leyó mal. Ninguno de los dos tenía dónde ir.
+
+    Pide ``rfq:dictaminar`` —no ``rfq:leer``— porque esto reescribe el
+    veredicto del sistema y sus banderas, y porque leer el plano gasta una
+    llamada al modelo.
+
+    Devuelve la ventana entera, ya recalculada, para que la pantalla repinte
+    sin volver a pedirla.
+    """
+    detalle = get_rfq(rfq_id, None, usuario)          # 404 si no existe
+    resorte = detalle.resorte or {}
+    lectura = None
+
+    if body.leer_plano:
+        # A petición expresa: se relee aunque el resorte ya tenga cotas. El PM
+        # puede querer las del dibujo justamente porque duda de las que hay.
+        import app.rfq.relectura as relectura
+        lectura = relectura.releer(rfq_id, message_id=detalle.message_id or "")
+        if lectura["estado"] == "leido" and lectura["resorte"]:
+            resorte = lectura["resorte"]
+
+    import app.rfq.recalculo as recalculo_mod
+    recalculo = recalculo_mod.recalcular(
+        rfq_id, resorte, ajustes=body.ajustes, usuario=usuario.correo,
+        version=detalle.version, message_id=detalle.message_id or "")
+
+    log.info("RFQ %s recalculado por %s (plano=%s, tocados=%s).",
+             rfq_id, usuario.correo, body.leer_plano,
+             ", ".join(recalculo["tocados"]) or "nada")
+
+    ventana = _ventana(detalle, usuario,
+                       resorte=recalculo["resorte"], lectura=lectura,
+                       recalculo=recalculo)
+    ventana["recalculo"] = {
+        "tocados": recalculo["tocados"],
+        "guardado": recalculo["guardado"],
+        "error": recalculo["error"],
+    }
+    return ventana
 
 
 # ---------------------------------------------------------------------------

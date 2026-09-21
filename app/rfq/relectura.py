@@ -105,10 +105,17 @@ def releer(rfq_id: str, message_id: str = "", cliente=None) -> Dict[str, Any]:
     except Exception as error:
         # Releer es una mejora, no un requisito: que falle no puede tumbar
         # ni la ficha ni la apertura de la calculadora.
-        log.exception("RFQ=%s: falló la relectura del plano (%s): %s",
-                      rfq_id, ", ".join(nombres), error)
+        #
+        # El motivo se traduce a algo accionable: el error crudo de la
+        # librería es un volcado JSON que llenaba la tarjeta de ruido sin
+        # decir si hay que recargar saldo, cambiar la clave o sólo esperar.
+        import app.core.modelo_errores as modelo_errores
+        motivo = modelo_errores.explicar(error)
+        log.exception("RFQ=%s: falló la relectura del plano (%s, %s): %s",
+                      rfq_id, ", ".join(nombres), motivo["codigo"], error)
         return {"estado": "fallo", "resorte": None, "ficheros": nombres,
-                "motivo": str(error)}
+                "motivo": motivo["texto"], "codigo": motivo["codigo"],
+                "reintentar": motivo["reintentar"]}
 
 
 def falta_geometria(resorte: Optional[dict]) -> bool:

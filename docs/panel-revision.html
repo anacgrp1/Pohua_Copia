@@ -24,7 +24,21 @@
 <body>
 <script src="../frontend/js/i18n.js"></script>
 <script>
-window.API = { puede: () => true };
+window.API = {
+  puede: () => true,
+  // El botón de recalcular contra un muñeco: devuelve lo mismo con el
+  // veredicto cambiado, para poder ver la pantalla sin servidor.
+  async recalcularRfq(id, cuerpo) {
+    const copia = JSON.parse(JSON.stringify(DATOS));
+    Object.entries(cuerpo.ajustes || {}).forEach(([k, v]) => {
+      const destino = k === 'numero_espiras_totales' ? 'espiras_totales'
+                    : k === 'material' ? 'material_texto' : k;
+      copia.resorte[destino] = v === '-' ? null : (isNaN(parseFloat(v)) ? v : parseFloat(v));
+    });
+    copia.recalculo = { tocados: Object.keys(cuerpo.ajustes || {}), guardado: true, error: null };
+    return copia;
+  },
+};
 window.Toast = { error(){}, success(){}, warning(){} };
 window.APP = { navigate(){} };
 window.Confirmar = { pedir: async () => false };
@@ -39,6 +53,12 @@ const DATOS = {
              dia_in: 0.205, peso_lb_pc: 0.295, base_lb: 1.85, surcharge_lb: 1.30 },
   costeo: { completo: true, faltantes: [], banderas_motor: ['Solid stress al 88 % del límite — es un comentario, no frena la cotización.'] },
   factibilidad: { motivos: [] },
+  // La geometría editable: es sobre estos valores que sale el veredicto, así
+  // que el PM los corrige aquí y recalcula antes de aprobar o declinar.
+  resorte: { tipo: 'compresion', diametro_alambre_mm: 5.21, diametro_exterior_mm: 38.1,
+             longitud_libre_mm: 76.2, espiras_totales: 9, confianza: 0.92,
+             material_texto: 'Stainless steel 302' },
+  lectura_plano: null,
   cantidades: [100000, 250000, 500000],
   tramos: [
     { cantidad: 100000, precio_pc: 3.686, resultado_pct: 20.0, objetivo_pct: 20, llega: true,

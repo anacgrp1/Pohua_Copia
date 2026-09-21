@@ -323,6 +323,22 @@ class PasswordRestablecida(BaseModel):
     entregados: int = 0
 
 
+class RecalculoRequest(BaseModel):
+    """Lo que el PM ajusta en la ventana de revisión antes de dictaminar.
+
+    ``ajustes`` son campos del resorte: sólo se aplican los de la lista de
+    ``app/rfq/recalculo.py``, y sólo los que vengan con valor —mandar el
+    formulario entero no borra lo que no se tocó—. Para vaciar un campo a
+    propósito se manda ``"-"``.
+
+    ``leer_plano`` fuerza la lectura del dibujo con la IA antes de recalcular,
+    que es el botón «Leer el plano con IA»: el PM puede querer las cotas del
+    dibujo aunque el resorte ya tenga algo escrito.
+    """
+    ajustes: Optional[Dict[str, Any]] = None
+    leer_plano: bool = False
+
+
 class OfertaRequest(BaseModel):
     """Lo que el PM puede ajustar antes de mandar la oferta al cliente."""
     destinatario: Optional[str] = None      # por defecto, el remitente del RFQ
