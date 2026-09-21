@@ -876,6 +876,15 @@ const I18N = (() => {
      * `campo` se traduce también, en dos formas: {campo} en minúscula, para
      * meterlo en medio de una frase, y {Campo} para empezarla.
      */
+    /** Las piezas de un motivo que viene plano, como lo emite el motor. */
+    function _piezasPlanas(m) {
+        const fuera = {};
+        ['campo', 'valor', 'limite', 'unidad'].forEach((clave) => {
+            if (m[clave] !== null && m[clave] !== undefined) fuera[clave] = m[clave];
+        });
+        return fuera;
+    }
+
     function motivo(prefijo, m) {
         if (!m) return '';
         if (typeof m === 'string') return m;
@@ -883,7 +892,17 @@ const I18N = (() => {
         if (!m.codigo) return respaldo;
 
         const clave = prefijo + m.codigo;
-        const datos = Object.assign({}, m.datos || {});
+        // El mismo motivo llega en DOS formas y las dos pasan por aquí:
+        //
+        //   * El de `rfq_banderas`, con sus piezas dentro de `datos` (así lo
+        //     guarda repository._datos_de_motivo).
+        //   * El del motor de factibilidad tal cual, PLANO: `campo`, `valor`
+        //     y `limite` colgando del propio motivo.
+        //
+        // Leer sólo `m.datos` dejaba los segundos sin sustituir, y en la
+        // pantalla salía literalmente "{Campo} is missing and is needed to
+        // decide" — un hueco donde tenía que ir el nombre de la cota.
+        const datos = Object.assign({}, m.datos || _piezasPlanas(m));
         if (datos.campo) {
             const etiqueta = t('campo.' + datos.campo);
             const nombre = etiqueta === 'campo.' + datos.campo

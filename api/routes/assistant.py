@@ -505,10 +505,16 @@ def preguntar(
 
     try:
         cliente = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
-        respuesta = cliente.messages.create(
+        # Sin `temperature`: los modelos recientes la rechazan con un 400 y
+        # tumbaban la consulta entera. Lo que se les pide aquí es leer cifras
+        # ya contadas en SQL, no redactar, y para eso su comportamiento por
+        # defecto sirve. `crear_mensaje` además la quita sola si alguien la
+        # vuelve a poner por configuración.
+        import app.core.modelo as modelo_api
+        respuesta = modelo_api.crear_mensaje(
+            cliente,
             model=modelo,
             max_tokens=600,
-            temperature=0.0,   # datos, no redacción creativa
             system=_SISTEMA,
             messages=[{
                 "role": "user",

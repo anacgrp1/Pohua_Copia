@@ -119,7 +119,13 @@ class Settings:
     ANTHROPIC_API_KEY: str = ""
     VISION_MODEL: str = "claude-opus-4-8"
     VISION_MAX_TOKENS: int = 2048
-    VISION_TEMPERATURE: float = 0.0
+    # Vacía a propósito: los modelos recientes RECHAZAN `temperature` con un
+    # 400 («is deprecated for this model») y se llevan por delante la llamada
+    # entera. Para lo que se les pide aquí —devolver JSON de un plano, leer
+    # cifras— el comportamiento por defecto es el que se quiere. Ponerle un
+    # número la vuelve a mandar, y `app/core/modelo.py` la quitará sola si el
+    # modelo la rechaza.
+    VISION_TEMPERATURE: Optional[float] = None
 
     # --- Modelo de lenguaje: extracción del cuerpo del correo (COT-61) ---
     # Si se deja vacío se usa VISION_MODEL.

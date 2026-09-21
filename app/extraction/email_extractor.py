@@ -156,12 +156,19 @@ def analizar_cuerpo(texto, asunto=None, cliente=None):
     log.info("Analizando el cuerpo del correo con %s (%d caracteres)...",
              modelo, len(texto))
 
-    respuesta = cliente.messages.create(
+    # La temperatura, sólo si está configurada y el modelo la acepta. Mandarla
+    # a un modelo reciente devuelve un 400 y se lleva por delante la
+    # extracción entera: el RFQ entra sin cliente, sin cantidades y sin
+    # material, y parece que el correo venía vacío.
+    import app.core.modelo as modelo_api
+    respuesta = modelo_api.crear_mensaje(
+        cliente,
         model=modelo,
         max_tokens=getattr(config, "VISION_MAX_TOKENS", 2048),
-        temperature=getattr(config, "VISION_TEMPERATURE", 0.0),
         system=PROMPT_COMERCIAL,
         messages=[{"role": "user", "content": contenido}],
+        **modelo_api.parametros_de_muestreo(
+            getattr(config, "VISION_TEMPERATURE", None)),
     )
 
     partes = [b.text for b in respuesta.content if getattr(b, "text", None)]

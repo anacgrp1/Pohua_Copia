@@ -383,6 +383,30 @@ class Ventana(QMainWindow):
         hará el primer ciclo— y sólo se escriben los avisos y lo que falta:
         enumerar quince cosas que están bien no ayuda a nadie.
         """
+        # Antes que nada, el esquema. Esta aplicación escribe en la MISMA base
+        # que el servidor —planos, resortes, la bandeja de salida— con el
+        # código de este repositorio. Si el código va por delante del esquema,
+        # falla al guardar y el fallo aparece lejos: un plano que no se guarda,
+        # una oferta que no se encola. Hasta ahora sólo las aplicaba el
+        # servidor web al arrancar, así que quien leía desde aquí dependía de
+        # que alguien hubiera desplegado.
+        self.escribir("info", "Revisando el esquema de la base…")
+        try:
+            import app.persistence.migraciones as migraciones
+            resumen = migraciones.aplicar_pendientes()
+            if resumen.get("error"):
+                self.escribir("error", f"Migraciones: {resumen['error']}")
+            elif resumen.get("aplicadas"):
+                self.escribir("ok", "Esquema actualizado: "
+                                    + ", ".join(resumen["aplicadas"]))
+            elif not resumen.get("habilitado"):
+                self.escribir("aviso", "AUTO_MIGRAR está apagado: el esquema no "
+                                       "se toca desde aquí.")
+            else:
+                self.escribir("info", "El esquema ya estaba al día.")
+        except Exception as error:
+            self.escribir("error", f"No se pudo revisar el esquema: {error}")
+
         self.escribir("info", "Comprobando la configuración…")
         try:
             import app.core.preflight as preflight

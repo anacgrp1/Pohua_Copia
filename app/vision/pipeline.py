@@ -277,11 +277,16 @@ def analizar_dibujos(archivos, cliente=None):
     log.info("Analizando %d bloque(s) de dibujo con %s (omitidos: %d)...",
              len(bloques) - 1, config.settings.VISION_MODEL, len(omitidos))
 
-    respuesta = cliente.messages.create(
+    # La temperatura va sólo si está configurada Y el modelo la acepta: los
+    # modelos recientes la rechazan con un 400 y tumban la lectura entera.
+    import app.core.modelo as modelo
+    respuesta = modelo.crear_mensaje(
+        cliente,
         model=config.settings.VISION_MODEL,
         max_tokens=config.settings.VISION_MAX_TOKENS,
-        temperature=config.settings.VISION_TEMPERATURE,
         messages=[{"role": "user", "content": bloques}],
+        **modelo.parametros_de_muestreo(
+            getattr(config.settings, "VISION_TEMPERATURE", None)),
     )
 
     # Concatena los bloques de texto de la respuesta
