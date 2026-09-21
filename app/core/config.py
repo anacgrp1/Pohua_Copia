@@ -117,7 +117,10 @@ class Settings:
 
     # --- Multimodal Vision Model ---
     ANTHROPIC_API_KEY: str = ""
-    VISION_MODEL: str = "claude-opus-4-8"
+    # El más capaz para leer planos: es el que tiene que sacar una cota
+    # borrosa de un dibujo escaneado sin inventarse el número. Aquí no se
+    # ahorra: una cota mal leída se convierte en un precio mal cotizado.
+    VISION_MODEL: str = "claude-opus-5"
     VISION_MAX_TOKENS: int = 2048
     # Vacía a propósito: los modelos recientes RECHAZAN `temperature` con un
     # 400 («is deprecated for this model») y se llevan por delante la llamada
@@ -129,7 +132,10 @@ class Settings:
 
     # --- Modelo de lenguaje: extracción del cuerpo del correo (COT-61) ---
     # Si se deja vacío se usa VISION_MODEL.
-    LLM_MODEL: str = ""
+    # Para el texto —el cuerpo del correo, el chat del asistente—. No hace
+    # falta el de arriba: aquí se leen cifras que ya vienen contadas y frases
+    # de un correo, no dibujos.
+    LLM_MODEL: str = "claude-sonnet-5"
     # Confianza mínima para dar por bueno un campo extraído del correo.
     # Por debajo, el campo no se usa ni se pide al cliente: lo valida el PM.
     UMBRAL_CONFIANZA: float = 0.7

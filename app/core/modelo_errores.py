@@ -38,6 +38,10 @@ DEMASIADO = "modelo_demasiadas_peticiones"
 SATURADO = "modelo_saturado"
 PETICION_MALA = "modelo_peticion_mala"
 SIN_CONEXION = "modelo_sin_conexion"
+# El modelo SÍ contestó: lo que falló fue entender su respuesta. Es un
+# problema distinto y se arregla en otro sitio, así que no puede compartir
+# mensaje con «no se pudo consultar el modelo».
+RESPUESTA_ILEGIBLE = "modelo_respuesta_ilegible"
 DESCONOCIDO = "modelo_desconocido"
 
 _TEXTOS = {
@@ -54,11 +58,14 @@ _TEXTOS = {
     SATURADO: ("El modelo está saturado ahora mismo. Vuelve a intentarlo en un "
                "momento: esto sí se arregla solo."),
     PETICION_MALA: ("La petición al modelo no era válida. Suele ser que el "
-                    "contexto creció demasiado; está en el registro."),
+                    "contexto creció demasiado, o un parámetro que ese modelo "
+                    "ya no acepta."),
     SIN_CONEXION: ("No se pudo alcanzar la API de Anthropic desde el servidor. "
                    "Puede ser un corte pasajero o la salida a internet."),
-    DESCONOCIDO: ("No se pudo consultar el modelo. El detalle está en el "
-                  "registro del servidor."),
+    RESPUESTA_ILEGIBLE: ("El modelo contestó, pero su respuesta no se pudo "
+                         "interpretar. El plano puede estar ilegible o el "
+                         "modelo devolvió algo que no era el JSON pedido."),
+    DESCONOCIDO: "No se pudo consultar el modelo.",
 }
 
 # Lo que dice el cuerpo del error de Anthropic cuando se acabó el saldo. Es un
@@ -68,6 +75,34 @@ _TEXTOS = {
 _SENAS_DE_SALDO = ("credit balance is too low", "insufficient credit",
                    "saldo", "billing")
 
+# Lo que NUNCA puede salir a una pantalla, aunque venga dentro del error.
+_A_TAPAR = (
+    re.compile(r"sk-ant-[A-Za-z0-9_\-]+"),
+    re.compile(r"\borg[-_][A-Za-z0-9_\-]+"),
+    re.compile(r"\breq_[A-Za-z0-9_\-]+"),
+    re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}"),
+)
+
+_LARGO_DETALLE = 180
+
+
+def _detalle(error: Exception) -> str:
+    """Un trozo del error que se pueda enseñar: corto y sin secretos.
+
+    Existe porque «no se pudo consultar el modelo» a secas mandaba a abrir el
+    registro de Render, que es exactamente la expedición que esto venía a
+    evitar. Con dos líneas del error de verdad casi siempre se sabe qué pasa.
+
+    Se recorta ANTES de tapar nada por si el recorte partiera un secreto por
+    la mitad: se tapa primero y se recorta después.
+    """
+    texto = " ".join(str(error).split())
+    for patron in _A_TAPAR:
+        texto = patron.sub("[…]", texto)
+    if len(texto) > _LARGO_DETALLE:
+        texto = texto[:_LARGO_DETALLE - 1].rstrip() + "…"
+    return texto
+
 
 def explicar(error: Exception) -> Dict[str, Any]:
     """Traduce la excepción a ``{codigo, texto, reintentar}``.
@@ -76,9 +111,19 @@ def explicar(error: Exception) -> Dict[str, Any]:
     diferencia entre «espera un momento» y «esto no se va a arreglar solo».
     """
     codigo = _clasificar(error)
+    detalle = _detalle(error)
+    texto = _TEXTOS[codigo]
+    # Cuando no se reconoció la causa, el error de verdad ES la pista: sin él
+    # sólo queda «algo falló, mira el registro».
+    # PETICION_MALA también lo lleva: «el contexto creció demasiado» y «ese
+    # parámetro ya no se acepta» se arreglan en sitios distintos, y el error
+    # de verdad es lo único que los distingue.
+    if codigo in (DESCONOCIDO, RESPUESTA_ILEGIBLE, PETICION_MALA) and detalle:
+        texto = f"{texto} {detalle}"
     return {
         "codigo": codigo,
-        "texto": _TEXTOS[codigo],
+        "texto": texto,
+        "detalle": detalle,
         # Sólo lo pasajero: saturación, límite de ritmo y cortes de red.
         "reintentar": codigo in (DEMASIADO, SATURADO, SIN_CONEXION),
     }
@@ -96,6 +141,7 @@ def _clasificar(error: Exception) -> str:
 
     # Por el tipo de la librería `anthropic`, que es lo más fiable cuando está.
     por_nombre = {
+        "ExtraccionError": RESPUESTA_ILEGIBLE,
         "AuthenticationError": CLAVE_MALA,
         "PermissionDeniedError": SIN_PERMISO,
         "NotFoundError": NO_EXISTE,

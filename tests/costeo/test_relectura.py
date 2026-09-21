@@ -152,11 +152,15 @@ def test_un_fallo_del_modelo_no_lanza(almacen_falso):
     assert r["estado"] == "fallo"
     assert r["resorte"] is None
     assert almacen_falso["guardados"] == []
-    # El motivo ya no es el volcado de la librería, sino algo que se puede
-    # leer y sobre lo que se puede actuar (app/core/modelo_errores.py).
+    # El motivo ya no es el volcado crudo de la librería: empieza por una
+    # frase que se puede leer y sobre la que se puede actuar, y DETRÁS lleva
+    # un trozo del error de verdad —recortado y sin secretos—, que es lo que
+    # distingue «el contexto creció demasiado» de «ese parámetro ya no se
+    # acepta» sin abrir el registro del servidor.
     import app.core.modelo_errores as modelo_errores
     assert r["codigo"] == modelo_errores.PETICION_MALA
-    assert "400" not in r["motivo"]
+    assert r["motivo"].startswith("La petición al modelo no era válida")
+    assert "el modelo dijo que no" in r["motivo"]
     assert r["reintentar"] is False
 
 
