@@ -140,6 +140,20 @@ def ciclo_deteccion(*, forzar: bool = False) -> ResultadoCiclo:
         resultado.detalles.append(motivo)
         return resultado
 
+    # Antes de abrir nada: ¿puede este proceso abrir el buzón siquiera?
+    #
+    # Si no puede, intentarlo igual deja tres líneas de ERROR con traza en
+    # CADA ciclo, para siempre, por una configuración que muchas veces es
+    # deliberada —lee la aplicación de escritorio y el servidor se aparta—.
+    # Ochenta y cuatro tracebacks idénticos en dos horas entierran el error
+    # que sí importa. Se dice una vez, claro, y se sigue.
+    import app.email.entrada as entrada
+    diagnostico = entrada.diagnostico_lectura()
+    if not diagnostico["puede"]:
+        frase = entrada.avisar_una_vez(diagnostico)
+        resultado.detalles.append(frase)
+        return resultado
+
     log.info("Buscando correos no leídos (modo=%s)...", config.settings.MAIL_MODE)
     try:
         provider = EmailProviderFactory.get_provider()

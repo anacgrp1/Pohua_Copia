@@ -74,6 +74,38 @@ _DENSIDAD_LB_IN3 = {
 _DENSIDAD_POR_DEFECTO = .284  # acero al carbono, igual que el motor
 
 
+def falta_para_el_peso(spring_data: Dict[str, Any]) -> Optional[str]:
+    """Qué cota concreta impide calcular el peso del alambre.
+
+    El peso es ``π · Dm · Nt`` por la sección del alambre, así que hacen falta
+    TRES cosas y cada una puede venir de varios sitios. Decir «faltan diámetro,
+    diámetro medio o número de espiras» las nombra las tres aunque sólo falle
+    una, y quien lee no sabe cuál escribir: el diámetro medio casi nunca está
+    impreso en un plano —se deduce del exterior menos un calibre— así que
+    mencionarlo manda a buscar una cota que no existe.
+
+    Devuelve el nombre del campo que hay que conseguir, o ``None`` si no falta
+    ninguno.
+    """
+    d = _num(spring_data.get("diametro_alambre_mm"))
+    if not d or d <= 0:
+        return "diametro_alambre_mm"
+
+    # El medio sale del exterior o del interior; basta con cualquiera.
+    if not (_num(spring_data.get("diametro_medio_mm"))
+            or _num(spring_data.get("diametro_exterior_mm"))
+            or _num(spring_data.get("diametro_interior_mm"))):
+        return "diametro_exterior_mm"
+
+    if not _num(spring_data.get("numero_espiras_totales")):
+        activas = _num(spring_data.get("numero_espiras_activas"))
+        tipo = str(spring_data.get("tipo_resorte") or "").lower()
+        if not (activas and tipo.startswith("compres")):
+            return "numero_espiras_totales"
+
+    return None
+
+
 def longitud_desarrollada_pulg(spring_data: Dict[str, Any]) -> Optional[float]:
     """Longitud de alambre desarrollada, en pulgadas.
 
@@ -218,7 +250,14 @@ def build_pn_for_engine(
     dev_len = longitud_desarrollada_pulg(spring_data)
     peso_lb = peso_alambre_lb(dev_len, diam_mm, material.get("codigo") or material_codigo)
     if peso_lb is None:
-        mensajes.falta(catalogo, "SIN_PESO_ALAMBRE")
+        que_falta = falta_para_el_peso(spring_data)
+        if que_falta:
+            # `campo` va con la clave —la web la traduce al idioma puesto— y
+            # `nombre` con el texto llano, para el mensaje del servidor.
+            mensajes.falta(catalogo, "SIN_PESO_POR", campo=que_falta,
+                           nombre=mensajes.etiqueta_campo(que_falta))
+        else:
+            mensajes.falta(catalogo, "SIN_PESO_ALAMBRE")
     elif tipo.startswith(("extension", "tension", "torsion")):
         mensajes.falta(catalogo, "PESO_SOLO_CUERPO")
 

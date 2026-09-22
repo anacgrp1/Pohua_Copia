@@ -180,13 +180,23 @@ def _buzon(inf, c, con_buzon: bool, latido):
         inf.ojo("Se leerá la BANDEJA DE ENTRADA, no una carpeta de pruebas",
                 "Para ensayar sin tocar el correo de ventas: MAIL_FOLDER=TEST.")
 
-    if modo in ("graph", "token", "prod"):
-        faltan = [n for n in ("AZURE_CLIENT_ID", "AZURE_TENANT_ID",
-                              "AZURE_CLIENT_SECRET", "GRAPH_USER")
-                  if not (getattr(c, n, "") or "").strip()]
-    else:
-        faltan = [n for n in ("IMAP_SERVER", "IMAP_USER", "IMAP_PASSWORD")
-                  if not (getattr(c, n, "") or "").strip()]
+    # La lista de qué credenciales hacen falta vive en UN sitio
+    # (app/email/entrada.py), el mismo que consulta el ciclo antes de abrir
+    # el buzón. Con dos copias, una se queda atrás y el preflight acaba
+    # diciendo que está todo bien mientras el ciclo falla.
+    import app.email.entrada as entrada
+    diagnostico = entrada.diagnostico_lectura()
+
+    # Apagado a propósito no es una falta. Marcar como problema algo que
+    # alguien eligió es la forma más rápida de que nadie vuelva a leer estos
+    # avisos.
+    if diagnostico.get("apagado"):
+        inf.ok("Este proceso no lee el buzón, y es a propósito",
+               diagnostico["nota"] + " Para que lea el servidor: pon "
+               "MAIL_MODE=graph (o imap) con sus credenciales.")
+        return
+
+    faltan = diagnostico["faltan"]
     if faltan:
         if latido["activo"]:
             # Con la aplicación de escritorio leyendo, el servidor no necesita

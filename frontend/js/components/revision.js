@@ -152,13 +152,16 @@ const Revision = (() => {
         return conCodigo.map((m) => traducirMotivo(m));
     }
 
-    /** Un motivo suelto: por código si se conoce, y si no, tal como vino. */
+    /** Un motivo suelto: por código si se conoce, y si no, tal como vino.
+     *
+     * Pasa por `I18N.motivo`, el mismo que traduce los del motor de
+     * factibilidad: así `{campo}` se resuelve al nombre de la cota en el
+     * idioma puesto —"número de espiras" y no "numero_espiras_totales"— sin
+     * tener dos traductores que se van separando. */
     function traducirMotivo(m) {
         if (!m) return '';
         if (typeof m === 'string') return m;
-        const clave = 'costeo.' + m.codigo;
-        const texto = I18N.t(clave, m.datos || {});
-        return texto === clave ? (m.texto || m.codigo || '') : texto;
+        return I18N.motivo('costeo.', m) || m.texto || m.codigo || '';
     }
 
     function qtyCorta(v) {

@@ -442,3 +442,83 @@ class TestLaFabrica(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestElGuardianDeOutlook(unittest.TestCase):
+    """«A program is trying to access email address information».
+
+    Outlook saca ese cuadro cuando se tocan propiedades de LIBRETA DE
+    DIRECCIONES —`SenderEmailType`, `Sender`, `GetExchangeUser()`,
+    `SenderEmailAddress`—, y hay que aprobarlo a mano en cada correo.
+    `PropertyAccessor` sobre las MAPI del mensaje lee lo mismo sin pasar por
+    ahí, así que va primero.
+    """
+
+    class _ItemVigilado:
+        """Un correo que grita si le tocan la libreta de direcciones."""
+
+        def __init__(self, mapi=None):
+            self._mapi = mapi or {}
+            self.libreta_tocada = []
+            self.PropertyAccessor = self._Accesor(self._mapi)
+
+        class _Accesor:
+            def __init__(self, mapi):
+                self._mapi = mapi
+
+            def GetProperty(self, esquema):
+                if esquema in self._mapi:
+                    return self._mapi[esquema]
+                raise RuntimeError("propiedad no encontrada")
+
+        def __getattr__(self, nombre):
+            if nombre in ("SenderEmailType", "Sender", "SenderEmailAddress"):
+                self.__dict__.setdefault("libreta_tocada", []).append(nombre)
+                raise RuntimeError("El guardián de Outlook pidió permiso")
+            raise AttributeError(nombre)
+
+    def _proveedor(self):
+        from app.email.outlook_provider import OutlookEmailProvider
+        return OutlookEmailProvider.__new__(OutlookEmailProvider)
+
+    def test_la_direccion_sale_sin_tocar_la_libreta(self):
+        from app.email.outlook_provider import PR_SENDER_SMTP_ADDRESS
+        item = self._ItemVigilado({PR_SENDER_SMTP_ADDRESS: "cliente@acme.com"})
+
+        direccion = self._proveedor()._remitente(item)
+
+        self.assertEqual(direccion, "cliente@acme.com")
+        self.assertEqual(item.libreta_tocada, [],
+                         "se tocó la libreta habiendo MAPI: saldría el cuadro")
+
+    def test_tambien_vale_la_de_en_nombre_de(self):
+        from app.email.outlook_provider import PR_SENT_REPRESENTING_SMTP_ADDRESS
+        item = self._ItemVigilado(
+            {PR_SENT_REPRESENTING_SMTP_ADDRESS: "ventas@acme.com"})
+
+        self.assertEqual(self._proveedor()._remitente(item), "ventas@acme.com")
+        self.assertEqual(item.libreta_tocada, [])
+
+    def test_una_mapi_sin_arroba_no_se_da_por_buena(self):
+        """La ruta interna de Exchange (/O=EXCHANGELABS/...) no es una
+        dirección: darla por buena dejaría sin respuesta al cliente."""
+        from app.email.outlook_provider import PR_SENDER_SMTP_ADDRESS
+        item = self._ItemVigilado(
+            {PR_SENDER_SMTP_ADDRESS: "/O=EXCHANGELABS/OU=EXCHANGE/CN=RECIPIENTS"})
+
+        from app.email.outlook_provider import AccesoBloqueado
+        with self.assertRaises(AccesoBloqueado):
+            self._proveedor()._remitente(item)
+        # Sin dirección utilizable, sí se cae al respaldo.
+        self.assertTrue(item.libreta_tocada)
+
+    def test_sin_mapi_se_cae_al_respaldo(self):
+        """Un correo importado de otro sistema puede no traerlas. Entonces sí
+        sale el cuadro, pero por uno de cada mil y no por todos."""
+        from app.email.outlook_provider import AccesoBloqueado
+        item = self._ItemVigilado({})
+        # Con el guardián cortando TODO, el correo se queda sin leer y se
+        # reintenta: eso ya estaba, y con este cambio pasa mucho menos.
+        with self.assertRaises(AccesoBloqueado):
+            self._proveedor()._remitente(item)
+        self.assertIn("SenderEmailType", item.libreta_tocada)

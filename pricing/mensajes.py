@@ -57,6 +57,9 @@ TEXTOS = {
         "Empaque ilegible: {error}",
     "SIN_CANTIDAD":
         "No se indicó cantidad: el costeo por escalones necesita un volumen.",
+    "SIN_PESO_POR":
+        "No se pudo calcular el peso del alambre: falta {nombre}. Sin peso, el "
+        "costo del material saldría en cero.",
     "SIN_PESO_ALAMBRE":
         "No se pudo calcular el peso del alambre (faltan diámetro, diámetro "
         "medio o número de espiras): el costo de material saldría en cero.",
@@ -79,6 +82,26 @@ TEXTOS = {
         "Sin material ni diámetro de alambre no se puede costear: "
         "hay que capturarlos en la cotización completa.",
 }
+
+
+# El nombre llano de cada cota. El mensaje lo lee una persona, no el
+# depurador: "falta numero_espiras_totales" es el nombre de una variable, no
+# una instrucción de qué ir a buscar al plano.
+ETIQUETAS_CAMPO = {
+    "diametro_alambre_mm": "el diámetro de alambre",
+    "diametro_exterior_mm": "el diámetro exterior (o el interior)",
+    "diametro_interior_mm": "el diámetro interior",
+    "diametro_medio_mm": "el diámetro medio",
+    "longitud_libre_mm": "la longitud libre",
+    "numero_espiras_totales": "el número de espiras totales",
+    "numero_espiras_activas": "el número de espiras activas",
+    "material": "el material",
+}
+
+
+def etiqueta_campo(campo) -> str:
+    """El nombre de la cota tal como se dice, o la clave si no se conoce."""
+    return ETIQUETAS_CAMPO.get(str(campo or ""), str(campo or ""))
 
 
 def texto(codigo: str, **datos) -> str:

@@ -50,6 +50,15 @@ PR_INTERNET_MESSAGE_ID = "http://schemas.microsoft.com/mapi/proptag/0x1035001F"
 PR_IN_REPLY_TO_ID = "http://schemas.microsoft.com/mapi/proptag/0x1042001F"
 PR_INTERNET_REFERENCES = "http://schemas.microsoft.com/mapi/proptag/0x1039001F"
 PR_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x39FE001E"
+# La dirección SMTP de quien manda, leída del propio mensaje.
+#
+# Esta es la que NO despierta al guardián de Outlook. `SenderEmailAddress`,
+# `SenderEmailType` y `Sender.GetExchangeUser()` sí: son propiedades de
+# LIBRETA DE DIRECCIONES, y tocarlas saca el cuadro «A program is trying to
+# access email address information stored in Outlook». `PropertyAccessor`
+# sobre estas dos lee lo mismo sin pasar por ahí.
+PR_SENDER_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x5D01001F"
+PR_SENT_REPRESENTING_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x5D02001F"
 # Para incrustar la firma: el "cid" del HTML y la marca de "no la
 # enseñes como archivo adjunto".
 PR_ATTACH_CONTENT_ID = "http://schemas.microsoft.com/mapi/proptag/0x3712001F"
@@ -273,8 +282,32 @@ class OutlookEmailProvider(BaseEmailProvider):
 
         Dentro de una organización, `SenderEmailAddress` devuelve la ruta
         interna (`/O=EXCHANGELABS/OU=…`), que no sirve ni para responder ni
-        para reconocer al cliente. La de verdad está en el usuario de Exchange.
+        para reconocer al cliente.
+
+        El ORDEN importa y no es el obvio. Las propiedades que Outlook
+        considera "libreta de direcciones" —`SenderEmailType`, `Sender`,
+        `GetExchangeUser()`, `SenderEmailAddress`— despiertan al guardián y
+        sacan el cuadro «A program is trying to access email address
+        information stored in Outlook», que hay que aprobar a mano en cada
+        correo. `PropertyAccessor` sobre las propiedades MAPI del mensaje lee
+        la MISMA dirección sin pasar por ahí, así que va primero.
+
+        Las guardadas quedan de respaldo para el caso raro en que el mensaje
+        no traiga las MAPI: un correo importado de otro sistema, o uno que
+        nunca salió de un PST. Entonces sí saldrá el cuadro, pero por una de
+        cada mil y no por todas.
         """
+        # Primero, sin despertar al guardián.
+        for propiedad in (PR_SENDER_SMTP_ADDRESS,
+                          PR_SENT_REPRESENTING_SMTP_ADDRESS,
+                          PR_SMTP_ADDRESS):
+            smtp = self._propiedad(item, propiedad)
+            if smtp and "@" in smtp:
+                return smtp
+
+        logger.debug("Las propiedades MAPI del remitente vinieron vacías; se "
+                     "prueban las de libreta, que pueden pedir permiso.")
+
         tipo = ""
         try:
             tipo = (item.SenderEmailType or "").upper()
@@ -288,9 +321,6 @@ class OutlookEmailProvider(BaseEmailProvider):
                     return str(usuario.PrimarySmtpAddress)
             except Exception as error:
                 logger.debug("GetExchangeUser no contestó: %s", error)
-            smtp = self._propiedad(item, PR_SMTP_ADDRESS)
-            if smtp:
-                return smtp
 
         try:
             directa = str(item.SenderEmailAddress or "")

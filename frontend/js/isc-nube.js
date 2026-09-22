@@ -91,6 +91,123 @@
         try { toast(texto); } catch (e) { console.warn('[nube] ' + texto); }
     }
 
+    // ------------------------------------------------- lo que se le dice a quien mira
+
+    /*
+     * El puente hablaba siempre en español.
+     *
+     * Pohua entero está traducido —`frontend/js/i18n.js`— y el plant manager
+     * que lo abre en inglés ve inglés en todas partes… hasta que la
+     * calculadora dice algo. Entonces le salta un «La hoja tiene una
+     * cotización a medias» en mitad de una pantalla en inglés. Y no es un
+     * aviso cualquiera: es justo el que le pregunta si puede pisar su
+     * trabajo. Un mensaje que pide permiso tiene que leerse.
+     *
+     * No se mete en `i18n.js` porque esto corre DENTRO del iframe de la
+     * calculadora, que es de otro repositorio y no carga ese archivo. Se le
+     * pregunta el idioma a Pohua a través de `window.parent` —el mismo camino
+     * que ya usa el visor de recortes más abajo— y si no contesta, inglés,
+     * que es el idioma por defecto de la aplicación.
+     */
+    var T = {
+        en: {
+            fundidas: '{n} item(s) that existed only in this browser were uploaded to Pohua.',
+            noGuardo: 'COULD NOT SAVE TO POHUA — {error}. Your work is still in this browser; it will upload on the next save.',
+            actualizado: 'Quotes updated by {quien}.',
+            otroUsuario: 'another user',
+            abrirTitulo: 'Open {rfq}',
+            abrirTexto: 'The sheet has a half-finished quote. It will be saved to the log and {rfq} opened in its place.',
+            noAbrio: 'Could not open {rfq} in the sheet: {error}',
+            clienteNuevo: 'Customer "{cliente}" was not in the catalog: it was created as {codigo} with Net 30. Review terms and rep.',
+            variosFicheros: 'There are {n} files from the email in the box; the first one is read ({nombre}). The rest, by hand.',
+            planoPuesto: 'The drawing from the email ({nombre}) is loaded: press "AI Read Drawing".',
+            planosPuestos: '{n} drawings from the email are loaded: press "AI Read Drawing".',
+            lectorApagado: 'The drawing from the email ({nombre}) is loaded. The reader is off: turn it on and press "AI Read Drawing".',
+            leyendo: 'Reading the drawing from the email ({nombre})…',
+            planoLeido: 'Drawing read: check the highlighted fields.',
+            planoNoLeido: 'Could not read the drawing: {error}. It is loaded; you can press "AI Read Drawing".',
+            rfqAbierto: 'RFQ {rfq} open in the sheet',
+            sinCatalogo: 'customer "{cliente}" is not in the catalog: pick one or create it',
+            conCliente: 'customer {cliente}',
+            sinResolver: '{n} field(s) the catalog did not resolve',
+            sinRegenerar: 'The calculator was not rebuilt: scripts/vendorizar_nucleo.py has not been run. It stays on the light theme.',
+            sembrado: 'First time: what was in this browser was uploaded to Pohua.',
+            noLeyoEstado: 'Could not read the state from Pohua — {error}'
+        },
+        es: {
+            fundidas: '{n} elemento(s) que estaban sólo en este navegador se subieron a Pohua.',
+            noGuardo: 'NO SE PUDO GUARDAR EN POHUA — {error}. Tu trabajo sigue en este navegador; se subirá al volver a guardar.',
+            actualizado: 'Cotizaciones actualizadas por {quien}.',
+            otroUsuario: 'otro usuario',
+            abrirTitulo: 'Abrir {rfq}',
+            abrirTexto: 'La hoja tiene una cotización a medias. Se guarda en el registro y se abre {rfq} en su lugar.',
+            noAbrio: 'No se pudo abrir {rfq} en la hoja: {error}',
+            clienteNuevo: 'El cliente "{cliente}" no estaba en el catálogo: se dio de alta como {codigo} con Net 30. Revisa términos y representante.',
+            variosFicheros: 'Hay {n} ficheros del correo en la casilla; se lee el primero ({nombre}). Los demás, a mano.',
+            planoPuesto: 'El plano del correo ({nombre}) ya está puesto: pulsa "AI Read Drawing".',
+            planosPuestos: '{n} planos del correo ya están puestos: pulsa "AI Read Drawing".',
+            lectorApagado: 'El plano del correo ({nombre}) ya está puesto. El lector está apagado: enciéndelo y pulsa "AI Read Drawing".',
+            leyendo: 'Leyendo el plano del correo ({nombre})…',
+            planoLeido: 'Plano leído: revisa los campos marcados.',
+            planoNoLeido: 'No se pudo leer el plano: {error}. Está cargado; puedes pulsar "AI Read Drawing".',
+            rfqAbierto: 'RFQ {rfq} abierto en la hoja',
+            sinCatalogo: 'el cliente "{cliente}" no está en el catálogo: hay que elegirlo o darlo de alta',
+            conCliente: 'cliente {cliente}',
+            sinResolver: '{n} dato(s) que el catálogo no resolvió',
+            sinRegenerar: 'La calculadora no se regeneró: falta pasar scripts/vendorizar_nucleo.py. Se queda en tema claro.',
+            sembrado: 'Primera vez: se subió a Pohua lo que había en este navegador.',
+            noLeyoEstado: 'No se pudo leer el estado desde Pohua — {error}'
+        },
+        fr: {
+            fundidas: "{n} élément(s) qui n'existaient que dans ce navigateur ont été envoyés à Pohua.",
+            noGuardo: "IMPOSSIBLE D'ENREGISTRER DANS POHUA — {error}. Votre travail reste dans ce navigateur ; il partira au prochain enregistrement.",
+            actualizado: 'Devis mis à jour par {quien}.',
+            otroUsuario: 'un autre utilisateur',
+            abrirTitulo: 'Ouvrir {rfq}',
+            abrirTexto: "La feuille contient un devis à moitié fait. Il sera enregistré dans le journal et {rfq} ouvert à sa place.",
+            noAbrio: "Impossible d'ouvrir {rfq} dans la feuille : {error}",
+            clienteNuevo: 'Le client « {cliente} » ne figurait pas au catalogue : il a été créé comme {codigo} avec Net 30. Vérifiez les conditions et le représentant.',
+            variosFicheros: "Il y a {n} fichiers du courrier dans la case ; le premier est lu ({nombre}). Les autres, à la main.",
+            planoPuesto: 'Le plan du courrier ({nombre}) est chargé : appuyez sur « AI Read Drawing ».',
+            planosPuestos: '{n} plans du courrier sont chargés : appuyez sur « AI Read Drawing ».',
+            lectorApagado: "Le plan du courrier ({nombre}) est chargé. Le lecteur est éteint : allumez-le et appuyez sur « AI Read Drawing ».",
+            leyendo: 'Lecture du plan du courrier ({nombre})…',
+            planoLeido: 'Plan lu : vérifiez les champs signalés.',
+            planoNoLeido: "Impossible de lire le plan : {error}. Il est chargé ; vous pouvez appuyer sur « AI Read Drawing ».",
+            rfqAbierto: 'RFQ {rfq} ouvert dans la feuille',
+            sinCatalogo: "le client « {cliente} » n'est pas au catalogue : choisissez-en un ou créez-le",
+            conCliente: 'client {cliente}',
+            sinResolver: "{n} donnée(s) que le catalogue n'a pas résolue(s)",
+            sinRegenerar: "La calculatrice n'a pas été régénérée : scripts/vendorizar_nucleo.py n'est pas passé. Elle reste en thème clair.",
+            sembrado: "Première fois : ce qu'il y avait dans ce navigateur a été envoyé à Pohua.",
+            noLeyoEstado: "Impossible de lire l'état depuis Pohua — {error}"
+        }
+    };
+
+    /* Pohua manda. Esto vive en el iframe, así que el idioma está un piso
+       arriba; si no se alcanza —abierto suelto, o el padre de otro origen—,
+       inglés, que es con lo que arranca la aplicación. */
+    function idiomaDePohua() {
+        try {
+            var p = (window.parent && window.parent !== window) ? window.parent : window;
+            return (p.I18N && p.I18N.idioma) || (window.I18N && window.I18N.idioma) || 'en';
+        } catch (e) { return 'en'; }
+    }
+
+    function t(clave, datos) {
+        var textos = T[idiomaDePohua()] || T.en;
+        var s = textos[clave] || T.en[clave] || '';
+        if (datos) {
+            for (var k in datos) {
+                if (Object.prototype.hasOwnProperty.call(datos, k)) {
+                    s = s.split('{' + k + '}').join(String(datos[k]));
+                }
+            }
+        }
+        return s;
+    }
+
+
     // ---------------------------------------------------- adoptar el documento
 
     /**
@@ -163,7 +280,7 @@
                 detail: fundidas + ' elemento(s) de modo local incorporados al abrir en Pohua.'
             });
         } catch (e) {}
-        aviso(fundidas + ' elemento(s) que estaban sólo en este navegador se subieron a Pohua.');
+        aviso(t('fundidas', { n: fundidas }));
     }
 
     // ------------------------------------------------------- los cinco métodos
@@ -215,8 +332,7 @@
                 SFS.healthy = true;
             }).catch(function (err) {
                 SFS.healthy = false;
-                aviso('NO SE PUDO GUARDAR EN POHUA — ' + err.message +
-                      '. Tu trabajo sigue en este navegador; se subirá al volver a guardar.');
+                aviso(t('noGuardo', { error: err.message }));
             }).then(function () {
                 SFS.saving = false;
                 pintarBarra();
@@ -236,8 +352,10 @@
                     revConocida = e.rev;
                     try { refreshSeedDriven(); } catch (err) {}
                     pintarBarra();
-                    aviso('Cotizaciones actualizadas por ' +
-                          (String(e.guardado_por || '').split('@')[0] || 'otro usuario') + '.');
+                    aviso(t('actualizado', {
+                        quien: String(e.guardado_por || '').split('@')[0] ||
+                               t('otroUsuario')
+                    }));
                 });
             }).catch(function () { /* un sondeo fallido no molesta a nadie */ });
         };
@@ -860,10 +978,10 @@
                            !(q.pns && q.pns[0] && q.pns[0].pn));
         if (vacio) { ponerRfq(d); return; }
 
-        var texto = 'La hoja tiene una cotización a medias. Se guarda en el ' +
-                    'registro y se abre ' + d.rfq_id + ' en su lugar.';
+        var texto = t('abrirTexto', { rfq: d.rfq_id });
         if (typeof confirmBox === 'function') {
-            confirmBox('Abrir ' + d.rfq_id, texto, function () { ponerRfq(d); });
+            confirmBox(t('abrirTitulo', { rfq: d.rfq_id }), texto,
+                       function () { ponerRfq(d); });
         } else if (window.confirm(texto)) {
             ponerRfq(d);
         }
@@ -952,7 +1070,7 @@
                           !q.header.customerCode ? cab.customer : null,
                           d.faltantes || []);
         } catch (e) {
-            aviso('No se pudo abrir ' + d.rfq_id + ' en la hoja: ' + e.message);
+            aviso(t('noAbrio', { rfq: d.rfq_id, error: e.message }));
         }
     }
 
@@ -1094,8 +1212,7 @@
             if (typeof fillCustomers === 'function') fillCustomers();
             if (typeof queueShared === 'function') queueShared();
         }, 'apuntar el cliente nuevo');
-        aviso('El cliente "' + limpio + '" no estaba en el catálogo: se dio de alta como ' +
-              codigo + ' con Net 30. Revisa términos y representante.');
+        aviso(t('clienteNuevo', { cliente: limpio, codigo: codigo }));
         return codigo;
     }
 
@@ -1136,14 +1253,14 @@
         if (esPlantManager()) {
             leerPlanoSolo(ficheros[0], q);
             if (ficheros.length > 1) {
-                aviso('Hay ' + ficheros.length + ' ficheros del correo en la casilla; ' +
-                      'se lee el primero (' + ficheros[0].name + '). Los demás, a mano.');
+                aviso(t('variosFicheros', { n: ficheros.length,
+                                            nombre: ficheros[0].name }));
             }
             return;
         }
         aviso(ficheros.length === 1
-            ? 'El plano del correo (' + ficheros[0].name + ') ya está puesto: pulsa "AI Read Drawing".'
-            : ficheros.length + ' planos del correo ya están puestos: pulsa "AI Read Drawing".');
+            ? t('planoPuesto', { nombre: ficheros[0].name })
+            : t('planosPuestos', { n: ficheros.length }));
     }
 
     /** Quien dictamina. El lector traduce ese permiso a ADMIN al servir la hoja. */
@@ -1180,11 +1297,10 @@
             ? parserStatus() : Promise.resolve(false);
         Promise.resolve(puede).then(function (vivo) {
             if (!vivo && !(typeof local !== 'undefined' && local.apiKey)) {
-                aviso('El plano del correo (' + fichero.name + ') ya está puesto. ' +
-                      'El lector está apagado: enciéndelo y pulsa "AI Read Drawing".');
+                aviso(t('lectorApagado', { nombre: fichero.name }));
                 return;
             }
-            aviso('Leyendo el plano del correo (' + fichero.name + ')…');
+            aviso(t('leyendo', { nombre: fichero.name }));
             if (typeof setParseUI === 'function') setParseUI(true);
             return parseOneFile(fichero).then(function () {
                 var actual = (typeof Q === 'function') ? Q() : null;
@@ -1197,10 +1313,11 @@
                 intentar(function () {
                     if (typeof openSpringCalc === 'function') openSpringCalc(false);
                 }, 'pasar las cotas del plano a la hoja de resortes');
-                aviso('Plano leído: revisa los campos marcados.');
+                aviso(t('planoLeido'));
             }).catch(function (err) {
-                aviso('No se pudo leer el plano: ' + (err && err.message ? err.message : err) +
-                      '. Está cargado; puedes pulsar "AI Read Drawing".');
+                aviso(t('planoNoLeido', {
+                    error: (err && err.message) ? err.message : err
+                }));
             }).then(function () {
                 if (typeof setParseUI === 'function') setParseUI(false);
             });
@@ -1300,15 +1417,14 @@
     /** Lo que se le dice a quien acaba de pulsar "Abrir cotización completa". */
     function avisarCargado(rfqId, lleno, cliente, sinCatalogo, faltantes) {
         if (!lleno) return;
-        var partes = ['RFQ ' + rfqId + ' abierto en la hoja'];
+        var partes = [t('rfqAbierto', { rfq: rfqId })];
         if (sinCatalogo) {
-            partes.push('el cliente "' + sinCatalogo + '" no está en el catálogo: ' +
-                        'hay que elegirlo o darlo de alta');
+            partes.push(t('sinCatalogo', { cliente: sinCatalogo }));
         } else if (cliente) {
-            partes.push('cliente ' + cliente);
+            partes.push(t('conCliente', { cliente: cliente }));
         }
         if (faltantes && faltantes.length) {
-            partes.push(faltantes.length + ' dato(s) que el catálogo no resolvió');
+            partes.push(t('sinResolver', { n: faltantes.length }));
         }
         aviso(partes.join(' · '));
     }
@@ -1573,8 +1689,7 @@
            que pasó, lo que se vio fue una tabla ilegible y no había forma de
            adivinar por qué. */
         if (!document.documentElement.hasAttribute('data-nube-tema')) {
-            aviso('La calculadora no se regeneró: falta pasar ' +
-                  'scripts/vendorizar_nucleo.py. Se queda en tema claro.');
+            aviso(t('sinRegenerar'));
         }
         enchufar();
         if (typeof renderShareBar === 'function') {
@@ -1583,12 +1698,12 @@
         adoptar().then(function (como) {
             pintarBarra();
             if (como === 'sembrado') {
-                aviso('Primera vez: se subió a Pohua lo que había en este navegador.');
+                aviso(t('sembrado'));
             }
         }).catch(function (err) {
             SFS.healthy = false;
             pintarBarra();
-            aviso('No se pudo leer el estado desde Pohua — ' + err.message);
+            aviso(t('noLeyoEstado', { error: err.message }));
         });
     });
 })();

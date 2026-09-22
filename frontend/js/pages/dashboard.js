@@ -80,6 +80,25 @@ const DashboardPage = (() => {
     const RADIO_NODO = 26;      // radio del círculo de cada estación
     const MAX_SOBRES = 4;       // por enlace: más es ruido, no información
 
+    /* Lo que ocupa un sobre de verdad en pantalla: 18 px de ancho más el
+       resplandor. Dos sobres a menos de esto se leen como una sola figura
+       dentada —los picos de las solapas, uno detrás de otro—, que es justo lo
+       que se veía. Es la distancia MÍNIMA entre centros, y manda sobre el
+       número de sobres: antes que apretarlos, se ponen menos. */
+    const SEPARACION_MIN = 52;
+
+    /* Ritmo, en píxeles por segundo, igual en todos los tramos.
+       Antes cada sobre llevaba su propia velocidad (`0.34 + (k % 3) * 0.05`)
+       Y estaba dicha en VUELTAS por segundo, lo que traía dos cosas malas:
+         - dentro de un tramo, el rápido alcanzaba al lento y acababan
+           encimados, por muy bien repartidos que salieran;
+         - entre tramos, uno corto y uno largo se recorrían en el mismo
+           tiempo, así que el corto iba visiblemente más despacio.
+       Con una sola velocidad en píxeles, las distancias que se ven al
+       arrancar son las mismas un minuto después, y todo el diagrama avanza
+       al mismo paso. */
+    const VELOCIDAD_PX = 56;
+
     let datos = null;           // última respuesta del servidor
     let geometria = null;       // posiciones calculadas para el ancho actual
     let sobres = [];
@@ -151,10 +170,16 @@ const DashboardPage = (() => {
      * trabajo, el tramo se ve más cargado. Un enlace hacia una etapa a cero se
      * queda sin sobres, que es la verdad: por ahí no está pasando nada.
      */
-    function cuantosSobres(total, maximo) {
+    function cuantosSobres(total, maximo, largo) {
         if (!total) return 0;
+        // Cuántos caben sin pisarse. Un tramo corto —o el diagrama en
+        // vertical, donde los tramos son la mitad de largos— admite menos, y
+        // ese límite es el que manda: un sobre solo dice lo mismo que cuatro
+        // amontonados, y se lee.
+        const caben = Math.max(1, Math.floor((largo || 0) / SEPARACION_MIN));
+        const tope = Math.min(MAX_SOBRES, caben);
         if (maximo <= 0) return 1;
-        return Math.max(1, Math.min(MAX_SOBRES, Math.round((total / maximo) * MAX_SOBRES)));
+        return Math.max(1, Math.min(tope, Math.round((total / maximo) * MAX_SOBRES)));
     }
 
     function crearSobres(g) {
@@ -167,16 +192,23 @@ const DashboardPage = (() => {
 
         sobres = [];
         for (let i = 0; i < tramos.length; i++) {
+            const t = tramos[i];
+            const largo = Math.hypot(t.x2 - t.x1, t.y2 - t.y1) || 1;
             // El enlace i lleva a la etapa i+1: su carga es la de destino.
-            const cuantos = cuantosSobres(totales[i + 1], maximo);
+            const cuantos = cuantosSobres(totales[i + 1], maximo, largo);
+            // Una sola velocidad para todo el tramo, sacada del ritmo en
+            // píxeles. Compartirla es lo que mantiene la separación: si dos
+            // sobres del mismo tramo van a distinta velocidad, el hueco entre
+            // ellos se cierra solo, y ningún reparto inicial lo evita.
+            const velocidad = VELOCIDAD_PX / largo;   // vueltas por segundo
             for (let k = 0; k < cuantos; k++) {
                 sobres.push({
                     tramo: i,
-                    // Repartidos por el tramo para que no salgan todos a la vez.
-                    // El +0.5 los aparta de los extremos: ahí la opacidad es 0
-                    // y el primer fotograma saldría con el tramo vacío.
+                    // Repartidos a partes iguales. El +0.5 los aparta de los
+                    // extremos: ahí la opacidad es 0 y el primer fotograma
+                    // saldría con el tramo vacío.
                     t: (k + 0.5) / cuantos,
-                    velocidad: 0.34 + (k % 3) * 0.05,   // vueltas por segundo
+                    velocidad,
                     espera: datos.etapas[i + 1]?.espera && totales[i + 1] > 0,
                 });
             }
