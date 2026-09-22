@@ -240,7 +240,14 @@ const API = {
 
     // Los avisos en el teléfono (Web Push).
     pushClave()            { return this.request('GET', '/api/push/clave'); },
-    pushSuscribir(sub)     { return this.request('POST', '/api/push/suscribir', { suscripcion: sub }); },
+    // El idioma va con la suscripción: una notificación push la pinta el
+    // sistema operativo con lo que mandó el servidor, así que cuando llega ya
+    // no hay dónde traducirla. Tiene que salir bien escrita de origen.
+    pushSuscribir(sub) {
+        const idioma = (typeof I18N !== 'undefined' && I18N.idioma) || 'en';
+        return this.request('POST', '/api/push/suscribir',
+                            { suscripcion: sub, idioma });
+    },
     pushDesuscribir(endpoint) { return this.request('DELETE', '/api/push/suscribir', { endpoint }); },
     pushProbar()           { return this.request('POST', '/api/push/probar'); },
 

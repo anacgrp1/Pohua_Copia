@@ -221,6 +221,16 @@ const Push = (() => {
             });
         }
         sincronizar();
+
+        /* Al cambiar de idioma, este aparato se vuelve a registrar.
+           El idioma viaja con la suscripción porque una notificación push la
+           pinta el sistema operativo: cuando llega al teléfono ya no hay
+           dónde traducirla. Sin esto, quien se suscribió en español seguiría
+           recibiendo avisos en español para siempre, aunque se pasara la
+           aplicación entera a inglés. */
+        if (typeof I18N !== 'undefined' && I18N.alCambiar) {
+            I18N.alCambiar(() => { sincronizar(); });
+        }
     }
 
     /** Al cambiar de usuario se olvida lo consultado: otro rol, otra respuesta. */

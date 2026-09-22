@@ -6048,6 +6048,37 @@ body.revision-abierta { overflow: hidden; }
     color: var(--text-muted);
 }
 
+/* Lo que el lector anotó del plano. En ámbar y con barra lateral, no en gris
+   de nota al pie: no son decoración, son el motivo por el que falta una cota.
+   Discretas frente a los campos —el PM viene a leer números—, pero visibles
+   sin buscarlas. */
+.revision-geo-avisos {
+    margin: 0 0 var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
+    list-style: none;
+    border-left: 2px solid var(--color-warning);
+    background: color-mix(in srgb, var(--color-warning) 8%, transparent);
+    border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0;
+}
+
+.revision-geo-avisos li {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.revision-geo-avisos li + li { margin-top: 4px; }
+
+/* Las espiras totales deducidas de las activas. No es un aviso —nada va mal—,
+   es la respuesta a "por qué está vacía esa casilla y aun así hay peso". En
+   gris de pie de campo, debajo de los campos que explica. */
+.revision-geo-deducido {
+    margin: var(--sp-2) 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+
 .revision-campos {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

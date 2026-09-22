@@ -28,6 +28,10 @@ router = APIRouter(prefix="/api/push", tags=["push"])
 
 class Suscripcion(BaseModel):
     suscripcion: Dict[str, Any]     # PushSubscription.toJSON()
+    # El idioma de Pohua en este aparato. Opcional a propósito: una versión
+    # anterior de la web no lo manda, y quedarse sin avisos por eso sería peor
+    # que recibirlos en inglés.
+    idioma: Optional[str] = None
 
 
 class Baja(BaseModel):
@@ -59,7 +63,11 @@ def suscribir(body: Suscripcion, request: Request,
                             "en el servidor (faltan las claves VAPID).")
     try:
         sub_id = push.suscribir(usuario.id, usuario.correo, body.suscripcion,
-                                navegador=request.headers.get("user-agent"))
+                                navegador=request.headers.get("user-agent"),
+                                # El idioma de Pohua en ESTE aparato: es lo que
+                                # decide en qué idioma le llegan los avisos, y
+                                # sólo el navegador lo sabe.
+                                idioma=body.idioma)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:

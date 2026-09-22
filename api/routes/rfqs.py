@@ -173,6 +173,23 @@ def get_rfq(
             datos = {}
     data["datos_json"] = datos
 
+    # Si al resorte le falta el calibre y hay plano guardado, se lee AQUÍ.
+    # Antes sólo lo hacía la ventana de revisión, así que la ficha enseñaba
+    # seis rayas y el error de la lectura del día del correo, mientras el
+    # dibujo seguía guardado esperando a que alguien abriera otra pantalla.
+    # Los datos ya son del sistema: traerlos no debería pedir intervención.
+    #
+    # `_una_vez` es lo que hace que esto no cueste una fortuna: un plano
+    # ilegible o una clave revocada se intentan una vez por proceso, no una
+    # vez por repintado.
+    try:
+        import app.rfq.relectura as relectura
+        asegurado = relectura.asegurar_resorte_una_vez(
+            rfq_id, resorte, message_id=data.get("message_id") or "")
+        resorte = asegurado["resorte"] or resorte
+    except Exception:
+        log.debug("RFQ %s: no se pudo asegurar el resorte en la ficha.", rfq_id)
+
     return RFQDetail(**data, banderas=banderas, resorte=resorte)
 
 
@@ -300,6 +317,27 @@ def revision_rfq(
                     lectura=asegurado["lectura"])
 
 
+def _espiras_calculadas(resorte: dict) -> dict:
+    """Las espiras totales deducidas de las activas, si hizo falta deducirlas.
+
+    Vacío cuando el plano ya daba las totales —no hay nada que explicar— y
+    cuando no se pueden saber, que es cuando el aviso de peso ya lo dice.
+    """
+    if not resorte:
+        return {}
+    if costeo_rfq.num(resorte.get("numero_espiras_totales")):
+        return {}
+    try:
+        from pricing import espiras as espiras_mod
+        totales, porque = espiras_mod.espiras_totales(resorte)
+    except Exception:          # nunca por esto se queda el PM sin ventana
+        return {}
+    if not totales or not porque:
+        return {}
+    return {"espiras_calculadas": costeo_rfq.num(totales),
+            "espiras_origen": porque}
+
+
 def _ventana(detalle, usuario, resorte=None, lectura=None, recalculo=None):
     """La respuesta de la ventana de revisión, en un solo sitio.
 
@@ -366,6 +404,23 @@ def _ventana(detalle, usuario, resorte=None, lectura=None, recalculo=None):
             "longitud_libre_mm": costeo_rfq.num(resorte.get("longitud_libre_mm")),
             "espiras_totales": costeo_rfq.num(resorte.get("numero_espiras_totales")),
             "confianza": costeo_rfq.num(resorte.get("confianza")),
+            # Cuando el plano acota las ACTIVAS y no las totales, el peso sale
+            # igual: se le suman las espiras muertas del tipo de extremo. Pero
+            # entonces la casilla "Total Coils" se ve vacía y parece que falta
+            # un dato que en realidad ya está resuelto, así que el PM lo teclea
+            # a mano —y si teclea las activas, el peso sale corto—.
+            # Van el número y de dónde sale: un total calculado y uno leído del
+            # plano no valen lo mismo, y quien aprueba tiene que poder
+            # distinguirlos.
+            **_espiras_calculadas(resorte),
+            # Lo que el lector anotó al mirar el plano: ambigüedades, texto
+            # ilegible, cotas que no estaban. Se le pedían en el prompt desde
+            # el principio y no las leía nadie: se guardaban en `datos_json` y
+            # ahí se quedaban. Son justo lo que distingue «el plano no lo
+            # dice» de «el lector no supo verlo», y esa diferencia decide si
+            # hay que preguntarle al cliente o volver a leer.
+            "advertencias": [a for a in (resorte.get("advertencias") or [])
+                             if str(a).strip()][:6],
         },
         # Si hizo falta leer el plano al abrir esta ventana, qué salió.
         # `None` = no hizo falta, el resorte ya estaba completo.
@@ -679,6 +734,11 @@ def releer_plano_del_rfq(
     import app.rfq.relectura as relectura
 
     get_rfq(rfq_id, None, usuario)                     # 404 si no existe
+    # Una persona pidiendo la lectura manda sobre lo que este proceso
+    # aprendiera de un intento anterior: si pulsa el botón es porque algo
+    # cambió fuera —saldo recargado, clave nueva, otro plano subido— y el
+    # freno automático no tiene por qué saberlo.
+    relectura.olvidar_intentos()
     lectura = relectura.releer(rfq_id)
     log.info("RFQ %s: relectura del plano pedida por %s → %s.",
              rfq_id, usuario.correo, lectura["estado"])

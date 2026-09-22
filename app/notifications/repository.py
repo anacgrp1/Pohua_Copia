@@ -52,6 +52,8 @@ def crear(
     nivel: str = "warn",
     usuario_id: Optional[int] = None,
     conexion=None,
+    clave: Optional[str] = None,
+    titulo_datos: Optional[dict] = None,
 ) -> Optional[int]:
     """Registra un aviso y devuelve su id, o ``None`` si no se pudo.
 
@@ -80,7 +82,8 @@ def crear(
             )
             nuevo = cur.fetchone()[0]
         log.info("Aviso %s creado para RFQ=%s (%s).", nuevo, rfq_id, tipo)
-        _empujar(nuevo, tipo, rfq_id, titulo, detalle, nivel, usuario_id)
+        _empujar(nuevo, tipo, rfq_id, titulo, detalle, nivel, usuario_id,
+                 clave, titulo_datos)
         return nuevo
     except Exception as error:
         log.exception("No se pudo crear el aviso de RFQ=%s (%s): %s",
@@ -91,12 +94,19 @@ def crear(
             conn.close()
 
 
-def _empujar(aviso_id, tipo, rfq_id, titulo, detalle, nivel, usuario_id) -> None:
-    """El mismo aviso, al teléfono (Web Push). Nunca frena a quien lo creó."""
+def _empujar(aviso_id, tipo, rfq_id, titulo, detalle, nivel, usuario_id,
+             clave=None, titulo_datos=None) -> None:
+    """El mismo aviso, al teléfono (Web Push). Nunca frena a quien lo creó.
+
+    ``clave``/``titulo_datos`` viajan hasta ``push`` sin tocarse: es allí donde
+    se sabe en qué idioma está cada aparato, y por tanto el único sitio donde
+    el título se puede escribir bien.
+    """
     try:
         import app.notifications.push as push
         push.enviar_a_todos(titulo=titulo, cuerpo=detalle or "", rfq_id=rfq_id,
                             nivel=nivel, usuario_id=usuario_id,
+                            clave=clave, titulo_datos=titulo_datos,
                             extra={"aviso_id": aviso_id, "tipo": tipo})
     except Exception as error:
         log.warning("Aviso %s: no se pudo empujar al teléfono: %s", aviso_id, error)

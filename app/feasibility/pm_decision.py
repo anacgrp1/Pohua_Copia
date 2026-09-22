@@ -205,6 +205,7 @@ def devolver(rfq_id, nota=None, usuario=None, conexion=None) -> dict:
         notificaciones.crear(
             tipo="dictamen_pm", rfq_id=rfq_id,
             titulo=f"{rfq_id}: devuelto por el PM",
+            clave="dictamen_devuelto", titulo_datos={"rfq": rfq_id},
             detalle=str(nota).strip(),
             datos={"usuario": usuario, "accion": "devolver"},
             nivel="warn")

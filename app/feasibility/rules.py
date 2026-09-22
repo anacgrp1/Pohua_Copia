@@ -139,6 +139,7 @@ class Reglas:
             self._puntuacion.get("umbral_factible"))
         self._materiales: Tuple[dict, ...] = tuple(datos["materiales_soportados"])
         self._indice_materiales = _indexar_materiales(self._materiales)
+        self._familias = _indexar_familias(datos.get("familias_genericas") or ())
 
     # -- tipos ------------------------------------------------------------- #
 
@@ -167,6 +168,30 @@ class Reglas:
                 return nombre
         return None
 
+    def material_generico(self, texto: Optional[str]) -> Optional[str]:
+        """Código del material cuando el plano nombra la FAMILIA, no el material.
+
+        "Spring wire" no es un material: es la familia entera. No resolvía a
+        ningún código, y sin código no hay módulo de cortante —así que el
+        lector no puede deducir las espiras desde la rigidez ni comprobar las
+        del plano— ni precio por libra. La oferta acababa en revisión por un
+        material que en la práctica ya está decidido: en ISC, Music Wire.
+
+        Es el ÚLTIMO recurso, y por eso vive aparte del índice de alias en vez
+        de dentro de él. Metido ahí, "spring wire" (once letras) le ganaría por
+        longitud a "hard drawn" (diez) y un plano que dice "hard drawn spring
+        wire" se cotizaría como Music Wire. Aquí el orden lo decide el archivo,
+        no la casualidad de cuántas letras tiene cada alias: gana la primera
+        que case, y las concretas van escritas primero.
+        """
+        if not texto or not str(texto).strip():
+            return None
+        objetivo = _normalizar(texto)
+        for patron, codigo in self._familias:
+            if patron.search(objetivo):
+                return codigo
+        return None
+
     def codigo_material(self, texto: Optional[str]) -> Optional[str]:
         """Código de catálogo del material, a partir del texto libre del RFQ.
 
@@ -182,7 +207,9 @@ class Reglas:
         """
         nombre = self.material_soportado(texto)
         if nombre is None:
-            return None
+            # Ningún material concreto casó. Puede que el plano sólo nombre la
+            # familia ("spring wire"), que sí se sabe cotizar.
+            return self.material_generico(texto)
         for material in self._materiales:
             if material["nombre"] == nombre:
                 return material.get("codigo")
@@ -295,6 +322,7 @@ def _validar(datos) -> None:
     if not isinstance(datos, dict):
         raise ReglasInvalidasError("Las directrices deben ser un objeto JSON.")
     _rechazar_desconocidas("directrices", datos, CLAVES_RAIZ)
+    _validar_familias(datos)
 
     version = datos.get("version")
     if not isinstance(version, str) or not version.strip():
@@ -362,6 +390,7 @@ def _validar_puntuacion(puntuacion) -> None:
     if not isinstance(puntuacion, dict):
         raise ReglasInvalidasError("'puntuacion' debe ser un objeto.")
     _rechazar_desconocidas("puntuacion", puntuacion, CLAVES_PUNTUACION)
+
 
     umbral = puntuacion.get("umbral_factible")
     if umbral is None:
@@ -445,10 +474,11 @@ LIMITES = ("min", "max", "preferido_min", "preferido_max")
 # límite sin efecto. Mejor que reviente al cargar.
 CLAVES_RANGO = LIMITES + ("nota", "penalizacion")
 CLAVES_MATERIAL = ("nombre", "codigo", "alias", "rango_alambre_mm")
+CLAVES_FAMILIA = ("alias", "codigo", "nota")
 CLAVES_RAIZ = (
     "version", "actualizado", "fuente", "tipos_fabricables",
     "tolerancia_minima_mm", "confianza_minima", "puntuacion",
-    "materiales_soportados", "rangos", "requeridos",
+    "materiales_soportados", "familias_genericas", "rangos", "requeridos",
     # Bloques de documentación: el motor no los lee, pero viajan con el
     # archivo para que quien edite un rango sepa de dónde salió.
     "pendientes", "referencia",
@@ -462,6 +492,51 @@ def _rechazar_desconocidas(donde: str, objeto: dict, admitidas) -> None:
         raise ReglasInvalidasError(
             f"'{donde}': clave(s) no reconocida(s) {', '.join(sobrantes)}. "
             f"Admitidas: {', '.join(admitidas)}.")
+
+
+
+def _validar_familias(datos) -> None:
+    """Las familias genéricas, si las hay, bien formadas y apuntando a algo.
+
+    Una familia con un código que no existe en `materiales_soportados` es el
+    fallo peor de todos: resuelve, así que nadie ve un material faltante, y
+    luego el catálogo no encuentra la fila. El precio sale sin materia prima y
+    la oferta se va con él. Se caza aquí, al cargar.
+    """
+    familias = datos.get("familias_genericas")
+    if familias is None:
+        return
+    if not isinstance(familias, list):
+        raise ReglasInvalidasError(
+            "'familias_genericas' debe ser una lista, en orden: se prueba de "
+            "arriba abajo y gana la primera que case.")
+
+    codigos = {m.get("codigo") for m in datos.get("materiales_soportados") or []}
+    vistos = set()
+    for i, familia in enumerate(familias):
+        donde = f"familias_genericas[{i}]"
+        if not isinstance(familia, dict):
+            raise ReglasInvalidasError(f"{donde} debe ser un objeto.")
+        _rechazar_desconocidas(donde, familia, CLAVES_FAMILIA)
+
+        alias = familia.get("alias")
+        if not isinstance(alias, str) or not alias.strip():
+            raise ReglasInvalidasError(f"{donde} necesita un 'alias' con texto.")
+        clave = _normalizar(alias)
+        if clave in vistos:
+            raise ReglasInvalidasError(
+                f"{donde}: el alias '{alias}' está dos veces. La segunda no se "
+                "alcanzaría nunca, porque gana la primera que case.")
+        vistos.add(clave)
+
+        codigo = familia.get("codigo")
+        if not isinstance(codigo, str) or not codigo.strip():
+            raise ReglasInvalidasError(f"{donde} necesita un 'codigo' con texto.")
+        if codigo not in codigos:
+            raise ReglasInvalidasError(
+                f"{donde}: el código '{codigo}' no es ninguno de los "
+                f"materiales_soportados. Una familia que resuelve a un código "
+                f"inexistente deja el costeo sin materia prima y nadie lo ve.")
 
 
 def _validar_limites(donde: str, limites) -> None:
@@ -532,6 +607,24 @@ def _normalizar(texto: str) -> str:
     descompuesto = unicodedata.normalize("NFKD", str(texto))
     sin_acentos = "".join(c for c in descompuesto if not unicodedata.combining(c))
     return _NO_ALFANUM.sub(" ", sin_acentos.lower()).strip()
+
+
+def _indexar_familias(familias) -> Tuple[Tuple[re.Pattern, str], ...]:
+    """Las familias genéricas, EN EL ORDEN DEL ARCHIVO.
+
+    A diferencia de `_indexar_materiales`, aquí no se ordena por longitud: el
+    orden es la regla. Quien edite el archivo tiene que poder poner lo concreto
+    antes que lo general y que eso se respete.
+    """
+    indice = []
+    for familia in familias:
+        patron = _normalizar(familia.get("alias", ""))
+        if not patron:
+            continue
+        indice.append(
+            (re.compile(rf"(?<![a-z0-9]){re.escape(patron)}(?![a-z0-9])"),
+             familia.get("codigo")))
+    return tuple(indice)
 
 
 def _indexar_materiales(materiales) -> Tuple[Tuple[re.Pattern, str], ...]:

@@ -89,9 +89,17 @@ def _validar(suscripcion: Dict[str, Any]) -> Dict[str, str]:
 
 
 def suscribir(usuario_id: int, correo: Optional[str], suscripcion: Dict[str, Any],
-              navegador: Optional[str] = None, conexion=None) -> int:
-    """Guarda (o renueva) la suscripción de un dispositivo. Devuelve su id."""
+              navegador: Optional[str] = None, conexion=None,
+              idioma: Optional[str] = None) -> int:
+    """Guarda (o renueva) la suscripción de un dispositivo. Devuelve su id.
+
+    ``idioma`` es el de Pohua en ESE dispositivo. Se guarda aquí y no con el
+    usuario porque la misma persona puede tener la computadora en inglés y el
+    teléfono en español, y cada aparato recibe su propio texto.
+    """
+    from app.notifications import textos
     s = _validar(suscripcion)
+    lengua = textos.normalizar_idioma(idioma)
     propia = conexion is None
     conn = conexion or duplicates.conectar_bd()
     try:
@@ -99,19 +107,21 @@ def suscribir(usuario_id: int, correo: Optional[str], suscripcion: Dict[str, Any
             cur.execute(
                 """
                 INSERT INTO push_suscripciones
-                    (usuario_id, usuario_correo, endpoint, p256dh, auth, navegador)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                    (usuario_id, usuario_correo, endpoint, p256dh, auth,
+                     navegador, idioma)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (endpoint) DO UPDATE
                     SET usuario_id = EXCLUDED.usuario_id,
                         usuario_correo = EXCLUDED.usuario_correo,
                         p256dh = EXCLUDED.p256dh,
                         auth = EXCLUDED.auth,
                         navegador = EXCLUDED.navegador,
+                        idioma = EXCLUDED.idioma,
                         fallos = 0
                 RETURNING id, (xmax = 0) AS es_nuevo;
                 """,
                 (usuario_id, correo, s["endpoint"], s["p256dh"], s["auth"],
-                 (navegador or "")[:200] or None),
+                 (navegador or "")[:200] or None, lengua),
             )
             nuevo, es_nuevo = cur.fetchone()
         # Cada vez que alguien abre Pohua, su dispositivo se vuelve a
@@ -158,14 +168,14 @@ def listar(usuario_id: Optional[int] = None, conexion=None) -> List[Dict[str, An
     try:
         with conn.cursor() as cur:
             sql = ("SELECT id, usuario_id, usuario_correo, endpoint, p256dh, auth, navegador, "
-                   "creada_en, ultimo_envio, fallos FROM push_suscripciones")
+                   "creada_en, ultimo_envio, fallos, idioma FROM push_suscripciones")
             if usuario_id is None:
                 cur.execute(sql + " ORDER BY id;")
             else:
                 cur.execute(sql + " WHERE usuario_id = %s ORDER BY id;", (usuario_id,))
             filas = cur.fetchall()
         claves = ("id", "usuario_id", "usuario_correo", "endpoint", "p256dh", "auth",
-                  "navegador", "creada_en", "ultimo_envio", "fallos")
+                  "navegador", "creada_en", "ultimo_envio", "fallos", "idioma")
         return [dict(zip(claves, f)) for f in filas]
     finally:
         if propia:
@@ -249,12 +259,19 @@ def _mandar_una(sub: Dict[str, Any], carga: str) -> bool:
 def enviar_a_todos(titulo: str, cuerpo: str = "", rfq_id: Optional[str] = None,
                    nivel: str = "info", usuario_id: Optional[int] = None,
                    extra: Optional[Dict[str, Any]] = None,
-                   en_segundo_plano: bool = True) -> int:
+                   en_segundo_plano: bool = True,
+                   clave: Optional[str] = None,
+                   titulo_datos: Optional[Dict[str, Any]] = None) -> int:
     """Manda el aviso a todos los dispositivos suscritos (o a los de una persona).
 
     Devuelve cuántos dispositivos había. Con ``en_segundo_plano`` el envío
     corre en un hilo y esta función vuelve enseguida: quien crea el aviso
     —el ciclo de correo, el dictamen del PM— no tiene por qué esperar.
+
+    ``clave`` y ``titulo_datos`` son lo que permite mandar el aviso en el
+    idioma de cada aparato (``app/notifications/textos.py``). Sin ellos se
+    manda ``titulo`` tal cual, que es lo que hacía siempre: así un aviso que
+    todavía no esté en el catálogo sale igual, sólo que sin traducir.
     """
     if not habilitado():
         return 0
@@ -266,11 +283,27 @@ def enviar_a_todos(titulo: str, cuerpo: str = "", rfq_id: Optional[str] = None,
     if not subs:
         return 0
 
-    carga = _carga(titulo, cuerpo, rfq_id, nivel, extra)
+    # Una carga por idioma, no una por dispositivo: con tres idiomas y treinta
+    # teléfonos son tres textos, no treinta. El cuerpo NO se traduce —lleva
+    # códigos, números y lo que escribiera una persona— y va igual a todos.
+    from app.notifications import textos
+    cargas: Dict[str, str] = {}
+
+    def _carga_para(sub: Dict[str, Any]) -> str:
+        lengua = textos.normalizar_idioma(sub.get("idioma"))
+        if lengua not in cargas:
+            dicho = titulo
+            if clave:
+                traducido = textos.titulo(clave, lengua, **(titulo_datos or {}))
+                if traducido:
+                    dicho = traducido
+            cargas[lengua] = _carga(dicho, cuerpo, rfq_id, nivel, extra)
+        return cargas[lengua]
 
     def _trabajo():
-        entregados = sum(1 for s in subs if _mandar_una(s, carga))
-        log.info("Push: %s de %s dispositivos recibieron «%s».", entregados, len(subs), titulo)
+        entregados = sum(1 for s in subs if _mandar_una(s, _carga_para(s)))
+        log.info("Push: %s de %s dispositivos recibieron «%s» (%s).",
+                 entregados, len(subs), titulo, ", ".join(sorted(cargas)) or "-")
 
     if en_segundo_plano:
         threading.Thread(target=_trabajo, name="push-avisos", daemon=True).start()

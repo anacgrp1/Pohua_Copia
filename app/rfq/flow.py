@@ -39,7 +39,6 @@ error pero no rompe el ciclo de lectura del buzón.
 """
 import logging
 import uuid
-from typing import Any
 
 import app.rfq.detector as detector
 import app.rfq.thread_validator as thread_validator
@@ -456,7 +455,8 @@ def _nivel_de_motivos(motivos):
     return "info"
 
 
-def _avisar(tipo, rfq_id, titulo, detalle, datos, nivel):
+def _avisar(tipo, rfq_id, titulo, detalle, datos, nivel,
+            clave=None, titulo_datos=None):
     """Escribe el aviso en el buzón del PM. Devuelve si se pudo.
 
     Un fallo aquí no frena nada: el RFQ ya quedó en ``RequiresReview`` y sigue
@@ -467,7 +467,8 @@ def _avisar(tipo, rfq_id, titulo, detalle, datos, nivel):
         import app.notifications.repository as notificaciones
         return notificaciones.crear(
             tipo=tipo, rfq_id=rfq_id, titulo=titulo, detalle=detalle,
-            datos=datos, nivel=nivel) is not None
+            datos=datos, nivel=nivel,
+            clave=clave, titulo_datos=titulo_datos) is not None
     except Exception as error:
         log.exception("RFQ=%s: no se pudo dejar el aviso para el PM: %s",
                       rfq_id, error)
@@ -515,6 +516,8 @@ def notificar_factibilidad_pm(rfq_id, factibilidad, cliente=None):
         tipo="factibilidad_revision",
         rfq_id=rfq_id,
         titulo=_texto_aviso('revision', cliente or rfq_id),
+        clave="factibilidad_revision",
+        titulo_datos={"cliente": cliente or rfq_id},
         detalle=f"{rfq_id} · {detalle}" if detalle else rfq_id,
         datos={"score": score, "banda": banda, "motivos": motivos,
                "reglas_version": factibilidad.get("reglas_version")},
@@ -557,6 +560,11 @@ def notificar_revision_pm(datos, en_revision, rfq_id):
         tipo="extraccion_revision",
         rfq_id=rfq_id,
         titulo=f"{rfq_id}: {len(en_revision)} dato(s) extraídos con poca confianza",
+        # La clave es lo que permite escribirlo en el idioma de cada teléfono
+        # (`app/notifications/textos.py`). El título de arriba sigue siendo el
+        # que se guarda en el buzón y el respaldo si la clave no estuviera.
+        clave="extraccion_revision",
+        titulo_datos={"rfq": rfq_id, "n": len(en_revision)},
         detalle=detalle,
         datos={"campos": en_revision, "customer": datos.get("customer")},
         # `warn` y no `crit`: hay dato, sólo que hay que confirmarlo. Lo crítico
@@ -705,7 +713,7 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
     thread_validator.registrar_en_historial(
         rfq_id, correo.get("message_id", ""), correo.get("asunto", ""))
 
-    resultado: dict[str, Any] = {
+    resultado = {
         "rfq_id": rfq_id,
         "clasificacion": clasificacion,
         "etapa": None,
@@ -852,6 +860,8 @@ def notificar_alta_pm(rfq_id, datos, factibilidad):
         tipo="factibilidad_revision",
         rfq_id=rfq_id,
         titulo=_texto_aviso('validacion', cliente),
+        clave="factibilidad_validacion",
+        titulo_datos={"cliente": cliente},
         detalle=f"{rfq_id} · PN {pn} · score {factibilidad.get('score')} "
                 f"({factibilidad.get('banda') or '-'})",
         datos={"score": factibilidad.get("score"), "banda": factibilidad.get("banda"),

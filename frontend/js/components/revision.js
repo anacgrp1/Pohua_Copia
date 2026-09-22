@@ -458,10 +458,33 @@ const Revision = (() => {
         const ajustado = g.ajustado_por
             ? `<span class="revision-ajustado">${esc(t('rev.ajustadoPor', { quien: g.ajustado_por }))}</span>` : '';
 
+        /* Lo que el lector anotó del plano. Se le piden en el prompt —"anota
+           cualquier ambigüedad, texto ilegible o supuesto"— y hasta ahora se
+           guardaban sin que las viera nadie. Van aquí, pegadas a las cotas
+           que comentan, porque es donde el PM decide si corrige un número,
+           manda releer o le pregunta al cliente. */
+        /* Las totales deducidas de las activas. La casilla se deja VACÍA a
+           propósito: lo que el PM escriba ahí se guarda como leído del plano,
+           y este número no lo es. Se enseña debajo, con el método, para que
+           se vea que el peso ya está resuelto y nadie lo teclee encima —si
+           teclea las activas creyendo que son las totales, el peso sale corto
+           y el precio con él—. */
+        const deducidas = (g.espiras_calculadas && g.espiras_origen)
+            ? `<p class="revision-geo-deducido">${esc(t('rev.espirasDeducidas', {
+                   n: g.espiras_calculadas, metodo: g.espiras_origen }))}</p>`
+            : '';
+
+        const avisos = (g.advertencias || []).filter(Boolean);
+        const avisosHtml = avisos.length ? `
+            <ul class="revision-geo-avisos">
+                ${avisos.map(a => `<li>${esc(a)}</li>`).join('')}
+            </ul>` : '';
+
         return `
             <section class="revision-bloque revision-geo">
                 <h4>${esc(t('rev.geometria'))}${ajustado}</h4>
                 ${nota ? `<p class="revision-geo-nota">${esc(nota)}</p>` : ''}
+                ${avisosHtml}
                 <div class="revision-campos">
                     ${campo('diametro_alambre_mm', t('ficha.alambre'), g.diametro_alambre_mm, 'mm')}
                     ${campo('diametro_exterior_mm', t('ficha.exterior'), g.diametro_exterior_mm, 'mm')}
@@ -469,6 +492,7 @@ const Revision = (() => {
                     ${campo('numero_espiras_totales', t('ficha.espiras'), g.espiras_totales, '')}
                     ${campo('material', t('ficha.material'), g.material_texto || '', '')}
                 </div>
+                ${deducidas}
                 ${puede ? `<div class="revision-geo-acciones">
                     <button type="button" class="btn btn-secondary revision-btn" data-accion="leerPlano">${esc(t('plano.releer'))}</button>
                     <button type="button" class="btn btn-primary revision-btn" data-accion="recalcular">${esc(t('rev.recalcular'))}</button>

@@ -16,6 +16,7 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 import pricing.mensajes as mensajes
+from pricing import espiras as espiras_mod
 from pricing import repository
 
 log = logging.getLogger("cotizador.pricing.adapter")
@@ -97,11 +98,14 @@ def falta_para_el_peso(spring_data: Dict[str, Any]) -> Optional[str]:
             or _num(spring_data.get("diametro_interior_mm"))):
         return "diametro_exterior_mm"
 
-    if not _num(spring_data.get("numero_espiras_totales")):
-        activas = _num(spring_data.get("numero_espiras_activas"))
-        tipo = str(spring_data.get("tipo_resorte") or "").lower()
-        if not (activas and tipo.startswith("compres")):
-            return "numero_espiras_totales"
+    # Las totales pueden venir del plano o salir de las activas más las
+    # espiras muertas del tipo de extremo (`pricing/espiras.py`). Se pregunta
+    # ahí y no aquí para que esta función y el cálculo del desarrollo no puedan
+    # discrepar: decir "no falta nada" y luego devolver un peso nulo es peor
+    # que decir que falta.
+    totales, _ = espiras_mod.espiras_totales(spring_data)
+    if not totales:
+        return "numero_espiras_totales"
 
     return None
 
@@ -136,14 +140,11 @@ def longitud_desarrollada_pulg(spring_data: Dict[str, Any]) -> Optional[float]:
     if not dm or dm <= 0:
         return None
 
-    espiras = _num(spring_data.get("numero_espiras_totales"))
-    if not espiras:
-        # Con espiras activas se puede aproximar el total en compresión
-        # (dos espiras de cierre), pero no en los demás tipos.
-        activas = _num(spring_data.get("numero_espiras_activas"))
-        tipo = str(spring_data.get("tipo_resorte") or "").lower()
-        if activas and tipo.startswith("compres"):
-            espiras = activas + 2
+    # Igual que arriba: la conversión de activas a totales vive en un solo
+    # sitio, con la tabla de espiras muertas por tipo de extremo. Antes aquí
+    # se sumaban 2 sin mirar los extremos, que sólo vale para los cerrados: a
+    # unos extremos planos les inventaba dos espiras de alambre.
+    espiras, _ = espiras_mod.espiras_totales(spring_data)
     if not espiras or espiras <= 0:
         return None
 

@@ -62,6 +62,35 @@ Reglas de extracción:
   - Para cada valor, evalúa tu confianza global del 0.0 al 1.0 en "confianza".
   - Anota en "advertencias" cualquier ambigüedad, texto ilegible o supuesto realizado.
 
+TRES DATOS DECIDEN EL PRECIO. Sin ellos no se puede calcular el peso del alambre,
+y sin peso el costo de material sale en CERO y la pieza no se puede cotizar:
+  1. el diámetro de alambre,
+  2. un diámetro del cuerpo (exterior, interior o medio: basta uno),
+  3. el NÚMERO DE ESPIRAS.
+Los dos primeros casi siempre están acotados en la vista. El tercero es el que
+más veces se queda sin leer, porque rara vez es una cota: suele estar en la
+tabla de parámetros o en las notas. Búscalo con calma antes de darlo por
+ausente, bajo cualquiera de estos nombres:
+  - totales: "espiras totales", "total coils", "N", "Nt", "T.C.", "TC",
+    "coils, total", "number of coils"
+  - activas: "espiras activas", "active coils", "Na", "A.C.", "AC",
+    "coils, active", "working coils"
+Mira la tabla de parámetros, las notas al pie, el cuadro de rotulación y
+cualquier recuadro de especificación, no sólo las cotas de la vista.
+
+Sobre las espiras, además:
+  - Devuelve las que el dibujo DIGA, en su campo. Si sólo dice las activas,
+    pon las activas y deja las totales en null: NO conviertas de una a otra
+    —la regla de extremos cerrados (Nt = Na + 2) se aplica después, y
+    aplicarla aquí esconde cuál venía en el plano—.
+  - NO las cuentes de la vista ni las estimes del paso y la longitud libre.
+    Un número inventado se convierte en un costo de material inventado, que es
+    peor que no tenerlo.
+  - Si de verdad el dibujo no las da por ningún lado, escribe en
+    "advertencias" exactamente: "el dibujo no indica el número de espiras".
+    Esa frase le dice a quien cotiza que hay que preguntárselo al cliente, en
+    vez de dejarle dudando si el lector falló.
+
 Devuelve EXCLUSIVAMENTE un objeto JSON válido (sin markdown, sin ```), con esta forma:
 {
   "num_parte": "string|null",

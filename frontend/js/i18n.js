@@ -239,6 +239,7 @@ const I18N = (() => {
         'rev.recalculando':{ en: 'Recalculating…', es: 'Recalculando…', fr: 'Recalcul…' },
         'rev.recalculado': { en: 'Verdict redone with {n} corrected value(s).', es: 'Dictamen rehecho con {n} valor(es) corregido(s).', fr: 'Verdict refait avec {n} valeur(s) corrigée(s).' },
         'rev.recalculadoSinCambios': { en: 'Verdict redone. Nothing was changed.', es: 'Dictamen rehecho. No cambió ningún valor.', fr: 'Verdict refait. Aucune valeur modifiée.' },
+        'rev.espirasDeducidas': { en: 'Total coils not on the drawing: {n} used for the weight ({metodo}).', es: 'El plano no da las espiras totales: se usan {n} para el peso ({metodo}).', fr: 'Le plan ne donne pas les spires totales : {n} sont utilisées pour le poids ({metodo}).' },
         'rev.recalcularNota': { en: 'The verdict and the flags come from these values. Correct them and recalculate before approving or declining.', es: 'El veredicto y los motivos salen de estos valores. Corrígelos y recalcula antes de aprobar o declinar.', fr: 'Le verdict et les motifs viennent de ces valeurs. Corrigez-les et recalculez avant d’approuver ou de refuser.' },
         'rev.ajustadoPor': { en: 'corrected by {quien}', es: 'corregido por {quien}', fr: 'corrigé par {quien}' },
         'plano.releer':      { en: 'Read the drawing with AI', es: 'Leer el plano con IA', fr: 'Lire le plan avec l’IA' },

@@ -94,6 +94,10 @@ class OutlookEmailProvider(BaseEmailProvider):
         self._outlook = None
         self._mapi = None
         self._carpeta = None
+        # Buzón (en minúsculas) → cuenta del perfil, o None si no está. Ver
+        # `_cuenta`: recorrer las cuentas despierta al guardián de Outlook, y
+        # esto es lo que hace que sólo lo despierte una vez.
+        self._cuentas_vistas = {}
 
     # ---------------------------------------------------------------- COM
 
@@ -430,6 +434,36 @@ class OutlookEmailProvider(BaseEmailProvider):
             return False
 
     def _cuenta(self, buzon: str):
+        """La cuenta de ese buzón en el perfil, preguntándolo UNA sola vez.
+
+        Por qué el recuerdo
+        -------------------
+        Recorrer `Session.Accounts` y leer su `SmtpAddress` es, palabra por
+        palabra, lo que el guardián de Outlook llama «email address
+        information stored in Outlook». Cada recorrido puede levantar el
+        cuadro de «A program is trying to access…», y esto se llamaba en CADA
+        envío: la bandeja de salida se vacía en cada ciclo del lector, así que
+        el cuadro salía una y otra vez y había que darle a Permitir a cada
+        rato —que es justo la costumbre que hace que un día alguien le dé a
+        Permitir a algo que no era esto—.
+
+        Las cuentas de un perfil de Outlook no cambian mientras el programa
+        corre. Preguntarlo una vez por proceso y recordarlo baja el cuadro de
+        "en cada correo" a "como mucho una vez al arrancar", sin tocar
+        permisos ni el registro de Windows.
+
+        Se recuerda también el "no está": un buzón que no está en el perfil
+        tampoco aparece solo, y buscarlo otra vez costaría otro cuadro para
+        volver a no encontrarlo.
+        """
+        clave = (buzon or "").lower()
+        if clave in self._cuentas_vistas:
+            return self._cuentas_vistas[clave]
+        cuenta = self._buscar_cuenta(buzon)
+        self._cuentas_vistas[clave] = cuenta
+        return cuenta
+
+    def _buscar_cuenta(self, buzon: str):
         """La cuenta de Outlook que corresponde a ese buzón, si la hay.
 
         Importa de verdad para el remitente. Con `SentOnBehalfOfName` el correo
@@ -529,7 +563,13 @@ class OutlookEmailProvider(BaseEmailProvider):
                          "añadirlo como cuenta en Outlook.", buzon)
 
     def _cuentas_del_perfil(self):
-        """Las direcciones de las cuentas del perfil, para poder decirlo."""
+        """Las direcciones de las cuentas del perfil, para poder decirlo.
+
+        Sólo se llama para redactar un aviso —cuando el buzón configurado no
+        está en el perfil—, nunca en el camino bueno: recorrer las cuentas
+        cuesta un cuadro de permiso, y gastarlo para adornar un registro sería
+        cobrarle al usuario por una frase.
+        """
         fuera = []
         try:
             cuentas = self._outlook.Session.Accounts

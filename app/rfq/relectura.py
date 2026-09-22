@@ -135,6 +135,60 @@ def falta_geometria(resorte: Optional[dict]) -> bool:
         return True
 
 
+# Lo ya intentado en este proceso, y si tiene sentido repetirlo. Vive en
+# memoria a propósito: al reiniciar se vuelve a intentar una vez, que es
+# justo lo que se quiere después de recargar saldo o cambiar la clave.
+_INTENTADO: Dict[str, str] = {}
+
+
+def olvidar_intentos() -> None:
+    """Para las pruebas, y para cuando alguien pulsa «releer» a mano."""
+    _INTENTADO.clear()
+
+
+def asegurar_resorte_una_vez(rfq_id: str, resorte: Optional[dict],
+                             message_id: str = "", cliente=None) -> Dict[str, Any]:
+    """Como ``asegurar_resorte``, pero sin reintentar lo que no se va a arreglar.
+
+    Por qué hace falta
+    ------------------
+    La ficha del RFQ se repinta cada vez que alguien la abre. Leer el plano ahí
+    es lo correcto —los datos que enseña salen del dibujo, y quien la abre no
+    tiene por qué saber que el día del correo la lectura falló ni ir a buscar
+    otra pantalla para arreglarlo—, pero cada lectura es una llamada de pago.
+
+    Un plano ilegible o una clave revocada fallan igual las cien veces. Sin
+    freno, abrir la misma ficha diez veces son diez llamadas cobradas para
+    obtener diez veces el mismo error.
+
+    Así que se distingue lo pasajero de lo definitivo, con el mismo criterio
+    que ya usa ``modelo_errores.explicar``: si el error se arregla solo
+    —saturación, límite de ritmo, un corte de red—, se vuelve a intentar; si
+    no, se intenta UNA vez y después se deja el botón de releer, que es una
+    persona decidiendo gastar la llamada.
+    """
+    if not falta_geometria(resorte):
+        return {"resorte": resorte, "lectura": None}
+
+    if _INTENTADO.get(rfq_id) == "definitivo":
+        # Ya se intentó y no va a salir distinto. No se dice que no se
+        # intentó: se dice que se intentó y falló, que es lo que la pantalla
+        # necesita para enseñar el motivo y el botón.
+        return {"resorte": resorte, "lectura": None, "agotado": True}
+
+    lectura = releer(rfq_id, message_id=message_id, cliente=cliente)
+
+    if lectura["estado"] == "leido" and lectura["resorte"]:
+        _INTENTADO.pop(rfq_id, None)
+        return {"resorte": lectura["resorte"], "lectura": lectura}
+
+    # `reintentar` sólo viene en los fallos del modelo. Un plano que no existe
+    # o que está en un formato que no se abre tampoco mejora solo.
+    pasajero = bool(lectura.get("reintentar"))
+    _INTENTADO[rfq_id] = "pasajero" if pasajero else "definitivo"
+    return {"resorte": resorte, "lectura": lectura}
+
+
 def asegurar_resorte(rfq_id: str, resorte: Optional[dict],
                      message_id: str = "", cliente=None) -> Dict[str, Any]:
     """Si al resorte le falta geometría y hay plano guardado, léelo ahora.
