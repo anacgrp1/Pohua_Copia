@@ -86,6 +86,23 @@ class Settings:
     HORARIO_HASTA: int = 18                    # 18:00 (a las 18:00 en punto, cerrado)
     HORARIO_DIAS: str = "1-5"                  # lunes a viernes (1=lunes, 7=domingo)
 
+    # --- El relevado de esfuerzos en compresión ---
+    #
+    # El taller contestó esto en `taller_2026.json`, y lo contestó CORRIGIENDO
+    # una suposición anterior: «not all compression — only very big springs and
+    # 17-7 SS material (aging); otherwise only when the drawing requires it».
+    # Por eso la regla del núcleo no pone el horno en un Music Wire corriente.
+    #
+    # Pero en las cotizaciones de referencia el horno SÍ está, puesto a mano.
+    # Las dos cosas pueden ser ciertas: que la regla general sea «sólo cuando
+    # el plano lo pida» y que en la práctica estas piezas se relajen igual.
+    #
+    # Esto no se decide en el código. Con el interruptor encendido, todo
+    # resorte de compresión lleva horno y se dice de dónde salió esa decisión;
+    # apagado, manda la regla del taller. Lo que no hace ninguno de los dos es
+    # meter una operación de tapadillo: el motivo viaja hasta la pantalla.
+    RELEVADO_SIEMPRE_COMPRESION: bool = False
+
     # --- El recordatorio de lo que espera dictamen ---
     # El aviso principal es la campana y el teléfono. Si un RFQ lleva más de
     # estas horas esperando a una persona, sale además UN correo a quien puede

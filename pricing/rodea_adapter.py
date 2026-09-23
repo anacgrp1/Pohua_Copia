@@ -113,10 +113,27 @@ def falta_para_el_peso(spring_data: Dict[str, Any]) -> Optional[str]:
 def longitud_desarrollada_pulg(spring_data: Dict[str, Any]) -> Optional[float]:
     """Longitud de alambre desarrollada, en pulgadas.
 
-    Es ``π · Dm · Nt`` (diámetro medio por número total de espiras), la fórmula
-    estándar para el cuerpo de un resorte helicoidal.  El diámetro medio se
-    obtiene del que haya: medio, exterior menos un calibre, o interior más un
-    calibre.
+    Es ``π · Dm · Nt / cos(α)`` — el diámetro medio por el número total de
+    espiras, corregido por el ángulo de hélice.  El diámetro medio se obtiene
+    del que haya: medio, exterior menos un calibre, o interior más un calibre.
+
+    Por qué el coseno
+    -----------------
+    ``π · Dm · Nt`` es la longitud si el alambre diera vueltas planas. No las
+    da: avanza un paso en cada vuelta, así que cada espira es la hipotenusa de
+    un triángulo cuyos catetos son la circunferencia y el paso. Ignorarlo
+    dejaba el alambre —y con él el peso, el costo de material y el precio— por
+    DEBAJO de lo que es.
+
+    En el 004-222 son 5.8° de hélice: 0.00573 lb contra 0.00576, medio por
+    ciento. Poco, pero es medio por ciento en el sentido de cotizar barato, y
+    en un resorte de paso largo crece deprisa —a 20° ya es un 6 %—.
+
+    Es la fórmula del núcleo (`resortes.js`: ``PI*D*Nt/Math.cos(helix)``), que
+    es lo que hace que el peso de aquí y el de la calculadora coincidan.
+
+    Sin paso no se puede calcular el ángulo, así que se devuelve la longitud
+    plana: quedarse corto por medio por ciento es mejor que no dar peso.
 
     Devuelve None si falta geometría.  No se estima: un peso inventado se
     convierte directamente en un costo de material inventado.
@@ -149,7 +166,44 @@ def longitud_desarrollada_pulg(spring_data: Dict[str, Any]) -> Optional[float]:
         return None
 
     import math
-    return math.pi * (dm / 25.4) * espiras
+    circunferencia = math.pi * dm                     # mm, una vuelta plana
+    paso = _paso_mm(spring_data, espiras)
+    if paso and paso > 0:
+        # La hipotenusa: una vuelta de circunferencia avanzando un paso.
+        por_espira = math.hypot(circunferencia, paso)
+    else:
+        por_espira = circunferencia
+    return (por_espira * espiras) / 25.4
+
+
+def _paso_mm(spring_data: Dict[str, Any], espiras: float) -> Optional[float]:
+    """El paso entre espiras, acotado o deducido de la longitud libre.
+
+    Sólo en compresión: en extensión las espiras van juntas —el paso es el
+    calibre— y en torsión la geometría es otra. Devolver None ahí deja la
+    longitud plana, que es la convención del núcleo para esos dos tipos.
+    """
+    tipo = str(spring_data.get("tipo_resorte") or "").strip().lower()
+    if not tipo.startswith("compres"):
+        return None
+
+    paso = _num(spring_data.get("paso_mm"))
+    if paso and paso > 0:
+        return paso
+
+    # Deducido: la longitud libre menos lo que ocupan los extremos cerrados,
+    # repartido entre las espiras activas.
+    l0 = _num(spring_data.get("longitud_libre_mm"))
+    d = _num(spring_data.get("diametro_alambre_mm"))
+    if not l0 or not d or l0 <= 0 or d <= 0:
+        return None
+    muertas, _ = espiras_mod.espiras_muertas(spring_data)
+    activas = espiras - muertas
+    if activas <= 0:
+        return None
+    extremos = 2 * d if muertas >= 2 else 0
+    paso = (l0 - extremos) / activas
+    return paso if paso > d else None      # menos que el calibre no es un paso
 
 
 def peso_alambre_lb(longitud_pulg: Optional[float], diametro_mm: Optional[float],
@@ -181,8 +235,17 @@ def _cantidades(lista: Any, unica: Optional[float]) -> List[float]:
 
 
 def _tramo(cantidad: float, routing: List[Dict[str, Any]],
-           empaque: Dict[str, Any]) -> Dict[str, Any]:
-    """Un tramo del motor con su ruta y su empaque; lo demás en blanco."""
+           empaque: Dict[str, Any],
+           caja: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Un tramo del motor con su ruta y su empaque; lo demás en blanco.
+
+    `caja` es lo que contestaron las reglas del taller para ESTE tramo. Manda
+    sobre el empaque del catálogo porque la caja la decide el peso total del
+    tramo, y eso cambia de un tramo a otro: 10.000 piezas de un resorte
+    pequeño van en cajas y 50.000 ya son tambores. El catálogo, en cambio,
+    sólo sabe dar una caja para todo el PN.
+    """
+    empaque = empaque or {}
     return {
         "qty": cantidad,
         # Copia por tramo: el motor escribe dentro (`scrapWarn`, lotes) y dos
@@ -192,8 +255,8 @@ def _tramo(cantidad: float, routing: List[Dict[str, Any]],
         "sub": {"supplier": "", "service": "", "minUsd": None, "perLb": None,
                 "perPc": None, "partsPerBatch": None, "shareSkid": "NO"},
         "packing": {
-            "id": empaque.get("codigo"),
-            "qtyPerBox": empaque.get("piezas_por_caja"),
+            "id": (caja or {}).get("id") or empaque.get("codigo"),
+            "qtyPerBox": (caja or {}).get("ppb") or empaque.get("piezas_por_caja"),
         },
     }
 
@@ -218,6 +281,41 @@ def _transporte(params: Dict[str, Any], catalogo) -> float:
         "ISC de %.2f $/lb. Es alrededor del 7 %% del costo de material."
         % TRANSPORTE_POR_DEFECTO)
     return TRANSPORTE_POR_DEFECTO
+
+
+HORNO = "Stationary Oven"
+
+
+def _con_relevado(secundarias, desc, catalogo):
+    """Añade el horno a toda compresión, si la casa lo tiene puesto así.
+
+    El taller contestó que el horno NO va en toda compresión —«only very big
+    springs and 17-7 SS material»— y la regla del núcleo lo respeta. Pero en
+    las cotizaciones de referencia el horno está, puesto a mano.
+
+    Así que no se decide aquí: lo decide `RELEVADO_SIEMPRE_COMPRESION` en la
+    configuración. Encendido, el horno entra y se DICE que entró por esa
+    política y no porque el plano lo pidiera; quien aprueba ve la diferencia
+    entre una operación que pide el dibujo y una que pone la casa.
+
+    Con el interruptor apagado esto no toca nada.
+    """
+    if secundarias is None or desc != "Compression Spring":
+        return secundarias
+    try:
+        import app.core.config as config
+        if not getattr(config.settings, "RELEVADO_SIEMPRE_COMPRESION", False):
+            return secundarias
+    except Exception:
+        return secundarias
+    if any(op.get("m") == HORNO for op in secundarias):
+        return secundarias          # el plano ya lo pedía
+    catalogo.faltantes.append(
+        "El horno de relevado se añadió por política de la casa "
+        "(RELEVADO_SIEMPRE_COMPRESION), no porque el plano lo pida: el dato "
+        "del taller dice que sólo va en resortes muy grandes y en 17-7.")
+    return list(secundarias) + [
+        {"m": HORNO, "why": "stress relief on all compression (ISC policy)"}]
 
 
 def _fmt_mm(v) -> str:
@@ -395,6 +493,7 @@ def build_pn_for_engine(
             tratamiento_termico=tratamiento,
             material_codigo=(material.get("codigo") or material_codigo),
         )
+        secundarias = _con_relevado(secundarias, desc, catalogo)
         if secundarias is None:
             catalogo.faltantes.append(
                 "No se pudieron consultar las reglas del taller, así que la ruta "
@@ -492,7 +591,9 @@ def build_pn_for_engine(
         # a 50,000 piezas se use otra máquina, así que no se inventa. Los que
         # sobran hasta cinco van vacíos, que es como el motor los ignora.
         "tiers": [
-            _tramo(q, routing, empaque) if q is not None else dict(_TIER_VACIO)
+            _tramo(q, routing, empaque,
+                   reglas.empaque(peso_lb, desc, q) if not tipo_desconocido else None)
+            if q is not None else dict(_TIER_VACIO)
             for q in (cantidades + [None] * 5)[:5]
         ],
         "selTier": 0,

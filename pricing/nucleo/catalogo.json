@@ -1,0 +1,6579 @@
+{
+ "machines": [
+  {
+   "family": "COILER",
+   "name": "AIM 3000",
+   "m1": "AIM30",
+   "setupH": 6.0,
+   "pph": 250.0,
+   "purchase": 700000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 80.0,
+   "ccvTargetH": 80.0,
+   "wireMinMm": 3.607,
+   "wireMaxMm": 9.525,
+   "odMaxMm": null,
+   "capC": true,
+   "capE": true,
+   "capT": true,
+   "setupClass": "High",
+   "uses": "All types + wire forms",
+   "risk": "Highest setup time and tooling cost; reserve for complex or higher-value parts.",
+   "odMinMm": null,
+   "capW": true,
+   "compSecondary": false,
+   "rank": 3.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "AIM AFM-3D2-T",
+   "m1": "3D2T",
+   "setupH": 2.0,
+   "pph": 500.0,
+   "purchase": 250000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 25.0,
+   "ccvTargetH": 25.0,
+   "wireMinMm": 3.175,
+   "wireMaxMm": 11.1,
+   "odMaxMm": null,
+   "capC": false,
+   "capE": false,
+   "capT": false,
+   "setupClass": "",
+   "uses": "Wire form ONLY",
+   "risk": "",
+   "odMinMm": null,
+   "capW": true,
+   "compSecondary": false,
+   "rank": 15.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "NUCOIL CSF-200",
+   "m1": "NUCO2",
+   "setupH": 6.0,
+   "pph": 400.0,
+   "purchase": 200000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 20.0,
+   "ccvTargetH": 20.0,
+   "wireMinMm": 0.457,
+   "wireMaxMm": 2.032,
+   "odMaxMm": null,
+   "capC": false,
+   "capE": true,
+   "capT": true,
+   "setupClass": "Medium",
+   "uses": "Tension, Torsion, Wire form",
+   "risk": "No torsion capability; restricted OD and wire range.",
+   "odMinMm": null,
+   "capW": true,
+   "compSecondary": false,
+   "rank": 12.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "NUCOIL CSF-400",
+   "m1": "NUCOI",
+   "setupH": 6.0,
+   "pph": 650.0,
+   "purchase": 300000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 30.0,
+   "ccvTargetH": 30.0,
+   "wireMinMm": 1.829,
+   "wireMaxMm": 4.064,
+   "odMaxMm": null,
+   "capC": false,
+   "capE": true,
+   "capT": true,
+   "setupClass": "",
+   "uses": "Tension, Torsion, Wire form",
+   "risk": "",
+   "odMinMm": null,
+   "capW": true,
+   "compSecondary": false,
+   "rank": 13.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "NUCOIL HX-60",
+   "m1": "HX-60",
+   "setupH": 10.0,
+   "pph": 334.0,
+   "purchase": 400000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 40.0,
+   "ccvTargetH": 40.0,
+   "wireMinMm": 2.997,
+   "wireMaxMm": 5.969,
+   "odMaxMm": null,
+   "capC": false,
+   "capE": true,
+   "capT": true,
+   "setupClass": "Medium",
+   "uses": "Tension, Torsion, Wire form",
+   "risk": "No torsion capability; limited for complex end forming.",
+   "odMinMm": null,
+   "capW": true,
+   "compSecondary": false,
+   "rank": 10.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "SIMPLEX MC 50",
+   "m1": "MC50",
+   "setupH": 5.0,
+   "pph": 950.0,
+   "purchase": 650000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 60.0,
+   "ccvTargetH": 60.0,
+   "wireMinMm": 1.016,
+   "wireMaxMm": 5.029,
+   "odMaxMm": 76.2,
+   "capC": true,
+   "capE": false,
+   "capT": false,
+   "setupClass": "",
+   "uses": "Compression ONLY",
+   "risk": "",
+   "odMinMm": null,
+   "capW": false,
+   "compSecondary": false,
+   "rank": 1.0,
+   "scrapPct": 5.0,
+   "caps": "Oil tempered: max dia drops to .165 in (4.2 mm)",
+   "capMaterial": "Oil Tempered",
+   "capWireMaxMm": 4.2
+  },
+  {
+   "family": "COILER",
+   "name": "KMH-516",
+   "m1": "K516",
+   "setupH": 5.0,
+   "pph": 7500.0,
+   "purchase": 100000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 20.0,
+   "ccvTargetH": 20.0,
+   "wireMinMm": 0.787,
+   "wireMaxMm": 1.6,
+   "odMaxMm": null,
+   "capC": true,
+   "capE": false,
+   "capT": false,
+   "setupClass": "",
+   "uses": "Compression",
+   "risk": "",
+   "odMinMm": null,
+   "capW": false,
+   "compSecondary": false,
+   "rank": 18.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "KMH-508",
+   "m1": "K508",
+   "setupH": 5.0,
+   "pph": 5000.0,
+   "purchase": 100000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 20.0,
+   "ccvTargetH": 20.0,
+   "wireMinMm": 0.305,
+   "wireMaxMm": 0.787,
+   "odMaxMm": null,
+   "capC": true,
+   "capE": false,
+   "capT": false,
+   "setupClass": "",
+   "uses": "Compression ONLY",
+   "risk": "",
+   "odMinMm": null,
+   "capW": false,
+   "compSecondary": false,
+   "rank": 16.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "SHINKO TF-45",
+   "m1": "TF-45",
+   "setupH": 10.0,
+   "pph": 450.0,
+   "purchase": 700000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 50.0,
+   "ccvTargetH": 50.0,
+   "wireMinMm": 2.007,
+   "wireMaxMm": 4.496,
+   "odMaxMm": null,
+   "capC": true,
+   "capE": true,
+   "capT": true,
+   "setupClass": "High",
+   "uses": "Compression, Tension, Torsion",
+   "risk": "Setup-intensive; over-capable (uneconomic) for simple high-volume parts.",
+   "odMinMm": null,
+   "capW": false,
+   "compSecondary": false,
+   "rank": 9.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "SHINKO TF-23",
+   "m1": "TF-23",
+   "setupH": 10.0,
+   "pph": 327.0,
+   "purchase": 400000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 40.0,
+   "ccvTargetH": 40.0,
+   "wireMinMm": 0.203,
+   "wireMaxMm": 2.311,
+   "odMaxMm": null,
+   "capC": true,
+   "capE": true,
+   "capT": true,
+   "setupClass": "High",
+   "uses": "Compression, Tension, Torsion",
+   "risk": "Not suitable for larger wire; setup-intensive for simple parts.",
+   "odMinMm": null,
+   "capW": false,
+   "compSecondary": false,
+   "rank": 17.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "ZX250",
+   "m1": "ZX250",
+   "setupH": 6.0,
+   "pph": 500.0,
+   "purchase": 250000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 25.0,
+   "ccvTargetH": 25.0,
+   "wireMinMm": 0.508,
+   "wireMaxMm": 2.489,
+   "odMaxMm": null,
+   "capC": true,
+   "capE": false,
+   "capT": true,
+   "setupClass": "Medium",
+   "uses": "Compression, Torsion, Wire form",
+   "risk": "Limited to small wire and OD; verify torsion tooling availability.",
+   "odMinMm": null,
+   "capW": true,
+   "compSecondary": false,
+   "rank": 5.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "AUTOLINK",
+   "m1": "AUTOL",
+   "setupH": 6.0,
+   "pph": 600.0,
+   "purchase": 250000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 30,
+   "ccvTargetH": 30,
+   "wireMinMm": null,
+   "wireMaxMm": null,
+   "odMaxMm": null,
+   "capC": null,
+   "capE": null,
+   "capT": null,
+   "setupClass": "",
+   "uses": "",
+   "risk": "",
+   "excluded": true
+  },
+  {
+   "family": "COILER",
+   "name": "TORIN (FENN) FZ-11",
+   "m1": "FZ-11",
+   "setupH": 3.0,
+   "pph": 4900.0,
+   "purchase": 200000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 20.0,
+   "ccvTargetH": 20.0,
+   "wireMinMm": 0.508,
+   "wireMaxMm": 2.159,
+   "odMaxMm": null,
+   "capC": true,
+   "capE": true,
+   "capT": true,
+   "setupClass": "",
+   "uses": "Compression, Tension, Torsion",
+   "risk": "",
+   "odMinMm": null,
+   "capW": false,
+   "compSecondary": false,
+   "rank": 8.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "TORIN (FENN) W10A",
+   "m1": "W10A",
+   "setupH": 3.0,
+   "pph": 5000.0,
+   "purchase": 150000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 15.0,
+   "ccvTargetH": 15.0,
+   "wireMinMm": 0.203,
+   "wireMaxMm": 0.711,
+   "odMaxMm": 22.22,
+   "capC": true,
+   "capE": false,
+   "capT": false,
+   "setupClass": "",
+   "uses": "Compression ONLY",
+   "risk": "",
+   "odMinMm": 1.57,
+   "capW": false,
+   "compSecondary": false,
+   "rank": 4.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "TORIN (FENN) W115A",
+   "m1": "W115",
+   "setupH": 3.0,
+   "pph": 400.0,
+   "purchase": 150000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 15.0,
+   "ccvTargetH": 15.0,
+   "wireMinMm": 0.813,
+   "wireMaxMm": 2.845,
+   "odMaxMm": 53.97,
+   "capC": true,
+   "capE": true,
+   "capT": false,
+   "setupClass": "",
+   "uses": "Compression, Tension",
+   "risk": "",
+   "odMinMm": 3.96,
+   "capW": false,
+   "compSecondary": false,
+   "rank": 7.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "TORIN (FENN) W11A",
+   "m1": "W11A",
+   "setupH": 3.0,
+   "pph": 1500.0,
+   "purchase": 150000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 15.0,
+   "ccvTargetH": 15.0,
+   "wireMinMm": 0.381,
+   "wireMaxMm": 1.829,
+   "odMaxMm": 39.67,
+   "capC": true,
+   "capE": true,
+   "capT": false,
+   "setupClass": "",
+   "uses": "Compression, Tension",
+   "risk": "",
+   "odMinMm": 2.36,
+   "capW": false,
+   "compSecondary": false,
+   "rank": 2.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "TORIN (FENN) W11T",
+   "m1": "W11T",
+   "setupH": 3.0,
+   "pph": 500.0,
+   "purchase": 150000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 15.0,
+   "ccvTargetH": 15.0,
+   "wireMinMm": 0.381,
+   "wireMaxMm": 1.854,
+   "odMaxMm": 39.7,
+   "capC": true,
+   "capE": false,
+   "capT": true,
+   "setupClass": "",
+   "uses": "Torsion (+Compression)",
+   "risk": "",
+   "odMinMm": 2.36,
+   "capW": false,
+   "compSecondary": true,
+   "rank": 11.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "TORIN (FENN) W125",
+   "m1": "W125",
+   "setupH": 3.0,
+   "pph": 300.0,
+   "purchase": 150000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 15.0,
+   "ccvTargetH": 15.0,
+   "wireMinMm": 2.032,
+   "wireMaxMm": 5.258,
+   "odMaxMm": 95.25,
+   "capC": true,
+   "capE": true,
+   "capT": true,
+   "setupClass": "",
+   "uses": "Compression, Tension, Torsion",
+   "risk": "",
+   "odMinMm": 9.52,
+   "capW": false,
+   "compSecondary": false,
+   "rank": 6.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "TORIN (FENN) W12T",
+   "m1": "W12T",
+   "setupH": 3.0,
+   "pph": 350.0,
+   "purchase": 150000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 15.0,
+   "ccvTargetH": 15.0,
+   "wireMinMm": 1.194,
+   "wireMaxMm": 3.759,
+   "odMaxMm": 69.85,
+   "capC": true,
+   "capE": false,
+   "capT": true,
+   "setupClass": "",
+   "uses": "Torsion (+Compression)",
+   "risk": "",
+   "odMinMm": 6.35,
+   "capW": false,
+   "compSecondary": true,
+   "rank": 14.0,
+   "scrapPct": 5.0,
+   "caps": null,
+   "capMaterial": null,
+   "capWireMaxMm": null
+  },
+  {
+   "family": "COILER",
+   "name": "TORIN (FENN) Z-11",
+   "m1": "Z-11",
+   "setupH": 3.0,
+   "pph": 600.0,
+   "purchase": 150000.0,
+   "laborH": 40.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.8,
+   "costRateH": 15,
+   "ccvTargetH": 15,
+   "wireMinMm": null,
+   "wireMaxMm": null,
+   "odMaxMm": null,
+   "capC": null,
+   "capE": null,
+   "capT": null,
+   "setupClass": "",
+   "uses": "",
+   "risk": "",
+   "excluded": true
+  },
+  {
+   "family": "SECONDARY",
+   "name": "Grinder A",
+   "m1": "SEC",
+   "setupH": 1.0,
+   "pph": 500.0,
+   "purchase": 150000.0,
+   "laborH": 27.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.6,
+   "costRateH": 15.0,
+   "ccvTargetH": 15.0,
+   "wireMinMm": null,
+   "wireMaxMm": null,
+   "odMaxMm": null,
+   "capC": null,
+   "capE": null,
+   "capT": null,
+   "setupClass": "",
+   "uses": "",
+   "risk": "",
+   "appliesWhen": "OK — only when the drawing calls for ground ends",
+   "scrapPct": 5.0
+  },
+  {
+   "family": "SECONDARY",
+   "name": "Grinder B",
+   "m1": "SEC",
+   "setupH": 1.0,
+   "pph": 500.0,
+   "purchase": 140000.0,
+   "laborH": 27.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.6,
+   "costRateH": 15.0,
+   "ccvTargetH": 15.0,
+   "wireMinMm": null,
+   "wireMaxMm": null,
+   "odMaxMm": null,
+   "capC": null,
+   "capE": null,
+   "capT": null,
+   "setupClass": "",
+   "uses": "",
+   "risk": "",
+   "appliesWhen": "OK — only when the drawing calls for ground ends",
+   "scrapPct": 5.0
+  },
+  {
+   "family": "SECONDARY",
+   "name": "Grinder C",
+   "m1": "SEC",
+   "setupH": 1.0,
+   "pph": null,
+   "purchase": 130000.0,
+   "laborH": 27.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.6,
+   "costRateH": 15.0,
+   "ccvTargetH": 15.0,
+   "wireMinMm": null,
+   "wireMaxMm": null,
+   "odMaxMm": null,
+   "capC": null,
+   "capE": null,
+   "capT": null,
+   "setupClass": "",
+   "uses": "",
+   "risk": "",
+   "appliesWhen": "OK — only when the drawing calls for ground ends",
+   "scrapPct": 5.0
+  },
+  {
+   "family": "SECONDARY",
+   "name": "Grinder D",
+   "m1": "SEC",
+   "setupH": 1.0,
+   "pph": null,
+   "purchase": 120000.0,
+   "laborH": 27.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.6,
+   "costRateH": 15.0,
+   "ccvTargetH": 15.0,
+   "wireMinMm": null,
+   "wireMaxMm": null,
+   "odMaxMm": null,
+   "capC": null,
+   "capE": null,
+   "capT": null,
+   "setupClass": "",
+   "uses": "",
+   "risk": "",
+   "appliesWhen": "OK — only when the drawing calls for ground ends",
+   "scrapPct": 5.0
+  },
+  {
+   "family": "SECONDARY",
+   "name": "Grinder PED",
+   "m1": "SEC",
+   "setupH": 1.0,
+   "pph": 50.0,
+   "purchase": 80000.0,
+   "laborH": 27.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.6,
+   "costRateH": 8.0,
+   "ccvTargetH": 8.0,
+   "wireMinMm": null,
+   "wireMaxMm": null,
+   "odMaxMm": null,
+   "capC": null,
+   "capE": null,
+   "capT": null,
+   "setupClass": "",
+   "uses": "",
+   "risk": "",
+   "appliesWhen": "Oversized springs that do not fit Grinders A–D, and very small batches / prototypes",
+   "scrapPct": 5.0
+  },
+  {
+   "family": "SECONDARY",
+   "name": "Stationary Oven",
+   "m1": "SEC",
+   "setupH": 3.0,
+   "pph": 400.0,
+   "purchase": 120000.0,
+   "laborH": 27.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.6,
+   "costRateH": 10.0,
+   "ccvTargetH": 10.0,
+   "wireMinMm": null,
+   "wireMaxMm": null,
+   "odMaxMm": null,
+   "capC": null,
+   "capE": null,
+   "capT": null,
+   "setupClass": "",
+   "uses": "",
+   "risk": "",
+   "appliesWhen": "CORRECTED: not all compression — only very big springs and 17-7 SS material (aging); otherwise only when the drawing requires it",
+   "scrapPct": 5.0
+  },
+  {
+   "family": "SECONDARY",
+   "name": "Looping / Hooks",
+   "m1": "SEC",
+   "setupH": 1.0,
+   "pph": 125.0,
+   "purchase": null,
+   "laborH": 27.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.6,
+   "costRateH": 0.0,
+   "ccvTargetH": 0.0,
+   "wireMinMm": null,
+   "wireMaxMm": null,
+   "odMaxMm": null,
+   "capC": null,
+   "capE": null,
+   "capT": null,
+   "setupClass": "",
+   "uses": "",
+   "risk": "",
+   "appliesWhen": "OK — extension springs (hook forming)",
+   "scrapPct": 5.0
+  },
+  {
+   "family": "SECONDARY",
+   "name": "Bending / Kick",
+   "m1": "SEC",
+   "setupH": 1.0,
+   "pph": 125.0,
+   "purchase": null,
+   "laborH": 27.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.6,
+   "costRateH": 0.0,
+   "ccvTargetH": 0.0,
+   "wireMinMm": null,
+   "wireMaxMm": null,
+   "odMaxMm": null,
+   "capC": null,
+   "capE": null,
+   "capT": null,
+   "setupClass": "",
+   "uses": "",
+   "risk": "",
+   "appliesWhen": "OK — torsion springs and wire forms (leg bending)",
+   "scrapPct": 5.0
+  },
+  {
+   "family": "SECONDARY",
+   "name": "Assembly",
+   "m1": "SEC",
+   "setupH": 1.0,
+   "pph": 300.0,
+   "purchase": null,
+   "laborH": 27.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.6,
+   "costRateH": 0.0,
+   "ccvTargetH": 0.0,
+   "wireMinMm": null,
+   "wireMaxMm": null,
+   "odMaxMm": null,
+   "capC": null,
+   "capE": null,
+   "capT": null,
+   "setupClass": "",
+   "uses": "",
+   "risk": "",
+   "appliesWhen": "OK — only when the drawing calls for an assembly",
+   "scrapPct": 5.0
+  },
+  {
+   "family": "SECONDARY",
+   "name": "Inspection / Sorting",
+   "m1": "SEC",
+   "setupH": 1.0,
+   "pph": 1000.0,
+   "purchase": null,
+   "laborH": 27.0,
+   "amortYrs": 7.0,
+   "loadPct": 1.0,
+   "hPerYr": 1920.0,
+   "oee": 0.6,
+   "costRateH": 0.0,
+   "ccvTargetH": 0.0,
+   "wireMinMm": null,
+   "wireMaxMm": null,
+   "odMaxMm": null,
+   "capC": null,
+   "capE": null,
+   "capT": null,
+   "setupClass": "",
+   "uses": "",
+   "risk": "",
+   "appliesWhen": "OK — when the drawing flags a critical characteristic",
+   "scrapPct": 5.0
+  }
+ ],
+ "machineParams": {
+  "coilerMult": 3,
+  "secondaryMult": 5,
+  "platingSurchargePerPN": 30
+ },
+ "materialLegend": {
+  "BB": "Round Bar Stock",
+  "BRASS": "Brass Wire",
+  "CSI": "Chrome Silicon (ASTM A401)",
+  "GHD": "Galvanized Hard Drawn",
+  "GMW": "Galvanized Music Wire",
+  "HAST": "Hastelloy C-276",
+  "HD": "Hard Drawn (ASTM A227)",
+  "MW": "Music Wire (ASTM A228)",
+  "OT": "Oil Tempered (ASTM A229)",
+  "PHOSB": "Phosphor Bronze",
+  "SG": "Soft Galvanized",
+  "SS": "Stainless Steel 302/304 (ASTM A313)",
+  "SS177": "Stainless Steel 17-7 PH",
+  "316": "Stainless Steel 316 (ASTM A313 Type 316)"
+ },
+ "materialPrices": [
+  {
+   "code": "BB",
+   "dia": 0.187,
+   "latest": 0.81,
+   "wavg": 0.81,
+   "min": 0.81,
+   "max": 0.81,
+   "pos": 1.0,
+   "qtyLb": 1600.0,
+   "date": "2026-03-25",
+   "sup": "ISW"
+  },
+  {
+   "code": "BRASS",
+   "dia": 0.05,
+   "latest": 15.78,
+   "wavg": 15.78,
+   "min": 15.78,
+   "max": 15.78,
+   "pos": 1.0,
+   "qtyLb": 25.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "CSI",
+   "dia": 0.148,
+   "latest": 1.4,
+   "wavg": 1.433333,
+   "min": 1.4,
+   "max": 1.44,
+   "pos": 2.0,
+   "qtyLb": 600.0,
+   "date": "2026-04-09",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "GHD",
+   "dia": 0.025,
+   "latest": 5.81,
+   "wavg": 2.591818,
+   "min": 2.27,
+   "max": 5.81,
+   "pos": 2.0,
+   "qtyLb": 275.0,
+   "date": "2026-02-25",
+   "sup": "ISW"
+  },
+  {
+   "code": "GHD",
+   "dia": 0.047,
+   "latest": 2.34,
+   "wavg": 2.4232,
+   "min": 2.34,
+   "max": 2.55,
+   "pos": 4.0,
+   "qtyLb": 3750.0,
+   "date": "2026-04-09",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "GHD",
+   "dia": 0.051,
+   "latest": 1.64,
+   "wavg": 1.646628,
+   "min": 1.64,
+   "max": 2.32,
+   "pos": 3.0,
+   "qtyLb": 51300.0,
+   "date": "2026-03-18",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "GHD",
+   "dia": 0.054,
+   "latest": 2.25,
+   "wavg": 2.25,
+   "min": 2.25,
+   "max": 2.25,
+   "pos": 1.0,
+   "qtyLb": 75.0,
+   "date": "2026-01-14",
+   "sup": "ISW"
+  },
+  {
+   "code": "GHD",
+   "dia": 0.062,
+   "latest": 1.97,
+   "wavg": 1.97,
+   "min": 1.97,
+   "max": 1.97,
+   "pos": 1.0,
+   "qtyLb": 350.0,
+   "date": "2026-01-07",
+   "sup": "ISW"
+  },
+  {
+   "code": "GHD",
+   "dia": 0.08,
+   "latest": 1.43,
+   "wavg": 1.315455,
+   "min": 1.22,
+   "max": 1.43,
+   "pos": 2.0,
+   "qtyLb": 1100.0,
+   "date": "2026-02-11",
+   "sup": "ISW"
+  },
+  {
+   "code": "GHD",
+   "dia": 0.091,
+   "latest": 1.07,
+   "wavg": 1.083846,
+   "min": 1.07,
+   "max": 1.1,
+   "pos": 3.0,
+   "qtyLb": 3250.0,
+   "date": "2026-04-09",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "GHD",
+   "dia": 0.099,
+   "latest": 1.1,
+   "wavg": 1.1,
+   "min": 1.1,
+   "max": 1.1,
+   "pos": 3.0,
+   "qtyLb": 3426.0,
+   "date": "2026-04-09",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "GHD",
+   "dia": 0.12,
+   "latest": 1.13,
+   "wavg": 1.150769,
+   "min": 1.13,
+   "max": 1.22,
+   "pos": 2.0,
+   "qtyLb": 650.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "GHD",
+   "dia": 0.148,
+   "latest": 1.13,
+   "wavg": 1.13,
+   "min": 1.13,
+   "max": 1.13,
+   "pos": 1.0,
+   "qtyLb": 1500.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "GHD",
+   "dia": 0.192,
+   "latest": 1.22,
+   "wavg": 1.22,
+   "min": 1.22,
+   "max": 1.22,
+   "pos": 1.0,
+   "qtyLb": 550.0,
+   "date": "2026-01-07",
+   "sup": "ISW"
+  },
+  {
+   "code": "GMW",
+   "dia": 0.016,
+   "latest": 5.79,
+   "wavg": 5.725,
+   "min": 5.66,
+   "max": 5.79,
+   "pos": 2.0,
+   "qtyLb": 100.0,
+   "date": "2026-04-22",
+   "sup": "ISW"
+  },
+  {
+   "code": "GMW",
+   "dia": 0.025,
+   "latest": 4.8,
+   "wavg": 4.8,
+   "min": 4.8,
+   "max": 4.8,
+   "pos": 1.0,
+   "qtyLb": 50.0,
+   "date": "2026-03-11",
+   "sup": "ISW"
+  },
+  {
+   "code": "GMW",
+   "dia": 0.03,
+   "latest": 6.97,
+   "wavg": 6.97,
+   "min": 6.97,
+   "max": 6.97,
+   "pos": 1.0,
+   "qtyLb": 25.0,
+   "date": "2026-03-11",
+   "sup": "ISW"
+  },
+  {
+   "code": "GMW",
+   "dia": 0.041,
+   "latest": 2.75,
+   "wavg": 2.75,
+   "min": 2.75,
+   "max": 2.75,
+   "pos": 1.0,
+   "qtyLb": 100.0,
+   "date": "2026-04-15",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "GMW",
+   "dia": 0.047,
+   "latest": 2.74,
+   "wavg": 2.74,
+   "min": 2.74,
+   "max": 2.74,
+   "pos": 1.0,
+   "qtyLb": 500.0,
+   "date": "2026-03-18",
+   "sup": "ISW"
+  },
+  {
+   "code": "GMW",
+   "dia": 0.054,
+   "latest": 2.54,
+   "wavg": 2.736,
+   "min": 2.54,
+   "max": 3.52,
+   "pos": 2.0,
+   "qtyLb": 125.0,
+   "date": "2026-04-09",
+   "sup": "ISW"
+  },
+  {
+   "code": "GMW",
+   "dia": 0.105,
+   "latest": 2.0,
+   "wavg": 1.977671,
+   "min": 1.89,
+   "max": 2.04,
+   "pos": 3.0,
+   "qtyLb": 3650.0,
+   "date": "2026-01-28",
+   "sup": "GIBBS, INTER"
+  },
+  {
+   "code": "GMW",
+   "dia": 0.125,
+   "latest": 1.91,
+   "wavg": 1.91,
+   "min": 1.91,
+   "max": 1.91,
+   "pos": 1.0,
+   "qtyLb": 1500.0,
+   "date": "2026-02-04",
+   "sup": "ISW"
+  },
+  {
+   "code": "HAST",
+   "dia": 0.032,
+   "latest": 50.04,
+   "wavg": 43.427143,
+   "min": 36.85,
+   "max": 51.19,
+   "pos": 5.0,
+   "qtyLb": 2100.0,
+   "date": "2026-03-11",
+   "sup": "ALLOY WIRE, ELGILOY"
+  },
+  {
+   "code": "HAST",
+   "dia": 0.038,
+   "latest": 76.71,
+   "wavg": 76.71,
+   "min": 76.71,
+   "max": 76.71,
+   "pos": 1.0,
+   "qtyLb": 50.0,
+   "date": "2026-03-04",
+   "sup": "ALLOY WIRE"
+  },
+  {
+   "code": "HD",
+   "dia": 0.028,
+   "latest": 1.95,
+   "wavg": 1.875,
+   "min": 1.8,
+   "max": 1.95,
+   "pos": 2.0,
+   "qtyLb": 100.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "HD",
+   "dia": 0.031,
+   "latest": 1.54,
+   "wavg": 1.59,
+   "min": 1.54,
+   "max": 1.63,
+   "pos": 2.0,
+   "qtyLb": 450.0,
+   "date": "2026-02-11",
+   "sup": "ISW"
+  },
+  {
+   "code": "HD",
+   "dia": 0.035,
+   "latest": 1.56,
+   "wavg": 1.638,
+   "min": 1.56,
+   "max": 1.95,
+   "pos": 2.0,
+   "qtyLb": 625.0,
+   "date": "2026-03-25",
+   "sup": "ISW"
+  },
+  {
+   "code": "HD",
+   "dia": 0.047,
+   "latest": 4.28,
+   "wavg": 4.28,
+   "min": 4.28,
+   "max": 4.28,
+   "pos": 1.0,
+   "qtyLb": 25.0,
+   "date": "2026-04-22",
+   "sup": "ISW"
+  },
+  {
+   "code": "HD",
+   "dia": 0.054,
+   "latest": 1.08,
+   "wavg": 1.08,
+   "min": 1.08,
+   "max": 1.08,
+   "pos": 1.0,
+   "qtyLb": 750.0,
+   "date": "2026-02-04",
+   "sup": "ISW"
+  },
+  {
+   "code": "HD",
+   "dia": 0.062,
+   "latest": 0.85,
+   "wavg": 1.126667,
+   "min": 0.85,
+   "max": 2.01,
+   "pos": 3.0,
+   "qtyLb": 375.0,
+   "date": "2026-04-09",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "HD",
+   "dia": 0.072,
+   "latest": 1.02,
+   "wavg": 0.916667,
+   "min": 0.88,
+   "max": 1.6,
+   "pos": 4.0,
+   "qtyLb": 1560.0,
+   "date": "2026-03-04",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "HD",
+   "dia": 0.08,
+   "latest": 0.91,
+   "wavg": 0.91,
+   "min": 0.91,
+   "max": 0.91,
+   "pos": 1.0,
+   "qtyLb": 275.0,
+   "date": "2026-02-11",
+   "sup": "ISW"
+  },
+  {
+   "code": "HD",
+   "dia": 0.091,
+   "latest": 0.85,
+   "wavg": 0.873077,
+   "min": 0.85,
+   "max": 1.06,
+   "pos": 4.0,
+   "qtyLb": 1300.0,
+   "date": "2026-04-09",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "HD",
+   "dia": 0.099,
+   "latest": 0.94,
+   "wavg": 0.914,
+   "min": 0.87,
+   "max": 0.94,
+   "pos": 2.0,
+   "qtyLb": 3500.0,
+   "date": "2026-04-29",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "HD",
+   "dia": 0.105,
+   "latest": 0.91,
+   "wavg": 0.921287,
+   "min": 0.91,
+   "max": 2.05,
+   "pos": 2.0,
+   "qtyLb": 2525.0,
+   "date": "2026-01-28",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "HD",
+   "dia": 0.125,
+   "latest": 0.91,
+   "wavg": 0.906842,
+   "min": 0.89,
+   "max": 0.91,
+   "pos": 2.0,
+   "qtyLb": 950.0,
+   "date": "2026-02-11",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "HD",
+   "dia": 0.177,
+   "latest": 0.87,
+   "wavg": 0.87,
+   "min": 0.87,
+   "max": 0.87,
+   "pos": 1.0,
+   "qtyLb": 200.0,
+   "date": "2026-04-22",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "HD",
+   "dia": 0.192,
+   "latest": 0.92,
+   "wavg": 0.92,
+   "min": 0.92,
+   "max": 0.92,
+   "pos": 1.0,
+   "qtyLb": 4000.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "HD",
+   "dia": 0.207,
+   "latest": 1.18,
+   "wavg": 1.18,
+   "min": 1.18,
+   "max": 1.18,
+   "pos": 1.0,
+   "qtyLb": 8000.0,
+   "date": "2026-04-29",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "HD",
+   "dia": 0.25,
+   "latest": 0.91,
+   "wavg": 0.91,
+   "min": 0.91,
+   "max": 0.91,
+   "pos": 1.0,
+   "qtyLb": 2250.0,
+   "date": "2026-01-28",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.02,
+   "latest": 2.8,
+   "wavg": 2.702,
+   "min": 2.66,
+   "max": 2.8,
+   "pos": 3.0,
+   "qtyLb": 1000.0,
+   "date": "2026-01-28",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.023,
+   "latest": 4.3,
+   "wavg": 4.3,
+   "min": 4.3,
+   "max": 4.3,
+   "pos": 1.0,
+   "qtyLb": 25.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.026,
+   "latest": 4.8,
+   "wavg": 3.716667,
+   "min": 2.55,
+   "max": 7.3,
+   "pos": 3.0,
+   "qtyLb": 150.0,
+   "date": "2026-04-20",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.03,
+   "latest": 2.26,
+   "wavg": 2.26,
+   "min": 2.26,
+   "max": 2.26,
+   "pos": 1.0,
+   "qtyLb": 100.0,
+   "date": "2026-04-22",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "MW",
+   "dia": 0.031,
+   "latest": 3.95,
+   "wavg": 3.95,
+   "min": 3.95,
+   "max": 3.95,
+   "pos": 1.0,
+   "qtyLb": 25.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.032,
+   "latest": 2.2,
+   "wavg": 2.175,
+   "min": 2.15,
+   "max": 2.2,
+   "pos": 2.0,
+   "qtyLb": 100.0,
+   "date": "2026-03-11",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "MW",
+   "dia": 0.034,
+   "latest": 2.44,
+   "wavg": 2.22,
+   "min": 2.11,
+   "max": 2.44,
+   "pos": 3.0,
+   "qtyLb": 300.0,
+   "date": "2026-03-26",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.035,
+   "latest": 3.19,
+   "wavg": 3.19,
+   "min": 3.19,
+   "max": 3.19,
+   "pos": 1.0,
+   "qtyLb": 75.0,
+   "date": "2026-02-25",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.036,
+   "latest": 2.15,
+   "wavg": 2.15,
+   "min": 2.15,
+   "max": 2.15,
+   "pos": 1.0,
+   "qtyLb": 75.0,
+   "date": "2026-01-28",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.037,
+   "latest": 1.99,
+   "wavg": 1.99,
+   "min": 1.99,
+   "max": 1.99,
+   "pos": 1.0,
+   "qtyLb": 750.0,
+   "date": "2026-01-07",
+   "sup": "INTER"
+  },
+  {
+   "code": "MW",
+   "dia": 0.038,
+   "latest": 2.03,
+   "wavg": 2.03,
+   "min": 2.03,
+   "max": 2.03,
+   "pos": 1.0,
+   "qtyLb": 25.0,
+   "date": "2026-01-14",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "MW",
+   "dia": 0.039,
+   "latest": 1.8,
+   "wavg": 1.8,
+   "min": 1.8,
+   "max": 1.8,
+   "pos": 1.0,
+   "qtyLb": 150.0,
+   "date": "2026-01-07",
+   "sup": "INTER"
+  },
+  {
+   "code": "MW",
+   "dia": 0.041,
+   "latest": 1.93,
+   "wavg": 2.09697,
+   "min": 1.93,
+   "max": 2.38,
+   "pos": 4.0,
+   "qtyLb": 825.0,
+   "date": "2026-04-10",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.042,
+   "latest": 4.24,
+   "wavg": 3.135,
+   "min": 2.03,
+   "max": 4.24,
+   "pos": 2.0,
+   "qtyLb": 50.0,
+   "date": "2026-02-11",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.043,
+   "latest": 2.76,
+   "wavg": 2.76,
+   "min": 2.76,
+   "max": 2.76,
+   "pos": 1.0,
+   "qtyLb": 50.0,
+   "date": "2026-04-09",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.045,
+   "latest": 2.15,
+   "wavg": 2.15,
+   "min": 2.15,
+   "max": 2.15,
+   "pos": 1.0,
+   "qtyLb": 75.0,
+   "date": "2026-01-07",
+   "sup": "INTER"
+  },
+  {
+   "code": "MW",
+   "dia": 0.047,
+   "latest": 1.84,
+   "wavg": 1.84,
+   "min": 1.84,
+   "max": 1.84,
+   "pos": 1.0,
+   "qtyLb": 50.0,
+   "date": "2026-02-11",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "MW",
+   "dia": 0.048,
+   "latest": 2.08,
+   "wavg": 2.08,
+   "min": 2.08,
+   "max": 2.08,
+   "pos": 1.0,
+   "qtyLb": 75.0,
+   "date": "2026-02-04",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "MW",
+   "dia": 0.051,
+   "latest": 2.05,
+   "wavg": 2.05,
+   "min": 2.05,
+   "max": 2.05,
+   "pos": 1.0,
+   "qtyLb": 25.0,
+   "date": "2026-01-07",
+   "sup": "INTER"
+  },
+  {
+   "code": "MW",
+   "dia": 0.054,
+   "latest": 1.94,
+   "wavg": 1.94,
+   "min": 1.94,
+   "max": 1.94,
+   "pos": 1.0,
+   "qtyLb": 1500.0,
+   "date": "2026-02-04",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "MW",
+   "dia": 0.055,
+   "latest": 5.33,
+   "wavg": 2.57,
+   "min": 2.11,
+   "max": 5.33,
+   "pos": 2.0,
+   "qtyLb": 175.0,
+   "date": "2026-04-29",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.058,
+   "latest": 2.05,
+   "wavg": 2.05,
+   "min": 2.05,
+   "max": 2.05,
+   "pos": 1.0,
+   "qtyLb": 25.0,
+   "date": "2026-01-07",
+   "sup": "INTER"
+  },
+  {
+   "code": "MW",
+   "dia": 0.062,
+   "latest": 1.39,
+   "wavg": 1.39,
+   "min": 1.39,
+   "max": 1.39,
+   "pos": 1.0,
+   "qtyLb": 1500.0,
+   "date": "2026-02-18",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.063,
+   "latest": 3.24,
+   "wavg": 2.87,
+   "min": 2.5,
+   "max": 3.24,
+   "pos": 2.0,
+   "qtyLb": 50.0,
+   "date": "2026-04-15",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.067,
+   "latest": 1.05,
+   "wavg": 1.05,
+   "min": 1.05,
+   "max": 1.05,
+   "pos": 1.0,
+   "qtyLb": 150.0,
+   "date": "2026-04-29",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "MW",
+   "dia": 0.07,
+   "latest": 1.1,
+   "wavg": 1.1,
+   "min": 1.1,
+   "max": 1.1,
+   "pos": 1.0,
+   "qtyLb": 8000.0,
+   "date": "2026-02-18",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.072,
+   "latest": 1.2,
+   "wavg": 1.144444,
+   "min": 1.1,
+   "max": 1.2,
+   "pos": 2.0,
+   "qtyLb": 2700.0,
+   "date": "2026-03-11",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.075,
+   "latest": 1.12,
+   "wavg": 1.12,
+   "min": 1.12,
+   "max": 1.12,
+   "pos": 1.0,
+   "qtyLb": 4500.0,
+   "date": "2026-01-07",
+   "sup": "INTER"
+  },
+  {
+   "code": "MW",
+   "dia": 0.078,
+   "latest": 1.08,
+   "wavg": 1.39,
+   "min": 1.08,
+   "max": 2.01,
+   "pos": 2.0,
+   "qtyLb": 150.0,
+   "date": "2026-04-22",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "MW",
+   "dia": 0.08,
+   "latest": 1.03,
+   "wavg": 1.036333,
+   "min": 1.03,
+   "max": 1.08,
+   "pos": 3.0,
+   "qtyLb": 1500.0,
+   "date": "2026-04-09",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.087,
+   "latest": 0.98,
+   "wavg": 0.98,
+   "min": 0.98,
+   "max": 0.98,
+   "pos": 1.0,
+   "qtyLb": 200.0,
+   "date": "2026-01-28",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.088,
+   "latest": 1.78,
+   "wavg": 1.78,
+   "min": 1.78,
+   "max": 1.78,
+   "pos": 1.0,
+   "qtyLb": 100.0,
+   "date": "2026-01-07",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.09,
+   "latest": 0.99,
+   "wavg": 0.99,
+   "min": 0.99,
+   "max": 0.99,
+   "pos": 1.0,
+   "qtyLb": 6000.0,
+   "date": "2026-01-14",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.091,
+   "latest": 1.05,
+   "wavg": 0.986364,
+   "min": 0.98,
+   "max": 1.05,
+   "pos": 2.0,
+   "qtyLb": 1100.0,
+   "date": "2026-04-22",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.092,
+   "latest": 2.17,
+   "wavg": 2.17,
+   "min": 2.17,
+   "max": 2.17,
+   "pos": 1.0,
+   "qtyLb": 75.0,
+   "date": "2026-04-22",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.095,
+   "latest": 1.01,
+   "wavg": 1.01,
+   "min": 1.01,
+   "max": 1.01,
+   "pos": 1.0,
+   "qtyLb": 2500.0,
+   "date": "2026-01-14",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.098,
+   "latest": 1.03,
+   "wavg": 1.03,
+   "min": 1.03,
+   "max": 1.03,
+   "pos": 1.0,
+   "qtyLb": 300.0,
+   "date": "2026-03-25",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.105,
+   "latest": 1.04,
+   "wavg": 1.035352,
+   "min": 1.01,
+   "max": 1.04,
+   "pos": 2.0,
+   "qtyLb": 1775.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.106,
+   "latest": 1.01,
+   "wavg": 0.996667,
+   "min": 0.98,
+   "max": 1.01,
+   "pos": 2.0,
+   "qtyLb": 450.0,
+   "date": "2026-01-14",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.112,
+   "latest": 0.98,
+   "wavg": 0.98,
+   "min": 0.98,
+   "max": 0.98,
+   "pos": 1.0,
+   "qtyLb": 750.0,
+   "date": "2026-01-07",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.115,
+   "latest": 0.98,
+   "wavg": 0.98,
+   "min": 0.98,
+   "max": 0.98,
+   "pos": 1.0,
+   "qtyLb": 1250.0,
+   "date": "2026-01-07",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.118,
+   "latest": 1.01,
+   "wavg": 1.01,
+   "min": 1.01,
+   "max": 1.01,
+   "pos": 1.0,
+   "qtyLb": 100.0,
+   "date": "2026-01-28",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.12,
+   "latest": 1.03,
+   "wavg": 1.020741,
+   "min": 0.98,
+   "max": 1.03,
+   "pos": 3.0,
+   "qtyLb": 2700.0,
+   "date": "2026-04-09",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.125,
+   "latest": 1.04,
+   "wavg": 1.003333,
+   "min": 0.99,
+   "max": 1.04,
+   "pos": 2.0,
+   "qtyLb": 3750.0,
+   "date": "2026-04-22",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.135,
+   "latest": 1.03,
+   "wavg": 1.024815,
+   "min": 1.01,
+   "max": 1.03,
+   "pos": 2.0,
+   "qtyLb": 675.0,
+   "date": "2026-04-01",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.142,
+   "latest": 1.01,
+   "wavg": 1.01,
+   "min": 1.01,
+   "max": 1.01,
+   "pos": 1.0,
+   "qtyLb": 2000.0,
+   "date": "2026-03-11",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.148,
+   "latest": 1.01,
+   "wavg": 0.998793,
+   "min": 0.98,
+   "max": 1.01,
+   "pos": 4.0,
+   "qtyLb": 34800.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.156,
+   "latest": 1.02,
+   "wavg": 0.988846,
+   "min": 0.98,
+   "max": 1.02,
+   "pos": 3.0,
+   "qtyLb": 2600.0,
+   "date": "2026-04-29",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.162,
+   "latest": 1.01,
+   "wavg": 1.01,
+   "min": 1.01,
+   "max": 1.01,
+   "pos": 2.0,
+   "qtyLb": 3500.0,
+   "date": "2026-02-04",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.165,
+   "latest": 1.04,
+   "wavg": 1.04,
+   "min": 1.04,
+   "max": 1.04,
+   "pos": 1.0,
+   "qtyLb": 125.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.172,
+   "latest": 1.04,
+   "wavg": 1.081818,
+   "min": 1.04,
+   "max": 1.5,
+   "pos": 2.0,
+   "qtyLb": 550.0,
+   "date": "2026-04-15",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.177,
+   "latest": 1.03,
+   "wavg": 1.013158,
+   "min": 0.99,
+   "max": 1.03,
+   "pos": 3.0,
+   "qtyLb": 9500.0,
+   "date": "2026-04-22",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.187,
+   "latest": 1.01,
+   "wavg": 1.019355,
+   "min": 1.01,
+   "max": 1.1,
+   "pos": 6.0,
+   "qtyLb": 3100.0,
+   "date": "2026-04-29",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.192,
+   "latest": 0.99,
+   "wavg": 0.993158,
+   "min": 0.99,
+   "max": 1.01,
+   "pos": 2.0,
+   "qtyLb": 4750.0,
+   "date": "2026-02-04",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.2,
+   "latest": 1.01,
+   "wavg": 1.01,
+   "min": 1.01,
+   "max": 1.01,
+   "pos": 1.0,
+   "qtyLb": 100.0,
+   "date": "2026-01-14",
+   "sup": "ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.218,
+   "latest": 0.99,
+   "wavg": 0.9888,
+   "min": 0.97,
+   "max": 0.99,
+   "pos": 2.0,
+   "qtyLb": 20000.0,
+   "date": "2026-01-14",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "MW",
+   "dia": 0.283,
+   "latest": 1.01,
+   "wavg": 1.01,
+   "min": 1.01,
+   "max": 1.01,
+   "pos": 1.0,
+   "qtyLb": 200.0,
+   "date": "2026-02-04",
+   "sup": "ISW"
+  },
+  {
+   "code": "OT",
+   "dia": 0.072,
+   "latest": 1.62,
+   "wavg": 1.62,
+   "min": 1.62,
+   "max": 1.62,
+   "pos": 1.0,
+   "qtyLb": 700.0,
+   "date": "2026-01-08",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "OT",
+   "dia": 0.148,
+   "latest": 1.35,
+   "wavg": 1.35,
+   "min": 1.35,
+   "max": 1.35,
+   "pos": 1.0,
+   "qtyLb": 3000.0,
+   "date": "2026-02-18",
+   "sup": "ISW"
+  },
+  {
+   "code": "OT",
+   "dia": 0.162,
+   "latest": 1.35,
+   "wavg": 1.35,
+   "min": 1.35,
+   "max": 1.35,
+   "pos": 1.0,
+   "qtyLb": 5000.0,
+   "date": "2026-01-07",
+   "sup": "ISW"
+  },
+  {
+   "code": "OT",
+   "dia": 0.177,
+   "latest": 1.34,
+   "wavg": 1.337077,
+   "min": 1.29,
+   "max": 1.37,
+   "pos": 5.0,
+   "qtyLb": 32500.0,
+   "date": "2026-03-25",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "OT",
+   "dia": 0.187,
+   "latest": 1.34,
+   "wavg": 1.276977,
+   "min": 1.16,
+   "max": 1.34,
+   "pos": 4.0,
+   "qtyLb": 19712.0,
+   "date": "2026-04-01",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "OT",
+   "dia": 0.207,
+   "latest": 1.1,
+   "wavg": 1.1,
+   "min": 1.1,
+   "max": 1.1,
+   "pos": 1.0,
+   "qtyLb": 14000.0,
+   "date": "2026-01-14",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "OT",
+   "dia": 0.218,
+   "latest": 1.19,
+   "wavg": 1.19,
+   "min": 1.19,
+   "max": 1.19,
+   "pos": 1.0,
+   "qtyLb": 4250.0,
+   "date": "2026-03-04",
+   "sup": "ISW"
+  },
+  {
+   "code": "OT",
+   "dia": 0.375,
+   "latest": 1.2,
+   "wavg": 1.1675,
+   "min": 1.15,
+   "max": 1.2,
+   "pos": 3.0,
+   "qtyLb": 12000.0,
+   "date": "2026-04-15",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "PHOSB",
+   "dia": 0.036,
+   "latest": 19.47,
+   "wavg": 19.47,
+   "min": 19.47,
+   "max": 19.47,
+   "pos": 1.0,
+   "qtyLb": 500.0,
+   "date": "2026-03-11",
+   "sup": "ISW"
+  },
+  {
+   "code": "SG",
+   "dia": 0.12,
+   "latest": 1.06,
+   "wavg": 1.146,
+   "min": 1.06,
+   "max": 1.49,
+   "pos": 2.0,
+   "qtyLb": 375.0,
+   "date": "2026-04-29",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.011,
+   "latest": 10.59,
+   "wavg": 10.59,
+   "min": 10.59,
+   "max": 10.59,
+   "pos": 1.0,
+   "qtyLb": 25.0,
+   "date": "2026-04-22",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.012,
+   "latest": 7.98,
+   "wavg": 7.98,
+   "min": 7.98,
+   "max": 7.98,
+   "pos": 1.0,
+   "qtyLb": 25.0,
+   "date": "2026-03-04",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.013,
+   "latest": 5.6,
+   "wavg": 5.6,
+   "min": 5.6,
+   "max": 5.6,
+   "pos": 1.0,
+   "qtyLb": 50.0,
+   "date": "2026-04-22",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "SS",
+   "dia": 0.014,
+   "latest": 7.16,
+   "wavg": 7.16,
+   "min": 7.16,
+   "max": 7.16,
+   "pos": 1.0,
+   "qtyLb": 25.0,
+   "date": "2026-01-28",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.016,
+   "latest": 6.17,
+   "wavg": 6.17,
+   "min": 6.17,
+   "max": 6.17,
+   "pos": 1.0,
+   "qtyLb": 25.0,
+   "date": "2026-04-29",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "SS",
+   "dia": 0.02,
+   "latest": 4.84,
+   "wavg": 4.84,
+   "min": 4.84,
+   "max": 4.84,
+   "pos": 1.0,
+   "qtyLb": 25.0,
+   "date": "2026-03-18",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "SS",
+   "dia": 0.022,
+   "latest": 3.89,
+   "wavg": 3.89,
+   "min": 3.89,
+   "max": 3.89,
+   "pos": 1.0,
+   "qtyLb": 50.0,
+   "date": "2026-01-28",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.023,
+   "latest": 3.67,
+   "wavg": 3.67,
+   "min": 3.67,
+   "max": 3.67,
+   "pos": 1.0,
+   "qtyLb": 50.0,
+   "date": "2026-03-25",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.024,
+   "latest": 4.71,
+   "wavg": 4.73,
+   "min": 4.71,
+   "max": 4.83,
+   "pos": 2.0,
+   "qtyLb": 150.0,
+   "date": "2026-04-29",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.025,
+   "latest": 3.54,
+   "wavg": 3.54,
+   "min": 3.54,
+   "max": 3.54,
+   "pos": 1.0,
+   "qtyLb": 175.0,
+   "date": "2026-02-11",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.026,
+   "latest": 5.14,
+   "wavg": 4.806,
+   "min": 3.47,
+   "max": 5.14,
+   "pos": 3.0,
+   "qtyLb": 250.0,
+   "date": "2026-04-02",
+   "sup": "INTER, ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.028,
+   "latest": 3.66,
+   "wavg": 3.62,
+   "min": 3.54,
+   "max": 3.66,
+   "pos": 2.0,
+   "qtyLb": 150.0,
+   "date": "2026-03-11",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.029,
+   "latest": 1.98,
+   "wavg": 1.98,
+   "min": 1.98,
+   "max": 1.98,
+   "pos": 1.0,
+   "qtyLb": 75.0,
+   "date": "2026-02-25",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "SS",
+   "dia": 0.031,
+   "latest": 2.77,
+   "wavg": 2.804286,
+   "min": 2.77,
+   "max": 2.89,
+   "pos": 2.0,
+   "qtyLb": 175.0,
+   "date": "2026-04-09",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.032,
+   "latest": 3.05,
+   "wavg": 2.894444,
+   "min": 2.77,
+   "max": 3.05,
+   "pos": 2.0,
+   "qtyLb": 4500.0,
+   "date": "2026-03-11",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.035,
+   "latest": 2.96,
+   "wavg": 2.9475,
+   "min": 2.91,
+   "max": 2.96,
+   "pos": 2.0,
+   "qtyLb": 200.0,
+   "date": "2026-02-04",
+   "sup": "INTER, ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.036,
+   "latest": 2.96,
+   "wavg": 2.96,
+   "min": 2.96,
+   "max": 2.96,
+   "pos": 1.0,
+   "qtyLb": 250.0,
+   "date": "2026-02-04",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.038,
+   "latest": 3.05,
+   "wavg": 3.05,
+   "min": 3.05,
+   "max": 3.05,
+   "pos": 1.0,
+   "qtyLb": 150.0,
+   "date": "2026-03-04",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.039,
+   "latest": 2.77,
+   "wavg": 2.77,
+   "min": 2.77,
+   "max": 2.77,
+   "pos": 1.0,
+   "qtyLb": 525.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.041,
+   "latest": 2.61,
+   "wavg": 2.61,
+   "min": 2.61,
+   "max": 2.61,
+   "pos": 1.0,
+   "qtyLb": 75.0,
+   "date": "2026-03-25",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.042,
+   "latest": 2.87,
+   "wavg": 2.87,
+   "min": 2.87,
+   "max": 2.87,
+   "pos": 1.0,
+   "qtyLb": 100.0,
+   "date": "2026-03-11",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.044,
+   "latest": 2.75,
+   "wavg": 2.75,
+   "min": 2.75,
+   "max": 2.75,
+   "pos": 1.0,
+   "qtyLb": 75.0,
+   "date": "2026-04-09",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.047,
+   "latest": 2.61,
+   "wavg": 2.837761,
+   "min": 2.61,
+   "max": 2.98,
+   "pos": 5.0,
+   "qtyLb": 1675.0,
+   "date": "2026-04-09",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.05,
+   "latest": 4.07,
+   "wavg": 3.083333,
+   "min": 2.59,
+   "max": 4.07,
+   "pos": 2.0,
+   "qtyLb": 75.0,
+   "date": "2026-04-29",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.054,
+   "latest": 2.79,
+   "wavg": 2.79,
+   "min": 2.79,
+   "max": 2.79,
+   "pos": 1.0,
+   "qtyLb": 500.0,
+   "date": "2026-01-07",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.055,
+   "latest": 2.59,
+   "wavg": 2.82,
+   "min": 2.59,
+   "max": 3.23,
+   "pos": 3.0,
+   "qtyLb": 200.0,
+   "date": "2026-04-01",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.058,
+   "latest": 2.9,
+   "wavg": 2.9,
+   "min": 2.9,
+   "max": 2.9,
+   "pos": 1.0,
+   "qtyLb": 50.0,
+   "date": "2026-01-07",
+   "sup": "INTER"
+  },
+  {
+   "code": "SS",
+   "dia": 0.06,
+   "latest": 2.52,
+   "wavg": 2.52,
+   "min": 2.52,
+   "max": 2.52,
+   "pos": 1.0,
+   "qtyLb": 200.0,
+   "date": "2026-04-29",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.062,
+   "latest": 2.52,
+   "wavg": 2.934545,
+   "min": 2.52,
+   "max": 6.22,
+   "pos": 3.0,
+   "qtyLb": 275.0,
+   "date": "2026-04-22",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.063,
+   "latest": 2.52,
+   "wavg": 2.604615,
+   "min": 2.52,
+   "max": 2.95,
+   "pos": 5.0,
+   "qtyLb": 455.0,
+   "date": "2026-04-09",
+   "sup": "GIBBS, INTER, ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.067,
+   "latest": 3.0,
+   "wavg": 2.906667,
+   "min": 2.86,
+   "max": 3.0,
+   "pos": 2.0,
+   "qtyLb": 75.0,
+   "date": "2026-02-04",
+   "sup": "GIBBS, INTER"
+  },
+  {
+   "code": "SS",
+   "dia": 0.068,
+   "latest": 2.45,
+   "wavg": 2.45,
+   "min": 2.45,
+   "max": 2.45,
+   "pos": 1.0,
+   "qtyLb": 75.0,
+   "date": "2026-03-18",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "SS",
+   "dia": 0.07,
+   "latest": 2.39,
+   "wavg": 2.39,
+   "min": 2.39,
+   "max": 2.39,
+   "pos": 1.0,
+   "qtyLb": 350.0,
+   "date": "2026-04-09",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.072,
+   "latest": 2.03,
+   "wavg": 2.03,
+   "min": 2.03,
+   "max": 2.03,
+   "pos": 1.0,
+   "qtyLb": 50.0,
+   "date": "2026-01-08",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "SS",
+   "dia": 0.08,
+   "latest": 2.96,
+   "wavg": 1.863465,
+   "min": 1.78,
+   "max": 2.96,
+   "pos": 4.0,
+   "qtyLb": 3175.0,
+   "date": "2026-03-25",
+   "sup": "GIBBS, INTER, ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.085,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 1.0,
+   "qtyLb": 275.0,
+   "date": "2026-01-14",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.086,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 1.0,
+   "qtyLb": 250.0,
+   "date": "2026-04-22",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.091,
+   "latest": 1.85,
+   "wavg": 1.915,
+   "min": 1.85,
+   "max": 1.98,
+   "pos": 2.0,
+   "qtyLb": 200.0,
+   "date": "2026-03-25",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.093,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 3.0,
+   "qtyLb": 525.0,
+   "date": "2026-03-30",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.095,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 1.0,
+   "qtyLb": 200.0,
+   "date": "2026-02-26",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.098,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 1.0,
+   "qtyLb": 225.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.1,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 1.0,
+   "qtyLb": 200.0,
+   "date": "2026-04-09",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.105,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 3.0,
+   "qtyLb": 1250.0,
+   "date": "2026-04-09",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.112,
+   "latest": 1.85,
+   "wavg": 1.887143,
+   "min": 1.85,
+   "max": 1.98,
+   "pos": 2.0,
+   "qtyLb": 350.0,
+   "date": "2026-02-04",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.116,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 2.0,
+   "qtyLb": 850.0,
+   "date": "2026-01-28",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.118,
+   "latest": 3.48,
+   "wavg": 3.48,
+   "min": 3.48,
+   "max": 3.48,
+   "pos": 1.0,
+   "qtyLb": 25.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.125,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 3.0,
+   "qtyLb": 700.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.135,
+   "latest": 3.64,
+   "wavg": 3.64,
+   "min": 3.64,
+   "max": 3.64,
+   "pos": 1.0,
+   "qtyLb": 600.0,
+   "date": "2026-01-28",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.148,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 1.0,
+   "qtyLb": 1000.0,
+   "date": "2026-03-25",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.156,
+   "latest": 1.85,
+   "wavg": 1.870741,
+   "min": 1.85,
+   "max": 1.92,
+   "pos": 2.0,
+   "qtyLb": 675.0,
+   "date": "2026-04-09",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.162,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 2.0,
+   "qtyLb": 3900.0,
+   "date": "2026-01-28",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.177,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 1.0,
+   "qtyLb": 1500.0,
+   "date": "2026-01-28",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.187,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 1.0,
+   "qtyLb": 475.0,
+   "date": "2026-04-09",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.192,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 1.0,
+   "qtyLb": 2600.0,
+   "date": "2026-01-07",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.207,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 2.0,
+   "qtyLb": 850.0,
+   "date": "2026-03-25",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.234,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 1.0,
+   "qtyLb": 300.0,
+   "date": "2026-01-07",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.25,
+   "latest": 1.85,
+   "wavg": 1.85,
+   "min": 1.85,
+   "max": 1.85,
+   "pos": 1.0,
+   "qtyLb": 3000.0,
+   "date": "2026-04-09",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS",
+   "dia": 0.312,
+   "latest": 2.04,
+   "wavg": 2.027148,
+   "min": 1.8,
+   "max": 2.38,
+   "pos": 4.0,
+   "qtyLb": 15250.0,
+   "date": "2026-04-15",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.032,
+   "latest": 4.75,
+   "wavg": 4.75,
+   "min": 4.75,
+   "max": 4.75,
+   "pos": 1.0,
+   "qtyLb": 25.0,
+   "date": "2026-01-07",
+   "sup": "INTER"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.042,
+   "latest": 4.59,
+   "wavg": 4.59,
+   "min": 4.59,
+   "max": 4.59,
+   "pos": 1.0,
+   "qtyLb": 100.0,
+   "date": "2026-04-09",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.045,
+   "latest": 4.49,
+   "wavg": 4.49,
+   "min": 4.49,
+   "max": 4.49,
+   "pos": 1.0,
+   "qtyLb": 150.0,
+   "date": "2026-04-09",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.047,
+   "latest": 4.52,
+   "wavg": 4.52,
+   "min": 4.52,
+   "max": 4.52,
+   "pos": 1.0,
+   "qtyLb": 500.0,
+   "date": "2026-02-04",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.051,
+   "latest": 4.88,
+   "wavg": 4.88,
+   "min": 4.88,
+   "max": 4.88,
+   "pos": 1.0,
+   "qtyLb": 50.0,
+   "date": "2026-01-07",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.06,
+   "latest": 4.39,
+   "wavg": 4.39,
+   "min": 4.39,
+   "max": 4.39,
+   "pos": 1.0,
+   "qtyLb": 400.0,
+   "date": "2026-01-21",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.062,
+   "latest": 1.63,
+   "wavg": 1.63,
+   "min": 1.63,
+   "max": 1.63,
+   "pos": 1.0,
+   "qtyLb": 100.0,
+   "date": "2026-03-18",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.065,
+   "latest": 5.22,
+   "wavg": 5.356667,
+   "min": 4.7,
+   "max": 6.15,
+   "pos": 3.0,
+   "qtyLb": 75.0,
+   "date": "2026-03-26",
+   "sup": "GIBBS, INTER, ISW"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.067,
+   "latest": 4.22,
+   "wavg": 4.405,
+   "min": 4.22,
+   "max": 4.59,
+   "pos": 2.0,
+   "qtyLb": 100.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.105,
+   "latest": 3.73,
+   "wavg": 3.752222,
+   "min": 3.73,
+   "max": 3.93,
+   "pos": 2.0,
+   "qtyLb": 675.0,
+   "date": "2026-04-22",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.12,
+   "latest": 3.67,
+   "wavg": 3.66,
+   "min": 3.65,
+   "max": 3.67,
+   "pos": 2.0,
+   "qtyLb": 150.0,
+   "date": "2026-03-26",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.125,
+   "latest": 3.43,
+   "wavg": 3.43,
+   "min": 3.43,
+   "max": 3.43,
+   "pos": 1.0,
+   "qtyLb": 1250.0,
+   "date": "2026-04-15",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.13,
+   "latest": 3.53,
+   "wavg": 3.53,
+   "min": 3.53,
+   "max": 3.53,
+   "pos": 1.0,
+   "qtyLb": 350.0,
+   "date": "2026-03-25",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.148,
+   "latest": 3.48,
+   "wavg": 3.48,
+   "min": 3.48,
+   "max": 3.48,
+   "pos": 1.0,
+   "qtyLb": 500.0,
+   "date": "2026-03-25",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.156,
+   "latest": 3.67,
+   "wavg": 3.67,
+   "min": 3.67,
+   "max": 3.67,
+   "pos": 1.0,
+   "qtyLb": 75.0,
+   "date": "2026-04-09",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.162,
+   "latest": 3.6,
+   "wavg": 3.536364,
+   "min": 3.5,
+   "max": 3.6,
+   "pos": 2.0,
+   "qtyLb": 550.0,
+   "date": "2026-04-15",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.177,
+   "latest": 3.67,
+   "wavg": 3.548235,
+   "min": 3.44,
+   "max": 3.67,
+   "pos": 2.0,
+   "qtyLb": 4250.0,
+   "date": "2026-02-18",
+   "sup": "GIBBS, ISW"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.192,
+   "latest": 3.36,
+   "wavg": 3.36,
+   "min": 3.36,
+   "max": 3.36,
+   "pos": 1.0,
+   "qtyLb": 350.0,
+   "date": "2026-02-25",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.207,
+   "latest": 3.59,
+   "wavg": 3.59,
+   "min": 3.59,
+   "max": 3.59,
+   "pos": 1.0,
+   "qtyLb": 750.0,
+   "date": "2026-01-21",
+   "sup": "GIBBS"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.262,
+   "latest": 3.67,
+   "wavg": 3.67,
+   "min": 3.67,
+   "max": 3.67,
+   "pos": 1.0,
+   "qtyLb": 1750.0,
+   "date": "2026-04-15",
+   "sup": "ISW"
+  },
+  {
+   "code": "SS177",
+   "dia": 0.362,
+   "latest": 3.81,
+   "wavg": 3.5348,
+   "min": 3.38,
+   "max": 3.81,
+   "pos": 2.0,
+   "qtyLb": 2500.0,
+   "date": "2026-04-09",
+   "sup": "GIBBS, ISW"
+  }
+ ],
+ "surcharges": [
+  {
+   "alloy": "302 / 304",
+   "code": "SS",
+   "perLb": 1.3,
+   "prev": 1.29,
+   "effective": "2026-05-01",
+   "updated": "2026-04-27",
+   "note": ""
+  },
+  {
+   "alloy": "17/7 PH (631)",
+   "code": "SS177",
+   "perLb": 1.62,
+   "prev": 1.61,
+   "effective": "2026-05-01",
+   "updated": "2026-04-27",
+   "note": ""
+  },
+  {
+   "alloy": "316",
+   "code": "316",
+   "perLb": 2.11,
+   "prev": 2.08,
+   "effective": "2026-05-01",
+   "updated": "2026-04-27",
+   "note": ""
+  },
+  {
+   "alloy": "N50 (XM19)",
+   "code": "XM19",
+   "perLb": 1.97,
+   "prev": 1.93,
+   "effective": "2026-05-01",
+   "updated": "2026-04-27",
+   "note": "Not in ISC material list yet"
+  },
+  {
+   "alloy": "304LVM",
+   "code": "304LVM",
+   "perLb": 1.54,
+   "prev": 1.55,
+   "effective": "2026-05-01",
+   "updated": "2026-04-27",
+   "note": "Not in ISC material list yet"
+  },
+  {
+   "alloy": "316LVM",
+   "code": "316LVM",
+   "perLb": 2.79,
+   "prev": 2.79,
+   "effective": "2026-05-01",
+   "updated": "2026-04-27",
+   "note": "Not in ISC material list yet"
+  },
+  {
+   "alloy": "17/4 PH (630)",
+   "code": "SS174",
+   "perLb": 1.39,
+   "prev": 1.39,
+   "effective": "2026-05-01",
+   "updated": "2026-04-27",
+   "note": "Not in ISC material list yet"
+  }
+ ],
+ "surchargeAppliesTo": [
+  "SS",
+  "SS177",
+  "316"
+ ],
+ "subcontractors": [
+  {
+   "name": "C&R Plating",
+   "quoteDate": "2025-09-12",
+   "services": [
+    {
+     "service": "Zinc Plate No Bake",
+     "min": 45.0,
+     "perLb": 0.52
+    },
+    {
+     "service": "Zinc Plate Clear Bake",
+     "min": 55.0,
+     "perLb": 0.53
+    },
+    {
+     "service": "Zinc Plate Yellow Bake",
+     "min": 60.0,
+     "perLb": 0.583
+    },
+    {
+     "service": "Passivate",
+     "min": 40.0,
+     "perLb": 0.32
+    },
+    {
+     "service": "Zinc Plate (Black) Bake",
+     "min": 100.0,
+     "perLb": 1.05
+    },
+    {
+     "service": "Plating Certs",
+     "min": 11.0,
+     "perLb": null
+    }
+   ],
+   "certs": 11,
+   "loopTrip": 150,
+   "skidMaxLb": 2400
+  },
+  {
+   "name": "Commercial Plating",
+   "quoteDate": "",
+   "services": [
+    {
+     "service": "Zinc & Clear",
+     "min": 150.0,
+     "perLb": null
+    },
+    {
+     "service": "Zinc Clear & Bake",
+     "min": 175.0,
+     "perLb": null
+    },
+    {
+     "service": "Zinc Yellow & Bake",
+     "min": 200.0,
+     "perLb": null
+    }
+   ],
+   "certs": 0,
+   "loopTrip": 120,
+   "skidMaxLb": 2400,
+   "stripPerLb": 0.2
+  }
+ ],
+ "platingHistory": [
+  {
+   "pn": "5281",
+   "customer": "AFC",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.85,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "98-3003",
+   "customer": "American Dish",
+   "finish": "Zinc Plate",
+   "perLb": 0.25,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "98-3011",
+   "customer": "American Dish",
+   "finish": "Zinc Plate",
+   "perLb": 0.22,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "ACC-390-0007",
+   "customer": "B & W",
+   "finish": "Zinc - Trivalent Clear & Bake",
+   "perLb": null,
+   "raw": "0.40  min 175",
+   "notes": ""
+  },
+  {
+   "pn": "3025-119PL",
+   "customer": "B&W Saddle Pins",
+   "finish": "Zinc Plate",
+   "perLb": 0.2,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "50N225SPTZ",
+   "customer": "B&W Truck Beds",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.235,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "034-8025-00",
+   "customer": "Bad Boy",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.26,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "034-8045-00",
+   "customer": "Bad Boy",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.35,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "034-9050-00",
+   "customer": "Bad Boy",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.33,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "034-2009-00",
+   "customer": "Bad Boy/Arkansas Bolt/Eidos",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.28,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "034-2020-00",
+   "customer": "BadBoy",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.235,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "034-2030-00",
+   "customer": "BadBoy",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.265,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "C730X075X4",
+   "customer": "Bax Sales",
+   "finish": "Zinc- Clear and Bake",
+   "perLb": null,
+   "raw": "$1.00/lb $175 min",
+   "notes": ""
+  },
+  {
+   "pn": "518487",
+   "customer": "Bobcat",
+   "finish": "Zinc- Clear and Bake",
+   "perLb": 0.45,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "27127",
+   "customer": "Cardinal Components",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.72,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "MA12",
+   "customer": "Community Products",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.3,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "90P04P",
+   "customer": "Construction Products",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.33654,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "1A0744",
+   "customer": "Cross Manufacturing",
+   "finish": "Zinc-Trivalent Clear & Bake",
+   "perLb": 0.65,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "21148",
+   "customer": "Danuser Machine Company",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.2451,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "Z3CS",
+   "customer": "Decker",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.382,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "462159Z2",
+   "customer": "Deco Products",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 1.5,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "DCP10607",
+   "customer": "Dual Dunamics Inc",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.58,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "008938",
+   "customer": "Excel Ind",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.235,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "607146",
+   "customer": "Excel Ind",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.382,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "601051",
+   "customer": "Excel Ind",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.235,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "601131",
+   "customer": "Excel Ind",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.7,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "8938",
+   "customer": "Excel Industriel",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.235,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "036384",
+   "customer": "Excel Industriel",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.34,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "008938",
+   "customer": "Excel Industries",
+   "finish": "Zinc - Trivalent Clear & Bake",
+   "perLb": null,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "K-105-PLATED",
+   "customer": "Fairfield Ind",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 1.15,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "K-105L-PLATED",
+   "customer": "FAIRFIELD INDUSTRIES INC",
+   "finish": "ZINC-CLEAR AND BAKE",
+   "perLb": 1.15,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "10760-06470",
+   "customer": "Fastenal",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.36,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "8370998",
+   "customer": "Fawn",
+   "finish": "Zinc Plate",
+   "perLb": 0.267,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "230325672",
+   "customer": "Femco Inc.",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.42,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "230325683",
+   "customer": "Femco Inc.",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.42,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "5019755",
+   "customer": "Fimco",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.32,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "807-273C",
+   "customer": "Great Plains  Manufacturing",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.36,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "807-350C",
+   "customer": "Great Plains  Manufacturing",
+   "finish": "Zinc- Clear and Bake",
+   "perLb": 0.55,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "155213-01",
+   "customer": "Great Plains Industries",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.55,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "807-236C",
+   "customer": "Great Plains Manufacturing",
+   "finish": "Zinc- Clear and Bake",
+   "perLb": null,
+   "raw": "$175 Min",
+   "notes": ""
+  },
+  {
+   "pn": "807-068C",
+   "customer": "Great Plains MFG",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.28,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "807-367C",
+   "customer": "Great Plains MFG",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.33,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "807-185C",
+   "customer": "Great Plains MFG",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.34,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "323245",
+   "customer": "Hahn Equip/Exmark MFG",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.3,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "HDICT-14",
+   "customer": "Harper Trucks, Inc",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.85,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "T2050450",
+   "customer": "Hubbell Power Systems",
+   "finish": "Zinc - Clear",
+   "perLb": null,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "539118762",
+   "customer": "Husqvarna",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.29,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "575230201",
+   "customer": "Husqvarna",
+   "finish": "Zinc-TRIVALENT Yellow & Bake",
+   "perLb": 0.45,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "670300030",
+   "customer": "Hydraulic Components",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.525,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "670300020",
+   "customer": "Hydraulic Components",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": null,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "333055",
+   "customer": "Iowa Spring",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.323,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "333042",
+   "customer": "Iowa Spring",
+   "finish": "Zinc- Clear and Bake",
+   "perLb": 0.85,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "52047",
+   "customer": "Iowa Spring",
+   "finish": "Zinc- Clear and Bake",
+   "perLb": 0.5,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "3046601",
+   "customer": "JCI Ruskin",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 1.15,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "88003100",
+   "customer": "JCI Ruskin",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": null,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "NK8053",
+   "customer": "Kreg Tool",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.21,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "2553040",
+   "customer": "Lislie Corp",
+   "finish": "Zinc- Clear and Bake",
+   "perLb": 0.8,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "WTR00181",
+   "customer": "LoadKing",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.3,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "283852",
+   "customer": "Moridge",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": null,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "283516",
+   "customer": "Moridge",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.42,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "284428",
+   "customer": "Moridge",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.34,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "283823",
+   "customer": "Moridge",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.43,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "283848",
+   "customer": "Moridge",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.33,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "284429",
+   "customer": "Moridge",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.35,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "283389",
+   "customer": "Moridge Manufacturing Inc.",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": null,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "283988",
+   "customer": "Moridge Manufacturing Inc.",
+   "finish": "Zinc - Yellow & Bake",
+   "perLb": 0.4,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "ISC-1625-Plate",
+   "customer": "Nolin",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.355,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "670300001",
+   "customer": "Prince Manufacturing",
+   "finish": "Zinc- Clear and Bake",
+   "perLb": 0.65,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "ISC-7994",
+   "customer": "R. H. Fastener",
+   "finish": "Zinc- Clear and Bake",
+   "perLb": 0.65,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "2750083",
+   "customer": "Regal Beloit",
+   "finish": "Zinc - Clear and Bake",
+   "perLb": null,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "831115527",
+   "customer": "RH Fast",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.26,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "100040",
+   "customer": "Schiller grounds care",
+   "finish": "Zinc- Clear and Bake",
+   "perLb": 0.44,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "61021101",
+   "customer": "SKF",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.6,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "87A373",
+   "customer": "Smith & Loveless",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": null,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "6231176",
+   "customer": "SOR",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.25,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "102E",
+   "customer": "Stone Manufacturing",
+   "finish": "Zinc-Clear Plate",
+   "perLb": 0.4,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "FD48642",
+   "customer": "T - L Irrigation Company",
+   "finish": "Zinc - Clear and Bake",
+   "perLb": null,
+   "raw": "$.30  min 175.00",
+   "notes": ""
+  },
+  {
+   "pn": "ISC-7487",
+   "customer": "TCD Parts",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.32,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "ISC-7060",
+   "customer": "Timber King",
+   "finish": "Zinc- Clear and Bake",
+   "perLb": null,
+   "raw": "$175 min.",
+   "notes": ""
+  },
+  {
+   "pn": "138-0678",
+   "customer": "Toro",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.242,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "138-7228",
+   "customer": "Toro",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.3,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "138-7252",
+   "customer": "Toro",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.35,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "138-7264",
+   "customer": "Toro",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.3,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "109-0148",
+   "customer": "Toro",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.235,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "108-4052",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.65,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "103-4281",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.26,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "103-7997",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.35,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "109-2230",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.26,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "109-7124",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.35,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "1-603693",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.29,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "1-603402",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.35,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "1-603414",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.33,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "1-603807",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.33,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "1-653331",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.31,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "1-653544",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.31,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "108-4056",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.385,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "1-323161",
+   "customer": "Toro",
+   "finish": "Zinc-Bake & Black",
+   "perLb": 1.08,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "116-8470",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.36,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "103-7398",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": null,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "1-633454",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.36,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "103-1767",
+   "customer": "Toro",
+   "finish": "Zinc - Yellow & Bake",
+   "perLb": null,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "1-323071",
+   "customer": "Toro",
+   "finish": "Zinc - Black and Bake",
+   "perLb": null,
+   "raw": "$300 Min",
+   "notes": ""
+  },
+  {
+   "pn": "1-323245",
+   "customer": "Toro/Midwest Control",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.35,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "PRT-832",
+   "customer": "Triangle MFG",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.515,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "NSN-5360-88-200-1495",
+   "customer": "US Postal",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 0.55,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "523327",
+   "customer": "WorldLawn",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.35,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "523278",
+   "customer": "WorldLawn",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.7,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "523109",
+   "customer": "WorldLawn",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.28,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "543520",
+   "customer": "WorldLawn",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.42,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "633382",
+   "customer": "Worldlawn",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": null,
+   "raw": "$0.23/$175 MIN",
+   "notes": ""
+  },
+  {
+   "pn": "4113746",
+   "customer": "Bobcat",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.45,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "2553040",
+   "customer": "Lisle Corp.",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": 0.8,
+   "raw": "",
+   "notes": ""
+  },
+  {
+   "pn": "284427",
+   "customer": "Moridge",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": null,
+   "raw": "$200 Min",
+   "notes": ""
+  },
+  {
+   "pn": "7134220",
+   "customer": "Components Company",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": null,
+   "raw": "$175 min.",
+   "notes": ""
+  },
+  {
+   "pn": "FSC455398",
+   "customer": "VC999 Packaging Systems",
+   "finish": "Zinc-Clear & Bake",
+   "perLb": null,
+   "raw": "$175 min.",
+   "notes": ""
+  },
+  {
+   "pn": "103-0265",
+   "customer": "Toro",
+   "finish": "Zinc-Yellow & Bake",
+   "perLb": 1.25,
+   "raw": "",
+   "notes": ""
+  }
+ ],
+ "packing": [
+  {
+   "id": "COR100803",
+   "desc": "10 X 8 X 3 BOX",
+   "supplier": "SIP",
+   "price": 0.63,
+   "uom": "EACH",
+   "defaultPerBox": null
+  },
+  {
+   "id": "COR08010",
+   "desc": "8X6X6 RSC STOCK CARTON",
+   "supplier": "SIP",
+   "price": 0.4,
+   "uom": "EACH",
+   "defaultPerBox": null
+  },
+  {
+   "id": "COR08030",
+   "desc": "8x8x8  RSC-Glued 32ECT KFT PLN*",
+   "supplier": "SIP",
+   "price": 0.48,
+   "uom": "EACH",
+   "defaultPerBox": null
+  },
+  {
+   "id": "COR18002",
+   "desc": "18X8X4 RSC STOCK CARTON (Sportworks)",
+   "supplier": "SIP",
+   "price": 0.69,
+   "uom": "EACH",
+   "defaultPerBox": null
+  },
+  {
+   "id": "CHP12012",
+   "desc": "12\" X 12\" 22 pt. Chipboard Pad",
+   "supplier": "SIP",
+   "price": 0.16,
+   "uom": "EACH",
+   "defaultPerBox": null
+  },
+  {
+   "id": "COR11050",
+   "desc": "11-1/4X8-3/4X12 RSC STK CTN  (Common Boxes)",
+   "supplier": "SIP",
+   "price": 0.83,
+   "uom": "EACH",
+   "defaultPerBox": null
+  },
+  {
+   "id": "COR121212U",
+   "desc": "12x12x12 (10,8,6) RSC Stock Carton Boxes",
+   "supplier": "SIP",
+   "price": 0.73,
+   "uom": "EACH",
+   "defaultPerBox": null
+  },
+  {
+   "id": "COR14040",
+   "desc": "14x14x14 RSC Stock Carton Boxes",
+   "supplier": "SIP",
+   "price": 1.33,
+   "uom": "EACH",
+   "defaultPerBox": null
+  },
+  {
+   "id": "COR24027A",
+   "desc": "24\" X 12\" X 12\" Double Wall Box",
+   "supplier": "SIP",
+   "price": 1.95,
+   "uom": "EACH",
+   "defaultPerBox": null
+  },
+  {
+   "id": "COR_ROW_11",
+   "desc": "DOUBLE WALL 12 x 12 x 12 rsc 48ect plain kraft",
+   "supplier": "SIP",
+   "price": 1.67,
+   "uom": "EACH",
+   "defaultPerBox": null
+  },
+  {
+   "id": "COR11812HD /-NON-INVETORY",
+   "desc": "11 1/4 x 8 3/4 x 12 BOX HEAVY DUTY (US POSTAL & Toro MEXICO",
+   "supplier": "SIP",
+   "price": 1.28,
+   "uom": "EACH",
+   "defaultPerBox": null
+  },
+  {
+   "id": "COR240606",
+   "desc": "24\" x 6\" x 6\" Stock Carton Boxes (Sportworks)",
+   "supplier": "SIP",
+   "price": 0.72,
+   "uom": "EACH",
+   "defaultPerBox": null
+  },
+  {
+   "id": "TACKY BOARD 11 7/8\" X 11 7/8\"",
+   "desc": "TACKY BOARD 11 7/8\" X 11 7/8\"",
+   "supplier": "PRESON",
+   "price": 0.52634,
+   "uom": "EACH",
+   "defaultPerBox": null
+  },
+  {
+   "id": "barrels no lids",
+   "desc": "30 gallon drums unlined",
+   "supplier": "obry",
+   "price": 5.5,
+   "uom": "EACH",
+   "defaultPerBox": null
+  },
+  {
+   "id": "barrels no lids",
+   "desc": "38 gallon drums unlined",
+   "supplier": "obry",
+   "price": 6.5,
+   "uom": "EACH",
+   "defaultPerBox": null
+  },
+  {
+   "id": "GAYLORD",
+   "desc": "GAYLORD — special packaging",
+   "supplier": "ISC",
+   "price": 30.0,
+   "uom": "EACH",
+   "defaultPerBox": null
+  }
+ ],
+ "customers": [
+  {
+   "code": "2RTOOL",
+   "name": "2R Tool & Machine, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "A&K RAIL",
+   "name": "A & K Railroad Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "AAAA SPEC",
+   "name": "AAAA Specialties",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ABB MOTORS",
+   "name": "ABB Motors and Mechanical Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ABILENE",
+   "name": "Abilene Machine Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ACI",
+   "name": "ACI Services, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "AERIFICATI",
+   "name": "Aerification Plus LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "AEROM",
+   "name": "Aeromotive, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "AEROT",
+   "name": "Aero Transportation Products Inc. (Wabtec Corp,)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "AFC",
+   "name": "AFC Industries Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "A-J",
+   "name": "A J Manufacturing Co Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ALAMO",
+   "name": "Alamo Group (SMC) Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ALKAR",
+   "name": "Alkar-RapidPak, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ALLEGMFG",
+   "name": "Allegiant Manufacturing",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ALLEN FILT",
+   "name": "Allen Filters",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ALLIM",
+   "name": "Allied Materials & Equip., Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ALLOY",
+   "name": "Alloy Process Engineering, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ALTEC AIR",
+   "name": "Altec Air, LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "AMDIS",
+   "name": "American Dish Service",
+   "terms": "Net 30"
+  },
+  {
+   "code": "AMER PROS",
+   "name": "American Prosthetic Components, LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "AMERG",
+   "name": "American Games, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "AMERSY",
+   "name": "American Syscomptel Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "AMMFG",
+   "name": "American Manufacturing",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ANCO",
+   "name": "Anco International Incorporated",
+   "terms": "Net 30"
+  },
+  {
+   "code": "APACI",
+   "name": "Apache Hose & Belting, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "APEXHAUST",
+   "name": "AP Exhaust Products, Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "APPLIED MO",
+   "name": "Applied Industrial Technologies",
+   "terms": "Net 30"
+  },
+  {
+   "code": "APPLIED OH",
+   "name": "Applied Industrial Technology",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ARBOL",
+   "name": "ABC Logistics div of Arkansas Bolt Co.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ARIENS",
+   "name": "Ariens Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ARMST",
+   "name": "Armstrong Machine Co.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ARTIC",
+   "name": "Arctic Fox",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ARTSW",
+   "name": "Arts-Way Manufacturing",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ASPENPRO",
+   "name": "Aspen Products",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ASSEC",
+   "name": "Associated Equipment Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ASSEM",
+   "name": "Assembled Products Corp",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ATLAS ROOF",
+   "name": "Atlas Roofing",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ATLAS TUBE",
+   "name": "Atlas Tube, Div of Zekelman Industries",
+   "terms": "Net 30"
+  },
+  {
+   "code": "AUEQP",
+   "name": "Automatic Equiment Mfg dba Blue Ox",
+   "terms": "Net 30"
+  },
+  {
+   "code": "AUSTIN HAR",
+   "name": "Austin Hardware & Supply, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "AXE EQUIP",
+   "name": "AXE Equipment",
+   "terms": "Net 30"
+  },
+  {
+   "code": "B&W",
+   "name": "B & W Custom Truck Beds,Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "B&W BRAKE",
+   "name": "B & W Brake, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BAXSALES",
+   "name": "Bax Sales Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BEE",
+   "name": "Bee Line Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BERGM",
+   "name": "Bergman Manufacturing Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BERKEL",
+   "name": "Berkel and Co",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BETTEN",
+   "name": "Bettendorf Stanford",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BISON",
+   "name": "Bison Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BMG",
+   "name": "BMG of Kansas, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BOBCAT",
+   "name": "Clark Equipment Company (Doosan Bobcat NA, Inc.)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BONE",
+   "name": "Allen Press Parts, formerly The Bone Pile",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BOSSARD",
+   "name": "Bossard North America",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BOULD LINC",
+   "name": "AFC Industries",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BRADB",
+   "name": "The Bradbury Co. Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BRODERSON",
+   "name": "Broderson Manufacturing Corp.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BROWNCO",
+   "name": "Brown-Covey Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BRUNSON",
+   "name": "Brunson Instrument Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BSN",
+   "name": "BSN Medical Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BUCKET",
+   "name": "The Bucket Cover",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BULK TANK",
+   "name": "Bulk Tank Incorporated",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BULLMOOSE",
+   "name": "Bull Moose Tube CompanyBUNZL PR|Bunzl Omaha (89-003)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "BURG",
+   "name": "Burger & Brown Engineering Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CAPSA",
+   "name": "CAPSA Healthcare",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CARDC",
+   "name": "Cardinal Components Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CASHCO",
+   "name": "Cashco, Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CBC",
+   "name": "Wesco (Formerly Carlton Bates)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CEI",
+   "name": "CEI Equipment Co. DBA KT PACER",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CERPW",
+   "name": "Certified Power, Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CHANCE",
+   "name": "Chance Rides Manufacturing Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CHECK",
+   "name": "Check-All Valve Mfg. Co.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CHEVY",
+   "name": "Classic Parts of America",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CHOATE",
+   "name": "Choate Machine and Tool, Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CLAYB",
+   "name": "Clay & Bailey Mfg. Co.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CLEVELAND",
+   "name": "Cleveland-Cliffs Tubular Components, LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "COBRA",
+   "name": "Cobra Motorcycle Mfg. Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CO-LINE",
+   "name": "Co-Line Manufacturing",
+   "terms": "Net 30"
+  },
+  {
+   "code": "COLLINS MA",
+   "name": "Collins Machinery",
+   "terms": "Net 30"
+  },
+  {
+   "code": "COLLIS",
+   "name": "Collis Toolholder Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "COLUM",
+   "name": "Columbia Glass & Window Co.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "COMMP",
+   "name": "Community Playthings",
+   "terms": "Net 30"
+  },
+  {
+   "code": "COMP",
+   "name": "Components Company Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "COMPRESS",
+   "name": "Compressor Parts & Components Co.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CONST PROD",
+   "name": "Construction Products",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CONTITECH",
+   "name": "ContiTech USA, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CONTL",
+   "name": "Control Devices LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CORNELIUS",
+   "name": "Cornelius Manufacturing",
+   "terms": "Net 30"
+  },
+  {
+   "code": "COSER",
+   "name": "Colorado Serum Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CRICK",
+   "name": "Ameri Source/ dba Crick Tool",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CROSM",
+   "name": "Cross Manufacturing Inc.-V100018",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CROWN",
+   "name": "Crown Packaging Corp.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CUSTOM SKA",
+   "name": "Custom SkateWorks",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CUSTPART",
+   "name": "Custom Parts Engineering",
+   "terms": "Net 30"
+  },
+  {
+   "code": "CUTLER REP",
+   "name": "Cutler Repaving",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DALS",
+   "name": "Bernard Dalsin Manufacturing",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DALTO",
+   "name": "Dalton AG Inc dba Dalton AG Products",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DANU",
+   "name": "Danuser Machine Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DECKER",
+   "name": "Decker Mfg Co",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DECOP",
+   "name": "Deco Products Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DELTAKITS",
+   "name": "Delta Kits",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DEMCO",
+   "name": "Demco Products",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DEXT",
+   "name": "Dexter Laundry, Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DIAGR",
+   "name": "Diagraph Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DIAM",
+   "name": "Diamond Mfg. Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DOERING",
+   "name": "Doering Company, LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DORMAKABA",
+   "name": "dormakaba USA, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DOUBH",
+   "name": "Double HH Mfg Div of Hope Haven Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DUAL",
+   "name": "Dual Dynamics Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DUTT",
+   "name": "Dutton-Lainson Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "DWYER",
+   "name": "Dwyer Instruments",
+   "terms": "Net 30"
+  },
+  {
+   "code": "EBCO",
+   "name": "EBCO Products Corp",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ECONTROLS",
+   "name": "InPro/Seal, LLC DBA FW Murphy Production Controls",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ELIJAH",
+   "name": "Elijah Tooling Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "EMCOS",
+   "name": "EMCO Enterprises Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "EMERS",
+   "name": "Emerson Mfg. Corp",
+   "terms": "Net 30"
+  },
+  {
+   "code": "EMMERT",
+   "name": "Emmert Welding & Mfg Co",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ENDRIES",
+   "name": "Endries International Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ENERGYMFG",
+   "name": "Energy Mfg. Company, Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ENSIGHT",
+   "name": "Ensight Solutions LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ESKRI",
+   "name": "Eskridge Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "EXCEL IND",
+   "name": "Excel Industries Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "EXLIN",
+   "name": "Exline, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "EXP SCALE",
+   "name": "Express Scale Parts",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FAIR",
+   "name": "Fair Manufacturing",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FAIRF",
+   "name": "Fairfield Industries Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FASCO3",
+   "name": "Regal Beloit America Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FASTCOM",
+   "name": "Fastcom Supply",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FASTEN SOL",
+   "name": "Fastener Solutions",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FASTENAL I",
+   "name": "Fastenal",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FASTENAL O",
+   "name": "Fastenal",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FAWN",
+   "name": "Fawn Engineering Corp.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FEATHERLIT",
+   "name": "Featherlite Trailer Manufacturing LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FEMCO",
+   "name": "Femco Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FERG",
+   "name": "Revere Plastics Systems (Formally Ferguson Prod.)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FIKE",
+   "name": "Fike Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FIMCO",
+   "name": "Fimco Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FINISHING",
+   "name": "Carlisle Fluid Technologies (Finishing Brands)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FIRST WAVE",
+   "name": "First Wave Products Group, LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FLEXTRON",
+   "name": "Flextronics America, LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FOODCRAFT",
+   "name": "Foodcraft",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FORD MOTOR",
+   "name": "Ford Motor Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FOSTM",
+   "name": "Foster Manufacturing Co., Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FREEM",
+   "name": "The Freeman Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "FULTON",
+   "name": "Fulton Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "GARMIN",
+   "name": "Garmin International, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "GEM TECH",
+   "name": "Gem Tech LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "GEORGE",
+   "name": "George Steel Fabricating",
+   "terms": "Net 30"
+  },
+  {
+   "code": "GLEND",
+   "name": "Glendo LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "GRAINCUSSO",
+   "name": "Grainger Sourcing",
+   "terms": "Net 30"
+  },
+  {
+   "code": "GRAY",
+   "name": "Gray Manufacturing Company Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "GRESALES",
+   "name": "Gregory Sales & Service",
+   "terms": "Net 30"
+  },
+  {
+   "code": "GRIND",
+   "name": "Great Plains Industries",
+   "terms": "Net 30"
+  },
+  {
+   "code": "GRPLN",
+   "name": "Great Plains Manufacturing",
+   "terms": "Net 30"
+  },
+  {
+   "code": "GULL",
+   "name": "Gull Industries",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HAMEL",
+   "name": "Hamel Mfg Company Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HAMPS",
+   "name": "WS Hampshire, Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HANDICARE",
+   "name": "Handicare USA, LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HANSR",
+   "name": "Hans Rudolph Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HANTOVER",
+   "name": "Hantover Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HARL",
+   "name": "Harlan Global Manufacturing,LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HARLEYATTA",
+   "name": "Sweepster/Paladin Attachments LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HARMAN CO",
+   "name": "Donald harman DBA Harman Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HARP",
+   "name": "Harper Trucks, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HAWAR",
+   "name": "Hawarden Machine Inc. dba For-Most Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HCDUK",
+   "name": "H.C. Duke & Son Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HEN",
+   "name": "Hen-Way Manufacturing Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HENKE",
+   "name": "Henke Mfg / Alamo Group",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HENKEMACH",
+   "name": "Global Equipment Co. Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HEWIL",
+   "name": "H.E. Williams Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HI HEAT",
+   "name": "Hi Heat Indsutries, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HIGHQ",
+   "name": "High Quality Plastics Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HIGHTECH",
+   "name": "High Tech Tool",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HILLS",
+   "name": "Hills Stainless Steel & Eqp. Co.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HILO",
+   "name": "Hi-Lo Manufacturing",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HIX",
+   "name": "Hix Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HMC",
+   "name": "HMC Industries",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HOPKINS",
+   "name": "Hopkins Manufacturing Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HORN",
+   "name": "Hornady Mfg. Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HORSE",
+   "name": "Horsepower Controls",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HTS",
+   "name": "HTS Technologies",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HUBBELL",
+   "name": "Hubbell Power Systems Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HUBBELL-IC",
+   "name": "Hubbell Industrial Controls",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HUGHE",
+   "name": "Hughes Brothers Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HUHTAMAKI",
+   "name": "Huhtamaki, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HULCO",
+   "name": "Hulco Parts",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HUSQV",
+   "name": "Husqvarna Turf Care Division",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HUSQVCONST",
+   "name": "Husqvarna Construction Products",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HYD ELECTR",
+   "name": "Hydraulic Electric Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HYDAC",
+   "name": "HYDAC Technology Corp",
+   "terms": "Net 30"
+  },
+  {
+   "code": "HYUNDAI",
+   "name": "Hyundai Motor Manufacturing Alabama LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "IBT",
+   "name": "IBT, Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "IHD",
+   "name": "Industrial Hardware Distributors",
+   "terms": "Net 30"
+  },
+  {
+   "code": "INDACCES",
+   "name": "Industrial Accessories Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "INDUS SALE",
+   "name": "Industrial Sales & Manufacturing Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "INFIN",
+   "name": "Infinity Fasteners Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "INTERLOCK",
+   "name": "InterLock Steel Intructures",
+   "terms": "Net 30"
+  },
+  {
+   "code": "INTER-TECH",
+   "name": "Inter-Tech Supplies",
+   "terms": "Net 30"
+  },
+  {
+   "code": "INTPR",
+   "name": "International Parts Supply",
+   "terms": "Net 30"
+  },
+  {
+   "code": "INVENTORY",
+   "name": "Inventory Sales Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "IOWA",
+   "name": "Iowa Spring Manufacturing Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "IOWAE",
+   "name": "Iowa EPS Products",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ISSCO",
+   "name": "Issco Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "JACKMA",
+   "name": "Jack Maddox",
+   "terms": "Net 30"
+  },
+  {
+   "code": "JCI RUSKIN",
+   "name": "Ruskin- Air Distribution Technologies",
+   "terms": "Net 30"
+  },
+  {
+   "code": "JDMFG",
+   "name": "J & D Mfg Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "JEM",
+   "name": "JEM International",
+   "terms": "Net 30"
+  },
+  {
+   "code": "JETED",
+   "name": "Jet Edge Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "JGB",
+   "name": "Echelon Supply and Service",
+   "terms": "Net 30"
+  },
+  {
+   "code": "JHTNA",
+   "name": "Johnson Health Tech NA Mfg",
+   "terms": "Net 30"
+  },
+  {
+   "code": "JOHNF",
+   "name": "Baader-Johnson Food Processing Equipment",
+   "terms": "Net 30"
+  },
+  {
+   "code": "JOHNSONGAS",
+   "name": "Johnson Gas Appliance Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "JONES",
+   "name": "Phil Jones",
+   "terms": "Net 30"
+  },
+  {
+   "code": "K&O",
+   "name": "K And O Manufacturing Co.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "KEGEL",
+   "name": "Kegel LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "KEJR",
+   "name": "Kejr, Inc dba Geoprobe Systems",
+   "terms": "Net 30"
+  },
+  {
+   "code": "KINZE",
+   "name": "Kinze Manufacturing Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "KIRBY",
+   "name": "Kirby Risk Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "KLAUSPROEN",
+   "name": "Klaus Proen",
+   "terms": "Net 30"
+  },
+  {
+   "code": "K-LINE",
+   "name": "K-Line Industries",
+   "terms": "Net 30"
+  },
+  {
+   "code": "KMW",
+   "name": "KMW, Ltd.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "KNAPP",
+   "name": "Knappco Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "KOCH",
+   "name": "UltraSource LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "KOMMEN",
+   "name": "Kommen Industrial Supply",
+   "terms": "Net 30"
+  },
+  {
+   "code": "KOOIMAG",
+   "name": "Kooimag Ag",
+   "terms": "Net 30"
+  },
+  {
+   "code": "KOSCH",
+   "name": "Kosch Manufacturing, LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "KTEK",
+   "name": "K-TEK Wisconsin (A Griffiths Company)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LAB",
+   "name": "LabStrong",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LABCO",
+   "name": "Labconco Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LAKESIDE",
+   "name": "Lakeside Casting Solutions",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LANDMARK",
+   "name": "Landmark Mfg Corporation (Good One)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LBT",
+   "name": "L.B.T. Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LEEBOY",
+   "name": "VT LeeBoy Inc (FAYAT Group)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LENEXA MFG",
+   "name": "Lenexa Manufacturing Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LIBBEY",
+   "name": "Libbey Glass Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LIFE FIT",
+   "name": "Life Fitness dba Cybex Intl",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LINDSAY",
+   "name": "Lindsay Irrigation Solutions, LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LINN",
+   "name": "Linn Pipe & Post Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LIPPERT",
+   "name": "Lippert Components",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LISLE",
+   "name": "Lisle Corp",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LIVER",
+   "name": "Livers Bronze Co. Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LOON",
+   "name": "Counter Shox LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LOREN",
+   "name": "Lorenson Industries Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LORENCOOK",
+   "name": "Loren Cook Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LOVE LIFE",
+   "name": "Love Lifesciences",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LP STEEL",
+   "name": "LP Tube, LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LS IND",
+   "name": "LS Industries",
+   "terms": "Net 30"
+  },
+  {
+   "code": "LT SERVICE",
+   "name": "L.T. Service Company L.L.C.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MAGNUM",
+   "name": "Magnum ENP (Bucyrus)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MAINFILTER",
+   "name": "Hengst Filtration USA LLC. (formerly Main Filter)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MARAT",
+   "name": "Marathon Sales Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MARLEN",
+   "name": "Marlen International",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MASTP",
+   "name": "Master Pitching Machine Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MAYVILLE",
+   "name": "MEC-Mayville Engineering Company Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MCDONALD",
+   "name": "McDonald Plastic Molding",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MERIT MED",
+   "name": "Merit Medical",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MERR",
+   "name": "Merrill Mfg. Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "METALCRAFT",
+   "name": "Metalcraft of Mayville",
+   "terms": "Net 30"
+  },
+  {
+   "code": "METCRAFT",
+   "name": "Metcraft Industries Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "METROLOGY",
+   "name": "MetrologyWorks",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MHILL",
+   "name": "Hot Grass and Vines (Formerly Total Habitat LC)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MICROCOM",
+   "name": "Microcom Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MID CONTIN",
+   "name": "Mid-Continent Machining, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MIDLAND",
+   "name": "Midland Plastics Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MIDWEST CO",
+   "name": "Midwest Control Products Corp.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MIDWEST ME",
+   "name": "Midwest Metalcraft & Equipment",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MIDWESTBRD",
+   "name": "Midwest BRD, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MILBA",
+   "name": "Milbank Mfg. Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MILLER MFG",
+   "name": "Miller Manufacturing Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MILLT",
+   "name": "Milltronics Mfg Co",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MK SPECIAL",
+   "name": "MK Specialties",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MOBILITY",
+   "name": "Mobility Worldwide",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MOC PROD",
+   "name": "MOC Products Company, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MODFO",
+   "name": "Modernfold Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MOFF",
+   "name": "Moffatt Products Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MOLY-COP",
+   "name": "Moly-Cop USA, LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MONOSEM",
+   "name": "Monosem Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MORIDGE",
+   "name": "Moridge Manufacturing Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MOTION IND",
+   "name": "Motion Industries, Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MT TABLES",
+   "name": "MT Tables",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MULTIVAC",
+   "name": "Multivac Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "MUSCLE",
+   "name": "Muscle Car Mike",
+   "terms": "Net 30"
+  },
+  {
+   "code": "NATION REP",
+   "name": "Nationwide Repair Holdings",
+   "terms": "Net 30"
+  },
+  {
+   "code": "NATIONAL B",
+   "name": "National Beef Leathers LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "NEOGEN",
+   "name": "Neogen Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "NIBCO",
+   "name": "NIBCO Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "NORTHSP",
+   "name": "North Star Power Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "NORTHWEST",
+   "name": "Northwestern Tools",
+   "terms": "Net 30"
+  },
+  {
+   "code": "NORTTO",
+   "name": "North Topeka Fabrication",
+   "terms": "Net 30"
+  },
+  {
+   "code": "NSK IND",
+   "name": "NSK Industires",
+   "terms": "Net 30"
+  },
+  {
+   "code": "NVENIA",
+   "name": "nVenia",
+   "terms": "Net 30"
+  },
+  {
+   "code": "O2 CORP",
+   "name": "O2 Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "OBEY",
+   "name": "Odey's Field Experts",
+   "terms": "Net 30"
+  },
+  {
+   "code": "OCI",
+   "name": "OCI Instruments",
+   "terms": "Net 30"
+  },
+  {
+   "code": "OMSTD",
+   "name": "Palfinger North America LLC (Omaha Standard)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ORANGE",
+   "name": "Orange EV LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "OSBOR",
+   "name": "Osborne Industries Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "OSSA",
+   "name": "OSSA Engineering",
+   "terms": "Net 30"
+  },
+  {
+   "code": "OVERSIZE",
+   "name": "Oversize Warning Products",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PACER",
+   "name": "Pacer Industrial Mixers",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PARK",
+   "name": "Park Industries Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PARKHURST",
+   "name": "Parkhurst Manufacturing Co. Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PARKSON",
+   "name": "Parkson Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PATRIOT",
+   "name": "Patriot Fire Protection, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PEERLESSG",
+   "name": "Peerless Gear",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PEREG",
+   "name": "Peregrine Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PINNACLE",
+   "name": "Pinnacle Climate Technologies",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PIVOT",
+   "name": "Pivot International",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PJTRAIL",
+   "name": "PJ Trailers, Mfg. Co.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PMP",
+   "name": "Precision Machined Parts",
+   "terms": "Net 30"
+  },
+  {
+   "code": "POWER",
+   "name": "Power Flame Incorporated",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PREC MET",
+   "name": "Precision Metals Corp",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PREGIS",
+   "name": "Pregis Intellipack LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PRIER",
+   "name": "Prier Products Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PRINCE",
+   "name": "Prince Manufacturing Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PTMW",
+   "name": "PTMW",
+   "terms": "Net 30"
+  },
+  {
+   "code": "PTSOL",
+   "name": "PT-Solutions",
+   "terms": "Net 30"
+  },
+  {
+   "code": "QC METAL",
+   "name": "QC Metal Fab",
+   "terms": "Net 30"
+  },
+  {
+   "code": "QUAL CONN",
+   "name": "Quality Connectionz Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "QUALITYSTA",
+   "name": "Quality Stainless Products",
+   "terms": "Net 30"
+  },
+  {
+   "code": "RCZ ENT",
+   "name": "RCZ Enterprises",
+   "terms": "Net 30"
+  },
+  {
+   "code": "RD LEVERAG",
+   "name": "R & D Leverage",
+   "terms": "Net 30"
+  },
+  {
+   "code": "RDIND",
+   "name": "RD Industries Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "RELIANCE",
+   "name": "Reliance Metalcenter",
+   "terms": "Net 30"
+  },
+  {
+   "code": "RH",
+   "name": "R. H. Fastener",
+   "terms": "Net 30"
+  },
+  {
+   "code": "RIEAD",
+   "name": "Rieadco Corp",
+   "terms": "Net 30"
+  },
+  {
+   "code": "RIGHT ANGL",
+   "name": "Right Angle Steel & Fab",
+   "terms": "Net 30"
+  },
+  {
+   "code": "RMF FREEZ",
+   "name": "RMF Freezers",
+   "terms": "Net 30"
+  },
+  {
+   "code": "RNPMEX",
+   "name": "Refacciones Neumaticas La Paz De CV",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ROCKHARD",
+   "name": "Rock Hard 4X4",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ROM",
+   "name": "Safe Fleet (ROM)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "RUGBY",
+   "name": "Rugby Manufacturing Corp. div of TBEI",
+   "terms": "Net 30"
+  },
+  {
+   "code": "RYCOM",
+   "name": "Rycom Instruments",
+   "terms": "Net 30"
+  },
+  {
+   "code": "RYKO",
+   "name": "National Carwash Solutions (Ryko Solutions, Inc)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SAFE FLEET",
+   "name": "Safe Fleet (Specialty Manufacturing, Inc)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SALINA VOR",
+   "name": "Salina Vortex Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SANSL",
+   "name": "Santa Fe Sales Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SCHENCK",
+   "name": "Coperion Process Sol. LLC (Former Schenck Process)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SCHILLER",
+   "name": "Schiller Grounds Care Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SCOTT TRAI",
+   "name": "Scott's Custom Trailers",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SCRIPTPRO",
+   "name": "ScriptPro",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SHARPLINE",
+   "name": "Sharpline Converting, INC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SHAW SUPP",
+   "name": "Shaw Supply Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SHOR-LINE",
+   "name": "Midmark (formerly Shor-Line)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SHUR",
+   "name": "Shur-Co",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SIGG",
+   "name": "Siggins Co.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SKF",
+   "name": "SKF USA Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SMILO",
+   "name": "Smith & Loveless Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SMOKIN",
+   "name": "Smokin Brothers",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SNARE",
+   "name": "The Snare Shop",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SNYDER",
+   "name": "Tank Holding (Formerly Snyder Industries Inc)",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SOR",
+   "name": "SOR Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SOUK",
+   "name": "Soukup Machine",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SPECIAL GA",
+   "name": "Specialty Sales Co.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SPETY",
+   "name": "Specialty Mfg. Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SPILLMAN",
+   "name": "Spillman Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SPORTWORKS",
+   "name": "Sportworks Global LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SR HOLDING",
+   "name": "SR Holdings andInnovations, LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "STANDARDMO",
+   "name": "Standard Motor Products, Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "STONE MFG",
+   "name": "Stone Manufacturing & Supply Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SUDEN",
+   "name": "Sudenga Industries Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SUNBRIGHT",
+   "name": "Sunbright USA, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SUPPLY TEC",
+   "name": "Supply Technologies",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SWISH",
+   "name": "SAI",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SWITCHNGO",
+   "name": "Switch-N-Go",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SYR",
+   "name": "Scot Young Research",
+   "terms": "Net 30"
+  },
+  {
+   "code": "SYSTEMS",
+   "name": "Systems LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TBEI",
+   "name": "TBEI, Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TCD",
+   "name": "TCD Parts",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TEKNO",
+   "name": "Tekno, Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TEXTREZGO",
+   "name": "Textron Finance Shared Services Center",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TIRES",
+   "name": "Tire Service International",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TITANA",
+   "name": "Titan Application",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TITLE",
+   "name": "Title Boxing,LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TL",
+   "name": "T - L Irrigation Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TMI",
+   "name": "Technik Manufacturing, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TONGS",
+   "name": "Midwest Tongs",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TORO",
+   "name": "Toro",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TRIAN",
+   "name": "Triangle Engineering",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TRIANLE",
+   "name": "Triangle Mfg.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TRITRON",
+   "name": "Tri-Tronics Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TROJANSPEC",
+   "name": "Beck Sales Inc dba Trojan Specialty Products",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TURF",
+   "name": "Turfco Mfg Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "TVH",
+   "name": "TVH Parts Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "UNI BAK",
+   "name": "United Bakery",
+   "terms": "Net 30"
+  },
+  {
+   "code": "UNIMACTS",
+   "name": "Unimacts Globall",
+   "terms": "Net 30"
+  },
+  {
+   "code": "UNIVERSAL4",
+   "name": "Universal 4 mations",
+   "terms": "Net 30"
+  },
+  {
+   "code": "UNIVERSALS",
+   "name": "Universal Sign & Display, LLC",
+   "terms": "Net 30"
+  },
+  {
+   "code": "US TSUBAKI",
+   "name": "US Tsubaki",
+   "terms": "Net 30"
+  },
+  {
+   "code": "USF",
+   "name": "USF Fabrication an Eagle Mfg Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "USPOS",
+   "name": "U.S. Postal Service",
+   "terms": "Net 30"
+  },
+  {
+   "code": "VANGUARD",
+   "name": "Vanguard Packaging, Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "VC999",
+   "name": "VC999 Packaging Systems",
+   "terms": "Net 30"
+  },
+  {
+   "code": "VIKCO",
+   "name": "Viking Corporation",
+   "terms": "Net 30"
+  },
+  {
+   "code": "VISTM",
+   "name": "Vista Machining Co. Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WATCO",
+   "name": "Watco Mfg. Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WATEROUS",
+   "name": "Waterous Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WATERTENT",
+   "name": "Waterloo Tent & Tarp Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WATSON",
+   "name": "Watson Metal Masters",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WDBIN",
+   "name": "Woodbine Mfg Co. dba Tommy Gate Company",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WDIX",
+   "name": "Willie Stavig",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WEILER",
+   "name": "Weiler",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WELD",
+   "name": "Weldmatic Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WESCH",
+   "name": "Western Chemical Pumps",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WESDF",
+   "name": "Westendorf Manufacturing",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WESFM",
+   "name": "Western Forms Inc.",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WESTHEFFER",
+   "name": "Westheffer Company Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WISECO",
+   "name": "Wise Company Inc",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WISEMAN",
+   "name": "Wiseman Industry",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WORLDLAWN",
+   "name": "Worldlawn Power Equipment",
+   "terms": "Net 30"
+  },
+  {
+   "code": "WWMAN",
+   "name": "WW Capital Corp",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ZEPHYR",
+   "name": "Zephyr Products",
+   "terms": "Net 30"
+  },
+  {
+   "code": "ZIMMER",
+   "name": "Zimmer Surgical, Inc.",
+   "terms": "Net 30"
+  }
+ ],
+ "users": [
+  {
+   "email": "admin@cgr-international.com",
+   "name": "CGR AI Team (Admin)",
+   "role": "ADMIN",
+   "pwHash": null
+  },
+  {
+   "email": "quoting@cgr-international.com",
+   "name": "CGR AI Team (Quoting)",
+   "role": "QUOTE",
+   "pwHash": null
+  }
+ ],
+ "matReference": [
+  {
+   "id": "music",
+   "name": "Music Wire",
+   "astm": "ASTM A228",
+   "densityKgM3": 7860.0,
+   "dMinMm": 0.1,
+   "dMaxMm": 6.5,
+   "tempMaxC": 120.0,
+   "costFac": 1.0,
+   "fatigue": "Excellent",
+   "note": "Highest-quality high-carbon wire. Best fatigue life of the carbon steels; preferred for dynamic / high-cycle service.",
+   "codigo": "MW",
+   "alias": ["MW", "MUSIC", "MUSICWIRE", "SPRINGWIRE", "SPRINGSTEELWIRE"],
+   "G": 81000.0,
+   "E": 203400.0,
+   "A": 2211.0,
+   "m": 0.145,
+   "shearFac": 0.45,
+   "bendFac": 0.78
+  },
+  {
+   "id": "crsi",
+   "name": "Chrome Silicon",
+   "astm": "ASTM A401",
+   "densityKgM3": 7860.0,
+   "dMinMm": 0.8,
+   "dMaxMm": 12.0,
+   "tempMaxC": 245.0,
+   "costFac": 2.5,
+   "fatigue": "Excellent",
+   "note": "Alloy steel for shock, impact and elevated-temperature duty. High allowable stress; common for engine / valve springs.",
+   "codigo": "CSI",
+   "alias": ["CSI", "CRSI", "CHROMESILICON"],
+   "G": 77200.0,
+   "E": 203400.0,
+   "A": 1974.0,
+   "m": 0.108,
+   "shearFac": 0.5,
+   "bendFac": 0.87
+  },
+  {
+   "id": "ss302",
+   "name": "Stainless 302/304",
+   "astm": "ASTM A313",
+   "densityKgM3": 7920.0,
+   "dMinMm": 0.1,
+   "dMaxMm": 10.0,
+   "tempMaxC": 290.0,
+   "costFac": 4.0,
+   "fatigue": "Moderate",
+   "note": "Austenitic stainless. Good general corrosion resistance; lower allowable stress and modulus than carbon steel.",
+   "codigo": "SS",
+   "alias": ["SS", "SS302", "SS304", "302", "304", "STAINLESS"],
+   "G": 69000.0,
+   "E": 193000.0,
+   "A": 1867.0,
+   "m": 0.146,
+   "shearFac": 0.35,
+   "bendFac": 0.61
+  },
+  {
+   "id": "ss177",
+   "name": "17-7 PH Stainless",
+   "astm": "ASTM A313 (631)",
+   "densityKgM3": 7800.0,
+   "dMinMm": 0.2,
+   "dMaxMm": 6.0,
+   "tempMaxC": 340.0,
+   "costFac": 6.0,
+   "fatigue": "Good",
+   "note": "Precipitation-hardening stainless. Heat-treated after forming for high strength + corrosion + moderate elevated-temperature service.",
+   "codigo": "SS177",
+   "alias": ["SS177", "177"],
+   "G": 75800.0,
+   "E": 203400.0,
+   "A": 2065.0,
+   "m": 0.127,
+   "shearFac": 0.45,
+   "bendFac": 0.75
+  },
+  {
+   "id": "otemp",
+   "name": "Oil Tempered",
+   "astm": "ASTM A229",
+   "densityKgM3": 7860.0,
+   "dMinMm": 0.5,
+   "dMaxMm": 16.0,
+   "tempMaxC": 150.0,
+   "costFac": 0.7,
+   "fatigue": "Moderate",
+   "note": "General-purpose pre-tempered carbon steel. Economical for static and moderate-cycle loads; not for high-cycle fatigue or shock.",
+   "codigo": "OT",
+   "alias": ["OT", "OTEMP", "OILTEMPERED"],
+   "G": 77200.0,
+   "E": 196500.0,
+   "A": 1855.0,
+   "m": 0.187,
+   "shearFac": 0.5,
+   "bendFac": 0.87
+  },
+  {
+   "id": "harddr",
+   "name": "Hard Drawn",
+   "astm": "ASTM A227",
+   "densityKgM3": 7860.0,
+   "dMinMm": 0.7,
+   "dMaxMm": 12.0,
+   "tempMaxC": 120.0,
+   "costFac": 0.5,
+   "fatigue": "Low",
+   "note": "Lowest-cost spring wire. Suited to static / low-cycle, non-critical applications. Avoid fatigue, shock and tight tolerances.",
+   "codigo": "HD",
+   "alias": ["HD", "HARDDRAWN"],
+   "G": 78600.0,
+   "E": 196500.0,
+   "A": 1783.0,
+   "m": 0.19,
+   "shearFac": 0.45,
+   "bendFac": 0.75
+  },
+  {
+   "id": "inconel",
+   "name": "Inconel X-750",
+   "astm": "AMS 5698/5699",
+   "densityKgM3": 8250.0,
+   "dMinMm": 0.4,
+   "dMaxMm": 8.0,
+   "tempMaxC": 370.0,
+   "costFac": 15.0,
+   "fatigue": "Good",
+   "note": "Nickel-chromium superalloy for high-temperature and corrosive environments. Expensive; specify only when service conditions require it.",
+   "codigo": "HAST",
+   "alias": ["HAST", "INCONEL", "NICKEL"],
+   "G": 79000.0,
+   "E": 214000.0,
+   "A": 1400.0,
+   "m": 0.1,
+   "shearFac": 0.35,
+   "bendFac": 0.61
+  },
+  {
+   "id": "phosb",
+   "name": "Phosphor Bronze",
+   "astm": "ASTM B159",
+   "densityKgM3": 8860.0,
+   "dMinMm": 0.1,
+   "dMaxMm": 7.5,
+   "tempMaxC": 95.0,
+   "costFac": 5.0,
+   "fatigue": "Low",
+   "note": "Copper alloy with good electrical conductivity and corrosion resistance. Low modulus and modest strength; used for contacts / electrical springs.",
+   "codigo": "PHOSB",
+   "alias": ["PHOSB", "PHOSPHORBRONZE"],
+   "G": 41400.0,
+   "E": 103000.0,
+   "A": 1000.0,
+   "m": 0.028,
+   "shearFac": 0.35,
+   "bendFac": 0.61
+  }
+ ]
+}

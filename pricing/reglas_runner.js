@@ -83,6 +83,14 @@ process.stdin.on('end', () => {
                 p.maquina || null, p.material || null, p.diam_mm);
         }
 
+        // La caja del tramo. La decide el peso TOTAL —piezas x peso de la
+        // pieza—, así que un tramo de 50.000 puede acabar en tambores donde
+        // el de 10.000 va en cajas.
+        if (p.op === 'empaque') {
+            salida.empaque = REGLAS.embalaje(
+                p.peso_lb, p.descripcion, p.cantidad, p.cajas || []);
+        }
+
         process.stdout.write(JSON.stringify(salida));
     } catch (err) {
         process.stderr.write(String((err && err.message) || err));

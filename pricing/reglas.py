@@ -114,6 +114,42 @@ def operaciones_secundarias(descripcion: str,
     return r.get("secundarias") or []
 
 
+def empaque(peso_lb: Optional[float], descripcion: str,
+            cantidad: Optional[float],
+            cajas: Optional[List[Dict[str, Any]]] = None
+            ) -> Optional[Dict[str, Any]]:
+    """La caja del tramo y cuántas piezas van en ella.
+
+    La elige el PESO TOTAL del tramo, no la pieza: 10.000 piezas de un resorte
+    pequeño caben en cajas y 50.000 ya son tambores. Por eso se pregunta una
+    vez por tramo y no una vez por PN.
+
+    Devuelve ``{"id", "ppb", "boxWt", "tierWt"}`` o ``None`` si no se pudo
+    preguntar o faltan el peso y la cantidad.
+    """
+    if not peso_lb or not cantidad:
+        return None
+    r = _preguntar({"op": "empaque", "peso_lb": peso_lb,
+                    "descripcion": descripcion, "cantidad": cantidad,
+                    "cajas": cajas or _cajas_del_catalogo()})
+    if r is None:
+        return None
+    return r.get("empaque")
+
+
+def _cajas_del_catalogo() -> List[Dict[str, Any]]:
+    """La lista de cajas del catálogo vendorizado.
+
+    La regla necesita saber qué cajas EXISTEN para no devolver una que la
+    planta no compra. Se lee del mismo `catalogo.json` que usa la calculadora.
+    """
+    try:
+        ruta = Path(__file__).resolve().parent / "nucleo" / "catalogo.json"
+        return json.loads(ruta.read_text(encoding="utf-8")).get("packing") or []
+    except (OSError, ValueError):
+        return []
+
+
 def tope_por_material(maquina_nombre: str,
                       tope: Optional[Dict[str, Any]],
                       material_nombre: Optional[str],

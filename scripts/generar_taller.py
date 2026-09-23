@@ -31,11 +31,24 @@ RAIZ = Path(__file__).resolve().parent.parent
 DATOS = RAIZ / "pricing" / "nucleo" / "taller_2026.json"
 DESTINO = RAIZ / "sql" / "migrations" / "025_taller_2026.sql"
 
-# El objetivo de CCV por hora es el TRIPLE del costo en las 31 filas del
-# catálogo. El taller no contestó ese número —sólo el costo—, así que se
-# conserva la proporción que ya había en vez de inventar otra. Si ISC maneja
-# otro múltiplo, ésta es la línea que hay que cambiar.
-MULTIPLO_CCV = 3.0
+CATALOGO = RAIZ / "pricing" / "nucleo" / "catalogo.json"
+
+# El objetivo de CCV por hora NO es el mismo múltiplo para todas: el catálogo
+# lo dice en `machineParams` —bobinadoras x3, secundarias x5— y las 31 filas
+# que ya había lo confirman (AIM 3000: 52.0833 x 3 = 156.2499; Grinder A:
+# 11.1607 x 5 = 55.8035). Aplicar un 3 plano a las secundarias las dejaba en
+# 45 en vez de 75.
+MULTIPLOS_POR_DEFECTO = {"COILER": 3.0, "SECONDARY": 5.0}
+
+
+def multiplos():
+    """Los multiplicadores de CCV, del catálogo si está."""
+    try:
+        p = json.loads(CATALOGO.read_text(encoding="utf-8")).get("machineParams") or {}
+    except OSError:
+        return dict(MULTIPLOS_POR_DEFECTO)
+    return {"COILER": float(p.get("coilerMult") or MULTIPLOS_POR_DEFECTO["COILER"]),
+            "SECONDARY": float(p.get("secondaryMult") or MULTIPLOS_POR_DEFECTO["SECONDARY"])}
 
 
 def norm(nombre):
@@ -67,6 +80,7 @@ def main():
     datos = json.loads(DATOS.read_text(encoding="utf-8"))
     fuente = datos.get("fuente", "taller_2026.json")
 
+    mult = multiplos()
     filas = [("COILER", m) for m in datos.get("coilers", [])]
     filas += [("SECONDARY", m) for m in datos.get("secondary", [])]
 
@@ -94,9 +108,8 @@ def main():
     w("-- Es la MISMA tabla que usa la calculadora de la planta. Que las dos den")
     w("-- el mismo precio para la misma pieza depende de eso.")
     w("--")
-    w("-- El objetivo de CCV/hora se mantiene en %gx el costo, que es la" % MULTIPLO_CCV)
-    w("-- proporción de las 31 filas que ya había: el taller no contestó ese")
-    w("-- número. Si ISC maneja otro múltiplo, se cambia en el generador.")
+    w("-- El objetivo de CCV/hora sale de `machineParams` del catálogo:")
+    w("-- bobinadoras x%g, secundarias x%g." % (mult["COILER"], mult["SECONDARY"]))
     w("")
     w("-- Las máquinas se localizan por el nombre normalizado —sin (FENN) y sin")
     w("-- puntuación— porque el taller escribe «TORIN W11A» y el catálogo")
@@ -137,7 +150,7 @@ def main():
               % sql_txt(norm(nombre)))
             w("INSERT INTO maquina_tarifas (maquina_id, costo_hora, ccv_objetivo_h, vigente_desde)")
             w("  SELECT id, %s, %s, CURRENT_DATE FROM maquinas"
-              % (lit(costo), lit(round(costo * MULTIPLO_CCV, 4))))
+              % (lit(costo), lit(round(costo * mult[familia], 4))))
             w("   WHERE isc_norm_maquina(nombre) = %s;" % sql_txt(norm(nombre)))
         if familia == "COILER":
             w("UPDATE maquina_capacidades SET")

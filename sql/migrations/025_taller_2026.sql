@@ -20,9 +20,8 @@
 -- Es la MISMA tabla que usa la calculadora de la planta. Que las dos den
 -- el mismo precio para la misma pieza depende de eso.
 --
--- El objetivo de CCV/hora se mantiene en 3x el costo, que es la
--- proporción de las 31 filas que ya había: el taller no contestó ese
--- número. Si ISC maneja otro múltiplo, se cambia en el generador.
+-- El objetivo de CCV/hora sale de `machineParams` del catálogo:
+-- bobinadoras x3, secundarias x5.
 
 -- Las máquinas se localizan por el nombre normalizado —sin (FENN) y sin
 -- puntuación— porque el taller escribe «TORIN W11A» y el catálogo
@@ -696,7 +695,7 @@ DELETE FROM maquina_tarifas
   WHERE vigente_desde = CURRENT_DATE AND maquina_id IN
         (SELECT id FROM maquinas WHERE isc_norm_maquina(nombre) = 'GRINDERA');
 INSERT INTO maquina_tarifas (maquina_id, costo_hora, ccv_objetivo_h, vigente_desde)
-  SELECT id, 15, 45, CURRENT_DATE FROM maquinas
+  SELECT id, 15, 75, CURRENT_DATE FROM maquinas
    WHERE isc_norm_maquina(nombre) = 'GRINDERA';
 
 -- Grinder B (SECONDARY)
@@ -715,7 +714,7 @@ DELETE FROM maquina_tarifas
   WHERE vigente_desde = CURRENT_DATE AND maquina_id IN
         (SELECT id FROM maquinas WHERE isc_norm_maquina(nombre) = 'GRINDERB');
 INSERT INTO maquina_tarifas (maquina_id, costo_hora, ccv_objetivo_h, vigente_desde)
-  SELECT id, 15, 45, CURRENT_DATE FROM maquinas
+  SELECT id, 15, 75, CURRENT_DATE FROM maquinas
    WHERE isc_norm_maquina(nombre) = 'GRINDERB';
 
 -- Grinder C (SECONDARY)
@@ -734,7 +733,7 @@ DELETE FROM maquina_tarifas
   WHERE vigente_desde = CURRENT_DATE AND maquina_id IN
         (SELECT id FROM maquinas WHERE isc_norm_maquina(nombre) = 'GRINDERC');
 INSERT INTO maquina_tarifas (maquina_id, costo_hora, ccv_objetivo_h, vigente_desde)
-  SELECT id, 15, 45, CURRENT_DATE FROM maquinas
+  SELECT id, 15, 75, CURRENT_DATE FROM maquinas
    WHERE isc_norm_maquina(nombre) = 'GRINDERC';
 
 -- Grinder D (SECONDARY)
@@ -753,7 +752,7 @@ DELETE FROM maquina_tarifas
   WHERE vigente_desde = CURRENT_DATE AND maquina_id IN
         (SELECT id FROM maquinas WHERE isc_norm_maquina(nombre) = 'GRINDERD');
 INSERT INTO maquina_tarifas (maquina_id, costo_hora, ccv_objetivo_h, vigente_desde)
-  SELECT id, 15, 45, CURRENT_DATE FROM maquinas
+  SELECT id, 15, 75, CURRENT_DATE FROM maquinas
    WHERE isc_norm_maquina(nombre) = 'GRINDERD';
 
 -- Grinder PED (SECONDARY)
@@ -772,7 +771,7 @@ DELETE FROM maquina_tarifas
   WHERE vigente_desde = CURRENT_DATE AND maquina_id IN
         (SELECT id FROM maquinas WHERE isc_norm_maquina(nombre) = 'GRINDERPED');
 INSERT INTO maquina_tarifas (maquina_id, costo_hora, ccv_objetivo_h, vigente_desde)
-  SELECT id, 8, 24, CURRENT_DATE FROM maquinas
+  SELECT id, 8, 40, CURRENT_DATE FROM maquinas
    WHERE isc_norm_maquina(nombre) = 'GRINDERPED';
 
 -- Stationary Oven (SECONDARY)
@@ -791,7 +790,7 @@ DELETE FROM maquina_tarifas
   WHERE vigente_desde = CURRENT_DATE AND maquina_id IN
         (SELECT id FROM maquinas WHERE isc_norm_maquina(nombre) = 'STATIONARYOVEN');
 INSERT INTO maquina_tarifas (maquina_id, costo_hora, ccv_objetivo_h, vigente_desde)
-  SELECT id, 10, 30, CURRENT_DATE FROM maquinas
+  SELECT id, 10, 50, CURRENT_DATE FROM maquinas
    WHERE isc_norm_maquina(nombre) = 'STATIONARYOVEN';
 
 -- Looping / Hooks (SECONDARY)
