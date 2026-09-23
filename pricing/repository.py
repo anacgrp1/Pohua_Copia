@@ -140,10 +140,134 @@ _SQL_MAQUINA = """
         (c.alambre_min_mm IS NOT NULL AND c.alambre_max_mm IS NOT NULL
          AND %(diam)s IS NOT NULL) DESC,
         ({capacidad} IS TRUE) DESC,
+        -- Y entre las capaces, el ORDEN DE PREFERENCIA del taller, que es la
+        -- regla que de verdad decide.
+        --
+        -- La columna la creó la migración 013 —"es LA regla que decide quién
+        -- gana entre las máquinas capaces"— y se quedó sin llenar y sin usar,
+        -- así que aquí mandaba el costo. Son dos reglas distintas y dan
+        -- máquinas distintas: para el 004-222, por costo salía una que ni
+        -- siquiera corre ese alambre, y por preferencia sale la TORIN W11A,
+        -- que es la que dice la calculadora de la planta.
+        --
+        -- `NULLS LAST` deja detrás a las que no tienen puesto capturado: no
+        -- se les inventa uno, van después de todas las que sí.
+        m.orden_uso ASC NULLS LAST,
         t.costo_hora ASC NULLS LAST,
         m.horas_setup ASC
     LIMIT 1;
 """
+
+
+_SQL_TIENE_TOPE = """
+    SELECT count(*) FROM information_schema.columns
+    WHERE table_name = 'maquinas'
+      AND column_name IN ('tope_material', 'tope_alambre_max_mm');
+"""
+
+
+def tope_de_maquina(nombre: str, conexion=None) -> Optional[Dict[str, Any]]:
+    """El tope por material de una máquina: ``{material, alambre_max_mm}``.
+
+    Hay materiales que una máquina sólo dobla hasta un diámetro MENOR que el
+    suyo. Lo contestó Miguel Rodea y hoy afecta a una: la SIMPLEX MC 50 llega a
+    .198" de alambre, pero en temple en aceite sólo a .165".
+
+    Devuelve None con dos significados distintos, y quien llama tiene que
+    distinguirlos: ``{}`` es "esa máquina no tiene tope", y ``None`` es "no se
+    pudo comprobar" —porque `maquinas` todavía no tiene las dos columnas—. Un
+    "no se pudo comprobar" tratado como "no hay tope" es exactamente el fallo
+    que esto viene a evitar.
+    """
+    if not nombre:
+        return None
+    with _conexion(conexion) as conn:
+        with conn.cursor() as cur:
+            cur.execute(_SQL_TIENE_TOPE)
+            if (cur.fetchone() or [0])[0] < 2:
+                return None          # el esquema aún no las tiene
+            cur.execute("SELECT tope_material, tope_alambre_max_mm "
+                        "FROM maquinas WHERE nombre = %(nombre)s LIMIT 1;",
+                        {"nombre": nombre})
+            fila = cur.fetchone()
+    if not fila or not fila[0] or fila[1] is None:
+        return {}                    # existe, y no tiene tope
+    return {"material": fila[0], "alambre_max_mm": _f(fila[1])}
+
+
+_SQL_CAPACIDAD_DE = """
+    SELECT c.alambre_min_mm, c.alambre_max_mm, c.od_max_mm
+    FROM maquinas m
+    LEFT JOIN maquina_capacidades c ON c.maquina_id = m.id
+    WHERE m.nombre = %(nombre)s
+    LIMIT 1;
+"""
+
+
+def capacidad_de_maquina(nombre: str, conexion=None) -> Optional[Dict[str, Any]]:
+    """El rango de alambre y el OD máximo capturados para una máquina.
+
+    ``None`` si no hay fila o no se capturó nada: "no lo sabemos", que NO es lo
+    mismo que "no tiene límite".
+    """
+    if not nombre:
+        return None
+    with _conexion(conexion) as conn:
+        with conn.cursor() as cur:
+            cur.execute(_SQL_CAPACIDAD_DE, {"nombre": nombre})
+            fila = cur.fetchone()
+    if not fila or all(v is None for v in fila):
+        return None
+    return {"alambre_min_mm": _f(fila[0]), "alambre_max_mm": _f(fila[1]),
+            "od_max_mm": _f(fila[2])}
+
+
+_SQL_MAQUINA_NOMBRE = """
+    SELECT m.id, m.codigo, m.nombre, fm.codigo AS familia,
+           m.horas_setup, m.pph_default, m.horas_labor,
+           fm.multiplicador,
+           t.costo_hora, t.ccv_objetivo_h
+    FROM maquinas m
+    JOIN familias_maquina fm ON fm.id = m.familia_id
+    LEFT JOIN LATERAL (
+        SELECT costo_hora, ccv_objetivo_h
+        FROM maquina_tarifas mt
+        WHERE mt.maquina_id = m.id
+          AND mt.vigente_desde <= %(hoy)s
+          AND (mt.vigente_hasta IS NULL OR mt.vigente_hasta > %(hoy)s)
+        ORDER BY mt.vigente_desde DESC
+        LIMIT 1
+    ) t ON true
+    WHERE m.activo AND m.nombre = %(nombre)s
+    LIMIT 1;
+"""
+
+
+def maquina_por_nombre(nombre: str,
+                       conexion=None,
+                       en_fecha: Optional[date] = None) -> Optional[Dict[str, Any]]:
+    """Una máquina concreta, por su nombre, con su tarifa vigente.
+
+    `elegir_maquina` busca la mejor para un resorte; esto es lo contrario: las
+    reglas del taller dicen que hace falta "Grinder A" y aquí se trae esa fila.
+    Devuelve None si no existe o está inactiva -- quien llama lo declara como
+    dato faltante en vez de saltarse la operación en silencio.
+    """
+    if not nombre:
+        return None
+    hoy = en_fecha or date.today()
+    with _conexion(conexion) as conn:
+        with conn.cursor() as cur:
+            cur.execute(_SQL_MAQUINA_NOMBRE, {"hoy": hoy, "nombre": nombre})
+            fila = cur.fetchone()
+    if not fila:
+        return None
+    return {
+        "id": fila[0], "codigo": fila[1], "nombre": fila[2], "familia": fila[3],
+        "horas_setup": _f(fila[4]), "pph": _f(fila[5]), "horas_labor": _f(fila[6]),
+        "multiplicador": _f(fila[7]),
+        "costo_hora": _f(fila[8]), "ccv_objetivo_h": _f(fila[9]),
+    }
 
 
 def elegir_maquina(tipo_resorte: str,

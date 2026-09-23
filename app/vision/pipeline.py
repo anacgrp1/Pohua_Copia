@@ -78,6 +78,17 @@ ausente, bajo cualquiera de estos nombres:
 Mira la tabla de parámetros, las notas al pie, el cuadro de rotulación y
 cualquier recuadro de especificación, no sólo las cotas de la vista.
 
+Y si de verdad no están escritas en ninguna parte, hay DOS cotas que las
+dicen sin nombrarlas. Búscalas con el mismo cuidado, porque con cualquiera de
+ellas la pieza se puede cotizar igual:
+  - la ALTURA SÓLIDA ("solid height", "Ls", "altura comprimida"): la altura
+    del resorte con todas las espiras tocándose. Es la más frecuente de las
+    dos, porque es la que limita el hueco donde va a ir el resorte.
+  - el PASO entre espiras ("pitch", "p").
+Ponlas en "altura_solida_mm" y "paso_mm". NO calcules tú las espiras a partir
+de ellas: devuelve las cotas tal como están y deja la cuenta al sistema, que
+sabe qué convención toca según el tipo de extremo.
+
 Sobre las espiras, además:
   - Devuelve las que el dibujo DIGA, en su campo. Si sólo dice las activas,
     pon las activas y deja las totales en null: NO conviertas de una a otra
@@ -103,6 +114,7 @@ Devuelve EXCLUSIVAMENTE un objeto JSON válido (sin markdown, sin ```), con esta
   "diametro_medio_mm": number|null,
   "longitud_libre_mm": number|null,
   "longitud_cuerpo_mm": number|null,
+  "altura_solida_mm": number|null,
   "numero_espiras_totales": number|null,
   "numero_espiras_activas": number|null,
   "paso_mm": number|null,

@@ -163,7 +163,10 @@ def notificar_declinacion(rfq_id, datos, destinatario=None) -> bool:
         return False
 
     try:
-        enviado = outbound.enviar(contenido)
+        # `rfq_id` y `clase` viajan para que, si este proceso no tiene cuenta
+        # emisora y el correo acaba en la bandeja de salida, se sepa de qué
+        # RFQ es y qué clase de correo espera.
+        enviado = outbound.enviar(contenido, rfq_id=rfq_id, clase="declinacion")
         log.info("RFQ=%s: declinación enviada a %s.", rfq_id, destino)
         return bool(enviado)
     except Exception as error:

@@ -90,7 +90,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Optional
+from typing import Any, Optional
 
 import app.feasibility.rules as rules
 
@@ -119,6 +119,7 @@ TIPO_DESCONOCIDO = "tipo_desconocido"
 TIPO_NO_FABRICABLE = "tipo_no_fabricable"
 MATERIAL_AUSENTE = "material_ausente"
 MATERIAL_NO_SOPORTADO = "material_no_soportado"
+MATERIAL_GENERICO = "material_generico"
 MATERIAL_FUERA_DE_RANGO = "material_fuera_de_rango"
 DATO_AUSENTE = "dato_ausente"
 DATO_NO_NUMERICO = "dato_no_numerico"
@@ -290,13 +291,41 @@ def _evaluar_material(datos, reglas):
         return [_motivo(MATERIAL_AUSENTE, NIVEL_WARN, "material", crudo, None,
                         "El plano no declara material.")]
 
+    motivos = []
     canonico = reglas.material_soportado(crudo)
+
     if canonico is None:
-        return [_motivo(
-            MATERIAL_NO_SOPORTADO, NIVEL_CRIT, "material", crudo,
-            list(reglas.materiales),
-            f"Material no soportado: {crudo!r}. No coincide con ninguno de los "
-            f"{len(reglas.materiales)} materiales de la planta.")]
+        # El plano nombra la FAMILIA, no el material: "spring wire" no es un
+        # material, es el género entero.
+        #
+        # Esto vive aquí y no en `material_soportado` a propósito. El índice de
+        # alias gana por longitud, así que "spring wire" (once letras) le
+        # ganaría a "hard drawn" (diez) y un plano que dice "hard drawn spring
+        # wire" se cotizaría como Music Wire. Las familias se prueban DESPUÉS,
+        # y sólo cuando ningún material concreto ha casado.
+        #
+        # Por qué importa que esté también aquí: el costeo ya lo resolvía
+        # —`codigo_material` consulta las familias— pero el dictamen no, así
+        # que la misma pantalla enseñaba "Music Wire" en el desplegable y a la
+        # vez "no mapea a ningún código de ISC" en los motivos. Dos caminos
+        # mirando la misma tabla y contestando cosas distintas.
+        codigo = reglas.material_generico(crudo)
+        canonico = reglas.nombre_por_codigo(codigo)
+        if canonico is None:
+            return [_motivo(
+                MATERIAL_NO_SOPORTADO, NIVEL_CRIT, "material", crudo,
+                list(reglas.materiales),
+                f"Material no soportado: {crudo!r}. No coincide con ninguno de "
+                f"los {len(reglas.materiales)} materiales de la planta.")]
+        # Resuelto, pero por familia: no bloquea y no resta puntos —la planta
+        # ya tiene decidido qué alambre es—, pero queda dicho. Quien aprueba
+        # tiene derecho a saber que ese material lo puso el sistema y no el
+        # plano.
+        motivos.append(_motivo(
+            MATERIAL_GENERICO, NIVEL_WARN, "material", crudo, canonico,
+            f"El plano nombra la familia, no el material: {crudo!r} se cotiza "
+            f"como {canonico}.",
+            penalizacion=0))
 
     # El alambre se compra en ciertos calibres: fuera de ellos, el material
     # existe pero no en ese diámetro. Es aviso, no impedimento: lo confirma
@@ -308,14 +337,14 @@ def _evaluar_material(datos, reglas):
     if lado:
         texto_banda = _texto_banda("diametro_alambre_mm", banda.get("min"),
                                    banda.get("max"))
-        return [_motivo(
+        motivos.append(_motivo(
             MATERIAL_FUERA_DE_RANGO, NIVEL_WARN, "diametro_alambre_mm", valor,
             texto_banda,
             f"El alambre de {_fmt(valor)} mm queda fuera de los calibres en que "
             f"se consigue {canonico} ({texto_banda}).",
             nota=banda.get("nota"),
-            penalizacion=reglas.penalizacion(MATERIAL_FUERA_DE_RANGO, banda, lado))]
-    return []
+            penalizacion=reglas.penalizacion(MATERIAL_FUERA_DE_RANGO, banda, lado)))
+    return motivos
 
 
 def _evaluar_rangos(datos, reglas, tipo):
@@ -421,7 +450,7 @@ def _evaluar_confianza(datos, reglas):
 # Auxiliares
 # --------------------------------------------------------------------------- #
 
-def _a_dict(resorte) -> dict:
+def _a_dict(resorte: Any) -> dict:
     """Acepta el dict del extractor, el dict fusionado o el propio dataclass."""
     if resorte is None:
         return {}
@@ -432,7 +461,9 @@ def _a_dict(resorte) -> dict:
             return anidado
         return resorte
     if hasattr(resorte, "to_dict"):
-        return resorte.to_dict()
+        datos = resorte.to_dict()
+        if isinstance(datos, dict):
+            return datos
     raise TypeError(
         "evaluar_factibilidad espera un dict o un objeto con to_dict(); "
         f"llegó {type(resorte).__name__}.")

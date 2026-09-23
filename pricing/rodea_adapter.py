@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pricing.mensajes as mensajes
 from pricing import espiras as espiras_mod
-from pricing import repository
+from pricing import reglas, repository
 
 log = logging.getLogger("cotizador.pricing.adapter")
 
@@ -198,6 +198,54 @@ def _tramo(cantidad: float, routing: List[Dict[str, Any]],
     }
 
 
+# El transporte del alambre. Es una constante de ISC que nadie ha revisado,
+# pero es la que usa la calculadora de la planta, y alrededor del 7 % del
+# costo de material.
+TRANSPORTE_POR_DEFECTO = 0.30
+
+
+def _transporte(params: Dict[str, Any], catalogo) -> float:
+    """El transporte del alambre, en $/lb.
+
+    Si el catálogo no lo trae se usa la constante de ISC y se anota, en vez de
+    dejarlo en cero y que el material salga barato sin que nadie lo note.
+    """
+    v = _num(params.get("transpPerLb"))
+    if v is not None:
+        return v
+    catalogo.faltantes.append(
+        "El catálogo no tiene el transporte del alambre: se usó la constante de "
+        "ISC de %.2f $/lb. Es alrededor del 7 %% del costo de material."
+        % TRANSPORTE_POR_DEFECTO)
+    return TRANSPORTE_POR_DEFECTO
+
+
+def _fmt_mm(v) -> str:
+    return ("%g" % v) if v is not None else "?"
+
+
+def _fuera_de_capacidad(cap: Dict[str, Any], diam_mm, od_mm) -> Optional[str]:
+    """Por qué esa máquina no da la talla para esta pieza, o ``None`` si da.
+
+    Un límite sin capturar (``None``) no descarta: significa que no se sabe, y
+    inventarse que no hay límite es justo el error que esto evita. Sólo se
+    afirma sobre lo que la planta capturó.
+    """
+    minimo = cap.get("alambre_min_mm")
+    maximo = cap.get("alambre_max_mm")
+    od_max = cap.get("od_max_mm")
+    if diam_mm is not None and minimo is not None and diam_mm < minimo:
+        return ("toma alambre desde %s mm y la pieza es de %s"
+                % (_fmt_mm(minimo), _fmt_mm(diam_mm)))
+    if diam_mm is not None and maximo is not None and diam_mm > maximo:
+        return ("toma alambre hasta %s mm y la pieza es de %s"
+                % (_fmt_mm(maximo), _fmt_mm(diam_mm)))
+    if od_mm is not None and od_max is not None and od_mm > od_max:
+        return ("llega a un exterior de %s mm y la pieza mide %s"
+                % (_fmt_mm(od_max), _fmt_mm(od_mm)))
+    return None
+
+
 def build_pn_for_engine(
     rfq_id: str,
     spring_data: Dict[str, Any],
@@ -211,7 +259,15 @@ def build_pn_for_engine(
     del número.
     """
     tipo = str(spring_data.get("tipo_resorte") or "").strip().lower()
-    desc = _TIPO_A_DESC.get(tipo, "Compression Spring")
+
+    # Un tipo que no reconocemos NO se convierte en el más parecido. Antes caía
+    # por defecto en "Compression Spring", así que un resorte de torsión mal
+    # leído se costeaba como uno de compresión —con otra máquina y otras
+    # operaciones— sin que nada lo dijera.
+    desc = _TIPO_A_DESC.get(tipo)
+    tipo_desconocido = desc is None
+    if tipo_desconocido:
+        desc = spring_data.get("tipo_resorte") or ""
 
     diam_mm = _num(spring_data.get("diametro_alambre_mm"))
     od_mm = _num(spring_data.get("diametro_exterior_mm"))
@@ -236,10 +292,64 @@ def build_pn_for_engine(
     if not cantidades:
         mensajes.falta(catalogo, "SIN_CANTIDAD")
 
+    if tipo_desconocido:
+        catalogo.faltantes.append(
+            "El tipo de resorte %r no es uno de los que sabemos costear "
+            "(compresión, extensión, torsión o wire form): la ruta y la máquina "
+            "hay que ponerlas a mano." % (spring_data.get("tipo_resorte"),))
+
     maquina = catalogo.maquina or {}
     material = catalogo.material or {}
     empaque = catalogo.empaque or {}
     params = catalogo.parametros or {}
+
+    # ¿Puede esa máquina, en concreto, con esta pieza?
+    #
+    # No se cambia la que eligió el catálogo —cuál PREFIERE el taller es otra
+    # discusión, y no se decide aquí—, pero sí se dice cuando la elegida
+    # FÍSICAMENTE no puede. Eso no es preferencia: es un dato, y hasta ahora no
+    # llegaba a nadie.
+    #
+    # Son dos comprobaciones distintas y ninguna cubre a la otra:
+    if maquina.get("nombre") and diam_mm:
+        # 1. El rango de alambre y el OD que la planta capturó para esa
+        #    máquina. Caso real: el 004-222 se costeó en una NUCOIL HX-60, que
+        #    toma alambre desde 1.0 mm, con un alambre de 0.991. La consulta de
+        #    selección ya filtra por esto, así que si aun así sale una máquina
+        #    fuera de rango es que la fila de capacidades no está o no coincide
+        #    con la que se usó al elegir — y eso hay que verlo, no suponerlo.
+        cap = repository.capacidad_de_maquina(maquina["nombre"], conexion=conexion)
+        if cap is None:
+            catalogo.faltantes.append(
+                "No hay capacidades capturadas para %s: no se pudo comprobar si "
+                "puede con un alambre de %s mm. Se cotizó con ella de todas "
+                "formas." % (maquina["nombre"], _fmt_mm(diam_mm)))
+        else:
+            fuera = _fuera_de_capacidad(cap, diam_mm, od_mm)
+            if fuera:
+                catalogo.faltantes.append(
+                    "La máquina elegida (%s) no puede con esta pieza: %s. Hay "
+                    "que cambiarla a mano antes de cotizar."
+                    % (maquina["nombre"], fuera))
+
+        # 2. El tope por material, que baja el diámetro máximo de una máquina
+        #    para ciertos alambres. La SIMPLEX MC 50 llega a .198" y en temple
+        #    en aceite sólo a .165". La que sí puede cuesta cuatro veces más por
+        #    pieza, así que callarlo es cotizar muy por debajo del costo.
+        tope = repository.tope_de_maquina(maquina["nombre"], conexion=conexion)
+        if tope is None:
+            catalogo.faltantes.append(
+                "No se pudo comprobar el tope por material: la tabla `maquinas` "
+                "todavía no tiene `tope_material` ni `tope_alambre_max_mm`. Están "
+                "en maquinas_valores.csv del extracto del catálogo.")
+        else:
+            motivo = reglas.tope_por_material(
+                maquina["nombre"], tope, material.get("nombre"), diam_mm)
+            if motivo:
+                catalogo.faltantes.append(
+                    "La máquina elegida (%s) no puede con este material: %s. "
+                    "Hay que cambiarla a mano antes de cotizar."
+                    % (maquina["nombre"], motivo))
 
     # scrap y markup salen de los parámetros versionados; si no hay juego
     # vigente se dejan en None y el motor aplica los suyos, pero queda anotado.
@@ -262,17 +372,97 @@ def build_pn_for_engine(
     elif tipo.startswith(("extension", "tension", "torsion")):
         mensajes.falta(catalogo, "PESO_SOLO_CUERPO")
 
+    # Las operaciones que van DESPUÉS de la bobinadora: rectificado si el plano
+    # pide extremos rectificados, horno por 17-7 o por tratamiento térmico,
+    # looping en extensión y doblado en torsión.
+    #
+    # No se deciden aquí: se preguntan a las reglas del taller, que viven en el
+    # núcleo. Reimplementarlas en Python sería tener dos versiones de la misma
+    # regla, y acabarían discrepando. Si el núcleo no está disponible se dice,
+    # en vez de entregar una ruta de una sola operación que parece completa.
+    secundarias = None
+    if not tipo_desconocido:
+        # El tratamiento térmico viene suelto o dentro del bloque de material,
+        # según de dónde salga la extracción.
+        _mat = spring_data.get("material")
+        tratamiento = spring_data.get("tratamiento_termico")
+        if not tratamiento and isinstance(_mat, dict):
+            tratamiento = _mat.get("tratamiento_termico")
+
+        secundarias = reglas.operaciones_secundarias(
+            desc,
+            tipo_extremos=spring_data.get("tipo_extremos"),
+            tratamiento_termico=tratamiento,
+            material_codigo=(material.get("codigo") or material_codigo),
+        )
+        if secundarias is None:
+            catalogo.faltantes.append(
+                "No se pudieron consultar las reglas del taller, así que la ruta "
+                "lleva sólo la bobinadora: faltan rectificado, horno, looping o "
+                "doblado según la pieza. El costo de proceso sale por debajo.")
+
     routing = []
     if maquina:
+        # `machH` es lo que la máquina CUESTA por hora; `tgtH` es lo que se
+        # espera que DEJE por hora. Son dos números distintos y en el catálogo
+        # viven en dos columnas distintas: `costo_hora` y `ccv_objetivo_h`.
+        #
+        # Aquí iban los dos al objetivo. En la NUCOIL HX-60 eso mandaba 89.29
+        # USD/h a la casilla "Machine $/h" en vez de 29.76 —el objetivo es el
+        # triple del costo en todas las filas del catálogo—, y el costo de
+        # máquina salía por tres. En el 004-222 eso fue $1.234 la pieza contra
+        # $0.3946: la cotización entera al triple, con todas las líneas del
+        # P&L cuadrando entre sí, porque el error entra antes de que empiecen
+        # los porcentajes.
+        #
+        # Si no hay tarifa vigente se manda `None` y la hoja lo enseña vacío,
+        # que es lo correcto: es una tarifa que hay que capturar, no un cero.
         routing.append({
             "machine": maquina.get("nombre"),
             "family": maquina.get("familia") or "COILER",
             "setupH": maquina.get("horas_setup"),
             "pph": maquina.get("pph"),
             "laborH": maquina.get("horas_labor"),
-            "machH": maquina.get("ccv_objetivo_h"),
+            "machH": maquina.get("costo_hora"),
             "tgtH": maquina.get("ccv_objetivo_h"),
-            "ratio": maquina.get("multiplicador") or 1.0,
+            # El ratio (máquinas por operario) se deja SIN VALOR a propósito.
+            #
+            # El motor tiene la escalera que validó Miguel Rodea: puesta a punto
+            # y primeras 4 h con máquina dedicada, luego 2, 3 y hasta 4 según
+            # duren las horas de tirada. Mandar aquí el multiplicador de la
+            # familia —que es una constante y no sabe cuántas horas dura esta
+            # tirada— anulaba esa escalera en TODAS las cotizaciones. Medido en
+            # la calculadora, eso son hasta un 40 % más de mano de obra en un
+            # tramo largo.
+            #
+            # Si `familias_maquina.multiplicador` significa otra cosa que
+            # máquinas por operario, ésta es la línea que hay que revisar.
+            "ratio": None,
+            "scrapPct": scrap_pct,
+        })
+
+    # Cada secundaria es una operación más en la ruta. Importa más de lo que
+    # parece: el número de operaciones alimenta la escalera de overheads y el
+    # suelo de ISC, que es 800 + 200 por cada operación de más, así que faltaba
+    # costo por tres caminos a la vez.
+    for op in (secundarias or []):
+        m = repository.maquina_por_nombre(op.get("m"), conexion=conexion)
+        if not m:
+            catalogo.faltantes.append(
+                "La operación «%s» que pide el plano (%s) no está en el catálogo "
+                "de máquinas: no se pudo costear." % (op.get("m"), op.get("why")))
+            continue
+        routing.append({
+            "machine": m.get("nombre"),
+            "family": m.get("familia") or "SECONDARY",
+            "setupH": m.get("horas_setup"),
+            "pph": m.get("pph"),
+            "laborH": m.get("horas_labor"),
+            # Lo mismo que arriba: el COSTO por hora, no el objetivo de CCV.
+            # En el Grinder A son 11.16 contra 55.80: cinco veces.
+            "machH": m.get("costo_hora"),
+            "tgtH": m.get("ccv_objetivo_h"),
+            "ratio": None,
             "scrapPct": scrap_pct,
         })
 
@@ -290,7 +480,9 @@ def build_pn_for_engine(
             "devLenIn": dev_len,
             "basePerLb": material.get("precio_lb"),
             "surchPerLb": material.get("surcharge_lb") or 0,
-            "transpPerLb": _num(params.get("transpPerLb")) or 0,
+            # `or 0` convertía "el catálogo no lo tiene" en "cuesta cero", y el
+            # transporte del alambre es alrededor del 7 % del material.
+            "transpPerLb": _transporte(params, catalogo),
             "mkPct": markup_material,
             "moqLb": None,
         },

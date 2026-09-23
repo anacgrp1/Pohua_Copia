@@ -129,6 +129,150 @@ def espiras_muertas(spring_data: Dict[str, Any]) -> Tuple[float, str]:
         f"which is not a recognised end type")
 
 
+# ---------------------------------------------------------------------------
+# Cuando el plano no acota las espiras
+# ---------------------------------------------------------------------------
+#
+# «O viene acotado o hay que preguntárselo al cliente» era demasiado tajante.
+# Las espiras no siempre están escritas, pero muchas veces están IMPLÍCITAS en
+# otras cotas que sí lo están, y sacarlas de ahí no es estimar: es la misma
+# aritmética que saca el calibre de (OD - ID)/2.
+#
+# Tres caminos, de más fiable a menos:
+#
+#   1. ALTURA SÓLIDA. Es geometría pura y no necesita saber de qué material es
+#      el resorte. Con los extremos esmerilados, todas las espiras se apoyan
+#      unas sobre otras: Ls = Nt · d. Sin esmerilar, la punta del alambre deja
+#      un calibre de más: Ls = (Nt + 1) · d.
+#
+#   2. PASO. También geometría. En extremos cerrados y esmerilados,
+#      L0 = p · Na + 2d; sin esmerilar, L0 = p · Na + 3d. Se despeja Na y se
+#      le suman las muertas de la tabla de arriba.
+#
+#   3. RIGIDEZ. k = G·d⁴ / (8·Dm³·Na), así que Na = G·d⁴ / (8·Dm³·k). Esta
+#      NECESITA el módulo de cortante del material, y ahí está el problema:
+#      el núcleo (ISCQuotingCore) ya tiene esa tabla y usarla aquí con otros
+#      números repetiría el fallo de las espiras muertas —dos tablas que
+#      divergen sin que nadie lo note—. Se deja el hueco preparado y la
+#      decisión escrita, no una segunda tabla inventada.
+#
+# Lo que se saca por estos caminos queda MARCADO como calculado, con la
+# fórmula y la cota de la que salió, para que quien aprueba vea de dónde
+# viene. Un número deducido y uno leído del plano no valen lo mismo.
+
+# Debajo de esto, un resultado no es un resorte: es un error de lectura.
+_ESPIRAS_MINIMAS = 1.5
+_ESPIRAS_MAXIMAS = 400.0
+
+
+def _esmerilados(spring_data: Dict[str, Any]) -> bool:
+    """¿Las puntas van rectificadas? Decide qué convención toca."""
+    extremos = _normalizar(spring_data.get("tipo_extremos"))
+    return any(p in extremos for p in
+               ("ground", "esmerilado", "esmerilados",
+                "rectificado", "rectificados"))
+
+
+def _creible(n: Optional[float]) -> Optional[float]:
+    """El resultado, si cae dentro de lo que puede ser un resorte."""
+    if n is None:
+        return None
+    return n if _ESPIRAS_MINIMAS <= n <= _ESPIRAS_MAXIMAS else None
+
+
+def totales_por_altura_solida(spring_data: Dict[str, Any]
+                              ) -> Tuple[Optional[float], Optional[str]]:
+    """Nt a partir de la altura sólida. Geometría pura, sin material.
+
+    Es el camino bueno: la altura sólida se acota a menudo —es lo que hay que
+    respetar en el hueco donde va el resorte— y no depende de ninguna
+    constante del material.
+    """
+    ls = _num(spring_data.get("altura_solida_mm"))
+    d = _num(spring_data.get("diametro_alambre_mm"))
+    if not ls or not d or ls <= 0 or d <= 0:
+        return None, None
+
+    if _esmerilados(spring_data):
+        nt = _creible(round(ls / d, 2))
+        formula = f"solid height / wire = {ls:g} / {d:g}"
+    else:
+        nt = _creible(round(ls / d - 1, 2))
+        formula = f"(solid height / wire) - 1 = ({ls:g} / {d:g}) - 1"
+    if nt is None:
+        return None, None
+    return nt, f"{nt:g} total coils from the solid height ({formula})"
+
+
+def totales_por_paso(spring_data: Dict[str, Any]
+                     ) -> Tuple[Optional[float], Optional[str]]:
+    """Nt a partir del paso y la longitud libre. También geometría pura.
+
+    Menos útil en la práctica que la altura sólida, porque el paso se acota
+    pocas veces; pero cuando está, sale exacto.
+    """
+    p = _num(spring_data.get("paso_mm"))
+    l0 = _num(spring_data.get("longitud_libre_mm"))
+    d = _num(spring_data.get("diametro_alambre_mm"))
+    if not p or not l0 or not d or p <= 0 or l0 <= 0 or d <= 0:
+        return None, None
+
+    # Lo que ocupan los extremos cerrados dentro de la longitud libre.
+    extremos_mm = 2 * d if _esmerilados(spring_data) else 3 * d
+    activas = (l0 - extremos_mm) / p
+    if activas <= 0:
+        return None, None
+
+    muertas, _ = espiras_muertas(spring_data)
+    nt = _creible(round(activas + muertas, 2))
+    if nt is None:
+        return None, None
+    return nt, (f"{nt:g} total coils from the pitch "
+                f"(active = ({l0:g} - {extremos_mm:g}) / {p:g}, "
+                f"plus {muertas:g} dead)")
+
+
+def totales_por_rigidez(spring_data: Dict[str, Any],
+                        modulo_cortante_psi: Optional[float] = None
+                        ) -> Tuple[Optional[float], Optional[str]]:
+    """Nt a partir de la constante del resorte. Necesita el material.
+
+    ``Na = G · d⁴ / (8 · Dm³ · k)``.
+
+    Se le pasa el módulo desde fuera a propósito: aquí NO vive una tabla de
+    módulos. El núcleo ya tiene la suya y dos tablas de constantes del mismo
+    material acaban divergiendo —es exactamente lo que pasó con las espiras
+    muertas—. Mientras no haya una sola, esta función devuelve ``None`` y el
+    camino queda documentado en vez de adivinado.
+    """
+    if not modulo_cortante_psi:
+        return None, None
+
+    k = _num(spring_data.get("constante_resorte_N_mm"))
+    d = _num(spring_data.get("diametro_alambre_mm"))
+    dm = _num(spring_data.get("diametro_medio_mm"))
+    if not dm:
+        od = _num(spring_data.get("diametro_exterior_mm"))
+        if od and d:
+            dm = od - d
+    if not k or not d or not dm or k <= 0 or d <= 0 or dm <= 0:
+        return None, None
+
+    # Todo a pulgadas y libras, que es en lo que está el módulo.
+    g = float(modulo_cortante_psi)
+    d_in = d / 25.4
+    dm_in = dm / 25.4
+    k_lbf_in = k * 5.71014716                     # N/mm -> lbf/in
+
+    activas = (g * d_in ** 4) / (8 * dm_in ** 3 * k_lbf_in)
+    muertas, _ = espiras_muertas(spring_data)
+    nt = _creible(round(activas + muertas, 2))
+    if nt is None:
+        return None, None
+    return nt, (f"{nt:g} total coils from the spring rate "
+                f"(active = G·d⁴ / (8·Dm³·k), plus {muertas:g} dead)")
+
+
 def es_compresion(spring_data: Dict[str, Any]) -> bool:
     tipo = _normalizar(spring_data.get("tipo_resorte"))
     return tipo.startswith("compres")
@@ -149,15 +293,23 @@ def espiras_totales(spring_data: Dict[str, Any]) -> Tuple[Optional[float], Optio
     if totales and totales > 0:
         return totales, None
 
-    activas = _num(spring_data.get("numero_espiras_activas"))
-    if not activas or activas <= 0:
-        return None, None
-
     # En extensión las espiras del plano son las del cuerpo y se usan tal cual;
     # en torsión la fórmula del desarrollo es otra y las patas no se cuentan
-    # aquí. Sumar extremos en cualquiera de los dos sería inventar alambre.
+    # aquí. Nada de lo que sigue vale fuera de compresión.
     if not es_compresion(spring_data):
         return None, None
 
-    muertas, porque = espiras_muertas(spring_data)
-    return activas + muertas, f"active coils + {porque}"
+    activas = _num(spring_data.get("numero_espiras_activas"))
+    if activas and activas > 0:
+        muertas, porque = espiras_muertas(spring_data)
+        return activas + muertas, f"active coils + {porque}"
+
+    # El plano no acota ni las totales ni las activas. Pero puede que las
+    # tenga dichas de otra forma. Se prueban las vías por orden de fiabilidad;
+    # la primera que dé un número creíble gana.
+    for via in (totales_por_altura_solida, totales_por_paso):
+        nt, porque = via(spring_data)
+        if nt:
+            return nt, porque
+
+    return None, None

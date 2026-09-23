@@ -34,6 +34,7 @@ const ResumenPage = (() => {
 
     let resumen = null;
     let atencion = null;
+    let decididas = null;
     let cargando = false;
 
     function esc(valor) {
@@ -60,9 +61,16 @@ const ResumenPage = (() => {
         cargando = true;
         try {
             // Las dos a la vez: son independientes y en serie se nota la espera.
-            [resumen, atencion] = await Promise.all([
+            // Las tres a la vez: son independientes y en serie se nota la
+            // espera. La de decididas se pide con `catch` propio porque es la
+            // menos importante de las tres: que falle no puede dejar la
+            // pantalla sin las cifras ni sin la cola de revisión.
+            [resumen, atencion, decididas] = await Promise.all([
                 API.assistantSummary(),
                 API.assistantAttention(),
+                API.rfqsDecididos(25)
+                    .then((d) => (d && d.rfqs) || [])
+                    .catch(() => []),
             ]);
         } catch (err) {
             if (err && err.sesionExpirada) return;
@@ -179,6 +187,62 @@ const ResumenPage = (() => {
         }).join('')}</ul>`;
     }
 
+    /**
+     * Los RFQ ya dictaminados: aprobados y declinados, juntos.
+     *
+     * Van juntos a propósito. Quien busca un caso viejo se acuerda del cliente
+     * y de cuándo fue, no de en cuál de los dos acabó; dos listas separadas
+     * obligan a mirar en las dos.
+     *
+     * Y se abren en CONSULTA: la hoja aparta el borrador de trabajo antes de
+     * cargar el caso y lo devuelve al salir, así que mirar una cotización
+     * cerrada nunca se mezcla con un cálculo en curso.
+     */
+    function filaDecidida(r) {
+        const aprobado = r.estado === 'Approved';
+        const clase = aprobado ? 'badge-approved' : 'badge-declined';
+        const cuando = (r.fecha_registro || '').slice(0, 10);
+        return `
+            <tr>
+                <td><code>${esc(r.rfq_id)}</code></td>
+                <td>${esc(r.cliente_id || '—')}</td>
+                <td>${esc(r.part_number || '—')}</td>
+                <td>${esc(cuando || '—')}</td>
+                <td><span class="badge ${clase}"><span class="badge-dot"></span>${esc(r.estado)}</span></td>
+                <td class="resumen-decidida-accion">
+                    <button type="button" class="btn btn-secondary btn-sm"
+                            data-decidida="${esc(r.rfq_id)}">${esc(I18N.t('resumen.verHoja'))}</button>
+                </td>
+            </tr>`;
+    }
+
+    function panelDecididas() {
+        const filas = decididas || [];
+        return `
+            <section class="panel">
+                <div class="panel-cabecera">
+                    <h3 class="panel-titulo">${esc(I18N.t('resumen.decididas'))}</h3>
+                    <span class="resumen-estrellas-nota">${esc(I18N.t('resumen.decididasNota'))}</span>
+                </div>
+                ${filas.length ? `
+                <div class="tabla-caja">
+                    <table class="tabla-usuarios resumen-tabla">
+                        <thead>
+                            <tr>
+                                <th>${esc(I18N.t('resumen.col.rfq'))}</th>
+                                <th>${esc(I18N.t('resumen.col.cliente'))}</th>
+                                <th>${esc(I18N.t('resumen.col.parte'))}</th>
+                                <th>${esc(I18N.t('resumen.col.fecha'))}</th>
+                                <th>${esc(I18N.t('resumen.col.estado'))}</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>${filas.map(filaDecidida).join('')}</tbody>
+                    </table>
+                </div>` : `<p class="resumen-vacio">${esc(I18N.t('resumen.sinDecididas'))}</p>`}
+            </section>`;
+    }
+
     function plantilla() {
         const r = resumen || {};
         const a = atencion || {};
@@ -245,6 +309,8 @@ const ResumenPage = (() => {
                 </section>
             </div>
 
+            ${panelDecididas()}
+
             <!-- Los clientes estrella, a todo el ancho: son doce nombres
                  largos y en media columna se partían en dos líneas cada uno. -->
             <section class="panel">
@@ -301,6 +367,16 @@ const ResumenPage = (() => {
                 abrir(ev.target.closest('.resumen-fila'));
             });
         }
+
+        // Los ya dictaminados se abren en la hoja, en CONSULTA: el borrador
+        // de trabajo se aparta y se devuelve al salir, así que mirar un caso
+        // cerrado no se mezcla con lo que alguien esté calculando.
+        contenedor.addEventListener('click', (ev) => {
+            const boton = ev.target.closest('[data-decidida]');
+            if (!boton) return;
+            ev.preventDefault();
+            APP.navigate('quoting', { rfq: boton.dataset.decidida, consulta: '1' });
+        });
     }
 
     /** La llama el router al salir. Sin esto el resorte sigue pintando. */

@@ -44,6 +44,7 @@ const QuotingPage = {
     pendiente: null,          // carga que espera a que el marco termine de cargar
     centralitaPuesta: false,
     rfqPendiente: null,       // RFQ que hay que abrir en cuanto la hoja esté lista
+    consulta: false,          // se abre sólo para mirarlo: no toca el borrador
     rfqAbierto: null,         // el que ya se abrió, para no repetirlo
     hojaLista: false,
 
@@ -64,12 +65,17 @@ const QuotingPage = {
          * documento, sólo escondido— y al volver se enseña la pestaña que
          * estaba abierta. Nada que recargar. */
         const pedido = params && params.rfq;
+        // `consulta` = se abre para MIRARLO, no para seguir trabajándolo. El
+        // borrador de quien estuviera calculando se aparta y se devuelve al
+        // salir (ver `isc-nube.js`), así que un caso cerrado nunca se mezcla
+        // con un cálculo en curso.
+        this.consulta = !!(params && params.consulta);
 
         if (this.montado && contenedor === this.contenedor &&
             contenedor.querySelector('#quotingMarcos')) {
             this.cambiar(pedido ? 'precio' : this.vista);
             this.pintarVolver();
-            if (pedido) this.abrirRfq(pedido);
+            if (pedido) this.abrirRfq(pedido, this.consulta);
             return;
         }
 
@@ -139,8 +145,9 @@ const QuotingPage = {
      * así que un mensaje mandado ahí se pierde sin ruido. Se espera a que
      * `isc-nube.js` avise con "hoja-lista"; si ya avisó, se manda en el acto.
      */
-    async abrirRfq(id) {
+    async abrirRfq(id, consulta) {
         if (!id || this.rfqAbierto === id) return;
+        if (consulta !== undefined) this.consulta = !!consulta;
         try {
             const datos = await API.rfqCotizacionInicial(id);
             if (datos && datos.error) {
@@ -200,6 +207,57 @@ const QuotingPage = {
         if (!this.rfqAbierto) { b.hidden = true; return; }
         b.textContent = I18N.t('quoting.volverRevision', { rfq: this.rfqAbierto });
         b.hidden = false;
+        this.pintarConsulta();
+    },
+
+    /**
+     * La cinta de "esto es un caso cerrado, sólo lo estás mirando".
+     *
+     * Sin ella, un RFQ dictaminado abierto en la hoja se ve EXACTAMENTE igual
+     * que uno en curso: mismas casillas, mismos números, mismo botón de
+     * recalcular. Alguien podría ponerse a trabajar encima de una cotización
+     * que ya se aprobó hace tres semanas sin darse cuenta de nada.
+     *
+     * Dice además que el borrador está a salvo, porque si no lo dijera la
+     * reacción sensata sería salir corriendo a guardar lo que estuviera
+     * haciendo.
+     */
+    pintarConsulta() {
+        const caja = this.contenedor && this.contenedor.querySelector('#quotingAviso');
+        if (!caja) return;
+        if (!this.consulta || !this.rfqAbierto) {
+            const vieja = caja.querySelector('.quoting-consulta');
+            if (vieja) vieja.remove();
+            return;
+        }
+        if (caja.querySelector('.quoting-consulta')) return;
+        const cinta = document.createElement('div');
+        cinta.className = 'quoting-consulta';
+        cinta.innerHTML = `
+            <span class="quoting-consulta-texto"></span>
+            <button type="button" class="btn btn-secondary btn-sm"
+                    id="quotingSalirConsulta"></button>`;
+        cinta.querySelector('.quoting-consulta-texto').textContent =
+            I18N.t('quoting.consulta', { rfq: this.rfqAbierto });
+        const boton = cinta.querySelector('#quotingSalirConsulta');
+        boton.textContent = I18N.t('quoting.volverCalculo');
+        boton.addEventListener('click', () => this.salirConsulta());
+        caja.appendChild(cinta);
+    },
+
+    /** Devuelve el borrador de trabajo y sale de la consulta. */
+    salirConsulta() {
+        const marco = this.contenedor && this.contenedor.querySelector('#quotingMarco');
+        try {
+            if (marco && marco.contentWindow) {
+                marco.contentWindow.postMessage(
+                    { source: 'pohua', tipo: 'salir-consulta' }, '*');
+            }
+        } catch (_) { /* si el marco no está, el borrador sigue guardado */ }
+        this.consulta = false;
+        this.rfqAbierto = null;
+        this.pintarVolver();
+        this.pintarConsulta();
     },
 
     entregarRfq() {
@@ -208,7 +266,8 @@ const QuotingPage = {
         if (!marco || !marco.contentWindow) return;
         try {
             marco.contentWindow.postMessage(
-                { source: 'pohua', tipo: 'cargar-rfq', datos: this.rfqPendiente }, '*');
+                { source: 'pohua', tipo: 'cargar-rfq', datos: this.rfqPendiente,
+                  consulta: !!this.consulta }, '*');
             this.rfqPendiente = null;
         } catch (_) { /* el marco aún no está: se reintenta al próximo aviso */ }
     },

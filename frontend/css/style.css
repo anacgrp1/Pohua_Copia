@@ -6073,6 +6073,30 @@ body.revision-abierta { overflow: hidden; }
 /* Las espiras totales deducidas de las activas. No es un aviso —nada va mal—,
    es la respuesta a "por qué está vacía esa casilla y aun así hay peso". En
    gris de pie de campo, debajo de los campos que explica. */
+/* La cinta de consulta: estás mirando un caso ya dictaminado.
+   En ámbar y arriba del todo, porque la hoja de un RFQ cerrado se ve idéntica
+   a la de uno en curso y sin esto nadie distinguiría una de otra. */
+.quoting-consulta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+    margin: 0 0 var(--sp-3);
+    padding: var(--sp-3);
+    border-left: 3px solid var(--color-warning);
+    background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+    border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0;
+}
+
+.quoting-consulta-texto {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.resumen-decidida-accion { text-align: right; white-space: nowrap; }
+
 .revision-geo-deducido {
     margin: var(--sp-2) 0 0;
     font-size: 12px;

@@ -7,11 +7,13 @@ entorno de ejecución. Los datos se pueden entregar como MATRIZ (a_matriz).
 No depende de ningún SDK externo (solo librería estándar): se puede testear
 con datos de ejemplo sin llamar a la API.
 """
+from __future__ import annotations
+
 import json
 import logging
 import re
 from dataclasses import asdict, dataclass, field
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional
 
 log = logging.getLogger("cotizador.extractor")
 
@@ -22,6 +24,7 @@ TIPOS_VALIDOS = {"compresion", "torsion", "extension", "desconocido"}
 CAMPOS_NUMERICOS = (
     "diametro_alambre_mm", "diametro_exterior_mm", "diametro_interior_mm",
     "diametro_medio_mm", "longitud_libre_mm", "longitud_cuerpo_mm",
+    "altura_solida_mm",
     "numero_espiras_totales", "numero_espiras_activas", "paso_mm",
     "angulo_brazos_grados", "longitud_gancho_mm", "constante_resorte_N_mm",
     "cantidad",
@@ -42,6 +45,7 @@ ORDEN_MATRIZ = (
     "num_parte", "tipo_resorte", "material", "norma_material",
     "diametro_alambre_mm", "diametro_exterior_mm", "diametro_interior_mm",
     "diametro_medio_mm", "longitud_libre_mm", "longitud_cuerpo_mm",
+    "altura_solida_mm",
     "numero_espiras_totales", "numero_espiras_activas", "paso_mm",
     "sentido_enrollado", "tipo_extremos", "angulo_brazos_grados",
     "longitud_gancho_mm", "constante_resorte_N_mm", "acabado",
@@ -53,6 +57,7 @@ UNIDADES = {
     "diametro_alambre_mm": "mm", "diametro_exterior_mm": "mm",
     "diametro_interior_mm": "mm", "diametro_medio_mm": "mm",
     "longitud_libre_mm": "mm", "longitud_cuerpo_mm": "mm",
+    "altura_solida_mm": "mm",
     "numero_espiras_totales": "espiras", "numero_espiras_activas": "espiras",
     "paso_mm": "mm", "angulo_brazos_grados": "grados",
     "longitud_gancho_mm": "mm", "constante_resorte_N_mm": "N/mm",
@@ -70,6 +75,7 @@ DESCRIPCIONES = {
     "diametro_medio_mm": "Diámetro medio (Dm)",
     "longitud_libre_mm": "Longitud libre, sin carga (L0)",
     "longitud_cuerpo_mm": "Longitud del cuerpo",
+    "altura_solida_mm": "Altura sólida, todo comprimido (Ls)",
     "numero_espiras_totales": "Número total de espiras",
     "numero_espiras_activas": "Número de espiras activas (Na)",
     "paso_mm": "Paso entre espiras (p)",
@@ -110,6 +116,7 @@ class ResorteCotizacion:
     longitud_cuerpo_mm: Optional[float] = None
     numero_espiras_totales: Optional[float] = None
     numero_espiras_activas: Optional[float] = None
+    altura_solida_mm: Optional[float] = None
     paso_mm: Optional[float] = None
     sentido_enrollado: Optional[str] = None
     tipo_extremos: Optional[str] = None
@@ -144,7 +151,7 @@ class ResorteCotizacion:
         datos["faltantes"] = self.faltantes()
         return datos
 
-    def a_matriz(self, incluir_encabezado: bool = True) -> List[List[Any]]:
+    def a_matriz(self, incluir_encabezado: bool = True) -> list[list[Any]]:
         """Entrega las variables del resorte como matriz (lista de filas)."""
         return _construir_matriz(self.to_dict(), incluir_encabezado)
 
@@ -471,9 +478,9 @@ def _completar_diametros(resorte) -> None:
 ENCABEZADO_MATRIZ = ["Variable", "Descripción", "Valor", "Unidad", "Obligatoria cotizar"]
 
 
-def _construir_matriz(datos: dict, incluir_encabezado: bool = True) -> List[List[Any]]:
+def _construir_matriz(datos: dict[str, Any], incluir_encabezado: bool = True) -> list[list[Any]]:
     """Construye la matriz (lista de filas) a partir del dict de datos."""
-    filas: List[List[Any]] = [list(ENCABEZADO_MATRIZ)] if incluir_encabezado else []
+    filas: list[list[Any]] = [list(ENCABEZADO_MATRIZ)] if incluir_encabezado else []
     for campo in ORDEN_MATRIZ:
         valor = datos.get(campo)
         if isinstance(valor, list):
@@ -488,9 +495,7 @@ def _construir_matriz(datos: dict, incluir_encabezado: bool = True) -> List[List
     return filas
 
 
-def a_matriz(
-    datos: Union[dict, ResorteCotizacion], incluir_encabezado: bool = True
-) -> List[List[Any]]:
+def a_matriz(datos: Any, incluir_encabezado: bool = True) -> list[list[Any]]:
     """
     Entrega las variables del resorte como MATRIZ (lista de filas).
     Acepta el dict de interpretar() o una instancia ResorteCotizacion.

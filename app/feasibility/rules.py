@@ -192,6 +192,21 @@ class Reglas:
                 return codigo
         return None
 
+    def nombre_por_codigo(self, codigo: Optional[str]) -> Optional[str]:
+        """El nombre canónico del material a partir de su código.
+
+        Hace falta porque `material_generico` devuelve el CÓDIGO de la familia
+        ("MW") y el resto del dictamen trabaja con el nombre canónico ("Music
+        Wire (ASTM A228)"): sin esta vuelta, un material resuelto por familia
+        no podría comprobarse contra su banda de calibres.
+        """
+        if not codigo:
+            return None
+        for material in self._materiales:
+            if material.get("codigo") == codigo:
+                return material.get("nombre")
+        return None
+
     def codigo_material(self, texto: Optional[str]) -> Optional[str]:
         """Código de catálogo del material, a partir del texto libre del RFQ.
 

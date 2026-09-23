@@ -600,5 +600,37 @@ class TestReglasDelRepo(unittest.TestCase):
         self.assertEqual(resultado["veredicto"], mf.VEREDICTO_FACTIBLE)
 
 
+class TestADict(unittest.TestCase):
+    """Pruebas de la función auxiliar _a_dict."""
+
+    def test_objeto_con_to_dict(self):
+        class ObjConToDict:
+            def to_dict(self):
+                return {"tipo_resorte": "compresion", "material": "AISI 302"}
+
+        resultado = mf._a_dict(ObjConToDict())
+        self.assertEqual(resultado, {"tipo_resorte": "compresion", "material": "AISI 302"})
+
+    def test_objeto_con_to_dict_invalido(self):
+        class ObjInvalido:
+            def to_dict(self):
+                return "no_es_un_dict"
+
+        with self.assertRaises(TypeError):
+            mf._a_dict(ObjInvalido())
+
+    def test_objeto_sin_to_dict_ni_dict(self):
+        with self.assertRaises(TypeError):
+            mf._a_dict(12345)
+
+    def test_none_devuelve_vacio(self):
+        self.assertEqual(mf._a_dict(None), {})
+
+    def test_dict_anidado(self):
+        datos = {"resorte": {"tipo_resorte": "torsion", "material": "MW"}}
+        self.assertEqual(mf._a_dict(datos), {"tipo_resorte": "torsion", "material": "MW"})
+
+
 if __name__ == "__main__":
     unittest.main()
+

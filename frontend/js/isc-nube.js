@@ -91,6 +91,56 @@
         try { toast(texto); } catch (e) { console.warn('[nube] ' + texto); }
     }
 
+    // ------------------------------------------ mirar un caso ya dictaminado
+
+    /*
+     * Un RFQ aprobado o declinado se abre para MIRARLO, no para seguir
+     * trabajándolo: ya se decidió. Pero la hoja es una sola, y cargarlo encima
+     * pisa el borrador de quien estuviera calculando otra cosa — que es
+     * exactamente la confusión entre cálculos que hay que evitar.
+     *
+     * Así que en consulta el borrador de trabajo se guarda aparte ANTES de
+     * cargar nada, y se devuelve al salir. La hoja queda como estaba, sin que
+     * nadie tenga que acordarse de guardar.
+     *
+     * Vive en memoria de la página, no en el almacenamiento: si alguien
+     * recarga en mitad de una consulta, lo que se conserva es el borrador
+     * guardado en disco, que es el de trabajo. Perder la consulta no cuesta
+     * nada; perder el borrador, sí.
+     */
+    var borradorGuardado = null;     // null = no hay ninguna consulta abierta
+
+    function enConsulta() { return borradorGuardado !== null; }
+
+    function guardarBorrador() {
+        if (borradorGuardado !== null) return;   // ya había una consulta
+        try {
+            borradorGuardado = JSON.stringify(local.draft || null);
+        } catch (e) {
+            // Si no se puede copiar, NO se entra en consulta: mejor no
+            // enseñar el caso viejo que enseñarlo a cambio de perder trabajo.
+            borradorGuardado = null;
+            console.warn('[nube] No se pudo apartar el borrador: ' + e.message);
+        }
+    }
+
+    function devolverBorrador() {
+        if (borradorGuardado === null) return false;
+        try {
+            local.draft = JSON.parse(borradorGuardado);
+            borradorGuardado = null;
+            if (typeof saveLocal === 'function') saveLocal();
+            intentar(function () {
+                if (typeof renderQuote === 'function') renderQuote();
+            }, 'repintar al volver de la consulta');
+            return true;
+        } catch (e) {
+            console.warn('[nube] No se pudo devolver el borrador: ' + e.message);
+            borradorGuardado = null;
+            return false;
+        }
+    }
+
     // ------------------------------------------------- lo que se le dice a quien mira
 
     /*
@@ -935,7 +985,11 @@
             if (d.tipo === 'pedir-resorte') {
                 try { if (typeof openSpringCalc === 'function') openSpringCalc(false); } catch (e) {}
             } else if (d.tipo === 'cargar-rfq') {
-                cargarRfq(d.datos);
+                cargarRfq(d.datos, d.consulta);
+            } else if (d.tipo === 'salir-consulta') {
+                var volvio = devolverBorrador();
+                aPohua({ source: 'isc-nube', tipo: 'consulta-cerrada',
+                         volvio: volvio });
             }
         });
     }
@@ -964,13 +1018,23 @@
      * este mismo RFQ, no se toca nada —volver a entrar no puede deshacer lo
      * que se lleve escrito—.
      */
-    function cargarRfq(d) {
+    function cargarRfq(d, consulta) {
         if (!d || !d.pn) return;
         if (typeof Q !== 'function' || typeof blankQuote !== 'function') return;
 
         var q = Q();
         if (q && q.pohuaRfq === d.rfq_id) {       // ya está abierto: no se toca
             avisarCargado(d.rfq_id, false);
+            return;
+        }
+
+        // En consulta NO se pregunta nada: el borrador se aparta entero y se
+        // devuelve al salir, así que no hay nada que el usuario pueda perder
+        // y no tiene sentido hacerle decidir.
+        if (consulta) {
+            guardarBorrador();
+            if (!enConsulta()) return;            // no se pudo apartar: no se entra
+            ponerRfq(d, true);
             return;
         }
 
@@ -996,10 +1060,13 @@
         }
     }
 
-    function ponerRfq(d) {
+    function ponerRfq(d, consulta) {
         try {
             var q = blankQuote();
             q.pohuaRfq = d.rfq_id;              // para no volver a cargarlo encima
+            // Marca lo que se está mirando. La pantalla la usa para enseñar la
+            // cinta de "estás viendo un caso cerrado" y el botón de volver.
+            if (consulta) q.pohuaConsulta = d.rfq_id;
             d.pn = completarPn(d.pn);
             q.pns = [d.pn];
             q.activePn = 0;

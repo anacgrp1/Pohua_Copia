@@ -141,9 +141,53 @@ def sha_del_clon() -> Optional[str]:
     return salida.stdout.strip() or None
 
 
+# Un fichero del núcleo por debajo de esto no es el núcleo: es un hueco con su
+# nombre. El más pequeño de verdad —`reglas.js`— pasa de 14 KB; el motor, de 19.
+# 2 KB deja margen de sobra para una versión futura más escueta y sigue cazando
+# el placeholder.
+_MINIMO_CREIBLE = 2048
+
+
+def es_hueco(pieza: str) -> bool:
+    """¿Lo que hay en el sitio de esa pieza es un placeholder?
+
+    Por qué existe esta comprobación
+    --------------------------------
+    `pricing/nucleo/reglas.js` eran DIEZ bytes: la línea ``// reglas``. El
+    fichero existía, así que `ruta()` lo encontraba, `origen()` decía "copia" y
+    el diagnóstico de la API daba el núcleo por presente. Pero dentro no había
+    ninguna regla del taller.
+
+    Lo que se perdía por eso no daba ningún error: las operaciones secundarias
+    —el esmerilado que pide un plano con extremos Ground— no se añadían a la
+    ruta, la caja no se elegía, y la cotización salía con UNA operación en vez
+    de tres. Un precio construido sobre media ruta, sin una sola línea roja en
+    ninguna pantalla.
+
+    Un hueco es peor que un fichero ausente: ausente se nota y se cae; hueco se
+    encuentra, contesta que sí, y devuelve nada.
+    """
+    r = ruta(pieza)
+    if r is None:
+        return False           # ausente no es hueco: son dos cosas distintas
+    try:
+        return r.stat().st_size < _MINIMO_CREIBLE
+    except OSError:
+        return False
+
+
+def huecos() -> list:
+    """Las piezas del núcleo que están, pero vacías. Vacío cuando todo va bien."""
+    return [p for p in PIEZAS if es_hueco(p)]
+
+
 def disponible() -> bool:
-    """¿Está el motor, que es la pieza sin la cual no hay costeo?"""
-    return ruta("motor") is not None
+    """¿Está el motor, que es la pieza sin la cual no hay costeo?
+
+    Un motor que es un placeholder cuenta como ausente: es lo único que evita
+    que el costeo siga adelante creyendo que tiene con qué.
+    """
+    return ruta("motor") is not None and not es_hueco("motor")
 
 
 def estado() -> Dict[str, object]:
@@ -156,9 +200,13 @@ def estado() -> Dict[str, object]:
             "ruta": str(r) if r else None,
             "origen": origen(pieza),
             "huella": huella(r),
+            # Encontrado y vacío a la vez. Va en el diagnóstico porque es el
+            # estado que no se nota de ninguna otra forma.
+            "hueco": es_hueco(pieza),
         }
     return {
         "disponible": disponible(),
         "sha_clon": sha_del_clon() or sha_vendorizado(),
+        "huecos": huecos(),
         "piezas": piezas,
     }

@@ -160,8 +160,27 @@ def diagnostico_envio() -> dict:
                     "desde el servidor hay que usar MAIL_MODE=graph."}
 
 
-def enviar(contenido) -> bool:
+def enviar(contenido, rfq_id=None, clase="aviso", por=None) -> bool:
     """Envía el correo por el canal del modo activo: SMTP, Graph u Outlook.
+
+    Y si este proceso NO tiene cuenta emisora, lo deja en la bandeja de salida
+    en vez de reventar.
+
+    Por qué el respaldo
+    -------------------
+    Render no tiene buzón: el de ventas se abre por el Outlook de una
+    computadora concreta. Eso ya estaba resuelto para la OFERTA, que se encola
+    en `correos_salida` y la aplicación de escritorio despacha en su ciclo.
+
+    Pero la declinación, la petición de datos faltantes y los recordatorios
+    llamaban aquí directamente. En Render eso levanta `SinCuentaEmisora`, el
+    que llama se lo traga y anota un error, y el correo no sale ni se guarda:
+    se pierde. Un RFQ declinado cuyo comprador nunca se entera es peor que uno
+    sin declinar, porque en la pantalla pone Declined.
+
+    Encolar en lugar de fallar convierte "se perdió" en "está esperando", y la
+    misma computadora que ya manda las ofertas lo manda. El que llama recibe
+    ``True``: el correo va a salir, sólo que no desde aquí.
 
     `getattr(config, ...)` miraba el MÓDULO, donde `MAIL_MODE` no existe: se
     quedaba siempre con "imap" y mandaba por SMTP aunque estuviera configurado
@@ -174,7 +193,7 @@ def enviar(contenido) -> bool:
     # las variables de ESE modo, en vez del error de SMTP para todos.
     diag = diagnostico_envio()
     if not diag["puede"]:
-        raise SinCuentaEmisora(diag["modo"], diag["faltan"])
+        return _encolar_o_fallar(contenido, diag, rfq_id, clase, por)
 
     if modo in _MODOS_OUTLOOK:
         # Por el Outlook que ya está abierto: mismo remitente y misma firma
@@ -192,6 +211,29 @@ def enviar(contenido) -> bool:
         return graph_sender.enviar_correo_graph(contenido)
     import app.email.smtp_sender as smtp_sender
     return smtp_sender.enviar_correo_smtp(contenido)
+
+
+def _encolar_o_fallar(contenido, diag, rfq_id, clase, por) -> bool:
+    """Deja el correo en la bandeja. Si tampoco se puede, entonces sí falla.
+
+    Se lanza `SinCuentaEmisora` sólo cuando el correo NO queda en ningún
+    sitio: es la diferencia entre "esto tarda" y "esto se perdió", y quien
+    llama necesita poder distinguirlas.
+    """
+    try:
+        import app.email.bandeja_salida as bandeja
+        cola_id = bandeja.encolar(contenido, rfq_id=rfq_id, clase=clase, por=por)
+    except Exception as error:
+        log.error("Sin cuenta emisora y sin bandeja de salida (%s): el correo "
+                  "a %s NO sale. %s", error,
+                  contenido.get("destinatario"), diag.get("nota") or "")
+        raise SinCuentaEmisora(diag["modo"], diag["faltan"]) from error
+
+    log.info("Este proceso no tiene cuenta emisora (%s): el correo a %s queda "
+             "en la bandeja de salida (id %s, %s) y lo manda la aplicación de "
+             "escritorio en su ciclo.",
+             diag["modo"], contenido.get("destinatario"), cola_id, clase)
+    return True
 
 
 def _adjuntos(contenido):

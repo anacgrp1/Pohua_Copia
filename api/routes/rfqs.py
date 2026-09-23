@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -39,18 +39,28 @@ router = APIRouter(prefix="/api/rfqs", tags=["rfqs"])
 
 @router.get("", response_model=RFQListResponse)
 def list_rfqs(
-    estado: Optional[str] = Query(None, description="Filter by estado"),
+    estado: Optional[str] = Query(
+        None, description="Filter by estado; several separated by comma"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     usuario: UsuarioSesion = Depends(exige("rfq:leer")),
 ):
     """Lists RFQs ordered by most recent first."""
-    conditions = []
-    params = []
+    conditions: list[str] = []
+    params: list[Any] = []
 
     if estado:
-        conditions.append("r.estado = %s")
-        params.append(estado)
+        # Varios estados separados por coma: "Approved,Declined" es UNA
+        # consulta, no dos. El apartado de RFQ decididos los quiere juntos y
+        # en orden de fecha; pedirlos por separado obligaría a mezclarlos y
+        # reordenarlos en el navegador, y a paginar dos listas a la vez.
+        pedidos = [e.strip() for e in estado.split(",") if e.strip()]
+        if len(pedidos) == 1:
+            conditions.append("r.estado = %s")
+            params.append(pedidos[0])
+        elif pedidos:
+            conditions.append("r.estado = ANY(%s)")
+            params.append(pedidos)
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 
@@ -319,6 +329,48 @@ def revision_rfq(
     return _ventana(detalle, usuario,
                     resorte=asegurado["resorte"] or {},
                     lectura=asegurado["lectura"])
+
+
+def _espiras_para_la_hoja(resorte: dict) -> dict:
+    """Las espiras TOTALES que hay que mandarle a la calculadora, y de dónde salen.
+
+    La hoja de resortes trata lo que le llega como el TOTAL: hace
+    ``Na = Nt - espiras_muertas`` en cuanto lo recibe. Así que mandarle las
+    activas es un error de dos espiras que se propaga a todo lo demás —altura
+    sólida, paso, rigidez, carga, esfuerzo, peso y precio—, y no se ve, porque
+    la hoja enseña números perfectamente coherentes entre sí.
+
+    El agujero que esto tapa
+    ------------------------
+    Cuando el plano acota las ACTIVAS y no las totales, este endpoint mandaba
+    ``espiras_totales: null`` y tiraba las activas. En la hoja la casilla
+    "Total Coils" quedaba vacía, parecía que faltaba un dato que en realidad
+    ya estaba resuelto, y quien cotizaba escribía a mano lo único que veía en
+    el plano: las activas. Dos espiras de menos en el peso, y una cotización
+    entera construida sobre ellas.
+
+    Esa trampa ya estaba tapada en la ventana de revisión y NO aquí, que es la
+    pantalla donde de verdad se cotiza.
+
+    Se manda el total resuelto —leído del plano, o deducido de las activas, la
+    altura sólida o el paso— junto con su procedencia, porque un total leído y
+    uno deducido no valen lo mismo y quien aprueba tiene que distinguirlos.
+    """
+    leidas = costeo_rfq.num(resorte.get("numero_espiras_totales")) if resorte else None
+    if leidas:
+        return {"espiras_totales": leidas, "espiras_origen": None}
+    if not resorte:
+        return {"espiras_totales": None}
+    try:
+        from pricing import espiras as espiras_mod
+        totales, porque = espiras_mod.espiras_totales(resorte)
+    except Exception:      # nunca por esto se queda la hoja sin abrirse
+        return {"espiras_totales": None}
+    if not totales:
+        # Ni leídas ni deducibles. Va vacío A PROPÓSITO: es cuando de verdad
+        # hay que preguntárselo al cliente, y el aviso de peso ya lo dice.
+        return {"espiras_totales": None}
+    return {"espiras_totales": costeo_rfq.num(totales), "espiras_origen": porque}
 
 
 def _espiras_calculadas(resorte: dict) -> dict:
@@ -610,7 +662,10 @@ def cotizacion_inicial(
             "diametro_interior_mm": costeo_rfq.num(resorte.get("diametro_interior_mm")),
             "longitud_libre_mm": costeo_rfq.num(resorte.get("longitud_libre_mm")),
             "longitud_cuerpo_mm": costeo_rfq.num(resorte.get("longitud_cuerpo_mm")),
-            "espiras_totales": costeo_rfq.num(resorte.get("numero_espiras_totales")),
+            # El total RESUELTO, no el crudo: la hoja resta las muertas a lo
+            # que le llegue, así que mandarle las activas sale mal y en
+            # silencio. Ver `_espiras_para_la_hoja`.
+            **_espiras_para_la_hoja(resorte),
             "material_texto": resorte.get("material") or detalle.material,
             "acabado": resorte.get("acabado"),
         },

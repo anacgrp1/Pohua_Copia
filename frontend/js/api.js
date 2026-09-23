@@ -199,6 +199,13 @@ const API = {
         return this.request('GET', `/api/rfqs${qs ? '?' + qs : ''}`);
     },
     getRFQ(rfqId)    { return this.request('GET', `/api/rfqs/${rfqId}`); },
+    // Los ya dictaminados —aprobados y declinados— en una sola lista y en
+    // orden de fecha. Van juntos a propósito: quien busca un caso viejo se
+    // acuerda del cliente y de cuándo fue, no de en cuál de los dos acabó.
+    rfqsDecididos(limit = 25) {
+        return this.request(
+            'GET', `/api/rfqs?estado=Approved,Declined&limit=${limit}`);
+    },
     approveRFQ(rfqId, body = {}) {
         return this.request('POST', `/api/rfqs/${rfqId}/approve`, body);
     },
