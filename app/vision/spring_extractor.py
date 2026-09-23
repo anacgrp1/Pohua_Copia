@@ -1,5 +1,6 @@
 """
-Interpreta el JSON devuelto por el modelo de visión y AÍSLA las
+SUBTAREA 2 [Lógica]
+Interpreta el JSON devuelto por el modelo de visión (Subtarea 1) y AÍSLA las
 variables físicas del resorte: los datos necesarios para la cotización en el
 entorno de ejecución. Los datos se pueden entregar como MATRIZ (a_matriz).
 
@@ -10,7 +11,7 @@ import json
 import logging
 import re
 from dataclasses import asdict, dataclass, field
-from typing import List, Optional
+from typing import Any, List, Optional, Union
 
 log = logging.getLogger("cotizador.extractor")
 
@@ -143,7 +144,7 @@ class ResorteCotizacion:
         datos["faltantes"] = self.faltantes()
         return datos
 
-    def a_matriz(self, incluir_encabezado: bool = True) -> List[list]:
+    def a_matriz(self, incluir_encabezado: bool = True) -> List[List[Any]]:
         """Entrega las variables del resorte como matriz (lista de filas)."""
         return _construir_matriz(self.to_dict(), incluir_encabezado)
 
@@ -185,7 +186,105 @@ def extraer_json(texto):
         except json.JSONDecodeError as error:
             raise ExtraccionError(f"JSON localizado pero inválido: {error}") from error
 
+    # 4) La respuesta se CORTÓ a media frase.
+    #
+    # Pasa de verdad y pasaba a ratos: mismo plano, mismo modelo, unas veces
+    # sí y otras no. El motivo es que la respuesta se acerca al tope de
+    # `VISION_MAX_TOKENS` y a veces lo pasa; cuando lo pasa, el JSON se queda
+    # sin cerrar y aquí no había nada que hacer con él.
+    #
+    # Pero casi todo estaba: las cotas van al principio del esquema y lo que
+    # se pierde por el final son las advertencias. Tirar la respuesta entera
+    # —y con ella la llamada, que se paga— por unas comillas sin cerrar es un
+    # despilfarro. Se cierra lo que quedó abierto y se rescata lo completo.
+    rescatado = _cerrar_a_la_fuerza(texto)
+    if rescatado is not None:
+        log.warning("La respuesta del modelo se cortó (probablemente por "
+                    "VISION_MAX_TOKENS): se rescataron %d campo(s). Sube el "
+                    "tope si esto se repite.", len(rescatado))
+        rescatado.setdefault("advertencias", [])
+        if isinstance(rescatado.get("advertencias"), list):
+            rescatado["advertencias"].append(
+                "la respuesta del lector se cortó por longitud: puede faltar "
+                "parte de lo que leyó")
+        return rescatado
+
     raise ExtraccionError("No se encontró ningún objeto JSON en la respuesta.")
+
+
+def _cerrar_a_la_fuerza(texto):
+    """Cierra un objeto JSON que se quedó a medias y lo parsea. ``None`` si no.
+
+    Sólo se usa cuando el objeto NO está balanceado, es decir, cuando la
+    respuesta se cortó. Se recorta hasta el último campo que esté entero y se
+    cierran las llaves y corchetes que quedaran abiertos.
+
+    Nunca inventa valores: lo que se perdió, se perdió. Lo que hace es no
+    perder además lo que sí llegó.
+    """
+    inicio = texto.find("{")
+    if inicio == -1:
+        return None
+
+    pila = []
+    en_cadena = False
+    escape = False
+    # Hasta dónde se puede cortar sin partir un valor por la mitad: la última
+    # coma o llave que estaba fuera de una cadena.
+    ultimo_seguro = None
+
+    for i in range(inicio, len(texto)):
+        car = texto[i]
+        if en_cadena:
+            if escape:
+                escape = False
+            elif car == "\\":
+                escape = True
+            elif car == '"':
+                en_cadena = False
+                ultimo_seguro = i
+            continue
+        if car == '"':
+            en_cadena = True
+        elif car in "{[":
+            pila.append("}" if car == "{" else "]")
+        elif car in "}]":
+            if pila:
+                pila.pop()
+            ultimo_seguro = i
+        elif car == ",":
+            ultimo_seguro = i - 1      # antes de la coma: el valor ya entero
+
+    if not pila:
+        return None                    # estaba balanceado: no es este caso
+
+    if ultimo_seguro is None:
+        return None                    # no llegó ni un campo entero
+
+    recorte = texto[inicio:ultimo_seguro + 1]
+    cierre = "".join(reversed(pila))
+
+    # Se prueba a cerrar; si no cuadra —el corte cayó en una clave sin su
+    # valor, o dentro de un número— se retrocede hasta la coma anterior y se
+    # vuelve a probar. Cada paso atrás pierde un campo y conserva los demás,
+    # que es exactamente el trato que se quiere.
+    #
+    # Se intenta un número acotado de veces: si tras unos cuantos saltos sigue
+    # sin parsear, lo que hay no es una respuesta cortada sino otra cosa, y
+    # seguir recortando sería empeñarse en sacar datos de algo que no los
+    # tiene.
+    for _ in range(12):
+        prueba = recorte.rstrip().rstrip(",")
+        if not prueba or prueba == "{":
+            return None
+        try:
+            return json.loads(prueba + cierre)
+        except json.JSONDecodeError:
+            coma = prueba.rfind(",")
+            if coma == -1:
+                return None
+            recorte = prueba[:coma]
+    return None
 
 
 def _recortar_objeto(texto):
@@ -307,14 +406,63 @@ def normalizar(datos_crudos):
     resorte.advertencias = _a_lista(datos_crudos.get("advertencias"))
     resorte.confianza = _a_confianza(datos_crudos.get("confianza"))
 
-    # Deriva diámetro medio si faltó pero hay exterior y alambre
+    _completar_diametros(resorte)
+    return resorte
+
+
+# Los tres diámetros de un resorte helicoidal no son tres datos: son dos, y el
+# tercero sale de los otros. OD = ID + 2d, siempre, por definición de cómo se
+# enrolla un alambre redondo.
+#
+# Por qué esto vive en el código y no en el prompt
+# ------------------------------------------------
+# Al lector se le prohíbe inventar, y hace bien: un número estimado se
+# convierte en un costo de material estimado que viaja hasta la oferta sin que
+# nadie lo vuelva a mirar. Pero entonces un plano que acota el exterior y el
+# interior y NO el alambre se quedaba sin calibre —el lector lo anotaba en sus
+# advertencias («sólo se puede inferir a partir de la diferencia entre 1.94 y
+# 1.53») y ahí moría—, y sin calibre no hay máquina, ni precio de material, ni
+# peso: el RFQ entero se paraba por una resta.
+#
+# Una resta no es una estimación. Hacerla aquí es determinista, se puede
+# auditar, sale igual las mil veces y no cuesta una llamada al modelo. Lo que
+# NO se puede hacer aquí es adivinar las espiras: eso sí es un dato que o está
+# en el plano o no está.
+def _completar_diametros(resorte) -> None:
+    """Rellena el diámetro que falte a partir de los otros dos. Anota cuál."""
+    d = resorte.diametro_alambre_mm
+    od = resorte.diametro_exterior_mm
+    idd = resorte.diametro_interior_mm
+
+    def anota(texto):
+        if texto not in (resorte.advertencias or []):
+            resorte.advertencias = list(resorte.advertencias or []) + [texto]
+
+    # El calibre, de la diferencia entre exterior e interior. Es el que
+    # desbloquea el costeo, así que es el que más importa.
+    if d is None and od is not None and idd is not None and od > idd:
+        d = round((od - idd) / 2, 4)
+        resorte.diametro_alambre_mm = d
+        anota(f"el diámetro de alambre no venía acotado: se calculó como "
+              f"(OD - ID)/2 = ({od:g} - {idd:g})/2 = {d:g} mm")
+
+    # El interior, si hay exterior y calibre.
+    if idd is None and od is not None and d is not None:
+        resorte.diametro_interior_mm = round(od - 2 * d, 4)
+
+    # El exterior, si hay interior y calibre.
+    if od is None and idd is not None and d is not None:
+        od = round(idd + 2 * d, 4)
+        resorte.diametro_exterior_mm = od
+        anota(f"el diámetro exterior no venía acotado: se calculó como "
+              f"ID + 2d = {idd:g} + 2x{d:g} = {od:g} mm")
+
+    # Y el medio, que es el que usa el peso: Dm = OD - d.
     if (resorte.diametro_medio_mm is None
             and resorte.diametro_exterior_mm is not None
             and resorte.diametro_alambre_mm is not None):
         resorte.diametro_medio_mm = round(
             resorte.diametro_exterior_mm - resorte.diametro_alambre_mm, 4)
-
-    return resorte
 
 
 # ============================================================================
@@ -323,9 +471,9 @@ def normalizar(datos_crudos):
 ENCABEZADO_MATRIZ = ["Variable", "Descripción", "Valor", "Unidad", "Obligatoria cotizar"]
 
 
-def _construir_matriz(datos, incluir_encabezado=True) -> list[list]:
+def _construir_matriz(datos: dict, incluir_encabezado: bool = True) -> List[List[Any]]:
     """Construye la matriz (lista de filas) a partir del dict de datos."""
-    filas = [list(ENCABEZADO_MATRIZ)] if incluir_encabezado else []
+    filas: List[List[Any]] = [list(ENCABEZADO_MATRIZ)] if incluir_encabezado else []
     for campo in ORDEN_MATRIZ:
         valor = datos.get(campo)
         if isinstance(valor, list):
@@ -340,7 +488,9 @@ def _construir_matriz(datos, incluir_encabezado=True) -> list[list]:
     return filas
 
 
-def a_matriz(datos, incluir_encabezado=True):
+def a_matriz(
+    datos: Union[dict, ResorteCotizacion], incluir_encabezado: bool = True
+) -> List[List[Any]]:
     """
     Entrega las variables del resorte como MATRIZ (lista de filas).
     Acepta el dict de interpretar() o una instancia ResorteCotizacion.
@@ -352,7 +502,7 @@ def a_matriz(datos, incluir_encabezado=True):
 
 
 # ============================================================================
-# Punto de entrada
+# Punto de entrada (Subtarea 2)
 # ============================================================================
 def interpretar(respuesta_texto, como_matriz=False):
     """

@@ -1077,12 +1077,23 @@
     /**
      * Copiar al catálogo de la calculadora un cliente que Pohua YA tiene.
      *
-     * Son dos catálogos distintos: el de Pohua —donde un cliente entra cuando
-     * se registra su dominio— y el de la calculadora, que vive en el documento
-     * compartido. Un cliente que está en el primero y no en el segundo deja la
-     * casilla "Customer" vacía, y sin cliente la cotización no se puede ni
-     * numerar ni aprobar: había que teclear a mano un nombre que el sistema ya
-     * conocía.
+     * YA CASI NUNCA HACE FALTA, y conviene saber por qué sigue aquí.
+     *
+     * Eran dos catálogos distintos —el de Pohua, donde un cliente entra
+     * cuando se registra su dominio, y el de la calculadora, que vivía dentro
+     * del documento compartido— y divergían solos: un cliente que Pohua
+     * conocía perfectamente dejaba la casilla "Customer" vacía, y sin cliente
+     * la cotización no se puede ni numerar ni aprobar.
+     *
+     * Ya no son dos. El servidor arma `dbs.customers` desde la tabla
+     * `clientes` cada vez que sirve el documento
+     * (`app/clients/catalogo_hoja.py`), así que al abrir un RFQ el cliente ya
+     * está en la lista.
+     *
+     * Esto se queda de red: si ese día la base no contestara, el servidor
+     * deja el catálogo que hubiera y esta función sigue sabiendo rellenar el
+     * hueco. Comprueba antes si ya está, así que cuando todo va bien no hace
+     * nada.
      *
      * Se copia SÓLO lo que Pohua ya dio de alta. Un remitente desconocido no
      * crea nada: el nombre que el modelo leyó de un correo no es un alta, y

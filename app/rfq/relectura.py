@@ -146,6 +146,57 @@ def olvidar_intentos() -> None:
     _INTENTADO.clear()
 
 
+def leer_en_segundo_plano(rfq_id: str, resorte: Optional[dict],
+                          message_id: str = "") -> bool:
+    """Lanza la lectura del plano SIN esperarla. Devuelve si se lanzó.
+
+    Por qué
+    -------
+    La ficha del RFQ leía el plano dentro de la propia petición, así que la
+    pantalla se quedaba en blanco lo que tardara el modelo —y leer un plano
+    con un modelo de visión son segundos, no milésimas—. Peor: esa espera se
+    pagaba al ABRIR la ficha, que es la pantalla más visitada, y para ver unos
+    datos que el 90% de las veces ya estaban en la base.
+
+    Así que la ficha ya no espera. Pinta al instante lo que hay guardado y
+    manda leer por detrás; cuando alguien vuelva a entrar —o abra la ventana
+    de revisión, que sí espera porque ahí se decide— las cotas están.
+
+    La ventana de revisión conserva la lectura SÍNCRONA a propósito: ahí el PM
+    va a aprobar o declinar, y dictaminar sobre un plano sin leer es
+    dictaminar sobre seis rayas. Esa espera está justificada; la de la ficha
+    no lo estaba.
+    """
+    if not falta_geometria(resorte):
+        return False
+    if _INTENTADO.get(rfq_id) in ("definitivo", "corriendo"):
+        return False
+
+    import threading
+
+    # "corriendo" evita que dos pestañas abiertas a la vez manden dos
+    # lecturas del mismo plano: son dos llamadas cobradas para guardar lo
+    # mismo, y la segunda además pisaría a la primera.
+    _INTENTADO[rfq_id] = "corriendo"
+
+    def _trabajo():
+        try:
+            lectura = releer(rfq_id, message_id=message_id)
+            if lectura["estado"] == "leido" and lectura["resorte"]:
+                _INTENTADO.pop(rfq_id, None)
+            else:
+                _INTENTADO[rfq_id] = ("pasajero" if lectura.get("reintentar")
+                                      else "definitivo")
+        except Exception:
+            # Nadie está esperando esto: si revienta, se apunta y ya.
+            _INTENTADO[rfq_id] = "pasajero"
+            log.exception("RFQ=%s: falló la lectura en segundo plano.", rfq_id)
+
+    threading.Thread(target=_trabajo, name=f"plano-{rfq_id}",
+                     daemon=True).start()
+    return True
+
+
 def asegurar_resorte_una_vez(rfq_id: str, resorte: Optional[dict],
                              message_id: str = "", cliente=None) -> Dict[str, Any]:
     """Como ``asegurar_resorte``, pero sin reintentar lo que no se va a arreglar.

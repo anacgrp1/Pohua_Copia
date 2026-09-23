@@ -318,6 +318,15 @@ def analizar_dibujos(archivos, cliente=None):
             getattr(config.settings, "VISION_TEMPERATURE", None)),
     )
 
+    # ¿Se cortó por el tope? La API lo dice, y es la diferencia entre "el
+    # modelo no supo" y "no le dejamos terminar la frase". Sin mirarlo, lo
+    # segundo se investiga durante horas como si fuera lo primero.
+    corte = getattr(respuesta, "stop_reason", None)
+    if corte == "max_tokens":
+        log.warning("La respuesta del lector se cortó en el tope de "
+                    "VISION_MAX_TOKENS (%s). Se aprovechará lo que llegó, "
+                    "pero conviene subirlo.", config.settings.VISION_MAX_TOKENS)
+
     # Concatena los bloques de texto de la respuesta
     texto = "".join(
         getattr(parte, "text", "") for parte in respuesta.content
@@ -336,6 +345,7 @@ def analizar_dibujos(archivos, cliente=None):
         "omitidos": omitidos,
         "modelo": config.settings.VISION_MODEL,
         "uso": uso,
+        "cortada": corte == "max_tokens",
     }
 
 

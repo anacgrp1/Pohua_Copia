@@ -83,8 +83,16 @@ def leer_estado(usuario: UsuarioSesion = Depends(_sesion)) -> Dict[str, Any]:
         with conn.cursor() as cur:
             estado = _leer_estado(cur)
 
-    if estado is None:
-        return {"estado": "vacio", "texto": "", "rev": 0, "mod": 0}
+        if estado is None:
+            return {"estado": "vacio", "texto": "", "rev": 0, "mod": 0}
+
+        # El catálogo de clientes sale de la tabla `clientes`, no del blob.
+        # Eran dos catálogos distintos y divergían solos: un cliente que
+        # Pohua conocía aparecía sin resolver en la hoja, y sin cliente una
+        # cotización no se puede ni numerar ni aprobar. Ver
+        # `app/clients/catalogo_hoja.py`.
+        import app.clients.catalogo_hoja as catalogo
+        catalogo.aplicar(estado["documento"], conn)
 
     return {
         "estado": "datos",
@@ -169,10 +177,23 @@ async def guardar_estado(
                 RETURNING rev, EXTRACT(EPOCH FROM guardado_en) * 1000
             """, (texto, usuario.correo))
             rev, mod = cur.fetchone()
+
+        # Y el otro sentido: un cliente dado de alta DENTRO de la hoja sube a
+        # `clientes`, que es donde se va a buscar cuando llegue su primer
+        # correo. Sin esto volveríamos a tener dos catálogos, ahora al revés.
+        #
+        # Va después del guardado y antes del commit: si el alta falla, el
+        # documento se guarda igual —que es lo que la persona pidió— y lo
+        # único que se pierde es la copia del cliente en la tabla, que la
+        # siguiente vez se vuelve a intentar.
+        import app.clients.catalogo_hoja as catalogo
+        nuevos = catalogo.recoger(documento, conn)
+
         conn.commit()
 
-    log.info("Estado de la calculadora guardado por %s (rev %s, %d KB).",
-             usuario.correo, rev, len(crudo) // 1024)
+    log.info("Estado de la calculadora guardado por %s (rev %s, %d KB%s).",
+             usuario.correo, rev, len(crudo) // 1024,
+             f", {nuevos} cliente(s) nuevos" if nuevos else "")
     return {"rev": int(rev), "mod": int(mod or 0), "guardado_por": usuario.correo}
 
 

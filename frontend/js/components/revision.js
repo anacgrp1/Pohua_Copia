@@ -632,6 +632,112 @@ const Revision = (() => {
         } finally { bloquear(false); }
     }
 
+    /**
+     * Declinar: el único botón de esta ventana que sale de la empresa.
+     *
+     * Existía desde el principio —con su diálogo ya escrito en los tres
+     * idiomas— y nunca llegó a haber una función detrás. El clic moría con un
+     * `ReferenceError` en la consola y la pantalla no se inmutaba: ni un
+     * aviso, ni un error, nada. El mismo fallo que tuvo `cotizar` en su día.
+     *
+     * Eso, en un botón que DECLINA, es de lo peor que puede pasar: quien lo
+     * pulsaba se quedaba convencido de haber rechazado el RFQ, y el RFQ
+     * seguía vivo esperando dictamen. El cliente, sin respuesta.
+     *
+     * Tres cosas que este botón sí hace ahora:
+     *
+     *  - Pide el motivo, y no sigue sin él. Se guarda en las notas del RFQ,
+     *    que es donde lo va a buscar dentro de seis meses quien se pregunte
+     *    por qué se rechazó esta pieza. El cliente NO lo lee: el correo de
+     *    declinación es el machote de la empresa y no incluye la nota.
+     *  - Avisa de que el correo sale y de que no se puede deshacer, con el
+     *    diálogo en rojo.
+     *  - Dice si el correo SALIÓ DE VERDAD. El servidor lo devuelve en
+     *    `correo_enviado`, y puede ser que no: con el envío automático
+     *    apagado, o sin remitente en el correo original, el RFQ queda
+     *    declinado y el comprador sin enterarse. Callarlo sería dejar al PM
+     *    creyendo que avisó.
+     */
+    async function declinar() {
+        if (!API.puede('rfq:dictaminar')) { Toast.error(I18N.t('aviso.sinPermisoRfq')); return; }
+        // La ventana también sirve para mirar un borrador de la calculadora,
+        // y ahí no hay nada que declinar: no hay RFQ ni cliente a quien
+        // escribir.
+        if (datos && datos.esCotizacion) { Toast.warning(I18N.t('rev.sinDictamen')); return; }
+
+        const motivo = await Confirmar.pedir({
+            titulo: I18N.t('dlg.rechazar.titulo'),
+            mensaje: I18N.t('dlg.rechazar.mensaje'),
+            aceptar: I18N.t('dlg.rechazar.si'),
+            peligro: true,
+            campo: { etiqueta: I18N.t('dlg.rechazar.motivo'),
+                     marcador: I18N.t('dlg.rechazar.ejemplo') },
+        });
+        if (motivo === null) return;                 // canceló
+        if (!String(motivo).trim()) {
+            // Declinar sin decir por qué deja el rastro vacío justo donde más
+            // falta hace. Se pide otra vez en vez de dejarlo pasar.
+            Toast.warning(I18N.t('aviso.motivoHace'));
+            return;
+        }
+
+        bloquear(true);
+        const id = rfqAbierto;
+        try {
+            const r = await API.declineRFQ(id, { nota: String(motivo).trim() });
+            cerrar();
+            if (r && r.correo_enviado) {
+                Toast.success(I18N.t('aviso.rfqRechazadaAviso'));
+            } else {
+                // No es un error: el dictamen quedó. Pero hay que decirlo.
+                Toast.warning(I18N.t('aviso.rfqRechazadaSinCorreo'));
+            }
+            // Repinta la pantalla de debajo para que el RFQ salga ya con
+            // su nuevo estado, sin que haya que recargar a mano.
+            if (typeof APP !== 'undefined' && APP.handleRoute) APP.handleRoute();
+        } catch (err) {
+            if (!err.sesionExpirada) Toast.error(err.message);
+        } finally { bloquear(false); }
+    }
+
+    /**
+     * Devolver: ni aprueba ni declina, y NO sale nada al cliente.
+     *
+     * Es la salida para el caso más común de todos —falta un dato, hay que
+     * preguntarle algo al comprador, el plano no cuadra— y también estaba sin
+     * escribir.
+     *
+     * El motivo es obligatorio por lo mismo que en declinar, pero aquí pesa
+     * todavía más: un RFQ devuelto sin decir qué le falta es un RFQ que vuelve
+     * igual de incompleto y le hace perder el viaje a dos personas.
+     */
+    async function devolver() {
+        if (!API.puede('rfq:dictaminar')) { Toast.error(I18N.t('aviso.sinPermisoRfq')); return; }
+        if (datos && datos.esCotizacion) { Toast.warning(I18N.t('rev.sinDictamen')); return; }
+
+        const nota = await Confirmar.pedir({
+            titulo: I18N.t('dlg.devolver.titulo'),
+            mensaje: I18N.t('dlg.devolver.mensaje'),
+            aceptar: I18N.t('dlg.devolver.si'),
+            campo: { etiqueta: I18N.t('dlg.devolver.motivo'),
+                     marcador: I18N.t('dlg.devolver.ejemplo') },
+        });
+        if (nota === null) return;
+        if (!String(nota).trim()) { Toast.warning(I18N.t('aviso.motivoHace')); return; }
+
+        bloquear(true);
+        try {
+            await API.rfqSendBack(rfqAbierto, String(nota).trim());
+            cerrar();
+            Toast.success(I18N.t('aviso.rfqDevuelta'));
+            // Repinta la pantalla de debajo para que el RFQ salga ya con
+            // su nuevo estado, sin que haya que recargar a mano.
+            if (typeof APP !== 'undefined' && APP.handleRoute) APP.handleRoute();
+        } catch (err) {
+            if (!err.sesionExpirada) Toast.error(err.message);
+        } finally { bloquear(false); }
+    }
+
     /** La cotización entera: la calculadora, abierta con este RFQ dentro.
 
         "Completa" es literal: las dos hojas —Quote y Spring Calc— con lo que

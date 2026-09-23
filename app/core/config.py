@@ -121,7 +121,14 @@ class Settings:
     # borrosa de un dibujo escaneado sin inventarse el número. Aquí no se
     # ahorra: una cota mal leída se convierte en un precio mal cotizado.
     VISION_MODEL: str = "claude-opus-5"
-    VISION_MAX_TOKENS: int = 2048
+    # 2048 se quedaba corto desde que al lector se le pide que anote lo que
+    # supone: seis advertencias razonadas más el esquema entero pasan del
+    # tope, la respuesta se corta a media frase y el JSON llega sin cerrar.
+    # Se veía como un fallo intermitente —mismo plano, mismo modelo, unas
+    # veces sí y otras no—, que es la clase de fallo que más cuesta atar.
+    # Con 4096 cabe de sobra; y si aun así se cortara, el extractor rescata
+    # lo que llegó en vez de tirar la llamada entera.
+    VISION_MAX_TOKENS: int = 4096
     # Vacía a propósito: los modelos recientes RECHAZAN `temperature` con un
     # 400 («is deprecated for this model») y se llevan por delante la llamada
     # entera. Para lo que se les pide aquí —devolver JSON de un plano, leer

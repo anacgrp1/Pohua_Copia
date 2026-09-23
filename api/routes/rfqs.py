@@ -179,16 +179,20 @@ def get_rfq(
     # dibujo seguía guardado esperando a que alguien abriera otra pantalla.
     # Los datos ya son del sistema: traerlos no debería pedir intervención.
     #
-    # `_una_vez` es lo que hace que esto no cueste una fortuna: un plano
-    # ilegible o una clave revocada se intentan una vez por proceso, no una
-    # vez por repintado.
+    # Sin esperarla. Leer un plano con un modelo de visión son segundos, y
+    # esta es la pantalla más visitada: cobrarle esa espera a cada apertura
+    # —casi siempre para redescubrir lo que ya estaba guardado— era el motivo
+    # de que la ficha tardara tanto en pintar.
+    #
+    # La ventana de revisión sigue esperando la lectura, y ahí sí toca: es
+    # donde se aprueba o se declina, y dictaminar sobre un plano sin leer es
+    # dictaminar sobre seis rayas.
     try:
         import app.rfq.relectura as relectura
-        asegurado = relectura.asegurar_resorte_una_vez(
+        relectura.leer_en_segundo_plano(
             rfq_id, resorte, message_id=data.get("message_id") or "")
-        resorte = asegurado["resorte"] or resorte
     except Exception:
-        log.debug("RFQ %s: no se pudo asegurar el resorte en la ficha.", rfq_id)
+        log.debug("RFQ %s: no se pudo lanzar la lectura del plano.", rfq_id)
 
     return RFQDetail(**data, banderas=banderas, resorte=resorte)
 

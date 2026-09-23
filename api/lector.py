@@ -36,9 +36,12 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Optional, Tuple
 
 from pricing import nucleo
+
+if TYPE_CHECKING:
+    from app.auth.tokens import UsuarioSesion
 
 log = logging.getLogger("cotizador.api.lector")
 
@@ -382,7 +385,7 @@ def estado() -> Tuple[bool, str]:
     return _MONTADO, _MOTIVO
 
 
-def usuario_de_cookie(peticion: Any) -> Any:
+def usuario_de_cookie(peticion: Any) -> UsuarioSesion:
     """El usuario de la cookie del lector, o 401/403.
 
     Es la misma comprobación que hace la puerta del montaje, escrita una vez
