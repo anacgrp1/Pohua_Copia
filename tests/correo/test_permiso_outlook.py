@@ -238,3 +238,27 @@ class TestElPermisoSePideAlArrancar:
         import desktop_app.main as escritorio
         fuente = inspect.getsource(escritorio.Lector.run)
         assert fuente.index("_pedir_permiso_a_outlook") < fuente.index("while self._corriendo")
+
+    def test_un_primer_permiso_hace_que_no_vuelva_a_preguntar(self, monkeypatch):
+        import desktop_app.main as escritorio
+
+        monkeypatch.setattr(escritorio, "_permiso_concedido", False)
+        llamadas = []
+        monkeypatch.setattr(op, "pedir_permiso_ahora", lambda: llamadas.append(1) or True)
+        monkeypatch.setattr(escritorio, "ajuste", lambda clave, defecto="": "outlook" if clave == "MAIL_MODE" else defecto)
+
+        lector = escritorio.Lector()
+        lector._pedir_permiso_a_outlook()
+        assert len(llamadas) == 1
+        assert escritorio._permiso_concedido is True
+
+        # Con el primer permiso concedido ya no vuelve a pedirlo
+        lector._pedir_permiso_a_outlook()
+        assert len(llamadas) == 1
+
+    def test_el_lector_ejecuta_el_ciclo(self):
+        import inspect
+
+        import desktop_app.main as escritorio
+        fuente = inspect.getsource(escritorio.Lector.run)
+        assert "ciclo_deteccion(forzar=forzado)" in fuente

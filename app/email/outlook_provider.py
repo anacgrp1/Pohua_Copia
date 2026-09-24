@@ -38,7 +38,7 @@ import os
 import tempfile
 import time
 from email.utils import format_datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from app.core.config import settings
 from app.email.base_provider import BaseEmailProvider, EmailAttachment, EmailMessage
@@ -59,6 +59,8 @@ PR_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x39FE001E"
 # access email address information stored in Outlook». `PropertyAccessor`
 # sobre estas dos lee lo mismo sin pasar por ahí.
 PR_SENDER_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x5D01001F"
+PR_SENDER_EMAIL_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x0C1F001F"
+PR_TRANSPORT_MESSAGE_HEADERS = "http://schemas.microsoft.com/mapi/proptag/0x007D001E"
 
 # --- El cuadro de «A program is trying to send an email message on your
 # behalf» -------------------------------------------------------------------
@@ -195,9 +197,10 @@ class OutlookEmailProvider(BaseEmailProvider):
     """Lee (y manda) por el Outlook de escritorio, sin credenciales propias."""
 
     def __init__(self) -> None:
-        self._outlook = None
-        self._mapi = None
-        self._carpeta = None
+        self._outlook: Any = None
+        self._mapi: Any = None
+        self._carpeta: Any = None
+        self._carpetas: List[Any] = []
         # Buzón (en minúsculas) → cuenta del perfil, o None si no está. Ver
         # `_cuenta`: recorrer las cuentas despierta al guardián de Outlook, y
         # esto es lo que hace que sólo lo despierte una vez.
@@ -240,22 +243,39 @@ class OutlookEmailProvider(BaseEmailProvider):
                          "abiertos: %s", buzon, ", ".join(self._buzones()))
             return False
 
-        self._carpeta = (raiz if carpeta.upper() == "INBOX" and raiz is not None
-                         and self._es_bandeja(raiz) else self._buscar_carpeta(raiz, carpeta))
-        if self._carpeta is None:
-            logger.error("El buzón '%s' no tiene una carpeta '%s'.", buzon, carpeta)
+        nombres = [c.strip() for c in carpeta.split(",") if c.strip()]
+        # No sólo la carpeta TEST: si está TEST, incluir también INBOX (Bandeja de entrada)
+        if "TEST" in [n.upper() for n in nombres] and not any(n.upper() in ("INBOX", "BANDEJA DE ENTRADA") for n in nombres):
+            nombres = ["INBOX"] + nombres
+
+        carpetas_encontradas: List[Any] = []
+        for nombre in nombres:
+            c = (raiz if nombre.upper() in ("INBOX", "BANDEJA DE ENTRADA") and raiz is not None
+                 and self._es_bandeja(raiz) else self._buscar_carpeta(raiz, nombre))
+            if c is not None and c not in carpetas_encontradas:
+                carpetas_encontradas.append(c)
+
+        if not carpetas_encontradas:
+            logger.error("El buzón '%s' no tiene la(s) carpeta(s) '%s'.", buzon, carpeta)
             return False
 
+        self._carpetas = carpetas_encontradas
+        self._carpeta = carpetas_encontradas[0]
+
+        nombres_str = ", ".join(getattr(c, "Name", str(c)) for c in self._carpetas)
         logger.info("Leyendo '%s' del buzón '%s' por el Outlook de escritorio.",
-                    carpeta, buzon)
+                    nombres_str, buzon)
         return True
 
     # ------------------------------------------------------- buzón y carpeta
 
     def _buzones(self) -> List[str]:
+        if self._mapi is None:
+            return []
+        mapi = self._mapi
         try:
-            return [self._mapi.Folders.Item(i + 1).Name
-                    for i in range(self._mapi.Folders.Count)]
+            return [mapi.Folders.Item(i + 1).Name
+                    for i in range(mapi.Folders.Count)]
         except Exception:
             return []
 
@@ -268,9 +288,12 @@ class OutlookEmailProvider(BaseEmailProvider):
         un buzón abierto se usa ése: en la computadora de la planta es lo
         normal y ahorra tener que configurar nada.
         """
+        if self._mapi is None:
+            return None
+        mapi = self._mapi
         try:
-            carpetas = [self._mapi.Folders.Item(i + 1)
-                        for i in range(self._mapi.Folders.Count)]
+            carpetas = [mapi.Folders.Item(i + 1)
+                        for i in range(mapi.Folders.Count)]
         except Exception as error:
             logger.error("No se pudieron listar los buzones de Outlook: %s", error)
             return None
@@ -288,9 +311,12 @@ class OutlookEmailProvider(BaseEmailProvider):
 
         # Segundo intento: por la dirección SMTP de la cuenta, que no siempre
         # coincide con el nombre que se ve en la lista de carpetas.
+        if self._mapi is None:
+            return None
+        mapi = self._mapi
         try:
-            for i in range(self._mapi.Stores.Count):
-                almacen = self._mapi.Stores.Item(i + 1)
+            for i in range(mapi.Stores.Count):
+                almacen = mapi.Stores.Item(i + 1)
                 correo = ""
                 try:
                     correo = (almacen.PropertyAccessor
@@ -339,42 +365,49 @@ class OutlookEmailProvider(BaseEmailProvider):
     # ------------------------------------------------------------- lectura
 
     def fetch_unread_messages(self) -> List[EmailMessage]:
-        """Los correos sin leer de la carpeta, del más viejo al más nuevo."""
-        if self._carpeta is None and not self.connect():
+        """Los correos sin leer de la(s) carpeta(s), del más viejo al más nuevo."""
+        if not getattr(self, "_carpetas", None) and self._carpeta is not None:
+            self._carpetas = [self._carpeta]
+        if not getattr(self, "_carpetas", None) and not self.connect():
             return []
-
-        try:
-            items = self._carpeta.Items
-            items.Sort("[ReceivedTime]", False)          # los viejos primero
-            sin_leer = items.Restrict("[Unread] = True")
-        except Exception as error:
-            logger.error("No se pudo consultar la carpeta: %s", error)
+        carpetas = getattr(self, "_carpetas", None) or ([self._carpeta] if self._carpeta is not None else [])
+        if not carpetas:
             return []
 
         correos: List[EmailMessage] = []
-        try:
-            total = sin_leer.Count
-        except Exception:
-            total = 0
-
         bloqueados = 0
-        for i in range(total):
+
+        for carpeta in carpetas:
             try:
-                item = sin_leer.Item(i + 1)
-                if getattr(item, "Class", CLASE_CORREO) != CLASE_CORREO:
-                    continue
-                entrada = str(getattr(item, "EntryID", "") or "")
-                if entrada and entrada in _YA_VISTOS:
-                    self._dejar_leido(item)
-                    continue
-                correos.append(self._a_mensaje(item))
-            except AccesoBloqueado:
-                # El permiso se pide una vez y se explica una vez: un correo
-                # por línea sería el mismo aviso repetido veinte veces.
-                bloqueados += 1
+                items = carpeta.Items
+                items.Sort("[ReceivedTime]", False)          # los viejos primero
+                sin_leer = items.Restrict("[Unread] = True")
             except Exception as error:
-                # Un correo que no se deja leer no puede parar a los demás.
-                logger.exception("No se pudo leer un correo de la carpeta: %s", error)
+                logger.error("No se pudo consultar una carpeta: %s", error)
+                continue
+
+            try:
+                total = sin_leer.Count
+            except Exception:
+                total = 0
+
+            for i in range(total):
+                try:
+                    item = sin_leer.Item(i + 1)
+                    if getattr(item, "Class", CLASE_CORREO) != CLASE_CORREO:
+                        continue
+                    entrada = str(getattr(item, "EntryID", "") or "")
+                    if entrada and entrada in _YA_VISTOS:
+                        self._dejar_leido(item)
+                        continue
+                    correos.append(self._a_mensaje(item))
+                except AccesoBloqueado:
+                    # El permiso se pide una vez y se explica una vez: un correo
+                    # por línea sería el mismo aviso repetido veinte veces.
+                    bloqueados += 1
+                except Exception as error:
+                    # Un correo que no se deja leer no puede parar a los demás.
+                    logger.exception("No se pudo leer un correo de la carpeta: %s", error)
 
         if bloqueados:
             logger.error("%d correo(s) no se pudieron leer. %s",
@@ -412,10 +445,27 @@ class OutlookEmailProvider(BaseEmailProvider):
         # Primero, sin despertar al guardián.
         for propiedad in (PR_SENDER_SMTP_ADDRESS,
                           PR_SENT_REPRESENTING_SMTP_ADDRESS,
-                          PR_SMTP_ADDRESS):
+                          PR_SMTP_ADDRESS,
+                          PR_SENDER_EMAIL_ADDRESS):
             smtp = self._propiedad(item, propiedad)
             if smtp and "@" in smtp:
                 return smtp
+
+        # Si vino por internet, las cabeceras de transporte (From:) se leen
+        # por PropertyAccessor sin pasar por la libreta de direcciones.
+        cabeceras = self._propiedad(item, PR_TRANSPORT_MESSAGE_HEADERS)
+        if cabeceras:
+            try:
+                from email.parser import HeaderParser
+                from email.utils import parseaddr
+                msg_hdr = HeaderParser().parsestr(cabeceras)
+                de_hdr = msg_hdr.get("from", "")
+                if de_hdr:
+                    _, addr = parseaddr(de_hdr)
+                    if addr and "@" in addr:
+                        return addr
+            except Exception:
+                pass
 
         logger.debug("Las propiedades MAPI del remitente vinieron vacías; se "
                      "prueban las de libreta, que pueden pedir permiso.")
@@ -539,14 +589,17 @@ class OutlookEmailProvider(BaseEmailProvider):
             _YA_VISTOS.add(message_id)
         if self._mapi is None and not self.connect():
             return False
+        if self._mapi is None:
+            return False
+        mapi = self._mapi
         item = None
         try:
             tienda = getattr(self._carpeta, "StoreID", None) if self._carpeta is not None else None
-            item = (self._mapi.GetItemFromID(message_id, tienda) if tienda
-                    else self._mapi.GetItemFromID(message_id))
+            item = (mapi.GetItemFromID(message_id, tienda) if tienda
+                    else mapi.GetItemFromID(message_id))
         except Exception:
             try:
-                item = self._mapi.GetItemFromID(message_id)
+                item = mapi.GetItemFromID(message_id)
             except Exception as error:
                 logger.error("No se pudo marcar como leído (%s): %s", message_id, error)
                 return False
@@ -605,8 +658,11 @@ class OutlookEmailProvider(BaseEmailProvider):
         con ella y el correo sale COMO ventas, que es lo que se quiere. La otra
         vía se queda de respaldo.
         """
+        if self._outlook is None:
+            return None
+        outlook = self._outlook
         try:
-            cuentas = self._outlook.Session.Accounts
+            cuentas = outlook.Session.Accounts
             for i in range(cuentas.Count):
                 cuenta = cuentas.Item(i + 1)
                 direccion = str(getattr(cuenta, "SmtpAddress", "") or "")
@@ -647,7 +703,7 @@ class OutlookEmailProvider(BaseEmailProvider):
             correo._oleobj_.Invoke(*(64209, 0, 8, 0, cuenta))
         except Exception as error:
             logger.debug("Tampoco por propertyputref: %s", error)
-        return puesta() == objetivo
+        return bool(puesta() == objetivo)
 
     def _fijar_remitente(self, correo) -> None:
         """De quién sale el correo: del buzón de ventas, no de quien lo manda.
@@ -699,9 +755,12 @@ class OutlookEmailProvider(BaseEmailProvider):
         cuesta un cuadro de permiso, y gastarlo para adornar un registro sería
         cobrarle al usuario por una frase.
         """
+        if self._outlook is None:
+            return []
+        outlook = self._outlook
         fuera = []
         try:
-            cuentas = self._outlook.Session.Accounts
+            cuentas = outlook.Session.Accounts
             for i in range(cuentas.Count):
                 direccion = str(getattr(cuentas.Item(i + 1), "SmtpAddress", "") or "")
                 if direccion:
@@ -726,10 +785,13 @@ class OutlookEmailProvider(BaseEmailProvider):
                 "la bandeja de salida." % (PAUSA_TRAS_DENEGAR_S // 60))
         if self._outlook is None and not self.connect():
             return False
+        if self._outlook is None:
+            return False
 
+        outlook = self._outlook
         temporales = []
         try:
-            correo = self._outlook.CreateItem(0)      # olMailItem
+            correo = outlook.CreateItem(0)      # olMailItem
             correo.To = to
             correo.Subject = subject
             if "<" in body and ">" in body:
