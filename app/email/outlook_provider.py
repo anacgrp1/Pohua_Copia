@@ -124,6 +124,44 @@ def outlook_confia() -> Optional[bool]:
     except Exception as error:
         logger.debug("No se pudo preguntar a Outlook si confía: %s", error)
         return None
+
+
+def pedir_permiso_ahora() -> Optional[bool]:
+    """Provoca AHORA el aviso «A program is trying to access e-mail address
+    information», en vez de dejar que salga con el primer correo.
+
+    Outlook no lo saca al conectarse: lo saca la primera vez que se lee una
+    dirección, o sea, cuando llega el primer correo sin leer. Eso podía ser
+    media hora después de arrancar, con la ventana escondida detrás de otra y
+    el lector parado esperando. Aquí se lee a propósito la dirección del
+    propio usuario —``Session.CurrentUser.Address``, que es de las que el
+    guardián vigila— nada más arrancar, para que la ventana salga cuando
+    todavía se está mirando la pantalla y se marque «Allow access for 10
+    minutes» de una vez.
+
+    Devuelve True si Outlook dejó leer, False si se pulsó «Deny» y None si no
+    se pudo preguntar (sin Outlook, sin pywin32). Cuando Outlook confía en el
+    programa (antivirus válido en el Centro de confianza) no sale ninguna
+    ventana y devuelve True.
+    """
+    try:
+        import pythoncom
+        import win32com.client
+        pythoncom.CoInitialize()
+        sesion = win32com.client.Dispatch("Outlook.Application").GetNamespace("MAPI")
+        direccion = sesion.CurrentUser.Address
+        logger.info("Outlook dejó leer la dirección del usuario (%s): permiso dado.",
+                    direccion or "?")
+        return True
+    except Exception as error:
+        if _es_denegado(error):
+            logger.warning("Se pulsó «Deny» en el aviso de Outlook: los correos se "
+                           "quedarán sin leer hasta que se permita.")
+            return False
+        logger.debug("No se pudo pedir el permiso a Outlook: %s", error)
+        return None
+
+
 PR_SENT_REPRESENTING_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x5D02001F"
 # Para incrustar la firma: el "cid" del HTML y la marca de "no la
 # enseñes como archivo adjunto".

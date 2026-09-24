@@ -137,6 +137,7 @@ class Lector(QThread):
         self._corriendo = True
         self._forzar = False       # "Leer ahora": se salta el horario
         self._salida_espera_hasta = 0.0
+        self._permiso_denegado = False
 
     def leer_ahora(self):
         self._forzar = True
@@ -144,17 +145,39 @@ class Lector(QThread):
     def parar(self):
         self._corriendo = False
 
+    def _pedir_permiso_a_outlook(self):
+        """El aviso de seguridad de Outlook, nada más arrancar y no con el
+        primer correo. Así sale mientras se mira la pantalla, y se marca
+        «Allow access for 10 minutes» de una vez."""
+        if str(ajuste("MAIL_MODE", "")).lower() != "outlook":
+            return
+        from app.email.outlook_provider import pedir_permiso_ahora
+        self.dice.emit("info", "Pidiendo permiso a Outlook. Si sale su aviso, "
+                               "marca «Allow access for 10 minutes» y pulsa Allow.")
+        permiso = pedir_permiso_ahora()
+        self._permiso_denegado = permiso is False
+        if permiso is True:
+            self.dice.emit("ok", "Outlook dio permiso para leer el buzón.")
+        elif permiso is False:
+            self.dice.emit("aviso", "Se pulsó Deny: los correos se quedan sin leer. "
+                                    "Pulsa «Leer ahora» para volver a pedirlo.")
+
     def run(self):
         import app.rfq.horario as horario
         from app.main import ciclo_deteccion
 
         minutos = int(ajuste("INTERVALO_MINUTOS", 5) or 5)
         self.dice.emit("info", f"Lector en marcha. Un ciclo cada {minutos} min.")
+        self._pedir_permiso_a_outlook()
         esperando_apertura = False
 
         while self._corriendo:
             forzado = self._forzar
             self._forzar = False
+            if forzado and self._permiso_denegado:
+                # «Leer ahora» después de un Deny: se vuelve a pedir, para
+                # que no haga falta reiniciar el lector.
+                self._pedir_permiso_a_outlook()
 
             if not forzado and not horario.abierto():
                 if not esperando_apertura:

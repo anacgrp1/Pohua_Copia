@@ -189,3 +189,52 @@ class TestNoSeReleeLoYaAtendido:
         p._carpeta = type("Carpeta", (), {"Items": Coleccion()})()
         monkeypatch.setattr(op, "_YA_VISTOS", {"ENTRY-1"})
         assert p.fetch_unread_messages() == []
+
+
+class TestElPermisoSePideAlArrancar:
+    """El aviso de direcciones, nada más arrancar y no con el primer correo."""
+
+    def _con_outlook(self, monkeypatch, sesion):
+        import sys
+        import types
+
+        class _App:
+            def GetNamespace(self, _):
+                return sesion
+        win32 = types.SimpleNamespace(client=types.SimpleNamespace(
+            Dispatch=lambda nombre: _App()))
+        monkeypatch.setitem(sys.modules, "pythoncom",
+                            types.SimpleNamespace(CoInitialize=lambda: None))
+        monkeypatch.setitem(sys.modules, "win32com", win32)
+        monkeypatch.setitem(sys.modules, "win32com.client", win32.client)
+
+    def test_lee_la_direccion_del_usuario_a_proposito(self, monkeypatch):
+        class Sesion:
+            class CurrentUser:
+                Address = "sales.isc@cgr-international.com"
+        self._con_outlook(monkeypatch, Sesion())
+        assert op.pedir_permiso_ahora() is True
+
+    def test_un_deny_se_reconoce(self, monkeypatch):
+        class Sesion:
+            @property
+            def CurrentUser(self):
+                raise ComError(op.E_ABORT, "Denied", None, None)
+        self._con_outlook(monkeypatch, Sesion())
+        assert op.pedir_permiso_ahora() is False
+
+    def test_sin_outlook_no_se_sabe(self, monkeypatch):
+        class Sesion:
+            @property
+            def CurrentUser(self):
+                raise RuntimeError("no hay Outlook")
+        self._con_outlook(monkeypatch, Sesion())
+        assert op.pedir_permiso_ahora() is None
+
+    def test_el_lector_lo_pide_antes_del_primer_ciclo(self):
+        # La llamada va en `run`, antes del bucle de ciclos.
+        import inspect
+
+        import desktop_app.main as escritorio
+        fuente = inspect.getsource(escritorio.Lector.run)
+        assert fuente.index("_pedir_permiso_a_outlook") < fuente.index("while self._corriendo")
