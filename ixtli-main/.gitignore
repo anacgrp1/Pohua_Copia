@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# PyInstaller / builds
+build/
+dist/
+Appv1/
+Appv2/
+Appv3/
+Appv4/
+
+# Logs y temporales
+debug_log.txt
+*.log
+
+# Editores / IDE
+.cursor/
+.vscode/
+.idea/
+
+# Sistema operativo
+Thumbs.db
+desktop.ini
+.DS_Store

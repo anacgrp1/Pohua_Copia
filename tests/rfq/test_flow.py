@@ -208,6 +208,10 @@ class TestOrquestacion(unittest.TestCase):
             mock.patch.object(flow, "registrar_veredicto"),
             # Los avisos al PM también van a la base (y al teléfono): fuera.
             mock.patch.object(flow, "_avisar", return_value=True),
+            # Y el alta del RFQ y sus planos también. Sin esto, la batería
+            # dejaba un «RFQ-1» de neogen.com en la base a la que apuntara
+            # el .env de quien la corría.
+            mock.patch.object(flow, "persistir", return_value=None),
         ]
         for parche in parches:
             parche.start()

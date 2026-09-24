@@ -59,6 +59,13 @@ PR_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x39FE001E"
 # access email address information stored in Outlook». `PropertyAccessor`
 # sobre estas dos lee lo mismo sin pasar por ahí.
 PR_SENDER_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x5D01001F"
+# El cuerpo, por sus etiquetas MAPI. `HTMLBody` y `Body` son de las que
+# despiertan al guardián —eran lo único que quedaba en la lectura que lo
+# hacía—; leídas así, por el PropertyAccessor, no. Es lo mismo que hace
+# Ixtli (el extractor de adjuntos de CGR) para no sacar el cuadro nunca.
+PR_HTML = "http://schemas.microsoft.com/mapi/proptag/0x10130102"          # bytes
+PR_BODY_W = "http://schemas.microsoft.com/mapi/proptag/0x1000001F"        # texto
+PR_INTERNET_CPID = "http://schemas.microsoft.com/mapi/proptag/0x3FDE0003"  # código de página
 PR_SENDER_EMAIL_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x0C1F001F"
 PR_TRANSPORT_MESSAGE_HEADERS = "http://schemas.microsoft.com/mapi/proptag/0x007D001E"
 
@@ -125,42 +132,6 @@ def outlook_confia() -> Optional[bool]:
         return bool(win32com.client.Dispatch("Outlook.Application").IsTrusted)
     except Exception as error:
         logger.debug("No se pudo preguntar a Outlook si confía: %s", error)
-        return None
-
-
-def pedir_permiso_ahora() -> Optional[bool]:
-    """Provoca AHORA el aviso «A program is trying to access e-mail address
-    information», en vez de dejar que salga con el primer correo.
-
-    Outlook no lo saca al conectarse: lo saca la primera vez que se lee una
-    dirección, o sea, cuando llega el primer correo sin leer. Eso podía ser
-    media hora después de arrancar, con la ventana escondida detrás de otra y
-    el lector parado esperando. Aquí se lee a propósito la dirección del
-    propio usuario —``Session.CurrentUser.Address``, que es de las que el
-    guardián vigila— nada más arrancar, para que la ventana salga cuando
-    todavía se está mirando la pantalla y se marque «Allow access for 10
-    minutes» de una vez.
-
-    Devuelve True si Outlook dejó leer, False si se pulsó «Deny» y None si no
-    se pudo preguntar (sin Outlook, sin pywin32). Cuando Outlook confía en el
-    programa (antivirus válido en el Centro de confianza) no sale ninguna
-    ventana y devuelve True.
-    """
-    try:
-        import pythoncom
-        import win32com.client
-        pythoncom.CoInitialize()
-        sesion = win32com.client.Dispatch("Outlook.Application").GetNamespace("MAPI")
-        direccion = sesion.CurrentUser.Address
-        logger.info("Outlook dejó leer la dirección del usuario (%s): permiso dado.",
-                    direccion or "?")
-        return True
-    except Exception as error:
-        if _es_denegado(error):
-            logger.warning("Se pulsó «Deny» en el aviso de Outlook: los correos se "
-                           "quedarán sin leer hasta que se permita.")
-            return False
-        logger.debug("No se pudo pedir el permiso a Outlook: %s", error)
         return None
 
 
@@ -243,10 +214,10 @@ class OutlookEmailProvider(BaseEmailProvider):
                          "abiertos: %s", buzon, ", ".join(self._buzones()))
             return False
 
+        # Sólo las carpetas de MAIL_FOLDER (varias, separadas por coma). No se
+        # añade ninguna por cuenta propia: mientras se prueba, el lector lee
+        # ÚNICAMENTE «TEST» y la bandeja de entrada se queda como está.
         nombres = [c.strip() for c in carpeta.split(",") if c.strip()]
-        # No sólo la carpeta TEST: si está TEST, incluir también INBOX (Bandeja de entrada)
-        if "TEST" in [n.upper() for n in nombres] and not any(n.upper() in ("INBOX", "BANDEJA DE ENTRADA") for n in nombres):
-            nombres = ["INBOX"] + nombres
 
         carpetas_encontradas: List[Any] = []
         for nombre in nombres:
@@ -546,13 +517,63 @@ class OutlookEmailProvider(BaseEmailProvider):
                         pass
         return fuera
 
-    def _a_mensaje(self, item) -> EmailMessage:
-        cuerpo_html = ""
+    @staticmethod
+    def _bytes_a_texto(crudo, codigo_pagina: str = "") -> str:
+        """PR_HTML llega como bytes (o como tupla de enteros, según pywin32)."""
+        if crudo is None:
+            return ""
+        if isinstance(crudo, str):
+            return crudo
+        if isinstance(crudo, (tuple, list)):
+            crudo = bytes(crudo)
+        if not isinstance(crudo, (bytes, bytearray)):
+            return str(crudo)
+        codificaciones = []
+        if codigo_pagina and str(codigo_pagina).isdigit():
+            cp = int(codigo_pagina)
+            codificaciones.append("utf-8" if cp == 65001 else f"cp{cp}")
+        codificaciones += ["utf-8", "cp1252"]
+        for codificacion in codificaciones:
+            try:
+                return bytes(crudo).decode(codificacion)
+            except (UnicodeDecodeError, LookupError):
+                continue
+        return bytes(crudo).decode("latin-1", errors="replace")
+
+    def _cuerpo(self, item):
+        """``(html, texto)`` del correo SIN despertar al guardián de Outlook.
+
+        `HTMLBody` y `Body` son propiedades vigiladas: leerlas saca el cuadro
+        «A program is trying to access e-mail address information» por cada
+        correo nuevo. Las mismas etiquetas MAPI leídas por el PropertyAccessor
+        (PR_HTML, PR_BODY) no lo sacan. Las de siempre quedan sólo de respaldo
+        para el mensaje raro que no traiga las MAPI.
+        """
+        html = ""
         try:
-            cuerpo_html = str(item.HTMLBody or "")
+            html = self._bytes_a_texto(item.PropertyAccessor.GetProperty(PR_HTML),
+                                       self._propiedad(item, PR_INTERNET_CPID))
+        except Exception as error:
+            logger.debug("PR_HTML no contestó: %s", error)
+        if html.strip():
+            return html, ""
+        texto = self._propiedad(item, PR_BODY_W)
+        if texto:
+            return "", texto
+
+        logger.debug("El cuerpo no vino por las etiquetas MAPI; se leen HTMLBody/Body, "
+                     "que pueden pedir permiso.")
+        try:
+            html = str(item.HTMLBody or "")
         except Exception:
-            pass
-        cuerpo = cuerpo_html or str(getattr(item, "Body", "") or "")
+            html = ""
+        if html:
+            return html, ""
+        return "", str(getattr(item, "Body", "") or "")
+
+    def _a_mensaje(self, item) -> EmailMessage:
+        cuerpo_html, cuerpo_texto = self._cuerpo(item)
+        cuerpo = cuerpo_html or cuerpo_texto
 
         cabeceras = {}
         mensaje_id = self._propiedad(item, PR_INTERNET_MESSAGE_ID)

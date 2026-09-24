@@ -191,70 +191,8 @@ class TestNoSeReleeLoYaAtendido:
         assert p.fetch_unread_messages() == []
 
 
-class TestElPermisoSePideAlArrancar:
-    """El aviso de direcciones, nada más arrancar y no con el primer correo."""
 
-    def _con_outlook(self, monkeypatch, sesion):
-        import sys
-        import types
-
-        class _App:
-            def GetNamespace(self, _):
-                return sesion
-        win32 = types.SimpleNamespace(client=types.SimpleNamespace(
-            Dispatch=lambda nombre: _App()))
-        monkeypatch.setitem(sys.modules, "pythoncom",
-                            types.SimpleNamespace(CoInitialize=lambda: None))
-        monkeypatch.setitem(sys.modules, "win32com", win32)
-        monkeypatch.setitem(sys.modules, "win32com.client", win32.client)
-
-    def test_lee_la_direccion_del_usuario_a_proposito(self, monkeypatch):
-        class Sesion:
-            class CurrentUser:
-                Address = "sales.isc@cgr-international.com"
-        self._con_outlook(monkeypatch, Sesion())
-        assert op.pedir_permiso_ahora() is True
-
-    def test_un_deny_se_reconoce(self, monkeypatch):
-        class Sesion:
-            @property
-            def CurrentUser(self):
-                raise ComError(op.E_ABORT, "Denied", None, None)
-        self._con_outlook(monkeypatch, Sesion())
-        assert op.pedir_permiso_ahora() is False
-
-    def test_sin_outlook_no_se_sabe(self, monkeypatch):
-        class Sesion:
-            @property
-            def CurrentUser(self):
-                raise RuntimeError("no hay Outlook")
-        self._con_outlook(monkeypatch, Sesion())
-        assert op.pedir_permiso_ahora() is None
-
-    def test_el_lector_lo_pide_antes_del_primer_ciclo(self):
-        # La llamada va en `run`, antes del bucle de ciclos.
-        import inspect
-
-        import desktop_app.main as escritorio
-        fuente = inspect.getsource(escritorio.Lector.run)
-        assert fuente.index("_pedir_permiso_a_outlook") < fuente.index("while self._corriendo")
-
-    def test_un_primer_permiso_hace_que_no_vuelva_a_preguntar(self, monkeypatch):
-        import desktop_app.main as escritorio
-
-        monkeypatch.setattr(escritorio, "_permiso_concedido", False)
-        llamadas = []
-        monkeypatch.setattr(op, "pedir_permiso_ahora", lambda: llamadas.append(1) or True)
-        monkeypatch.setattr(escritorio, "ajuste", lambda clave, defecto="": "outlook" if clave == "MAIL_MODE" else defecto)
-
-        lector = escritorio.Lector()
-        lector._pedir_permiso_a_outlook()
-        assert len(llamadas) == 1
-        assert escritorio._permiso_concedido is True
-
-        # Con el primer permiso concedido ya no vuelve a pedirlo
-        lector._pedir_permiso_a_outlook()
-        assert len(llamadas) == 1
+class TestElLector:
 
     def test_el_lector_ejecuta_el_ciclo(self):
         import inspect
@@ -262,3 +200,60 @@ class TestElPermisoSePideAlArrancar:
         import desktop_app.main as escritorio
         fuente = inspect.getsource(escritorio.Lector.run)
         assert "ciclo_deteccion(forzar=forzado)" in fuente
+
+
+class TestElCuerpoSeLeeSinDespertarAlGuardian:
+    """`HTMLBody` y `Body` eran lo único de la lectura que aún sacaba el cuadro
+    de Outlook. Se leen por sus etiquetas MAPI (PR_HTML / PR_BODY), como hace
+    Ixtli, y las vigiladas quedan sólo de respaldo."""
+
+    class _Item:
+        def __init__(self, props):
+            self._props = props
+            self.PropertyAccessor = self
+
+        def GetProperty(self, esquema):
+            if esquema not in self._props:
+                raise RuntimeError("no existe")
+            return self._props[esquema]
+
+        @property
+        def HTMLBody(self):
+            raise AssertionError("HTMLBody es vigilada: no debía leerse")
+
+        @property
+        def Body(self):
+            raise AssertionError("Body es vigilada: no debía leerse")
+
+    def test_html_por_etiqueta_mapi_en_bytes(self):
+        item = self._Item({op.PR_HTML: "<p>Cotizar 5,000 pzas · Ñ</p>".encode("utf-8"),
+                           op.PR_INTERNET_CPID: 65001})
+        html, texto = op.OutlookEmailProvider()._cuerpo(item)
+        assert "5,000 pzas · Ñ" in html and texto == ""
+
+    def test_html_como_tupla_de_enteros_y_cp1252(self):
+        crudo = tuple("<b>Señor</b>".encode("cp1252"))
+        item = self._Item({op.PR_HTML: crudo, op.PR_INTERNET_CPID: 1252})
+        html, _ = op.OutlookEmailProvider()._cuerpo(item)
+        assert html == "<b>Señor</b>"
+
+    def test_sin_html_se_usa_el_texto_mapi(self):
+        item = self._Item({op.PR_BODY_W: "Please quote 10,000 pcs"})
+        html, texto = op.OutlookEmailProvider()._cuerpo(item)
+        assert (html, texto) == ("", "Please quote 10,000 pcs")
+
+    def test_solo_sin_etiquetas_mapi_se_tocan_las_vigiladas(self):
+        class Raro(self._Item):
+            @property
+            def HTMLBody(self):
+                return "<p>viejo</p>"
+        html, _ = op.OutlookEmailProvider()._cuerpo(Raro({}))
+        assert html == "<p>viejo</p>"
+
+    def test_ya_no_se_provoca_el_cuadro_al_arrancar(self):
+        # Sin lecturas vigiladas no hay nada que pedir al arrancar: provocarlo
+        # sería sacar el cuadro que se acaba de quitar.
+        assert not hasattr(op, "pedir_permiso_ahora")
+        import desktop_app.main as escritorio
+        assert not hasattr(escritorio.Lector, "_pedir_permiso_a_outlook")
+

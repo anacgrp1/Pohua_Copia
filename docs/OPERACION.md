@@ -403,6 +403,19 @@ lean el mismo buzón los dos. Ese latido se autentica con `WORKER_SECRET_KEY`;
 si la variable no está definida, el endpoint devuelve 503 en vez de aceptar un
 secreto por defecto conocido.
 
+**El cuadro «A program is trying to access e-mail address information».**
+Lo saca Outlook cuando un programa lee propiedades vigiladas de un correo
+(`Body`, `HTMLBody`, `SenderEmailAddress`, la libreta de direcciones). El
+lector de escritorio ya no lee ninguna: el remitente y el cuerpo salen por sus
+etiquetas MAPI con el `PropertyAccessor` (la misma técnica de Ixtli, el
+extractor de adjuntos de CGR), que no despiertan al guardián. Si el cuadro
+vuelve a salir con un correo concreto es que ese mensaje no trae las etiquetas
+(importado de otro sistema) y se cayó al respaldo. El otro cuadro, «A program
+is trying to send an email message on your behalf», es del envío y sólo lo
+quita que Outlook confíe en el programa (antivirus válido en el Centro de
+confianza o directiva de TI). El lector sigue leyendo únicamente la carpeta
+`MAIL_FOLDER` (hoy `TEST`); Ixtli recorre todas y eso NO se copió.
+
 **Logs.** Van a consola y a `app.log` (rotativo, 5 MB × 5 archivos). La
 configuración la aplica cada punto de entrada — `app/main.py`, `api/server.py`,
 `desktop_app/main.py` —, ya no un import con efectos secundarios.
