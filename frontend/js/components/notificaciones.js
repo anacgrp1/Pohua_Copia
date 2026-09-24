@@ -243,6 +243,9 @@ const Notificaciones = (() => {
 
             pintarGlobo();
             if (abierto) pintarPanel();
+            if (cola.status === 'fulfilled' && (!puedeAvisos || buzon.status === 'fulfilled')) {
+                cerrarLasDelSistema();
+            }
         } catch (err) {
             if (err && err.sesionExpirada) return;
             // Un fallo del sondeo no se avisa: la campana se queda como estaba.
@@ -250,6 +253,31 @@ const Notificaciones = (() => {
         } finally {
             cargando = false;
         }
+    }
+
+    /**
+     * Quita del teléfono y del escritorio los avisos de RFQ ya dictaminados.
+     *
+     * La campana se vacía sola al aprobar o declinar (el servidor da sus
+     * avisos por atendidos), pero la notificación que el sistema pintó por
+     * Web Push se quedaba en el centro de notificaciones —y con
+     * `requireInteraction`, sin irse nunca—. Aquí se cierra toda la que sea de
+     * un RFQ que ya no espera nada: ni aviso pendiente ni sitio en la cola.
+     */
+    async function cerrarLasDelSistema() {
+        try {
+            if (!('serviceWorker' in navigator)) return;
+            const registro = await navigator.serviceWorker.getRegistration();
+            if (!registro || !registro.getNotifications) return;
+            const vivos = new Set();
+            ((avisos && avisos.avisos) || []).forEach((a) => a.rfq_id && vivos.add(a.rfq_id));
+            ((datos && datos.pendientes) || []).forEach((p) => p.rfq_id && vivos.add(p.rfq_id));
+            const pintadas = await registro.getNotifications();
+            pintadas.forEach((n) => {
+                const rfq = n.data && n.data.rfq_id;
+                if (rfq && !vivos.has(rfq)) n.close();
+            });
+        } catch (_) { /* sin service worker, no hay nada que cerrar */ }
     }
 
     /**
@@ -364,6 +392,13 @@ const Notificaciones = (() => {
     function init() {
         const c = caja();
         if (!c) return;
+
+        // Aprobado o declinado aquí mismo (js/api.js): la campana se pone al
+        // día en el acto, sin esperar al siguiente sondeo.
+        if (!init.oyendo) {
+            init.oyendo = true;
+            window.addEventListener('pohua:rfq-dictaminado', () => setTimeout(refrescar, 300));
+        }
 
         // Sin permiso para ver RFQs no hay nada que notificar, y la campana se
         // queda escondida en vez de enseñar un panel vacío para siempre.

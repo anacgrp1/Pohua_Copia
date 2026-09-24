@@ -80,6 +80,14 @@ PAUSA_TRAS_DENEGAR_S = 15 * 60
 _denegado_en: Optional[float] = None   # del módulo: vale para todas las instancias
 
 
+# Los correos que este proceso ya atendió (procesados o repetidos), por su
+# EntryID. Si uno sigue «sin leer» en Outlook —porque marcarlo falló—, el ciclo
+# siguiente lo salta SIN tocar su cuerpo ni su PropertyAccessor: son
+# propiedades vigiladas, y leerlas cada cinco minutos era la ventana de
+# «access email address information» cada cinco minutos.
+_YA_VISTOS: set = set()
+
+
 class EnvioDenegado(RuntimeError):
     """Outlook no dejó mandar: alguien pulsó «Deny», o se pulsó hace poco."""
 
@@ -317,6 +325,10 @@ class OutlookEmailProvider(BaseEmailProvider):
                 item = sin_leer.Item(i + 1)
                 if getattr(item, "Class", CLASE_CORREO) != CLASE_CORREO:
                     continue
+                entrada = str(getattr(item, "EntryID", "") or "")
+                if entrada and entrada in _YA_VISTOS:
+                    self._dejar_leido(item)
+                    continue
                 correos.append(self._a_mensaje(item))
             except AccesoBloqueado:
                 # El permiso se pide una vez y se explica una vez: un correo
@@ -479,16 +491,37 @@ class OutlookEmailProvider(BaseEmailProvider):
     # -------------------------------------------------------------- marcar
 
     def mark_as_read(self, message_id: str) -> bool:
-        """Marca como leído el correo, buscándolo por su EntryID."""
+        """Marca como leído el correo, buscándolo por su EntryID.
+
+        Con el StoreID de la carpeta: en un buzón compartido, `GetItemFromID`
+        sólo con el EntryID busca en el buzón personal, no lo encuentra, y el
+        correo se quedaba sin leer —y se volvía a leer en cada ciclo—.
+        """
+        if message_id:
+            _YA_VISTOS.add(message_id)
         if self._mapi is None and not self.connect():
             return False
+        item = None
         try:
-            item = self._mapi.GetItemFromID(message_id)
+            tienda = getattr(self._carpeta, "StoreID", None) if self._carpeta is not None else None
+            item = (self._mapi.GetItemFromID(message_id, tienda) if tienda
+                    else self._mapi.GetItemFromID(message_id))
+        except Exception:
+            try:
+                item = self._mapi.GetItemFromID(message_id)
+            except Exception as error:
+                logger.error("No se pudo marcar como leído (%s): %s", message_id, error)
+                return False
+        return self._dejar_leido(item)
+
+    @staticmethod
+    def _dejar_leido(item) -> bool:
+        try:
             item.UnRead = False
             item.Save()
             return True
         except Exception as error:
-            logger.error("No se pudo marcar como leído (%s): %s", message_id, error)
+            logger.error("No se pudo marcar como leído: %s", error)
             return False
 
     def _cuenta(self, buzon: str):

@@ -202,13 +202,23 @@ const ResumenPage = (() => {
         const aprobado = r.estado === 'Approved';
         const clase = aprobado ? 'badge-approved' : 'badge-declined';
         const cuando = (r.fecha_registro || '').slice(0, 10);
+        // El nombre y no el código: un RFQ cuyo cliente no está en la cartera
+        // no tiene código, y salía como "—" aunque el correo dijera quién era.
+        const cliente = r.cliente_nombre || r.cliente_id || '';
+        // En el teléfono la fila es una ficha y estos tres datos van en UNA
+        // línea bajo el número: se arma aquí con sólo los que hay, para que un
+        // dato vacío no deje un "·" colgando ni un "—" suelto.
+        const linea = [cliente, r.part_number, cuando].filter(Boolean)
+            .map((v) => `<span class="resumen-decidida-item">${esc(v)}</span>`)
+            .join('<span class="resumen-decidida-sep" aria-hidden="true">·</span>');
         return `
             <tr>
-                <td><code>${esc(r.rfq_id)}</code></td>
-                <td>${esc(r.cliente_id || '—')}</td>
-                <td>${esc(r.part_number || '—')}</td>
-                <td>${esc(cuando || '—')}</td>
-                <td><span class="badge ${clase}"><span class="badge-dot"></span>${esc(r.estado)}</span></td>
+                <td class="resumen-decidida-id"><code>${esc(r.rfq_id)}</code>${linea
+                    ? `<span class="resumen-decidida-linea">${linea}</span>` : ''}</td>
+                <td class="resumen-decidida-dato">${esc(cliente || '—')}</td>
+                <td class="resumen-decidida-dato">${esc(r.part_number || '—')}</td>
+                <td class="resumen-decidida-dato">${esc(cuando || '—')}</td>
+                <td class="resumen-decidida-estado"><span class="badge ${clase}"><span class="badge-dot"></span>${esc(r.estado)}</span></td>
                 <td class="resumen-decidida-accion">
                     <button type="button" class="btn btn-secondary btn-sm"
                             data-decidida="${esc(r.rfq_id)}">${esc(I18N.t('resumen.verHoja'))}</button>
@@ -226,7 +236,7 @@ const ResumenPage = (() => {
                 </div>
                 ${filas.length ? `
                 <div class="tabla-caja">
-                    <table class="tabla-usuarios resumen-tabla">
+                    <table class="tabla-usuarios resumen-tabla resumen-decididas">
                         <thead>
                             <tr>
                                 <th>${esc(I18N.t('resumen.col.rfq'))}</th>

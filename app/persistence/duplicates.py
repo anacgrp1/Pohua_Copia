@@ -84,27 +84,66 @@ def inicializar_bd():
     schema.verificar_tablas(("correos_procesados",))
 
 
-def es_duplicado(message_id):
+def es_duplicado(message_id, otras_claves=()):
     """
-    Conteo rápido por message-id. Retorna True si el correo ya fue
-    procesado. Se llama ANTES de evaluar el contenido del correo.
+    ¿Este correo ya se atendió? Se llama ANTES de evaluar su contenido.
+
+    Mira dos sitios y varias claves, porque un solo sitio con una sola clave
+    dejó pasar el mismo correo dos veces —y salieron dos RFQ del mismo pedido—:
+
+    * ``correos_procesados`` y también ``rfqs.message_id``: si el proceso se
+      cayó DESPUÉS de dar de alta el RFQ y antes de apuntar el correo, el RFQ
+      existe aunque el correo no conste como procesado.
+    * El Message-ID y, en ``otras_claves``, el EntryID de Outlook: cuando el
+      guardián de Outlook no deja leer la cabecera, el correo queda apuntado
+      con su EntryID, y la siguiente vez —ya con permiso— llegaba con su
+      Message-ID de verdad, que no constaba en ningún sitio.
     """
-    if not message_id:
-        # Sin message-id no se puede garantizar unicidad: tratar como nuevo
+    claves = [c for c in [message_id, *(otras_claves or ())] if c]
+    if not claves:
+        # Sin ninguna clave no se puede garantizar unicidad: tratar como nuevo
         return False
 
-    sql = "SELECT COUNT(1) FROM correos_procesados WHERE message_id = %s;"
+    sql = """
+        SELECT (SELECT COUNT(1) FROM correos_procesados WHERE message_id = ANY(%(c)s))
+             + (SELECT COUNT(1) FROM rfqs WHERE message_id = ANY(%(c)s));
+    """
     with conexion_bd() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql, (message_id,))
+            cur.execute(sql, {"c": claves})
+            return (cur.fetchone()[0] or 0) > 0
+
+
+def hay_rfq_del_correo(message_id) -> bool:
+    """¿Se llegó a dar de alta un RFQ con este correo?"""
+    if not message_id:
+        return False
+    with conexion_bd() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(1) FROM rfqs WHERE message_id = %s;", (message_id,))
             return cur.fetchone()[0] > 0
 
 
-def registrar_correo(correo):
+def olvidar_correo(message_id, otras_claves=()) -> None:
+    """Quita la marca de procesado: el correo se volverá a intentar."""
+    claves = [c for c in [message_id, *(otras_claves or ())] if c]
+    if not claves:
+        return
+    with conexion_bd() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM correos_procesados WHERE message_id = ANY(%s);",
+                        (claves,))
+
+
+def registrar_correo(correo, otras_claves=()):
     """
-    Registra el message-id tras procesar el correo.
+    Apunta el correo como atendido. Se llama ANTES de procesarlo.
     ON CONFLICT DO NOTHING evita errores si dos ejecuciones se cruzan.
     Retorna True si se insertó (correo nuevo), False si ya existía.
+
+    ``otras_claves`` (el EntryID de Outlook) se apuntan también, cada una en
+    su fila: así el correo se reconoce tanto si la próxima vez llega con su
+    Message-ID como si el guardián de Outlook sólo deja ver el EntryID.
     """
     sql = """
     INSERT INTO correos_procesados (message_id, remitente, asunto, fecha_correo)
@@ -119,10 +158,13 @@ def registrar_correo(correo):
         correo.get("fecha", ""),
     )
 
+    extra = [c for c in (otras_claves or ()) if c and c != correo["message_id"]]
     with conexion_bd() as conn:
         with conn.cursor() as cur:
             cur.execute(sql, valores)
             fila = cur.fetchone()
+            for clave in extra:
+                cur.execute(sql, (clave, *valores[1:]))
             return fila is not None
 
 

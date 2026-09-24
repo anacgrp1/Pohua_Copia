@@ -35,7 +35,9 @@ from typing import List, Optional
 
 log = logging.getLogger("cotizador.almacen_planos")
 
-_MODOS_LOCAL = ("local", "imap", "dev")
+# "outlook" es el lector de escritorio: guarda en el disco de esa computadora,
+# como "imap". Sin él, cada RFQ leído por Outlook dejaba un ERROR en el registro.
+_MODOS_LOCAL = ("local", "imap", "dev", "outlook")
 _MODOS_TOKEN = ("token", "graph", "prod")
 
 

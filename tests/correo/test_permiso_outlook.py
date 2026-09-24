@@ -131,3 +131,61 @@ class TestLaColaSeParaSinPerderNada:
         ok = outbound.enviar({"destinatario": "c@x.com", "asunto": "Oferta",
                               "cuerpo_texto": "hola"}, rfq_id="RFQ-1", clase="oferta")
         assert ok is True and len(encolados) == 1
+
+
+class TestNoSeReleeLoYaAtendido:
+    """Cada lectura de un correo toca propiedades vigiladas (cuerpo,
+    PropertyAccessor): releer el mismo cada cinco minutos era la ventana de
+    «access email address information» cada cinco minutos."""
+
+    def test_marcar_como_leido_usa_la_tienda_del_buzon(self, monkeypatch):
+        visto: dict[str, object] = {}
+
+        class Item:
+            UnRead = True
+
+            def Save(self):
+                visto["guardado"] = True
+
+        class Mapi:
+            def GetItemFromID(self, entry, tienda=None):
+                visto["tienda"] = tienda
+                return Item()
+
+        p = op.OutlookEmailProvider()
+        p._mapi = Mapi()
+        p._carpeta = type("Carpeta", (), {"StoreID": "STORE-VENTAS"})()
+        monkeypatch.setattr(op, "_YA_VISTOS", set())
+        assert p.mark_as_read("ENTRY-1") is True
+        assert visto == {"tienda": "STORE-VENTAS", "guardado": True}
+        assert "ENTRY-1" in op._YA_VISTOS
+
+    def test_lo_ya_atendido_se_salta_sin_leer_su_cuerpo(self, monkeypatch):
+        class Correo:
+            Class = 43
+            EntryID = "ENTRY-1"
+            UnRead = True
+
+            def Save(self):
+                pass
+
+            @property
+            def Body(self):
+                raise AssertionError("no debía leerse: es una propiedad vigilada")
+
+        class Coleccion:
+            Count = 1
+
+            def Item(self, i):
+                return Correo()
+
+            def Sort(self, *a):
+                pass
+
+            def Restrict(self, _):
+                return self
+
+        p = op.OutlookEmailProvider()
+        p._carpeta = type("Carpeta", (), {"Items": Coleccion()})()
+        monkeypatch.setattr(op, "_YA_VISTOS", {"ENTRY-1"})
+        assert p.fetch_unread_messages() == []

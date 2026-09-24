@@ -69,7 +69,8 @@ def list_rfqs(
         SELECT r.id, r.rfq_id, r.version, r.cliente_id, r.nombre_proyecto,
                r.part_number, r.volumen, r.material, r.estado, r.message_id,
                r.veredicto_sistema, r.veredicto_final, r.score,
-               r.fecha_registro::text
+               r.fecha_registro::text,
+               NULLIF(r.datos_json->>'customer', '') AS cliente_nombre
         FROM rfqs r
         {where}
         ORDER BY r.fecha_registro DESC
@@ -88,6 +89,7 @@ def list_rfqs(
         "id", "rfq_id", "version", "cliente_id", "nombre_proyecto",
         "part_number", "volumen", "material", "estado", "message_id",
         "veredicto_sistema", "veredicto_final", "score", "fecha_registro",
+        "cliente_nombre",
     ]
 
     rfqs = [RFQSummary(**dict(zip(columns, row))) for row in rows]

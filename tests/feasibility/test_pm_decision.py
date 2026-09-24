@@ -45,6 +45,8 @@ class BaseDecision(unittest.TestCase):
         self.habilitado = self.patch("app.email.outbound.envio_habilitado",
                                      return_value=False)
         self.enviar = self.patch("app.email.outbound.enviar", return_value=True)
+        self.cerrar_avisos = self.patch("app.notifications.repository.cerrar_del_rfq",
+                                        return_value=1)
 
     def patch(self, objetivo, **kwargs):
         parche = mock.patch(objetivo, **kwargs)
@@ -131,6 +133,35 @@ class TestAprobar(BaseDecision):
         self.assertEqual(self.guardar.call_args.kwargs["estado"], "Approved")
         self.construir.assert_not_called()
         self.enviar.assert_not_called()
+
+
+class TestLaCampanaSeVacia(BaseDecision):
+    """Aprobado o declinado, sus avisos ya no piden nada a nadie."""
+
+    def test_aprobar_cierra_los_avisos_del_rfq(self):
+        pm_decision.aprobar("RFQ-1", usuario="rodea@isc.com")
+        self.cerrar_avisos.assert_called_once()
+        self.assertEqual(self.cerrar_avisos.call_args.args[0], "RFQ-1")
+        self.assertEqual(self.cerrar_avisos.call_args.kwargs["correo"], "rodea@isc.com")
+
+    def test_declinar_tambien(self):
+        pm_decision.declinar("RFQ-1", usuario="rodea@isc.com", enviar_correo=False)
+        self.cerrar_avisos.assert_called_once()
+
+    def test_devolver_no_los_cierra(self):
+        # Devuelto sigue esperando: el aviso tiene que quedarse.
+        self.patch("app.rfq.repository.agregar_nota",
+                   return_value={"id": 1, "version": 1, "estado": "RequiresReview",
+                                 "notas": ""})
+        self.patch("app.notifications.repository.crear", return_value=1)
+        pm_decision.devolver("RFQ-1", nota="Falta el material", usuario="rodea@isc.com")
+        self.cerrar_avisos.assert_not_called()
+
+    def test_si_falla_el_dictamen_queda_igual(self):
+        self.cerrar_avisos.side_effect = RuntimeError("sin base")
+        resultado = pm_decision.aprobar("RFQ-1", usuario="rodea@isc.com")
+        self.assertEqual(resultado["veredicto_final"], "feasible")
+        self.guardar.assert_called_once()
 
 
 class TestNotaYAutor(BaseDecision):

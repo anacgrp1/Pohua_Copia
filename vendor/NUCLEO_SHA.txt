@@ -20,3 +20,10 @@ lleva CSS propio para ir dentro del iframe (fondo transparente,
 barra y reloj escondidos, móvil) que vendorizar_nucleo.py no produce
 y que se perdería. Antes de volver a pasar el script hay que
 enseñarle a conservar ese bloque.
+
+PARCHE PROPIO DE POHUA (2026-09-24), no está en el núcleo:
+  - vendor/isc_extractor/normalizar.py: cotas_en_pulgadas(). En planos
+    en pulgadas devuelve cada cota a la del plano (".039 in" -> 0.9906 mm)
+    en vez del mm redondeado por el modelo (0.991 -> 0.039016 in). Llevarlo
+    también al núcleo, o volver a aplicarlo tras pasar vendorizar_nucleo.py
+    (lo comprueba tests/costeo/test_004_222_nucleo.py::TestLasMilesimas).

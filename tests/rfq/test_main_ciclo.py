@@ -71,8 +71,14 @@ class TestCicloDeteccion(unittest.TestCase):
             mock.patch("app.rfq.horario.abierto", return_value=True),
             mock.patch("app.email.factory.EmailProviderFactory.get_provider",
                        return_value=self.provider),
+            # El buzón es falso: que no dependa de las variables IMAP del
+            # entorno (según el orden de las pruebas, estaban o no).
+            mock.patch("app.email.entrada.diagnostico_lectura",
+                       return_value={"puede": True}),
             mock.patch("app.persistence.duplicates.es_duplicado", return_value=False),
-            mock.patch("app.persistence.duplicates.registrar_correo"),
+            mock.patch("app.persistence.duplicates.registrar_correo", return_value=True),
+            mock.patch("app.persistence.duplicates.hay_rfq_del_correo", return_value=False),
+            mock.patch("app.persistence.duplicates.olvidar_correo"),
             # Al final del ciclo va el recordatorio de lo que lleva demasiado
             # tiempo esperando dictamen, y eso abre la base de datos por su
             # cuenta. Estas pruebas son sobre el lote de correos, así que se
@@ -148,6 +154,63 @@ class TestCicloDeteccion(unittest.TestCase):
         # Y se marca como leído: si no, volvería a mirarse en cada ciclo.
         self.assertIn("PROPIO", self.provider.leidos)
         self.assertTrue(any("propio buzón" in d for d in resultado.detalles))
+
+    def test_el_duplicado_se_busca_tambien_por_entry_id(self):
+        """El EntryID de Outlook también cuenta como clave del correo.
+
+        Si una vez el guardián de Outlook dejó leer la cabecera y otra no, el
+        mismo correo llega con dos claves distintas. Se consulta y se apunta
+        con las dos, para reconocerlo con cualquiera.
+        """
+        with mock.patch("app.persistence.duplicates.es_duplicado",
+                        return_value=False) as es_dup, \
+             mock.patch("app.persistence.duplicates.registrar_correo",
+                        return_value=True) as registrar, \
+             mock.patch.object(main, "procesar_correo", return_value="RFQ_NUEVO"):
+            main.ciclo_deteccion()
+        self.assertEqual(es_dup.call_args_list[0].kwargs["otras_claves"], ["A"])
+        self.assertEqual(registrar.call_args_list[0].kwargs["otras_claves"], ["A"])
+
+    def test_se_apunta_antes_de_procesar(self):
+        """Si se apuntara después, un fallo tras crear el RFQ lo repetiría."""
+        orden = []
+        with mock.patch("app.persistence.duplicates.registrar_correo",
+                        side_effect=lambda *a, **k: orden.append("apuntar") or True), \
+             mock.patch.object(main, "procesar_correo",
+                               side_effect=lambda c: orden.append("procesar") or "RFQ"):
+            main.ciclo_deteccion()
+        self.assertEqual(orden[:2], ["apuntar", "procesar"])
+
+    def test_si_otra_ejecucion_ya_lo_apunto_no_se_procesa(self):
+        with mock.patch("app.persistence.duplicates.registrar_correo", return_value=False), \
+             mock.patch.object(main, "procesar_correo") as procesar:
+            main.ciclo_deteccion()
+        procesar.assert_not_called()
+
+    def test_falla_sin_rfq_se_desapunta_para_reintentarlo(self):
+        with mock.patch("app.persistence.duplicates.hay_rfq_del_correo",
+                        return_value=False), \
+             mock.patch("app.persistence.duplicates.olvidar_correo") as olvidar, \
+             mock.patch.object(main, "procesar_correo", side_effect=RuntimeError("x")):
+            main.ciclo_deteccion()
+        self.assertEqual(olvidar.call_count, 3)
+        self.assertEqual(self.provider.leidos, [])
+
+    def test_falla_con_rfq_ya_creado_no_se_vuelve_a_cotizar(self):
+        """El caso real: el RFQ ya existía y el correo seguía sin leer.
+
+        Falló algo DESPUÉS de dar de alta el RFQ. El correo se queda apuntado
+        y se marca leído: volver a procesarlo daba un segundo RFQ, cotizado de
+        nuevo, de un pedido que ya tenía dictamen.
+        """
+        with mock.patch("app.persistence.duplicates.hay_rfq_del_correo",
+                        return_value=True), \
+             mock.patch("app.persistence.duplicates.olvidar_correo") as olvidar, \
+             mock.patch.object(main, "procesar_correo", side_effect=RuntimeError("x")):
+            resultado = main.ciclo_deteccion()
+        olvidar.assert_not_called()
+        self.assertEqual(self.provider.leidos, ["A", "B", "C"])
+        self.assertEqual(resultado.errores, 3)
 
     def test_lote_sano_marca_todo_como_leido(self):
         with mock.patch.object(main, "procesar_correo", return_value="RFQ_NUEVO"):

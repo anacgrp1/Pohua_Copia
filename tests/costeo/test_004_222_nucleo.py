@@ -57,6 +57,95 @@ class TestElLector:
         assert (r or spec)["espiras"]["numero_espiras_totales"] == 12.25
 
 
+def _spec_como_lo_devuelve_el_modelo():
+    """El 004-222 tal como llega del modelo: en mm y REDONDEADO por él.
+
+    ".039 in" -> 0.991 mm (es 0.9906) y ".562 high" -> 14.275 (es 14.2748). En
+    la Spring Calc eso se veía como 0.039016 y 0.562008: las milésimas que el
+    plano no dice.
+    """
+    return {"tipo_resorte": "compresion",
+            "identificacion": {"numero_parte": "004-222", "unidad_dimensional": "in"},
+            "material": {"designacion": "SPRING WIRE"},
+            "extremos": {"tipo": "CLOSED & GROUND"},
+            "dimensiones_mm": {
+                "diametro_alambre": {"nominal": 0.991, "texto_original": "WIRE DIA .039 in"},
+                "diametro_exterior": {"nominal": None, "valor_minimo": 12.065,
+                                      "valor_maximo": 12.192,
+                                      "texto_original": "O.D .475/.480 in"},
+                "longitud_libre_L0": {"nominal": 38.1,
+                                      "texto_original": "FREE LENGTH 1.500 in"}},
+            "espiras": {"numero_espiras_activas": 10.25, "numero_espiras_totales": None},
+            "cargas": [{"etiqueta": "compress to .562 high", "longitud_mm": 14.275,
+                        "fuerza_N": 16.9}],
+            "metadatos_extraccion": {}}
+
+
+class TestLasMilesimas:
+    """El flujo y la calculadora suelta enseñan las cotas EXACTAS del plano."""
+
+    @staticmethod
+    def _pulgadas(adapter, spec, clave):
+        for f in adapter.campos(spec, "compresion"):
+            if f["key"] == clave:
+                return float(f["value"]) / 25.4
+        raise AssertionError(clave)
+
+    def test_el_alambre_es_039_y_no_039016(self, adapter):
+        from isc_extractor import normalizar
+        spec = _spec_como_lo_devuelve_el_modelo()
+        assert round(self._pulgadas(adapter, spec, "wireDia"), 6) == 0.039016
+        normalizar.aplicar(spec)
+        assert abs(self._pulgadas(adapter, spec, "wireDia") - 0.039) < 1e-9
+
+    def test_la_altura_de_trabajo_es_562(self, adapter):
+        from isc_extractor import normalizar
+        spec = _spec_como_lo_devuelve_el_modelo()
+        normalizar.aplicar(spec)
+        assert abs(self._pulgadas(adapter, spec, "workingHeight") - 0.562) < 1e-9
+
+    def test_lo_que_ya_era_exacto_no_cambia(self, adapter):
+        from isc_extractor import normalizar
+        spec = _spec_como_lo_devuelve_el_modelo()
+        normalizar.aplicar(spec)
+        od = spec["dimensiones_mm"]["diametro_exterior"]
+        assert (od["valor_minimo"], od["valor_maximo"]) == (12.065, 12.192)
+        assert spec["dimensiones_mm"]["longitud_libre_L0"]["nominal"] == 38.1
+
+    def test_un_plano_en_mm_no_se_toca(self, adapter):
+        from isc_extractor import normalizar
+        spec = _spec_como_lo_devuelve_el_modelo()
+        spec["identificacion"]["unidad_dimensional"] = "mm"
+        assert normalizar.cotas_en_pulgadas(spec) == 0
+        assert spec["dimensiones_mm"]["diametro_alambre"]["nominal"] == 0.991
+
+    def test_sin_unidad_declarada_decide_el_texto_del_plano(self, adapter):
+        from isc_extractor import normalizar
+        spec = _spec_como_lo_devuelve_el_modelo()
+        del spec["identificacion"]["unidad_dimensional"]
+        assert normalizar.plano_en_pulgadas(spec)
+        normalizar.aplicar(spec)
+        assert spec["dimensiones_mm"]["diametro_alambre"]["nominal"] == 0.9906
+
+    def test_una_fraccion_del_plano_tambien_vale(self, adapter):
+        from isc_extractor import normalizar
+        spec = {"identificacion": {"unidad_dimensional": "in"},
+                "dimensiones_mm": {"diametro_exterior": {
+                    "nominal": 14.29, "texto_original": "OD 9/16 in"}}}
+        normalizar.cotas_en_pulgadas(spec)
+        assert spec["dimensiones_mm"]["diametro_exterior"]["nominal"] == 14.2875
+
+    def test_lo_que_no_es_redondeo_no_se_mueve(self, adapter):
+        from isc_extractor import normalizar
+        # 1.2 mm no sale de redondear .039 in (0.9906), ni una décima de mm
+        # cae en una milésima de pulgada: se queda como está.
+        spec = {"identificacion": {"unidad_dimensional": "in"},
+                "dimensiones_mm": {"diametro_alambre": {
+                    "nominal": 1.2, "texto_original": "WIRE .039 in"}}}
+        assert normalizar.cotas_en_pulgadas(spec) == 0
+        assert spec["dimensiones_mm"]["diametro_alambre"]["nominal"] == 1.2
+
+
 class TestLaSpringCalc:
 
     def test_music_wire_reconoce_spring_wire(self):

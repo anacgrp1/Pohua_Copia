@@ -192,9 +192,18 @@ def ciclo_deteccion(*, forzar: bool = False) -> ResultadoCiclo:
             # respuestas al mismo comprador, así que se avisa en el registro
             # cada ciclo: un interruptor así no puede quedarse encendido sin
             # que nadie se entere.
-            if not repetidos_permitidos and duplicates.es_duplicado(correo["message_id"]):
+            entry_id = str(getattr(msg, "id", "") or "")
+            if not repetidos_permitidos and duplicates.es_duplicado(
+                    correo["message_id"], otras_claves=[entry_id]):
                 log.debug("Duplicado ignorado: %s", correo["message_id"])
                 resultado.detalles.append(f"Duplicado omitido: {correo['message_id']}")
+                # Ya se atendió: se marca como leído. Si no, se volvía a leer
+                # en cada ciclo, para siempre —y en Outlook, cada lectura es
+                # otra ventana de permiso—.
+                try:
+                    provider.mark_as_read(msg.id)
+                except Exception as error:
+                    log.debug("No se pudo marcar el repetido como leído: %s", error)
                 continue
 
             # Correo salido de este mismo buzón: no se contesta. Se marca
@@ -208,8 +217,33 @@ def ciclo_deteccion(*, forzar: bool = False) -> ResultadoCiclo:
                 provider.mark_as_read(msg.id)
                 continue
 
-            clasificacion = procesar_correo(correo)
-            duplicates.registrar_correo(correo)
+            # Se apunta ANTES de procesarlo. Apuntarlo después dejaba un hueco:
+            # si algo fallaba tras dar de alta el RFQ —el acuse al cliente, por
+            # ejemplo— el correo seguía sin apuntar y sin leer, el ciclo
+            # siguiente lo procesaba otra vez y salía un SEGUNDO RFQ del mismo
+            # pedido, cotizado de nuevo.
+            nuevo = duplicates.registrar_correo(correo, otras_claves=[entry_id])
+            if not nuevo and not repetidos_permitidos:
+                # Otra ejecución lo apuntó entre la consulta y aquí: es suyo.
+                log.info("Correo %s ya tomado por otra ejecución; se omite.",
+                         correo["message_id"])
+                continue
+            try:
+                clasificacion = procesar_correo(correo)
+            except Exception:
+                # Si no llegó a crearse el RFQ, se desapunta para reintentarlo.
+                # Si se creó, se queda apuntado: el RFQ ya existe y repetirlo
+                # es peor que cualquier paso que faltara.
+                try:
+                    if not duplicates.hay_rfq_del_correo(correo["message_id"]):
+                        duplicates.olvidar_correo(correo["message_id"],
+                                                  otras_claves=[entry_id])
+                    else:
+                        provider.mark_as_read(msg.id)
+                except Exception:
+                    log.debug("No se pudo decidir si reintentar el correo.",
+                              exc_info=True)
+                raise
             if clasificacion and str(clasificacion).upper().startswith("RFQ"):
                 resultado.rfqs += 1
             resultado.detalles.append(f"{clasificacion}: {correo.get('asunto', '?')}")

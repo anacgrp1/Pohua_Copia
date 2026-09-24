@@ -76,3 +76,25 @@ class TestLaRutaLoDeclara:
         fuente = inspect.getsource(rutas.list_rfqs)
         assert "ANY(%s)" in fuente
         assert "split(\",\")" in fuente
+
+
+class TestElNombreDelCliente:
+    """Un RFQ sin cliente de la cartera salía en las listas como "—".
+
+    El flujo deja en ``datos_json.customer`` quién es (la razón social o, si
+    no se reconoció, lo que dijo el correo): la lista lo devuelve para que la
+    pantalla no tenga que adivinarlo.
+    """
+
+    def test_la_lista_devuelve_el_nombre(self):
+        import inspect
+        import api.routes.rfqs as rutas
+        fuente = inspect.getsource(rutas.list_rfqs)
+        assert "datos_json->>'customer'" in fuente
+        assert '"cliente_nombre"' in fuente
+
+    def test_el_esquema_lo_acepta(self):
+        from api.models.schemas import RFQSummary
+        r = RFQSummary(id=1, rfq_id="INT-1", version=1, cliente_nombre="CGR México")
+        assert r.cliente_nombre == "CGR México"
+        assert RFQSummary(id=1, rfq_id="INT-1", version=1).cliente_nombre is None

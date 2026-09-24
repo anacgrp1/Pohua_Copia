@@ -112,6 +112,14 @@ def resolver(rfq_id, veredicto, version=None, nota=None, usuario=None,
         rfq_id, veredicto, version=version, nota=_nota_con_autor(texto, usuario),
         estado=estado, conexion=conexion)
 
+    # Dictaminado: sus avisos de la campana ya no esperan nada de nadie.
+    # Nunca tumba el dictamen, que ya está guardado.
+    try:
+        import app.notifications.repository as avisos
+        avisos.cerrar_del_rfq(rfq_id, correo=usuario, conexion=conexion)
+    except Exception as error:
+        log.warning("RFQ %s: no se pudieron cerrar sus avisos: %s", rfq_id, error)
+
     correo_enviado = False
     if veredicto == NO_FACTIBLE and enviar_correo:
         correo_enviado = notificar_declinacion(

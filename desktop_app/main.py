@@ -136,6 +136,7 @@ class Lector(QThread):
         super().__init__()
         self._corriendo = True
         self._forzar = False       # "Leer ahora": se salta el horario
+        self._salida_espera_hasta = 0.0
 
     def leer_ahora(self):
         self._forzar = True
@@ -189,15 +190,40 @@ class Lector(QThread):
 
             # La espera, en trozos de un segundo: así "Detener" y "Leer ahora"
             # contestan al momento y no dentro de cinco minutos.
-            for _ in range(minutos * 60):
+            #
+            # Y mientras se espera, la bandeja de salida se mira cada pocos
+            # segundos. La oferta que aprueba el PM se encola en el servidor y
+            # sale por ESTE Outlook; esperando al ciclo de lectura tardaba
+            # hasta cinco minutos en llegar al cliente. Preguntar si hay algo
+            # es una consulta de nada; sólo se abre Outlook si lo hay.
+            cada = max(5, int(ajuste("SALIDA_SEGUNDOS", 15) or 15))
+            for segundo in range(1, minutos * 60 + 1):
                 if not self._corriendo or self._forzar:
                     break
                 time.sleep(1)
+                if segundo % cada == 0:
+                    self.salida_si_hay()
 
         self.cambia_estado.emit("parado")
         self.dice.emit("info", "Lector detenido.")
 
-    def despachar_salida(self):
+    def salida_si_hay(self):
+        """Manda la bandeja de salida sólo si tiene algo. Nunca lanza."""
+        try:
+            import app.email.bandeja_salida as bandeja
+            from app.email.outlook_provider import envio_en_pausa
+            # Tras un «Deny» no se insiste: esperan al ciclo, sin ventanas.
+            # Y tras un fallo, tampoco cada 15 s: cinco intentos seguidos en
+            # un minuto dejarían el correo en 'fallo' por un Outlook que sólo
+            # se estaba reiniciando.
+            if envio_en_pausa() or time.monotonic() < self._salida_espera_hasta:
+                return
+            if bandeja.hay_pendientes() > 0:
+                self.despachar_salida(rapido=True)
+        except Exception as error:      # un fallo aquí no para la espera
+            self.dice.emit("error", f"No se pudo mirar la bandeja de salida: {error}")
+
+    def despachar_salida(self, rapido=False):
         """Manda las ofertas que el servidor dejó esperando.
 
         El servidor arma la oferta cuando el plant manager pulsa el botón,
@@ -222,6 +248,12 @@ class Lector(QThread):
         if resumen["fallidos"]:
             self.dice.emit("error", f"Bandeja de salida: {resumen['fallidos']} "
                                     f"no salieron; se reintentan el próximo ciclo.")
+        if rapido and resumen["fallidos"]:
+            self._salida_espera_hasta = time.monotonic() + 300
+        if rapido:
+            # Cada 15 s: sólo se dice lo que salió o falló. Lo demás lo cuenta
+            # el ciclo completo, una vez cada cinco minutos y no cada 15 s.
+            return
         if resumen["pendientes"]:
             self.dice.emit("info", f"   Quedan {resumen['pendientes']} esperando.")
         if resumen.get("denegados"):

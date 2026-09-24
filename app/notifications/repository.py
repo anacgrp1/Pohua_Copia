@@ -222,3 +222,34 @@ def marcar_todas(usuario_id: Optional[int] = None,
     finally:
         if propia and conn is not None:
             conn.close()
+
+
+def cerrar_del_rfq(rfq_id: str, usuario_id: Optional[int] = None,
+                   correo: Optional[str] = None, conexion=None) -> int:
+    """Da por atendidos los avisos pendientes de un RFQ. Devuelve cuántos.
+
+    Al aprobar o declinar un RFQ, sus avisos («espera dictamen», «datos con
+    poca confianza»…) ya no piden nada a nadie, pero seguían en la campana
+    hasta que alguien los marcara a mano. No se borran: quedan como leídos,
+    con quién y cuándo, que es la constancia de que se atendieron.
+    """
+    if not rfq_id:
+        return 0
+    propia = conexion is None
+    conn = None
+    try:
+        conn = conexion or duplicates.conectar_bd()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE notificaciones
+                SET leida_en = now(), leida_por = %s, leida_por_correo = %s
+                WHERE rfq_id = %s AND leida_en IS NULL;
+                """,
+                (usuario_id, correo, rfq_id),
+            )
+            cambiadas = cur.rowcount
+        return int(cambiadas or 0)
+    finally:
+        if propia and conn is not None:
+            conn.close()

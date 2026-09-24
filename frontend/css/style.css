@@ -6166,6 +6166,70 @@ body.revision-abierta { overflow: hidden; }
 
 .resumen-decidida-accion { text-align: right; white-space: nowrap; }
 
+/* La línea "cliente · parte · fecha" es sólo del teléfono: en la tabla cada
+   dato ya tiene su columna. */
+.resumen-decidida-linea { display: none; }
+
+/* --- RFQ ya dictaminadas, en el teléfono ---------------------------------
+   La tabla pasa a fichas como la de usuarios, pero sin etiquetas: cada celda
+   salía suelta en su renglón —número, "—", parte, fecha, estado, botón— y
+   una ficha ocupaba media pantalla. Aquí cada RFQ son tres líneas:
+
+       INT-8D69173C                    ● Approved
+       CGR México · 004-222 · 2026-09-24
+       [        Open in the sheet        ]                                  */
+@media (max-width: 768px) {
+    .tabla-usuarios.resumen-decididas tr {
+        display: block;
+        position: relative;
+        padding: var(--sp-3) var(--sp-4);
+    }
+    .tabla-usuarios.resumen-decididas td {
+        display: block;
+        width: auto;
+        padding: 0;
+        margin: 0;
+        border: none;
+        white-space: normal;
+    }
+    .tabla-usuarios.resumen-decididas td.resumen-decidida-dato { display: none; }
+
+    .resumen-decididas .resumen-decidida-id code {
+        display: block;
+        min-height: 26px;
+        padding-right: 116px;           /* el sitio del estado, sólo en esta línea */
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    .resumen-decididas .resumen-decidida-linea {
+        display: block;
+        margin-top: 4px;
+        font-size: 13px;
+        line-height: 1.45;
+        color: var(--text-secondary);
+    }
+    /* Cada dato entero: "004-222" o la fecha no se parten por el guion. Si
+       no caben, baja el dato completo; sólo un nombre larguísimo se corta. */
+    .resumen-decidida-item { white-space: nowrap; }
+    .resumen-decidida-item:first-child { white-space: normal; overflow-wrap: anywhere; }
+    .resumen-decidida-sep { margin: 0 6px; color: var(--text-muted); }
+
+    .tabla-usuarios.resumen-decididas td.resumen-decidida-estado {
+        position: absolute;
+        top: var(--sp-3);
+        right: var(--sp-4);
+    }
+    .tabla-usuarios.resumen-decididas td.resumen-decidida-accion {
+        margin-top: var(--sp-3);
+        text-align: left;
+    }
+    .resumen-decididas .resumen-decidida-accion .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 .revision-geo-deducido {
     margin: var(--sp-2) 0 0;
     font-size: 12px;

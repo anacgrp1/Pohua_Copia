@@ -122,6 +122,10 @@ class RFQSummary(BaseModel):
     veredicto_final: Optional[str] = None
     score: Optional[float] = None
     fecha_registro: Optional[str] = None
+    # El nombre del cliente tal como lo dejó el flujo (razón social o, si no
+    # se reconoció, lo que dijo el correo). Sin él, un RFQ cuyo cliente no
+    # está en la cartera salía en las listas como "—".
+    cliente_nombre: Optional[str] = None
 
 
 class RFQDetail(RFQSummary):

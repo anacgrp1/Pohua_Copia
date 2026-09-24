@@ -48,6 +48,19 @@ class TestGuardarPlanosDisco(unittest.TestCase):
         # Se agrupan bajo la carpeta del rfq_id
         self.assertIn("RFQ-2026-001", rutas[0])
 
+    def test_el_lector_de_outlook_guarda_en_disco(self):
+        """MAIL_MODE=outlook es el lector de escritorio: disco, como imap.
+
+        Antes daba «Modo de almacenamiento desconocido: 'outlook'» en cada RFQ.
+        """
+        from unittest import mock
+        with mock.patch("app.persistence.blueprint_store.guardar_en_base"):
+            rutas = guardar_planos(
+                "RFQ-2026-002", [{"nombre": "plano.pdf", "contenido": b"%PDF-1.7"}],
+                modo="outlook", base_dir=self.tmp)
+        self.assertEqual(len(rutas), 1)
+        self.assertTrue(os.path.isfile(rutas[0]))
+
     def test_sin_adjuntos_devuelve_lista_vacia(self):
         self.assertEqual(
             guardar_planos("RFQ-2026-001", [], modo="local", base_dir=self.tmp), []
