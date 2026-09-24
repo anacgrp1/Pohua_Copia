@@ -396,6 +396,31 @@ def _lector(inf):
                 "scripts/vendorizar_nucleo.py las regenera.")
 
 
+def _catalogo(inf):
+    """¿Está en la base el catálogo que validó el taller?
+
+    Sin él, el costeo del flujo usa los valores de marcador de la migración
+    007 —otra escalera de overhead, sin transporte del alambre, máquinas sin
+    capacidades— y el precio no es el de la calculadora de la planta, que
+    lleva los datos buenos dentro. Se reconoce por el parámetro `transpPerLb`,
+    que sólo entra con el extracto.
+    """
+    inf.en("Catálogo de costeo")
+    try:
+        from pricing import repository
+        params = repository.parametros_vigentes()
+    except Exception as error:
+        inf.ojo("No se pudo leer el catálogo de costeo", str(error))
+        return
+    if "transpPerLb" in (params or {}):
+        inf.ok("El catálogo validado del taller está cargado")
+        return
+    inf.falta("El catálogo validado del taller NO está cargado en la base",
+              "El precio del flujo no va a coincidir con la calculadora. Se carga "
+              "una vez, desde la carpeta del proyecto: python scripts/cargar_catalogo.py "
+              "--carpeta _extracto_catalogo")
+
+
 def _legal(inf):
     """Los datos del responsable en el aviso de privacidad.
 
@@ -462,6 +487,7 @@ def revisar(con_buzon: bool = True, desde_escritorio: bool = False) -> Dict[str,
         lambda: _avisos(inf),
         lambda: _recordatorio(inf),
         lambda: _lector(inf),
+        lambda: _catalogo(inf),
         lambda: _legal(inf),
     ):
         # Una comprobación que reviente no puede llevarse por delante el resto

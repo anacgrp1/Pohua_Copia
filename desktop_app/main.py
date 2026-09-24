@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -50,11 +51,11 @@ if str(RAIZ) not in sys.path:
 # se lee el fichero.
 os.chdir(RAIZ)
 
-from PySide6.QtCore import QThread, QTimer, Signal          # noqa: E402
+from PySide6.QtCore import QLockFile, QThread, QTimer, Signal  # noqa: E402
 from PySide6.QtGui import QFont                                  # noqa: E402
 from PySide6.QtWidgets import (                                  # noqa: E402
-    QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
-    QTextEdit, QVBoxLayout, QWidget,
+    QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow, QMessageBox,
+    QPushButton, QTextEdit, QVBoxLayout, QWidget,
 )
 
 import app.core.config as config                                 # noqa: E402
@@ -223,6 +224,11 @@ class Lector(QThread):
                                     f"no salieron; se reintentan el próximo ciclo.")
         if resumen["pendientes"]:
             self.dice.emit("info", f"   Quedan {resumen['pendientes']} esperando.")
+        if resumen.get("denegados"):
+            self.dice.emit("aviso",
+                           "Outlook no dejó mandar (se pulsó «Deny»). Las ofertas "
+                           "siguen en la bandeja de salida; no se vuelve a "
+                           "preguntar en 15 min.")
         if resumen.get("omitidos"):
             # Pasa si esta computadora tampoco está configurada para mandar:
             # decirlo aquí ahorra buscar el correo perdido en el servidor.
@@ -423,11 +429,44 @@ class Ventana(QMainWindow):
             elif punto["estado"] == "ojo":
                 self.escribir("aviso", punto["titulo"])
 
+        self._comprobar_confianza_de_outlook()
+
         if informe["listo"]:
             self.escribir("ok", "Todo en su sitio. Puedes iniciar el lector.")
         else:
             self.escribir("aviso", f"Faltan {informe['bloqueantes']} cosa(s); "
                                    "el lector puede arrancar igual, pero fallará ahí.")
+
+    def _comprobar_confianza_de_outlook(self):
+        """Una vez, al abrir: ¿Outlook va a pedir permiso para cada correo?
+
+        Si no confía en los programas que lo automatizan, saca «A program is
+        trying to send an email message on your behalf» en CADA envío, y esa
+        ventana no tiene «permitir durante un rato». Se dice aquí, con lo que
+        hay que hacer, en lugar de que se descubra a base de ventanas.
+        """
+        modo = str(ajuste("MAIL_MODE", "")).lower()
+        if modo != "outlook":
+            return
+        from app.email.outlook_provider import outlook_confia
+        confia = outlook_confia()
+        if confia is None:
+            return
+        if confia:
+            self.escribir("ok", "Outlook confía en Pohua: los correos salen sin "
+                                "preguntar.")
+            return
+        self.escribir("aviso", "Outlook va a pedir permiso para CADA correo que "
+                               "mande Pohua (el cuadro «A program is trying to "
+                               "send an email…»).")
+        self.escribir("info", "   Se quita en Outlook: Archivo → Opciones → Centro "
+                              "de confianza → Configuración → Acceso mediante "
+                              "programación. «Estado del antivirus» tiene que "
+                              "decir Válido; si no, hay que activar o actualizar "
+                              "el antivirus (o que TI lo configure).")
+        self.escribir("info", "   Mientras tanto: si pulsas «Deny», Pohua deja de "
+                              "preguntar 15 min y las ofertas esperan en la "
+                              "bandeja de salida.")
 
     # ----------------------------------------------------------- arrancar
 
@@ -517,6 +556,17 @@ class Ventana(QMainWindow):
 def main():
     aplicacion = QApplication(sys.argv)
     aplicacion.setStyle("Fusion")
+
+    # Una sola copia abierta. Dos leían el mismo buzón y mandaban la misma
+    # bandeja de salida a la vez: dos ventanas de permiso de Outlook, una
+    # encima de la otra, por cada correo.
+    candado = QLockFile(os.path.join(tempfile.gettempdir(), "pohua-escritorio.lock"))
+    candado.setStaleLockTime(0)
+    if not candado.tryLock(100):
+        QMessageBox.information(None, "Pohua",
+                                "Pohua ya está abierto en esta computadora.")
+        sys.exit(0)
+
     ventana = Ventana()
     ventana.show()
     sys.exit(aplicacion.exec())

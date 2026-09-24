@@ -91,6 +91,7 @@ def operaciones_secundarias(descripcion: str,
                             tipo_extremos: Optional[str] = None,
                             tratamiento_termico: Optional[str] = None,
                             material_codigo: Optional[str] = None,
+                            plano_calculadora: Optional[Dict[str, Any]] = None,
                             ) -> Optional[List[Dict[str, str]]]:
     """Las operaciones que van DESPUÉS de la bobinadora.
 
@@ -100,9 +101,16 @@ def operaciones_secundarias(descripcion: str,
 
     El plano se le pasa con la forma que esperan las reglas -- los campos que
     la calculadora saca del dibujo -- para no tener dos formatos del mismo dato.
+
+    ``plano_calculadora`` es ese plano tal cual lo leyó el lector del núcleo
+    (``app/vision/lector_nucleo.py``): con él, la regla ve lo MISMO que ve en la
+    calculadora —incluida la lista de factibilidad, de donde sale el horno
+    cuando el dibujo pide relevado de tensiones—.
     """
-    plano: Dict[str, Any] = {"fields": [], "feasibility": []}
-    if tipo_extremos:
+    base = plano_calculadora or {}
+    plano: Dict[str, Any] = {"fields": list(base.get("fields") or []),
+                             "feasibility": list(base.get("feasibility") or [])}
+    if tipo_extremos and not any(f.get("key") == "endType" for f in plano["fields"]):
         plano["fields"].append({"key": "endType", "value": tipo_extremos})
     if tratamiento_termico:
         plano["feasibility"].append({"label": f"Heat treatment: {tratamiento_termico}"})

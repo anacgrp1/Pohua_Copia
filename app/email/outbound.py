@@ -199,13 +199,23 @@ def enviar(contenido, rfq_id=None, clase="aviso", por=None) -> bool:
         # Por el Outlook que ya está abierto: mismo remitente y misma firma
         # que si lo hubiera escrito una persona.
         from app.email.factory import EmailProviderFactory
+        from app.email.outlook_provider import EnvioDenegado
         proveedor = EmailProviderFactory.get_provider()
-        return proveedor.send_email(
-            to=contenido["destinatario"],
-            subject=contenido["asunto"],
-            body=contenido.get("cuerpo_html") or contenido.get("cuerpo_texto", ""),
-            attachments=_adjuntos(contenido),
-        )
+        try:
+            return proveedor.send_email(
+                to=contenido["destinatario"],
+                subject=contenido["asunto"],
+                body=contenido.get("cuerpo_html") or contenido.get("cuerpo_texto", ""),
+                attachments=_adjuntos(contenido),
+            )
+        except EnvioDenegado as error:
+            # Outlook no dejó mandar: el correo no se pierde, espera en la
+            # bandeja de salida y lo manda el siguiente ciclo que pueda.
+            import app.email.bandeja_salida as bandeja
+            cola_id = bandeja.encolar(contenido, rfq_id=rfq_id, clase=clase, por=por)
+            log.warning("%s El correo a %s queda en la bandeja de salida (id %s).",
+                        error, contenido.get("destinatario"), cola_id)
+            return True
     if modo in _MODOS_TOKEN:
         import app.email.graph_sender as graph_sender
         return graph_sender.enviar_correo_graph(contenido)

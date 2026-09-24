@@ -36,6 +36,7 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
+import time
 from email.utils import format_datetime
 from typing import List, Optional
 
@@ -58,6 +59,63 @@ PR_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x39FE001E"
 # access email address information stored in Outlook». `PropertyAccessor`
 # sobre estas dos lee lo mismo sin pasar por ahí.
 PR_SENDER_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x5D01001F"
+
+# --- El cuadro de «A program is trying to send an email message on your
+# behalf» -------------------------------------------------------------------
+#
+# Lo saca el guardián de Outlook en CADA `Send()` cuando no confía en el
+# programa, y a diferencia del de la libreta de direcciones NO tiene «permitir
+# durante 10 minutos»: una ventana por correo. Outlook confía solo cuando ve un
+# antivirus en buen estado (Archivo → Opciones → Centro de confianza → Acceso
+# mediante programación). Eso no se arregla desde el código; lo que sí se hace
+# aquí es que no se amontonen:
+#
+#   * Si alguien pulsa «Deny», Outlook contesta E_ABORT. Se deja de llamar a
+#     `Send()` durante un rato y los correos esperan en la bandeja de salida,
+#     en vez de sacar una ventana nueva por cada uno que quede.
+#   * `outlook_confia()` lo pregunta UNA vez al arrancar, para decirlo en la
+#     aplicación de escritorio en lugar de descubrirlo a base de ventanas.
+E_ABORT = -2147467260                  # 0x80004004
+PAUSA_TRAS_DENEGAR_S = 15 * 60
+_denegado_en: Optional[float] = None   # del módulo: vale para todas las instancias
+
+
+class EnvioDenegado(RuntimeError):
+    """Outlook no dejó mandar: alguien pulsó «Deny», o se pulsó hace poco."""
+
+
+def _es_denegado(error: BaseException) -> bool:
+    """¿Es el E_ABORT de la ventana de Outlook? Viene en el HRESULT o dentro
+    del excepinfo, según por dónde lo devuelva pywin32."""
+    args = getattr(error, "args", ()) or ()
+    if args and args[0] == E_ABORT:
+        return True
+    info = args[2] if len(args) > 2 else None
+    return bool(isinstance(info, tuple) and len(info) > 5 and info[5] == E_ABORT)
+
+
+def _marcar_denegado() -> None:
+    global _denegado_en
+    _denegado_en = time.monotonic()
+
+
+def envio_en_pausa() -> bool:
+    """¿Se pulsó «Deny» hace menos de PAUSA_TRAS_DENEGAR_S?"""
+    return (_denegado_en is not None and
+            time.monotonic() - _denegado_en < PAUSA_TRAS_DENEGAR_S)
+
+
+def outlook_confia() -> Optional[bool]:
+    """¿Manda Outlook sin preguntar? None si no se puede saber (sin Outlook,
+    sin pywin32, u Outlook que no expone `IsTrusted`)."""
+    try:
+        import pythoncom
+        import win32com.client
+        pythoncom.CoInitialize()
+        return bool(win32com.client.Dispatch("Outlook.Application").IsTrusted)
+    except Exception as error:
+        logger.debug("No se pudo preguntar a Outlook si confía: %s", error)
+        return None
 PR_SENT_REPRESENTING_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x5D02001F"
 # Para incrustar la firma: el "cid" del HTML y la marca de "no la
 # enseñes como archivo adjunto".
@@ -591,6 +649,10 @@ class OutlookEmailProvider(BaseEmailProvider):
         siempre, sin SMTP ni tokens: el mismo camino que si alguien la hubiera
         escrito a mano.
         """
+        if envio_en_pausa():
+            raise EnvioDenegado(
+                "Outlook no dejó mandar hace menos de %d min; el correo espera en "
+                "la bandeja de salida." % (PAUSA_TRAS_DENEGAR_S // 60))
         if self._outlook is None and not self.connect():
             return False
 
@@ -634,6 +696,12 @@ class OutlookEmailProvider(BaseEmailProvider):
             logger.info("Correo enviado por Outlook a %s.", to)
             return True
         except Exception as error:
+            if _es_denegado(error):
+                _marcar_denegado()
+                logger.warning("Outlook no dejó mandar el correo a %s (se pulsó "
+                               "«Deny»). No se vuelve a intentar en %d min.",
+                               to, PAUSA_TRAS_DENEGAR_S // 60)
+                raise EnvioDenegado("Outlook no dejó mandar el correo.") from error
             logger.error("No se pudo enviar por Outlook: %s", error)
             return False
         finally:

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import re
+from typing import Optional
 
 log = logging.getLogger("cotizador.rfq.costeo")
 
@@ -47,18 +48,29 @@ def cantidades_del_rfq(datos: dict) -> list:
     return sorted(fuera)[:5]
 
 
-def tramo_para_ventana(t: dict, objetivo_pct) -> dict:
-    """Traduce un tramo del motor a lo que dibuja la ventana."""
+def tramo_para_ventana(t: dict, objetivo_pct, entrada: Optional[dict] = None) -> dict:
+    """Traduce un tramo del motor a lo que dibuja la ventana.
+
+    ``entrada`` es el mismo tramo tal como se le MANDÓ al motor. La ruta sale
+    de ahí: el motor del núcleo no la devuelve en su resultado, y leerla del
+    resultado dejaba la ventana diciendo «Sin ruta» con la ruta puesta y las
+    horas calculadas.
+    """
     pnl = t.get("pnl") or {}
     sell = num(t.get("sell"))
     resultado = num(pnl.get("result"))
     resultado_pct = (resultado / sell * 100) if (sell and resultado is not None) else None
     ruta = []
-    for op in (t.get("routing") or []):
+    for op in ((entrada or {}).get("routing") or t.get("routing") or []):
         if not op or not op.get("machine"):
             continue
-        ruta.append({"maquina": op.get("machine"), "pph": num(op.get("pph")),
-                     "setup_h": num(op.get("setupH"))})
+        ruta.append({"maquina": op.get("machine"),
+                     # Qué clase de máquina es: la que enrolla el resorte
+                     # (COILER) o una operación posterior (SECONDARY).
+                     "familia": op.get("family") or None,
+                     "pph": num(op.get("pph")),
+                     "setup_h": num(op.get("setupH")),
+                     "costo_h": num(op.get("machH"))})
     return {
         "cantidad": num(t.get("qty")),
         "precio_pc": sell,
@@ -169,8 +181,10 @@ def costear(rfq_id: str, datos: dict, resorte: dict, material_rfq=None) -> dict:
                     catalogo.parametros, None, catalogo.dbs_motor))
             params = catalogo.parametros or {}
             objetivo = num(params.get("contribution")) or 20.0
-            tramos = [tramo_para_ventana(t, objetivo)
-                      for t in (resultado.get("tiers") or []) if t]
+            enviados = pn.get("tiers") or []
+            tramos = [tramo_para_ventana(t, objetivo,
+                                         enviados[i] if i < len(enviados) else None)
+                      for i, t in enumerate(resultado.get("tiers") or []) if t]
             mat = pn.get("material") or {}
             comunes = {
                 "material": mat.get("code"),

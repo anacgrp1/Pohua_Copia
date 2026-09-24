@@ -370,7 +370,10 @@ def build_pn_for_engine(
     diam_mm = _num(spring_data.get("diametro_alambre_mm"))
     od_mm = _num(spring_data.get("diametro_exterior_mm"))
     cantidad = _num(spring_data.get("cantidad"))
-    material_codigo = (spring_data.get("material") or "").strip() or None
+    # El código que resolvió el lector del núcleo («SPRING WIRE» → MW) manda
+    # sobre el texto del plano: es el mismo que usa la calculadora.
+    material_codigo = (str(spring_data.get("material_codigo") or "").strip()
+                       or (spring_data.get("material") or "").strip() or None)
 
     # Los tramos de cantidad. Un RFQ real casi nunca trae UNA cantidad: trae
     # "10,000, 25,000 y 50,000" y quiere precio para cada una. Se admiten
@@ -438,8 +441,8 @@ def build_pn_for_engine(
         if tope is None:
             catalogo.faltantes.append(
                 "No se pudo comprobar el tope por material: la tabla `maquinas` "
-                "todavía no tiene `tope_material` ni `tope_alambre_max_mm`. Están "
-                "en maquinas_valores.csv del extracto del catálogo.")
+                "todavía no tiene `tope_material` ni `tope_alambre_max_mm`: falta "
+                "aplicar la migración 028.")
         else:
             motivo = reglas.tope_por_material(
                 maquina["nombre"], tope, material.get("nombre"), diam_mm)
@@ -492,6 +495,7 @@ def build_pn_for_engine(
             tipo_extremos=spring_data.get("tipo_extremos"),
             tratamiento_termico=tratamiento,
             material_codigo=(material.get("codigo") or material_codigo),
+            plano_calculadora=spring_data.get("plano_calculadora"),
         )
         secundarias = _con_relevado(secundarias, desc, catalogo)
         if secundarias is None:

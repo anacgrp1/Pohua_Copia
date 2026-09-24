@@ -5672,7 +5672,35 @@ body.revision-abierta { overflow: hidden; }
     line-height: 1.35;
     color: var(--color-warning);
 }
-.revision-franja-texto { min-width: 0; font-size: 13px; line-height: 1.5; }
+.revision-franja-texto { min-width: 0; font-size: 13px; line-height: 1.5; margin: 0; padding-left: 16px; }
+/* Un aviso por línea: todos seguidos con «—» eran un párrafo que nadie leía. */
+.revision-franja-texto li + li { margin-top: 4px; }
+
+/* La máquina, la primera pastilla: es lo que el PM pregunta antes que nada. */
+.revision-pill--maquina { border-color: var(--cgr-azul-frio); }
+.revision-pill--maquina b { color: var(--cgr-azul-frio); }
+.revision-pill--falta { border-color: var(--color-warning); }
+.revision-pill--falta b { color: var(--color-warning); }
+
+/* La ruta, operación por operación: qué máquina, de qué clase y a qué ritmo. */
+.revision-op { padding: 6px 0; border-top: 1px solid var(--border-subtle); }
+.revision-op:first-of-type { border-top: none; }
+.revision-op-cab { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.revision-op-num {
+    flex: none; width: 18px; height: 18px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; background: var(--bg-elevated); color: var(--text-secondary);
+}
+.revision-op-maq { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.revision-op-fam {
+    flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 1px 7px; border-radius: var(--radius-full); border: 1px solid var(--border-default); color: var(--text-secondary);
+}
+.revision-op-fam--coiler { border-color: var(--cgr-azul-frio); color: var(--cgr-azul-frio); }
+.revision-op-datos {
+    display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 2px 0 0 26px;
+    font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums;
+}
 .revision-franja--error { border-color: var(--color-error); background: var(--color-error-bg); }
 .revision-franja--error .revision-franja-icono { color: var(--color-error); }
 .revision-franja--info  { border-color: var(--color-info);  background: var(--color-info-bg); }

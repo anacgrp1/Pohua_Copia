@@ -1,0 +1,133 @@
+# -*- coding: utf-8 -*-
+"""La ventana «A program is trying to send an email message on your behalf».
+
+Outlook la saca en CADA `Send()` cuando no confía en el programa, y no tiene
+«permitir durante un rato». Eso se quita en Outlook (antivirus válido en el
+Centro de confianza), no desde aquí. Lo que sí es de Pohua es que no se
+amontonen: después de un «Deny» no se vuelve a llamar a `Send()` durante un
+rato, la cola se para en vez de sacar una ventana por correo, y ningún correo
+se pierde por eso.
+"""
+
+import os
+
+import pytest
+
+os.environ.setdefault("IMAP_SERVER", "smtp.test.local")
+os.environ.setdefault("IMAP_USER", "remitente@cgr.com")
+os.environ.setdefault("IMAP_PASSWORD", "secreto")
+
+from app.email import outlook_provider as op  # noqa: E402
+
+
+class ComError(Exception):
+    """Como pywintypes.com_error: (hresult, texto, excepinfo, argerr)."""
+
+
+@pytest.fixture(autouse=True)
+def sin_pausa(monkeypatch):
+    monkeypatch.setattr(op, "_denegado_en", None)
+
+
+class _CorreoQueNiegan:
+    def __init__(self, error):
+        self.error = error
+        self.Attachments = self
+
+    def Add(self, ruta):
+        return None
+
+    def Send(self):
+        raise self.error
+
+
+class _Outlook:
+    def __init__(self, error):
+        self.error = error
+        self.creados = 0
+
+    def CreateItem(self, _):
+        self.creados += 1
+        return _CorreoQueNiegan(self.error)
+
+
+def _proveedor(error, monkeypatch):
+    p = op.OutlookEmailProvider()
+    p._outlook = _Outlook(error)
+    monkeypatch.setattr(p, "_fijar_remitente", lambda correo: None)
+    return p
+
+
+class TestReconoceElDeny:
+
+    def test_por_el_hresult(self):
+        assert op._es_denegado(ComError(op.E_ABORT, "Operation aborted", None, None))
+
+    def test_por_el_excepinfo(self):
+        info = (0, "Outlook", "Operation aborted", None, 0, op.E_ABORT)
+        assert op._es_denegado(ComError(-2147352567, "Exception occurred.", info, None))
+
+    def test_otro_error_no_es_un_deny(self):
+        assert not op._es_denegado(ComError(-2147221005, "Invalid class string", None, None))
+
+
+class TestTrasUnDeny:
+
+    def test_se_avisa_y_no_se_vuelve_a_preguntar(self, monkeypatch):
+        p = _proveedor(ComError(op.E_ABORT, "Operation aborted", None, None), monkeypatch)
+        with pytest.raises(op.EnvioDenegado):
+            p.send_email("a@b.com", "Oferta", "hola")
+        assert p._outlook.creados == 1
+        # El siguiente ni siquiera llega a Outlook: sería otra ventana.
+        with pytest.raises(op.EnvioDenegado):
+            p.send_email("c@d.com", "Oferta", "hola")
+        assert p._outlook.creados == 1
+        assert op.envio_en_pausa()
+
+    def test_un_error_cualquiera_no_pausa(self, monkeypatch):
+        p = _proveedor(ComError(-1, "otro", None, None), monkeypatch)
+        assert p.send_email("a@b.com", "Oferta", "hola") is False
+        assert not op.envio_en_pausa()
+
+
+class TestLaColaSeParaSinPerderNada:
+
+    def test_un_deny_para_la_cola_y_no_gasta_intentos(self, monkeypatch):
+        import app.email.bandeja_salida as bandeja
+        cola = [{"id": i, "destinatario": f"c{i}@x.com", "rfq_id": None} for i in (1, 2, 3)]
+        fallos = []
+        monkeypatch.setattr(bandeja, "pendientes", lambda limite=20: list(cola))
+        monkeypatch.setattr(bandeja, "hay_pendientes", lambda: 3)
+        monkeypatch.setattr(bandeja, "marcar_fallo", lambda i, e: fallos.append(i))
+        llamadas = []
+
+        def niega(correo):
+            llamadas.append(correo["id"])
+            raise op.EnvioDenegado("Outlook no dejó mandar el correo.")
+
+        resumen = bandeja.drenar(enviar=niega)
+        assert llamadas == [1]              # una sola ventana, no tres
+        assert fallos == []                 # no cuenta como intento fallido
+        assert resumen["denegados"] == 1 and resumen["pendientes"] == 3
+
+    def test_un_correo_directo_denegado_queda_en_la_bandeja(self, monkeypatch):
+        import app.core.config as config
+        import app.email.bandeja_salida as bandeja
+        import app.email.factory as factory
+        import app.email.outbound as outbound
+
+        class Niega:
+            def send_email(self, **kw):
+                raise op.EnvioDenegado("Outlook no dejó mandar el correo.")
+
+        monkeypatch.setattr(config.settings, "MAIL_MODE", "outlook", raising=False)
+        monkeypatch.setattr(outbound, "diagnostico_envio",
+                            lambda: {"puede": True, "modo": "outlook", "faltan": []})
+        monkeypatch.setattr(factory.EmailProviderFactory, "get_provider",
+                            staticmethod(lambda: Niega()))
+        encolados = []
+        monkeypatch.setattr(bandeja, "encolar",
+                            lambda contenido, **kw: encolados.append(contenido) or 99)
+        ok = outbound.enviar({"destinatario": "c@x.com", "asunto": "Oferta",
+                              "cuerpo_texto": "hola"}, rfq_id="RFQ-1", clase="oferta")
+        assert ok is True and len(encolados) == 1

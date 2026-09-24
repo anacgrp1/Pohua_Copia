@@ -321,7 +321,6 @@ def procesar_dibujos(correo, rfq_id, informe=None):
     # Import perezoso (solo cuando hay algo que analizar)
     import app.persistence.spring_repository as spring_repository
     import app.vision.pipeline as pipeline
-    import app.vision.spring_extractor as spring_extractor
 
     # Lo que el modelo puede leer Y que además es un plano: la firma del
     # correo llega como un adjunto más y por nombre no se distingue de un
@@ -344,8 +343,10 @@ def procesar_dibujos(correo, rfq_id, informe=None):
     resultados = []
     nombres = ", ".join(a.get("nombre", "?") for a in soportados)
     try:
-        analisis = pipeline.analizar_dibujos(soportados)
-        datos = spring_extractor.interpretar(analisis["texto"])
+        # Con el MISMO lector que la calculadora (app/vision/lector_nucleo.py);
+        # el de app/vision queda de respaldo si el núcleo no está o falla.
+        import app.vision.lector_nucleo as lector_nucleo
+        datos = lector_nucleo.leer_planos(soportados)
         spring_repository.guardar(
             rfq_id, correo.get("message_id", ""), nombres, datos)
         resultados.append(datos)

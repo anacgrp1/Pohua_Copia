@@ -38,6 +38,9 @@ def _todo_bien(extra=None):
                    return_value=[{"correo": "rodea@isc.com"}]),
         mock.patch("app.auth.repository.usuarios_con_permiso",
                    return_value=[{"nombre": "Rodea", "correo": "rodea@isc.com"}]),
+        # El catálogo validado, cargado: sin esto la comprobación iría a la base.
+        mock.patch("pricing.repository.parametros_vigentes",
+                   return_value={"transpPerLb": 0.3}),
     ]
     return parches
 
@@ -176,3 +179,23 @@ class TestInforme(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestElCatalogo(unittest.TestCase):
+    """Sin el catálogo validado, el precio del flujo no es el de la calculadora."""
+
+    def test_sin_el_extracto_cargado_lo_dice_con_el_comando(self):
+        from app.core import preflight
+        inf = preflight._Informe()
+        with mock.patch("pricing.repository.parametros_vigentes", return_value={"matMk": 6}):
+            preflight._catalogo(inf)
+        assert inf.puntos[0]["estado"] == "falta"
+        assert "cargar_catalogo.py" in inf.puntos[0]["detalle"]
+
+    def test_con_el_extracto_cargado_esta_bien(self):
+        from app.core import preflight
+        inf = preflight._Informe()
+        with mock.patch("pricing.repository.parametros_vigentes",
+                        return_value={"transpPerLb": 0.3}):
+            preflight._catalogo(inf)
+        assert inf.puntos[0]["estado"] == "ok"

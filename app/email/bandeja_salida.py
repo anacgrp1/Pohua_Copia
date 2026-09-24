@@ -229,7 +229,8 @@ def drenar(limite: int = 20, enviar=None) -> Dict[str, int]:
     Nunca lanza: un correo que no sale no puede tumbar el ciclo de lectura, que
     es lo que hace entrar los RFQ.
     """
-    resumen = {"enviados": 0, "fallidos": 0, "pendientes": 0, "omitidos": 0}
+    resumen = {"enviados": 0, "fallidos": 0, "pendientes": 0, "omitidos": 0,
+               "denegados": 0}
 
     # Si ESTE proceso tampoco puede mandar, no se toca la cola. Intentarlo
     # gastaría los cinco intentos de cada correo en segundos y los dejaría en
@@ -261,6 +262,8 @@ def drenar(limite: int = 20, enviar=None) -> Dict[str, int]:
     if not cola:
         return resumen
 
+    from app.email.outlook_provider import EnvioDenegado
+
     despachar = enviar or _despachar_por_outlook
     for correo in cola:
         try:
@@ -273,6 +276,13 @@ def drenar(limite: int = 20, enviar=None) -> Dict[str, int]:
             else:
                 marcar_fallo(correo["id"], "El proveedor devolvió False.")
                 resumen["fallidos"] += 1
+        except EnvioDenegado as error:
+            # Outlook no dejó (se pulsó «Deny»). No es un fallo del correo: no
+            # gasta intentos. Y se para aquí: seguir sería una ventana de
+            # Outlook más por cada correo que quede en la cola.
+            log.warning("Bandeja de salida: %s Quedan en espera.", error)
+            resumen["denegados"] += 1
+            break
         except Exception as error:
             log.error("Bandeja de salida: falló el id=%s: %s", correo["id"], error)
             try:

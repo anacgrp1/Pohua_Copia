@@ -220,7 +220,8 @@ def test_lo_viejo_sale_primero(base, pdf):
 
 def test_sin_cola_no_se_hace_nada(base):
     assert bandeja.drenar(enviar=lambda c: True) == {
-        "enviados": 0, "fallidos": 0, "pendientes": 0, "omitidos": 0}
+        "enviados": 0, "fallidos": 0, "pendientes": 0, "omitidos": 0,
+        "denegados": 0}
 
 
 # --------------------------------------------------------------------------- #

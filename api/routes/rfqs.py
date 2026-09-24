@@ -668,6 +668,9 @@ def cotizacion_inicial(
             **_espiras_para_la_hoja(resorte),
             "material_texto": resorte.get("material") or detalle.material,
             "acabado": resorte.get("acabado"),
+            # Lo que el lector del núcleo entrega a la calculadora (cotas,
+            # factibilidad, veredicto): la hoja abre como con «AI Read Drawing».
+            "plano_calculadora": resorte.get("plano_calculadora"),
         },
         # Los dibujos que venían en el correo, para dejarlos puestos en la
         # casilla de "AI Read Drawing" sin ir a buscarlos otra vez al buzón.

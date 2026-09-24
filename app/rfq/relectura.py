@@ -93,11 +93,10 @@ def releer(rfq_id: str, message_id: str = "", cliente=None) -> Dict[str, Any]:
     nombres = [p["nombre"] for p in utiles]
     try:
         import app.persistence.spring_repository as spring_repository
-        import app.vision.pipeline as pipeline
-        import app.vision.spring_extractor as spring_extractor
+        import app.vision.lector_nucleo as lector_nucleo
 
-        analisis = pipeline.analizar_dibujos(utiles, cliente=cliente)
-        datos = spring_extractor.interpretar(analisis["texto"])
+        # El mismo lector que la calculadora; el de respaldo si no está.
+        datos = lector_nucleo.leer_planos(utiles, cliente=cliente)
         spring_repository.guardar(rfq_id, message_id or "", ", ".join(nombres), datos)
         log.info("RFQ=%s: plano releído con la IA (%s); listo_para_cotizar=%s.",
                  rfq_id, ", ".join(nombres), datos.get("listo_para_cotizar"))
@@ -135,6 +134,31 @@ def falta_geometria(resorte: Optional[dict]) -> bool:
         return True
 
 
+def falta_lectura_del_nucleo(resorte: Optional[dict]) -> bool:
+    """¿Este resorte se leyó con otro lector que el de la calculadora?
+
+    Los RFQ que entraron antes de que el flujo usara el lector del núcleo
+    (``app/vision/lector_nucleo.py``) tienen cotas pero no lo que la
+    calculadora necesita para abrirlos igual que con «AI Read Drawing»: la
+    lista de factibilidad, el veredicto y el tipo de extremo en su código. Se
+    leen otra vez, UNA: si el núcleo no está o no puede, el resorte queda
+    marcado ``lector='vision'`` y no se vuelve a intentar.
+    """
+    if not resorte or resorte.get("plano_calculadora"):
+        return False
+    if resorte.get("lector") == "vision":
+        return False
+    try:
+        import app.vision.lector_nucleo as lector_nucleo
+        return lector_nucleo.disponible()
+    except Exception:
+        return False
+
+
+def hay_que_leer(resorte: Optional[dict]) -> bool:
+    return falta_geometria(resorte) or falta_lectura_del_nucleo(resorte)
+
+
 # Lo ya intentado en este proceso, y si tiene sentido repetirlo. Vive en
 # memoria a propósito: al reiniciar se vuelve a intentar una vez, que es
 # justo lo que se quiere después de recargar saldo o cambiar la clave.
@@ -167,7 +191,7 @@ def leer_en_segundo_plano(rfq_id: str, resorte: Optional[dict],
     dictaminar sobre seis rayas. Esa espera está justificada; la de la ficha
     no lo estaba.
     """
-    if not falta_geometria(resorte):
+    if not hay_que_leer(resorte):
         return False
     if _INTENTADO.get(rfq_id) in ("definitivo", "corriendo"):
         return False
@@ -218,7 +242,7 @@ def asegurar_resorte_una_vez(rfq_id: str, resorte: Optional[dict],
     no, se intenta UNA vez y después se deja el botón de releer, que es una
     persona decidiendo gastar la llamada.
     """
-    if not falta_geometria(resorte):
+    if not hay_que_leer(resorte):
         return {"resorte": resorte, "lectura": None}
 
     if _INTENTADO.get(rfq_id) == "definitivo":
@@ -252,10 +276,17 @@ def asegurar_resorte(rfq_id: str, resorte: Optional[dict],
     ``lectura`` es ``None`` cuando no hizo falta releer, para que quien llame
     distinga "no se intentó" de "se intentó y no salió".
     """
-    if not falta_geometria(resorte):
+    if not hay_que_leer(resorte):
+        return {"resorte": resorte, "lectura": None}
+    # Con cotas y sólo por pasar al lector del núcleo, UNA vez por proceso:
+    # abrir la cotización diez veces no pueden ser diez lecturas cobradas.
+    if not falta_geometria(resorte) and _INTENTADO.get(rfq_id):
         return {"resorte": resorte, "lectura": None}
 
     lectura = releer(rfq_id, message_id=message_id, cliente=cliente)
     if lectura["estado"] == "leido" and lectura["resorte"]:
+        _INTENTADO.pop(rfq_id, None)
         return {"resorte": lectura["resorte"], "lectura": lectura}
+    if not falta_geometria(resorte):
+        _INTENTADO[rfq_id] = "definitivo"
     return {"resorte": resorte, "lectura": lectura}

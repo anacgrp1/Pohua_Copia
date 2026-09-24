@@ -1327,7 +1327,9 @@
 
             // El plano del correo, puesto en la casilla de "AI Read Drawing"
             // —y leído solo si quien mira es el PM—.
-            intentar(function () { ponerPlanos(d.ficheros, q); }, 'poner el plano');
+            intentar(function () {
+                ponerPlanos(d.ficheros, q, !!((d.resorte || {}).plano_calculadora));
+            }, 'poner el plano');
 
             // Y ya con el borrador puesto, se le entrega a la hoja de resortes.
             if (d.pn.drawing) {
@@ -1509,7 +1511,7 @@
      * NO se lee solo: cada lectura es una llamada de pago y el lector puede
      * estar apagado. Queda cargado y a un toque.
      */
-    function ponerPlanos(ficheros, q) {
+    function ponerPlanos(ficheros, q, yaLeido) {
         if (!ficheros || !ficheros.length) return;
         var campo = document.getElementById('q-drawing');
         if (!campo || typeof DataTransfer === 'undefined') return;
@@ -1530,7 +1532,10 @@
            que es exactamente lo que no se quería ver al abrir la cotización.
 
            Los demás se quedan cargados para quien quiera leerlos a mano. */
-        if (esPlantManager()) {
+        // Ya leído en el servidor con el mismo lector: leerlo otra vez aquí
+        // sería pagar dos veces la misma lectura. Se queda en la casilla por
+        // si alguien quiere los recortes («AI Read Drawing»).
+        if (esPlantManager() && !yaLeido) {
             leerPlanoSolo(ficheros[0], q);
             if (ficheros.length > 1) {
                 aviso(t('variosFicheros', { n: ficheros.length,
@@ -1657,6 +1662,29 @@
      */
     function prepararResorte(d) {
         var r = d.resorte || {};
+
+        /* Si el servidor leyó el plano con el lector del núcleo —el mismo de
+           «AI Read Drawing»—, se usa TAL CUAL: cotas, lista de factibilidad y
+           veredicto. Así la Spring Calc abre este RFQ igual que abriría el
+           plano en la calculadora suelta, con su checklist y su FEASIBLE, en
+           lugar de «No customer drawing parsed yet». */
+        var pc = r.plano_calculadora;
+        if (pc && pc.fields && pc.fields.length) {
+            var titulo = {};
+            Object.keys(pc.title || {}).forEach(function (k) { titulo[k] = pc.title[k]; });
+            titulo.pn = titulo.pn || d.pn.pn || '';
+            titulo.customer = titulo.customer || (d.header || {}).customer || '';
+            d.pn.drawing = {
+                springType: pc.springType || TIPOS_RESORTE[String(r.tipo || '').toLowerCase()] || undefined,
+                fields: pc.fields,
+                feasibility: pc.feasibility || [],
+                verdict: pc.verdict || null,
+                title: titulo,
+                remarks: pc.remarks || undefined,
+                origen: 'correo',
+            };
+            return;
+        }
         var tipo = TIPOS_RESORTE[String(r.tipo || '').toLowerCase()] || null;
         var campos = [];
         var mm = function (clave, valor) {

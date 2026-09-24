@@ -191,13 +191,37 @@ const Revision = (() => {
             </div>`;
     }
 
+    /** La máquina que enrolla el resorte: la primera de la ruta que es
+        COILER (o la primera, si ninguna dice su familia). Es la pregunta que
+        hace el PM antes que ninguna: «¿en qué la vamos a hacer?». */
+    function bobinadora(d) {
+        for (const tr of (d.tramos || [])) {
+            const ruta = tr.ruta || [];
+            const op = ruta.find(o => String(o.familia || '').toUpperCase() === 'COILER') || ruta[0];
+            if (op && op.maquina) return op.maquina;
+        }
+        return null;
+    }
+
+    function familia(op) {
+        const f = String((op && op.familia) || '').toUpperCase();
+        if (f === 'COILER') return t('rev.fam.coiler');
+        if (f === 'SECONDARY') return t('rev.fam.secundaria');
+        return f ? f.charAt(0) + f.slice(1).toLowerCase() : '';
+    }
+
     function comunes(d) {
         const c = d.comunes || {};
         const mat = c.material ? (esc(c.material) + (c.material_nombre ? ` — ${esc(c.material_nombre)}` : '')) : '—';
+        const maq = bobinadora(d);
         return `
             <section class="revision-comunes" aria-label="${esc(t('rev.todosTramos'))}">
                 <div class="revision-rotulo">${esc(t('rev.todosTramos'))}</div>
                 <div class="revision-pills">
+                    <span class="revision-pill revision-pill--maquina ${maq ? '' : 'revision-pill--falta'}"
+                          title="${esc(t('rev.maquinaAyuda'))}">
+                        ${esc(t('rev.maquina'))}: <b>${maq ? esc(maq) : esc(t('rev.sinMaquina'))}</b>
+                    </span>
                     <span class="revision-pill">${mat}</span>
                     <span class="revision-pill">Ø ${esNum(c.dia_in) ? num(c.dia_in, 3) + ' in' : '—'}</span>
                     <span class="revision-pill">${esNum(c.peso_lb_pc) ? num(c.peso_lb_pc, 3) + ' lb/pc' : '—'}</span>
@@ -241,9 +265,9 @@ const Revision = (() => {
         return `
             <div class="revision-franja revision-franja--${nivel}" role="status">
                 <span class="revision-franja-icono">⚠</span>
-                <div class="revision-franja-texto">
-                    ${lista.map(a => esc(a.texto)).join(' — ')}
-                </div>
+                <ul class="revision-franja-texto">
+                    ${lista.map(a => `<li>${esc(a.texto)}</li>`).join('')}
+                </ul>
             </div>`;
     }
 
@@ -348,13 +372,18 @@ const Revision = (() => {
                         <span class="lbl-desktop">ROUTE${horasTot ? ` · ${horasTot} MACHINE H` : ''}</span>
                         <span class="lbl-movil">ROUTE${horasTot ? ` · ${horasTot} MACHINE HOURS` : ''}</span>
                     </h4>
-                    ${ruta.length ? ruta.map(op => `
-                        <div class="revision-fila-dato">
-                            <span class="revision-fila-lbl">${esc(op.maquina || '—')}</span>
-                            <span class="revision-fila-val">
-                                <b>${esNum(op.pph) ? num(op.pph, 0) + ' pc/h' : '—'}</b>
-                                <small>· setup ${esNum(op.setup_h) ? num(op.setup_h, 1) + ' h' : '—'}</small>
-                            </span>
+                    ${ruta.length ? ruta.map((op, i) => `
+                        <div class="revision-op">
+                            <div class="revision-op-cab">
+                                <span class="revision-op-num">${i + 1}</span>
+                                <span class="revision-op-maq">${esc(op.maquina || '—')}</span>
+                                ${familia(op) ? `<span class="revision-op-fam revision-op-fam--${esc(String(op.familia || '').toLowerCase())}">${esc(familia(op))}</span>` : ''}
+                            </div>
+                            <div class="revision-op-datos">
+                                <span>${esNum(op.pph) ? num(op.pph, 0) + ' pc/h' : '—'}</span>
+                                <span>setup ${esNum(op.setup_h) ? num(op.setup_h, 1) + ' h' : '—'}</span>
+                                ${esNum(op.costo_h) ? `<span>${dinero(op.costo_h, 2)}/h</span>` : ''}
+                            </div>
                         </div>`).join('') : `<div class="revision-nota">${esc(t('rev.sinRuta'))}</div>`}
                 </section>
 
