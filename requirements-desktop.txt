@@ -7,6 +7,10 @@
 # Instalación en el equipo de la planta:
 #     pip install -r requirements.txt -r requirements-desktop.txt
 
+# El paquete PySide6 completo trae también PySide6-Addons, donde vive el motor
+# web de Qt (QtWebEngine): con él la ventana enseña Pohua entera —Monitor,
+# Mail, Quoting, Overview— en su primera pestaña. Si sólo está
+# PySide6-Essentials, la ventana lo dice y ofrece abrirla en el navegador.
 PySide6>=6.6
 
 # Automatización COM de Windows: es lo que deja leer el buzón por el Outlook

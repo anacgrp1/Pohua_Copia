@@ -173,9 +173,146 @@ const MonitorPage = (() => {
         }
     }
 
+    // ------------------------------------------------------------ el lector
+
+    /**
+     * El lector local, dentro del Monitor.
+     *
+     * Sólo existe cuando Pohua corre dentro de la aplicación de escritorio:
+     * ella abre el buzón por el Outlook de esa computadora y expone el lector
+     * por `window.pohuaLector` (un puente de Qt, ver desktop_app/main.py).
+     * En el navegador no hay puente y este apartado no se pinta.
+     *
+     * Aquí se ve y se maneja igual que en la ventana de antes: estado,
+     * Iniciar / Leer ahora / Detener, las cifras del día y su registro. El
+     * registro del servidor, más abajo, sigue enseñando también estas líneas
+     * (llegan con el latido) para quien mire el Monitor desde otra máquina.
+     */
+    const LECTOR_MAX_LINEAS = 500;
+    let lector = null;
+    let lectorLineas = [];
+    let lectorConectado = null;   // los manejadores puestos en el puente
+
+    function lectorPlantilla() {
+        return `
+        <section class="monitor-lector" id="monitorLector" hidden>
+            <div class="monitor-logs-head">
+                <span class="status-dot" id="lectorPunto"></span>
+                <span class="monitor-logs-titulo">${esc(I18N.t('lector.titulo'))}</span>
+                <span class="badge badge-buzon" id="lectorDonde"></span>
+                <span class="monitor-lector-estado" id="lectorEstado"></span>
+                <span class="monitor-lector-botones">
+                    <button type="button" class="btn btn-secondary btn-sm" id="lectorAhora" disabled>${esc(I18N.t('lector.ahora'))}</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="lectorIniciar">${esc(I18N.t('lector.iniciar'))}</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="lectorParar" disabled>${esc(I18N.t('lector.parar'))}</button>
+                </span>
+            </div>
+            <div class="monitor-lector-cifras">
+                <div class="monitor-lector-cifra"><strong id="lectorCorreos">0</strong><span>${esc(I18N.t('lector.leidos'))}</span></div>
+                <div class="monitor-lector-cifra"><strong id="lectorRfqs">0</strong><span>${esc(I18N.t('lector.rfqs'))}</span></div>
+                <div class="monitor-lector-cifra"><strong id="lectorErrores">0</strong><span>${esc(I18N.t('lector.errores'))}</span></div>
+            </div>
+            <div class="monitor-log monitor-log--lector" id="lectorLog" tabindex="0">
+                <p class="log-vacio">${esc(I18N.t('lector.vacio'))}</p>
+            </div>
+        </section>`;
+    }
+
+    const NIVEL_LECTOR = { info: 'INFO', ok: 'INFO', aviso: 'WARNING', error: 'ERROR' };
+
+    function lectorPintarLineas() {
+        const caja = document.getElementById('lectorLog');
+        if (!caja) return;
+        if (!lectorLineas.length) {
+            caja.innerHTML = `<p class="log-vacio">${esc(I18N.t('lector.vacio'))}</p>`;
+            return;
+        }
+        caja.innerHTML = lectorLineas.map(l => {
+            const nivel = String(l.nivel || 'info').toLowerCase();
+            const clase = (NIVEL_LECTOR[nivel] || 'INFO').toLowerCase();
+            return `<div class="log-linea log-linea--${esc(clase)} log-linea--lector-${esc(nivel)}">`
+                 + `<span class="log-hora">${esc(l.hora || '')}</span>`
+                 + `<span class="log-nivel">${esc(NIVEL_LECTOR[nivel] || 'INFO')}</span>`
+                 + `<span class="log-origen">lector.escritorio</span>`
+                 + `<span class="log-mensaje">${esc(l.texto)}</span>`
+                 + `</div>`;
+        }).join('');
+        caja.scrollTop = caja.scrollHeight;
+    }
+
+    function lectorPintarEstado(e) {
+        const seccion = document.getElementById('monitorLector');
+        if (!seccion || !e) return;
+        seccion.hidden = false;
+        const estado = e.estado || 'parado';
+        const punto = document.getElementById('lectorPunto');
+        if (punto) punto.className = 'status-dot ' + ({ leyendo: 'running', espera: 'waiting' }[estado] || 'stopped');
+        const texto = { leyendo: 'lector.leyendo', espera: 'lector.espera' }[estado] || 'lector.detenido';
+        const etiqueta = document.getElementById('lectorEstado');
+        if (etiqueta) etiqueta.textContent = I18N.t(texto);
+        const donde = document.getElementById('lectorDonde');
+        if (donde) donde.textContent = [e.buzon, e.carpeta, e.como].filter(Boolean).join(' · ');
+        const t = e.totales || {};
+        const poner = (id, v) => { const n = document.getElementById(id); if (n) n.textContent = String(v ?? 0); };
+        poner('lectorCorreos', t.correos); poner('lectorRfqs', t.rfqs); poner('lectorErrores', t.errores);
+        const corriendo = !!e.corriendo;
+        const b = (id) => document.getElementById(id);
+        if (b('lectorIniciar')) b('lectorIniciar').disabled = corriendo;
+        if (b('lectorParar')) b('lectorParar').disabled = !corriendo;
+        if (b('lectorAhora')) b('lectorAhora').disabled = !corriendo;
+        seccion.title = I18N.t('lector.nota');
+        document.querySelector('.monitor-logs')?.classList.add('monitor-logs--con-lector');
+    }
+
+    function leerJson(texto) {
+        try { return typeof texto === 'string' ? JSON.parse(texto) : texto; } catch (_) { return null; }
+    }
+
+    function montarLector() {
+        lector = window.pohuaLector || null;
+        if (!lector) {
+            // El puente puede llegar después de pintar la página: se espera.
+            document.addEventListener('pohua:lector-listo', () => montarLector(), { once: true });
+            return;
+        }
+        document.getElementById('lectorIniciar')?.addEventListener('click', () => lector.arrancar());
+        document.getElementById('lectorParar')?.addEventListener('click', () => lector.parar());
+        document.getElementById('lectorAhora')?.addEventListener('click', () => lector.leer_ahora());
+
+        const alCambiar = (json) => lectorPintarEstado(leerJson(json));
+        const alEscribir = (json) => {
+            const l = leerJson(json);
+            if (!l) return;
+            lectorLineas.push(l);
+            if (lectorLineas.length > LECTOR_MAX_LINEAS) lectorLineas.splice(0, lectorLineas.length - LECTOR_MAX_LINEAS);
+            lectorPintarLineas();
+        };
+        lector.cambio.connect(alCambiar);
+        lector.linea.connect(alEscribir);
+        lectorConectado = { alCambiar, alEscribir };
+
+        lector.estado((json) => lectorPintarEstado(leerJson(json)));
+        lector.historial((json) => {
+            lectorLineas = leerJson(json) || [];
+            lectorPintarLineas();
+        });
+    }
+
+    function desmontarLector() {
+        if (lector && lectorConectado) {
+            try {
+                lector.cambio.disconnect(lectorConectado.alCambiar);
+                lector.linea.disconnect(lectorConectado.alEscribir);
+            } catch (_) { /* el puente ya no está */ }
+        }
+        lectorConectado = null;
+    }
+
     function plantilla() {
         return `
         <div class="kpi-fila" id="monitorCards"></div>
+
+        ${lectorPlantilla()}
 
         <section class="monitor-logs">
             <div class="monitor-logs-head">
@@ -213,6 +350,7 @@ const MonitorPage = (() => {
             ?.addEventListener('click', () => refrescar({ silencioso: false }));
 
         pegadoAbajo = true;
+        montarLector();
         await Promise.all([cargarTarjetas(), refrescar()]);
 
         detener();
@@ -228,6 +366,7 @@ const MonitorPage = (() => {
             clearInterval(temporizador);
             temporizador = null;
         }
+        desmontarLector();
     }
 
     return { render, detener };

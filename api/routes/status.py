@@ -15,6 +15,7 @@ import logging
 import os
 import re
 import threading
+from collections import deque
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -85,6 +86,70 @@ def _snapshot() -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Lo que cuenta el lector de escritorio
+#
+# Cuando el buzón lo lee la aplicación de escritorio (Outlook), el servidor
+# se aparta y su propio registro no dice nada de los correos: el Monitor de
+# la web enseñaba «0 correos, 0 RFQ» y un registro sin lecturas mientras en
+# la planta el lector trabajaba. La aplicación manda con cada latido sus
+# últimas líneas y sus contadores, y aquí se guardan en memoria para que el
+# Monitor enseñe UNA sola historia: la del servidor y la del lector, juntas.
+# ---------------------------------------------------------------------------
+_MAX_LINEAS_ESCRITORIO = 600
+_escritorio: dict[str, Any] = {
+    "lineas": deque(maxlen=_MAX_LINEAS_ESCRITORIO),
+    "vistas": set(),                    # ids ya recibidos: un reintento no duplica
+    "totales": {"procesados": 0, "rfqs": 0, "errores": 0},
+    "estado": None,                     # "leyendo" / "espera" / "parado"
+    "ultimo": None,                     # cuándo llegó el último latido (ISO)
+}
+
+
+def registrar_escritorio(lineas: list[dict] | None, totales: dict | None,
+                         estado: str | None) -> int:
+    """Guarda lo que trae un latido. Devuelve cuántas líneas nuevas entraron."""
+    nuevas = 0
+    with _lock:
+        for linea in lineas or []:
+            ident = str(linea.get("id") or "")
+            if ident and ident in _escritorio["vistas"]:
+                continue
+            if ident:
+                _escritorio["vistas"].add(ident)
+                if len(_escritorio["vistas"]) > _MAX_LINEAS_ESCRITORIO * 2:
+                    _escritorio["vistas"] = set(
+                        str(x.get("id")) for x in _escritorio["lineas"] if x.get("id"))
+            _escritorio["lineas"].append({
+                "id": ident,
+                "marca": str(linea.get("marca") or ""),
+                "nivel": str(linea.get("nivel") or "INFO").upper(),
+                "origen": str(linea.get("origen") or "lector.escritorio"),
+                "mensaje": str(linea.get("mensaje") or ""),
+            })
+            nuevas += 1
+        if totales:
+            for clave in ("procesados", "rfqs", "errores"):
+                try:
+                    _escritorio["totales"][clave] = int(totales.get(clave) or 0)
+                except (TypeError, ValueError):
+                    pass
+        if estado:
+            _escritorio["estado"] = str(estado)
+        _escritorio["ultimo"] = datetime.now().isoformat()
+    return nuevas
+
+
+def _lineas_escritorio() -> list[dict]:
+    with _lock:
+        return list(_escritorio["lineas"])
+
+
+def _totales_escritorio() -> dict[str, int]:
+    with _lock:
+        return dict(_escritorio["totales"])
+
+
+# ---------------------------------------------------------------------------
 # Rutas
 # ---------------------------------------------------------------------------
 
@@ -96,6 +161,9 @@ def get_status(usuario: UsuarioSesion = Depends(usuario_actual)):
     import app.rfq.horario as horario
 
     estado = _snapshot()
+    # Los contadores suman lo del servidor y lo del lector de escritorio: el
+    # Monitor cuenta correos, no quién los leyó.
+    de_fuera = _totales_escritorio()
     return ServiceStatus(
         horario=EstadoHorario(**horario.estado()),
         running=estado["running"],
@@ -104,9 +172,9 @@ def get_status(usuario: UsuarioSesion = Depends(usuario_actual)):
         last_cycle=estado["last_cycle"],
         next_cycle=estado["next_cycle"],
         interval_minutes=config.settings.INTERVALO_MINUTOS,
-        total_processed=estado["total_processed"],
-        total_rfqs=estado["total_rfqs"],
-        total_errors=estado["total_errors"],
+        total_processed=estado["total_processed"] + de_fuera["procesados"],
+        total_rfqs=estado["total_rfqs"] + de_fuera["rfqs"],
+        total_errors=estado["total_errors"] + de_fuera["errores"],
     )
 
 
@@ -231,4 +299,32 @@ def logs(
             # patrón: se enseñan tal cual en vez de tirarlas.
             resultado.append(LogLine(nivel="TRACE", mensaje=linea))
 
-    return LogTail(lineas=resultado, archivo=str(ruta), total=len(crudas))
+    return LogTail(lineas=_con_el_escritorio(resultado, lines),
+                   archivo=str(ruta), total=len(crudas))
+
+
+def _con_el_escritorio(del_servidor: list[LogLine], lines: int) -> list[LogLine]:
+    """Las líneas del servidor y las del lector de escritorio, en orden de hora.
+
+    Las dos llevan la misma marca («2026-09-24 21:44:11,000», en UTC), así
+    que se ordenan juntas. Un rastro de excepción (sin marca) se queda pegado
+    a la línea que lo precede.
+    """
+    de_fuera = [LogLine(**{k: v for k, v in x.items() if k != "id"})
+                for x in _lineas_escritorio()]
+    if not de_fuera:
+        return del_servidor
+
+    # Cada línea hereda la marca de la anterior si no tiene: así el orden es
+    # estable y los rastros no se van al principio.
+    def con_marca(lineas):
+        ultima = ""
+        fuera = []
+        for i, linea in enumerate(lineas):
+            ultima = linea.marca or ultima
+            fuera.append((ultima, i, linea))
+        return fuera
+
+    juntas = con_marca(del_servidor) + con_marca(de_fuera)
+    juntas.sort(key=lambda t: (t[0], t[1]))
+    return [t[2] for t in juntas][-lines:]

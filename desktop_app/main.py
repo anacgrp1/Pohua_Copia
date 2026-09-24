@@ -15,10 +15,20 @@ dos, se pisarían el mismo correo.
 
 Cómo se ve
 ----------
-Como Pohua: el mismo azul de la casa, las mismas palabras y el mismo horario
-de atención. Quien la abre no tiene que aprender otra aplicación; tiene que
-poder mirar la ventana y saber si está leyendo, desde qué buzón y qué pasó en
-el último ciclo.
+Es Pohua entera, con el icono de Pohua y dos pestañas: **Pohua**, la misma
+aplicación web dentro de la ventana (Monitor, Mail, Quoting, Overview… lo que
+vea el usuario que entre), y **Lector local**, el panel del lector de correo:
+estado, Iniciar / Leer ahora / Detener, cifras y registro. El lector sigue
+leyendo aunque se esté en la otra pestaña.
+
+Además, esta ventana le pone a la página un puente de Qt (`QWebChannel`,
+`window.pohuaLector`) con el que el Monitor de la web enseña ese mismo lector
+como un apartado más, y lo que el lector escribe viaja con el latido al
+servidor, así que el Monitor enseña el registro del servidor y el del lector
+juntos y sus cifras suman los correos de los dos.
+
+Si en esta computadora no está el motor web de Qt (PySide6-Addons), queda la
+pestaña del lector con un botón para abrir Pohua en el navegador.
 
 Arrancarla:
 
@@ -33,6 +43,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 # El proyecto entero cuelga de la carpeta de arriba: la app de escritorio usa
 # EL MISMO ciclo que el servidor, no una copia.
@@ -51,12 +62,40 @@ if str(RAIZ) not in sys.path:
 # se lee el fichero.
 os.chdir(RAIZ)
 
-from PySide6.QtCore import QLockFile, QThread, QTimer, Signal  # noqa: E402
-from PySide6.QtGui import QFont                                  # noqa: E402
-from PySide6.QtWidgets import (                                  # noqa: E402
-    QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow, QMessageBox,
-    QPushButton, QTextEdit, QVBoxLayout, QWidget,
+from PySide6.QtCore import (                                             # noqa: E402
+    QFile, QIODevice, QLockFile, QObject, QThread, QTimer, QUrl, Signal, Slot,
 )
+from PySide6.QtGui import QDesktopServices, QFont, QIcon                  # noqa: E402
+from PySide6.QtWidgets import (                                           # noqa: E402
+    QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow, QMessageBox,
+    QPushButton, QTabWidget, QTextEdit, QVBoxLayout, QWidget,
+)
+
+# El motor web de Qt viene en PySide6-Addons. Si falta, la ventana lo dice y
+# ofrece abrir Pohua en el navegador: el lector no depende de él.
+if TYPE_CHECKING:
+    from PySide6.QtWebChannel import QWebChannel
+    from PySide6.QtWebEngineCore import (
+        QWebEnginePage, QWebEngineProfile, QWebEngineScript,
+    )
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+    HAY_WEB = True
+else:
+    try:
+        from PySide6.QtWebChannel import QWebChannel                            # noqa: E402
+        from PySide6.QtWebEngineCore import (                                   # noqa: E402
+            QWebEnginePage, QWebEngineProfile, QWebEngineScript,
+        )
+        from PySide6.QtWebEngineWidgets import QWebEngineView                   # noqa: E402
+        HAY_WEB = True
+    except ImportError:                                                          # pragma: no cover
+        QWebChannel = QWebEnginePage = QWebEngineProfile = QWebEngineScript = None
+        QWebEngineView = None
+        HAY_WEB = False
+
+# El icono de Pohua: el mismo de la web (frontend/assets), para la ventana y
+# la barra de tareas. Sin esto Windows enseñaba el icono de Python.
+ICONO = RAIZ / "frontend" / "assets" / "icon-512.png"
 
 import app.core.config as config                                 # noqa: E402
 from app.core.logging import configure_logging                   # noqa: E402
@@ -104,10 +143,22 @@ QPushButton:disabled, QPushButton#principal:disabled, QPushButton#parar:disabled
 QFrame#tarjeta QLabel {{ background: transparent; }}
 QTextEdit {{ background: #0b1220; border: 1px solid {LINEA}; border-radius: 10px;
              font-family: Consolas, 'Courier New', monospace; font-size: 12px; }}
+QTabWidget::pane {{ border: none; }}
+QTabBar::tab {{ background: transparent; color: {APAGADO}; padding: 10px 18px;
+                border-bottom: 2px solid transparent; font-weight: 600; }}
+QTabBar::tab:selected {{ color: {TINTA}; border-bottom-color: {ROSA}; }}
+QTabBar::tab:hover:!selected {{ color: {TINTA}; }}
+QLabel#estadoLector {{ color: {APAGADO}; font-size: 12px; padding: 0 6px; }}
 """
 
 
-def ajuste(nombre, por_defecto=""):
+def direccion_web() -> str:
+    """Dónde vive Pohua: APP_URL (Render) y, si no está, el servidor local."""
+    return (ajuste("APP_URL", "") or ajuste("WEB_SERVER_URL", "")
+            or "http://localhost:8000").rstrip("/")
+
+
+def ajuste(nombre: str, por_defecto: Any = "") -> Any:
     """Un ajuste de `config.settings`.
 
     Va por `settings` y no por el módulo: `getattr(config, 'WORKER_SECRET_KEY')`
@@ -271,6 +322,80 @@ class Lector(QThread):
 
 
 # --------------------------------------------------------------------------- #
+# El puente con la web: el lector, dentro del Monitor de Pohua
+# --------------------------------------------------------------------------- #
+
+class PuenteLector(QObject):
+    """Lo que la página de Pohua ve como ``window.pohuaLector``.
+
+    Es la misma API que tenían los botones de la ventana: arrancar, parar,
+    leer ahora; y dos señales para que la página se entere sin preguntar:
+    ``cambio`` (estado y cifras, en JSON) y ``linea`` (una línea nueva del
+    registro, en JSON). ``estado()`` e ``historial()`` dan lo que ya había
+    cuando la página se abre.
+    """
+    cambio = Signal(str)
+    linea = Signal(str)
+
+    def __init__(self, ventana):
+        super().__init__(ventana)
+        self._ventana = ventana
+
+    @Slot()
+    def arrancar(self):
+        self._ventana.arrancar()
+
+    @Slot()
+    def parar(self):
+        self._ventana.parar()
+
+    @Slot()
+    def leer_ahora(self):
+        self._ventana.leer_ahora()
+
+    @Slot(result=str)
+    def estado(self):
+        import json
+        return json.dumps(self._ventana.estado_para_la_web(), ensure_ascii=False)
+
+    @Slot(result=str)
+    def historial(self):
+        import json
+        return json.dumps(list(self._ventana.historial), ensure_ascii=False)
+
+
+def _qwebchannel_js() -> str:
+    """El cliente JavaScript de QWebChannel, sacado de los recursos de Qt.
+
+    Se inyecta en la página en vez de pedírselo por ``qrc:///``: una página
+    servida por https no puede cargar recursos ``qrc`` y el puente se quedaba
+    sin cliente.
+    """
+    fichero = QFile(":/qtwebchannel/qwebchannel.js")
+    if not fichero.open(QIODevice.OpenModeFlag.ReadOnly):
+        return ""
+    try:
+        return bytes(fichero.readAll().data()).decode("utf-8")
+    finally:
+        fichero.close()
+
+
+# Se ejecuta en la página al crearse el documento: monta el canal y deja el
+# lector en `window.pohuaLector`. La página (js/pages/monitor.js) espera el
+# evento por si llega después de pintarse.
+_ARRANQUE_JS = """
+(function () {
+    if (!window.qt || !window.qt.webChannelTransport || typeof QWebChannel === 'undefined') return;
+    new QWebChannel(qt.webChannelTransport, function (canal) {
+        window.pohuaLector = canal.objects.lector;
+        window.POHUA_ESCRITORIO = true;
+        document.dispatchEvent(new CustomEvent('pohua:lector-listo'));
+    });
+})();
+"""
+
+
+# --------------------------------------------------------------------------- #
 # La ventana
 # --------------------------------------------------------------------------- #
 
@@ -278,15 +403,43 @@ class Ventana(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Pohua · Lector local")
-        self.resize(760, 620)
+        self.setWindowTitle("Pohua")
+        self.resize(1280, 800)
         self.setStyleSheet(ESTILO)
+        if ICONO.is_file():
+            self.setWindowIcon(QIcon(str(ICONO)))
 
         self.lector = None
         self.totales = {"correos": 0, "rfqs": 0, "errores": 0}
+        self.estado_actual = "parado"
+        # Lo escrito en el registro, para dárselo a la página del Monitor
+        # cuando se abra (y para el panel de respaldo si no hay motor web).
+        from collections import deque
+        self.historial = deque(maxlen=500)
+        self.puente: PuenteLector | None = None
+        # Los controles del panel de respaldo; None cuando la ventana es la web.
+        self.web: QWebEngineView | None = None
+        self.donde: QLabel | None = None
+        self.registro: QTextEdit | None = None
+        self.punto: QLabel | None = None
+        self.estado: QLabel | None = None
+        self.pie: QLabel | None = None
+        self.btn_arrancar: QPushButton | None = None
+        self.btn_ahora: QPushButton | None = None
+        self.btn_parar: QPushButton | None = None
+        self.val_correos: QLabel | None = None
+        self.val_rfqs: QLabel | None = None
+        self.val_errores: QLabel | None = None
 
         self.latido = QTimer(self)
         self.latido.timeout.connect(self.mandar_latido)
+        # Lo que el lector escribe en su registro, pendiente de mandar al
+        # Monitor de la web. Se manda con el latido de cada minuto y, si hay
+        # algo nuevo, un par de segundos después de escribirse.
+        self._pendientes = []
+        self._enviar_pronto = QTimer(self)
+        self._enviar_pronto.setSingleShot(True)
+        self._enviar_pronto.timeout.connect(self.mandar_latido)
 
         self._montar()
         self._comprobar_de_entrada()
@@ -312,10 +465,131 @@ class Ventana(QMainWindow):
         return caja, valor
 
     def _montar(self):
+        """Dos pestañas: Pohua (la web, dentro) y el Lector local.
+
+        El lector tiene su pestaña propia, y además la web lo enseña dentro
+        de su Monitor cuando la versión desplegada lo trae. Las dos vistas
+        son el mismo lector: lo que se escribe en una se ve en la otra.
+        """
+        self.pestanas = QTabWidget()
+        self.pestanas.setDocumentMode(True)
+        if HAY_WEB:
+            self.pestanas.addTab(self._pagina_web(), "Pohua")
+        self.pestanas.addTab(self._pagina_lector(), "Lector local")
+        # El estado del lector, siempre a la vista, esté en la pestaña que esté.
+        self.estado_pestanas = QLabel("Lector: detenido")
+        self.estado_pestanas.setObjectName("estadoLector")
+        self.pestanas.setCornerWidget(self.estado_pestanas)
+        self.setCentralWidget(self.pestanas)
+
+    def _pagina_web(self):
+        """Pohua entera, dentro de la ventana.
+
+        Es la misma web que se abre en el navegador —Monitor, Mail, Quoting,
+        Overview, lo que vea quien entre—, no una copia en Qt: así no hay dos
+        pantallas que mantener. El perfil se guarda en disco para que la
+        sesión no se pierda al cerrar. Y se le pone el puente con el lector,
+        que el Monitor de la web enseña como un apartado más.
+        """
+        if (not HAY_WEB
+                or QWebEngineProfile is None
+                or QWebEngineScript is None
+                or QWebEngineView is None
+                or QWebEnginePage is None
+                or QWebChannel is None):
+            return self._pagina_lector()
+
+        perfil = QWebEngineProfile("pohua", self)
+        perfil.setPersistentCookiesPolicy(
+            QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies)
+        carpeta = Path(tempfile.gettempdir()) / "pohua-escritorio-web"
+        carpeta.mkdir(parents=True, exist_ok=True)
+        perfil.setPersistentStoragePath(str(carpeta))
+        perfil.setCachePath(str(carpeta / "cache"))
+
+        cliente = _qwebchannel_js()
+        if cliente:
+            guion = QWebEngineScript()
+            guion.setName("pohua-lector")
+            guion.setSourceCode(cliente + "\n" + _ARRANQUE_JS)
+            guion.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentCreation)
+            guion.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
+            guion.setRunsOnSubFrames(False)
+            perfil.scripts().insert(guion)
+
+        self.web = QWebEngineView()
+        pagina = QWebEnginePage(perfil, self.web)
+        self.puente = PuenteLector(self)
+        canal = QWebChannel(pagina)
+        canal.registerObject("lector", self.puente)
+        pagina.setWebChannel(canal)
+        self.web.setPage(pagina)
+        # Al terminar de cargar, se comprueba que la página vio el puente: si
+        # no lo vio, el Monitor no puede enseñar el lector, y el motivo (la web
+        # desplegada aún sin el apartado, o el cliente no inyectado) se deja en
+        # el registro en lugar de que se descubra por un hueco en la pantalla.
+        self.web.loadFinished.connect(self._comprobar_puente)
+        self.web.load(QUrl(direccion_web()))
+        return self.web
+
+    def _comprobar_puente(self, bien: bool) -> None:
+        import logging
+        registro = logging.getLogger("cotizador.escritorio")
+        if not bien or self.web is None:
+            registro.warning("La web de Pohua no cargó (%s).", direccion_web())
+            return
+
+        def contestar(resultado: Any) -> None:
+            texto = str(resultado or "")
+            if texto.startswith("ok"):
+                registro.info("Puente con la web listo: el Monitor puede enseñar el lector "
+                              "(%s).", texto)
+            else:
+                registro.warning("La página no ve el puente del lector (%s). Si la web "
+                                 "desplegada aún no trae el apartado «Local reader» en "
+                                 "el Monitor, hay que desplegar frontend/.", texto)
+
+        self.web.page().runJavaScript(
+            "(function(){"
+            " var tiene = typeof window.pohuaLector !== 'undefined';"
+            " var monitor = typeof MonitorPage !== 'undefined';"
+            " return (tiene ? 'ok' : 'sin puente') + ' · MonitorPage=' + monitor;"
+            "})()", contestar)
+
+    def estado_para_la_web(self) -> dict:
+        buzon = ajuste("OUTLOOK_BUZON", "") or ajuste("IMAP_USER", "")
+        modo = str(ajuste("MAIL_MODE", "imap")).lower()
+        como = {"outlook": "Outlook", "graph": "Microsoft Graph"}.get(modo, "IMAP")
+        return {
+            "estado": self.estado_actual,
+            "corriendo": bool(self.lector and self.lector.isRunning()),
+            "totales": dict(self.totales),
+            "buzon": buzon,
+            "carpeta": ajuste("MAIL_FOLDER", "INBOX"),
+            "como": como,
+        }
+
+    def _avisar_a_la_web(self):
+        if self.puente is not None:
+            import json
+            self.puente.cambio.emit(json.dumps(self.estado_para_la_web(), ensure_ascii=False))
+
+    def _pagina_lector(self):
+        """El panel de respaldo: sólo cuando no hay motor web en la máquina."""
         raiz = QWidget()
         capa = QVBoxLayout(raiz)
         capa.setContentsMargins(18, 16, 18, 16)
         capa.setSpacing(14)
+
+        if not HAY_WEB:
+            aviso = QLabel("En esta computadora falta el motor web de Qt (PySide6-Addons): "
+                           "Pohua se abre en el navegador y aquí queda el lector.")
+            aviso.setObjectName("sub")
+            aviso.setWordWrap(True)
+            abrir = QPushButton("Abrir Pohua en el navegador")
+            abrir.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(direccion_web())))
+            capa.addWidget(aviso)
+            capa.addWidget(abrir)
 
         # --- cabecera: qué es esto y de dónde lee ---
         cabecera = QVBoxLayout()
@@ -379,8 +653,7 @@ class Ventana(QMainWindow):
         self.pie = QLabel("El latido avisa al servidor de que aquí se está leyendo.")
         self.pie.setObjectName("pie")
         capa.addWidget(self.pie)
-
-        self.setCentralWidget(raiz)
+        return raiz
 
     # -------------------------------------------------------------- decir
 
@@ -397,19 +670,54 @@ class Ventana(QMainWindow):
 
         color = COLOR_NIVEL.get(nivel, APAGADO)
         hora = time.strftime("%H:%M:%S")
-        self.registro.append(
-            f'<span style="color:#64748b">{hora}</span> '
-            f'<span style="color:{color}">{_html.escape(str(texto))}</span>')
-        barra = self.registro.verticalScrollBar()
-        barra.setValue(barra.maximum())
+        if self.registro is not None:
+            self.registro.append(
+                f'<span style="color:#64748b">{hora}</span> '
+                f'<span style="color:{color}">{_html.escape(str(texto))}</span>')
+            barra = self.registro.verticalScrollBar()
+            barra.setValue(barra.maximum())
+        linea = {"hora": hora, "nivel": nivel, "texto": str(texto)}
+        self.historial.append(linea)
+        if self.puente is not None:
+            import json
+            self.puente.linea.emit(json.dumps(linea, ensure_ascii=False))
+        self._apuntar_para_el_monitor(nivel, str(texto))
+
+    # Del color de esta ventana al nivel del registro del servidor.
+    _NIVEL_MONITOR = {"info": "INFO", "ok": "INFO", "aviso": "WARNING", "error": "ERROR"}
+
+    def _apuntar_para_el_monitor(self, nivel, texto):
+        """La misma línea, en la forma del registro del servidor, para el Monitor.
+
+        La marca va en UTC porque el registro del servidor está en UTC: si
+        fuera con la hora local, el Monitor ordenaría las líneas del lector
+        seis horas antes que las del servidor.
+        """
+        marca = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()) + ",000"
+        self._pendientes.append({
+            "id": f"{time.time_ns()}",
+            "marca": marca,
+            "nivel": self._NIVEL_MONITOR.get(nivel, "INFO"),
+            "origen": "lector.escritorio",
+            "mensaje": texto.strip(),
+        })
+        del self._pendientes[:-200]
+        if not self._enviar_pronto.isActive():
+            self._enviar_pronto.start(2000)
 
     def pintar_estado(self, cual):
         colores = {"leyendo": (VERDE, "Leyendo el buzón"),
                    "espera": (NARANJA, "En espera (fuera de horario)"),
                    "parado": (ROSA, "Detenido")}
         color, texto = colores.get(cual, (ROSA, "Detenido"))
-        self.punto.setStyleSheet(f"color: {color}; font-size: 16px;")
-        self.estado.setText(texto)
+        if self.punto is not None and self.estado is not None:
+            self.punto.setStyleSheet(f"color: {color}; font-size: 16px;")
+            self.estado.setText(texto)
+        self.estado_actual = cual if cual in colores else "parado"
+        if getattr(self, "estado_pestanas", None) is not None:
+            self.estado_pestanas.setText(f"Lector: {texto.lower()}")
+            self.estado_pestanas.setStyleSheet(f"color: {color}; padding: 0 6px;")
+        self._avisar_a_la_web()
 
     # ------------------------------------------------- comprobación inicial
 
@@ -511,13 +819,21 @@ class Ventana(QMainWindow):
         self.lector.cambia_estado.connect(self.pintar_estado)
         self.lector.start()
 
-        self.btn_arrancar.setEnabled(False)
-        self.btn_parar.setEnabled(True)
-        self.btn_ahora.setEnabled(True)
+        self._botones(corriendo=True)
         self.pintar_estado("leyendo")
 
         self.latido.start(60_000)
         self.mandar_latido()
+
+    def _botones(self, corriendo: bool):
+        """Los botones del panel de respaldo; la web se entera por `cambio`."""
+        if (self.btn_arrancar is None
+                or self.btn_parar is None
+                or self.btn_ahora is None):
+            return
+        self.btn_arrancar.setEnabled(not corriendo)
+        self.btn_parar.setEnabled(corriendo)
+        self.btn_ahora.setEnabled(corriendo)
 
     def leer_ahora(self):
         if self.lector and self.lector.isRunning():
@@ -529,9 +845,7 @@ class Ventana(QMainWindow):
             self.escribir("info", "Deteniendo…")
             self.lector.parar()
             self.lector.wait(3000)
-        self.btn_arrancar.setEnabled(True)
-        self.btn_parar.setEnabled(False)
-        self.btn_ahora.setEnabled(False)
+        self._botones(corriendo=False)
         self.latido.stop()
         self.pintar_estado("parado")
 
@@ -541,11 +855,22 @@ class Ventana(QMainWindow):
         self.totales["correos"] += getattr(resultado, "procesados", 0)
         self.totales["rfqs"] += getattr(resultado, "rfqs", 0)
         self.totales["errores"] += getattr(resultado, "errores", 0)
-        self.val_correos.setText(str(self.totales["correos"]))
-        self.val_rfqs.setText(str(self.totales["rfqs"]))
-        self.val_errores.setText(str(self.totales["errores"]))
+        if (self.val_correos is not None
+                and self.val_rfqs is not None
+                and self.val_errores is not None):
+            self.val_correos.setText(str(self.totales["correos"]))
+            self.val_rfqs.setText(str(self.totales["rfqs"]))
+            self.val_errores.setText(str(self.totales["errores"]))
+        self._avisar_a_la_web()
 
     # ------------------------------------------------------------- latido
+
+    def _pie(self, texto):
+        """El renglón del latido, en el panel de respaldo y en el registro."""
+        if self.pie is not None:
+            self.pie.setText(texto)
+        else:
+            self._ultimo_pie = texto
 
     def mandar_latido(self):
         """Le dice al servidor que aquí se está leyendo, para que él no lea.
@@ -559,35 +884,65 @@ class Ventana(QMainWindow):
         base = (ajuste("APP_URL", "") or ajuste("WEB_SERVER_URL", "")).rstrip("/")
         secreto = ajuste("WORKER_SECRET_KEY", "")
         if not base or not secreto:
-            self.pie.setText("Sin latido: falta APP_URL o WORKER_SECRET_KEY. "
+            self._pie("Sin latido: falta APP_URL o WORKER_SECRET_KEY. "
                              "El servidor podría leer el mismo buzón.")
             return
 
+        # Con el latido viaja lo que el Monitor de la web tiene que enseñar:
+        # las líneas nuevas del registro, los contadores y en qué está el
+        # lector. Si el envío falla, las líneas se quedan para el siguiente.
+        lineas = list(self._pendientes)
+        carga = {
+            "secret_key": secreto,
+            "lineas": lineas,
+            "totales": {"procesados": self.totales["correos"],
+                        "rfqs": self.totales["rfqs"],
+                        "errores": self.totales["errores"]},
+            "estado": self.estado_actual,
+        }
         try:
             respuesta = requests.post(f"{base}/api/worker/heartbeat",
-                                      json={"secret_key": secreto}, timeout=8)
+                                      json=carga, timeout=8)
             if respuesta.status_code == 200:
-                self.pie.setText(f"Latido enviado a {base} · "
+                if lineas:
+                    del self._pendientes[:len(lineas)]
+                self._pie(f"Latido enviado a {base} · "
                                  f"{time.strftime('%H:%M:%S')}")
             elif respuesta.status_code == 403:
-                self.pie.setText("El servidor rechazó el latido: "
+                self._pie("El servidor rechazó el latido: "
                                  "WORKER_SECRET_KEY no coincide.")
                 self.escribir("error", "Latido rechazado: el secreto no coincide "
                                        "con el del servidor.")
             else:
-                self.pie.setText(f"El servidor contestó {respuesta.status_code} "
+                self._pie(f"El servidor contestó {respuesta.status_code} "
                                  "al latido.")
         except Exception as error:
-            self.pie.setText(f"No se pudo mandar el latido: {error}")
+            self._pie(f"No se pudo mandar el latido: {error}")
 
     def closeEvent(self, evento):
         self.parar()
+        if self.web is not None:
+            pagina = self.web.page()
+            if pagina is not None:
+                pagina.deleteLater()
         evento.accept()
 
 
 def main():
+    # En Windows, sin esto la barra de tareas agrupa la ventana bajo Python y
+    # enseña el icono de Python aunque la ventana tenga el suyo.
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("CGR.Pohua")
+        except Exception:
+            pass
+
     aplicacion = QApplication(sys.argv)
     aplicacion.setStyle("Fusion")
+    aplicacion.setApplicationName("Pohua")
+    if ICONO.is_file():
+        aplicacion.setWindowIcon(QIcon(str(ICONO)))
 
     # Una sola copia abierta. Dos leían el mismo buzón y mandaban la misma
     # bandeja de salida a la vez: dos ventanas de permiso de Outlook, una

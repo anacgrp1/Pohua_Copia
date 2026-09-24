@@ -397,6 +397,24 @@ como context manager, que gestiona la transacción pero **no** cierra). Aun así
 usa el endpoint con `-pooler` de Neon: es lo que evita agotar el límite de
 conexiones de la rama cuando entran varios correos a la vez.
 
+**La aplicación de escritorio es Pohua entera.** `desktop_app/main.py`
+(PySide6) abre, con el icono de Pohua, dos pestañas: **Pohua**, la misma web
+de Render dentro de la ventana (Monitor, Mail, Quoting, Overview: lo que vea
+el usuario que entre), y **Lector local**, el panel del lector de correo por
+Outlook (estado, Iniciar / Leer ahora / Detener, cifras y registro). El
+lector sigue leyendo aunque se esté en la otra pestaña. Ese mismo lector
+aparece además dentro del **Monitor** de la web como un apartado más («Local
+reader») gracias a un puente de Qt (`QWebChannel`): la ventana inyecta el
+cliente en la página y deja el lector en `window.pohuaLector`;
+`js/pages/monitor.js` lo pinta sólo cuando existe, así que en el navegador
+ese apartado no aparece. Lo que el lector escribe viaja además con el latido
+(`/api/worker/heartbeat`, campos `lineas`, `totales`, `estado`) para que el
+Monitor, mirado desde cualquier máquina, enseñe el registro del servidor y el
+del lector juntos y cuente los correos de los dos. La sesión web se guarda en
+el perfil de la ventana. La web necesita el motor de Qt (`PySide6-Addons`,
+que viene con el paquete `PySide6` completo); si falta, la ventana enseña el
+panel del lector de siempre y un botón para abrir Pohua en el navegador.
+
 **Un solo lector de correo.** Si la app de escritorio está corriendo, manda un
 latido cada minuto y el worker del servidor se queda en espera, para que no
 lean el mismo buzón los dos. Ese latido se autentica con `WORKER_SECRET_KEY`;

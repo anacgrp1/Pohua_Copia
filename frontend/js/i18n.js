@@ -165,6 +165,20 @@ const I18N = (() => {
         'monitor.cargando':  { en: 'Loading the log…', es: 'Cargando el registro…', fr: 'Chargement du journal…' },
         'monitor.vacio':     { en: 'The log is empty.', es: 'El registro está vacío.', fr: 'Le journal est vide.' },
         'monitor.sinFichero': { en: 'No log file yet.', es: 'Todavía no hay fichero de registro.', fr: 'Pas encore de fichier journal.' },
+        // El lector local: sólo cuando Pohua corre dentro de la aplicación de
+        // escritorio, que es la que abre el buzón por Outlook.
+        'lector.titulo':   { en: 'Local reader', es: 'Lector local', fr: 'Lecteur local' },
+        'lector.nota':     { en: 'This computer reads the mailbox through its desktop Outlook.', es: 'Esta computadora lee el buzón por su Outlook de escritorio.', fr: 'Cet ordinateur lit la boîte via son Outlook de bureau.' },
+        'lector.iniciar':  { en: 'Start reader', es: 'Iniciar lector', fr: 'Démarrer le lecteur' },
+        'lector.parar':    { en: 'Stop', es: 'Detener', fr: 'Arrêter' },
+        'lector.ahora':    { en: 'Read now', es: 'Leer ahora', fr: 'Lire maintenant' },
+        'lector.leidos':   { en: 'Emails read', es: 'Correos leídos', fr: 'Courriels lus' },
+        'lector.rfqs':     { en: 'RFQs created', es: 'RFQ dados de alta', fr: 'RFQ créées' },
+        'lector.errores':  { en: 'With errors', es: 'Con error', fr: 'En erreur' },
+        'lector.detenido': { en: 'Stopped', es: 'Detenido', fr: 'Arrêté' },
+        'lector.leyendo':  { en: 'Reading the mailbox', es: 'Leyendo el buzón', fr: 'Lecture de la boîte' },
+        'lector.espera':   { en: 'Waiting (outside hours)', es: 'En espera (fuera de horario)', fr: 'En attente (hors horaires)' },
+        'lector.vacio':    { en: 'Nothing yet: the reader has not started.', es: 'Nada todavía: el lector no ha arrancado.', fr: 'Rien encore : le lecteur n\'a pas démarré.' },
 
         // --- Comprobación del flujo (Perfil → Sistema) --------------------
         // Ojo: esta clave era 'flujo.titulo' y pisaba a la del recorrido de

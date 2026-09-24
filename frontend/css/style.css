@@ -3259,6 +3259,48 @@ a:hover { color: var(--cgr-primary); }
 }
 
 
+/* --- El lector local, dentro del Monitor ---------------------------------
+   Sólo aparece cuando Pohua corre dentro de la aplicación de escritorio. Es
+   el mismo panel que antes tenía ventana propia: estado y botones en la
+   cabecera, tres cifras y su registro, con la misma tipografía que el del
+   servidor para que se lean como una sola cosa. */
+.monitor-lector { margin-top: var(--sp-5); }
+.monitor-lector[hidden] { display: none; }
+.monitor-lector-estado { font-size: 13px; color: var(--text-secondary); }
+.monitor-lector-botones { margin-left: auto; display: flex; gap: var(--sp-2); }
+.monitor-lector-botones .btn:disabled { opacity: .45; cursor: default; }
+/* El buzón, tal cual: en mayúsculas una dirección de correo no se lee. */
+#lectorDonde { text-transform: none; letter-spacing: 0; }
+.monitor-lector-cifras {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-3);
+}
+.monitor-lector-cifra {
+    display: flex; flex-direction: column; gap: 2px;
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+.monitor-lector-cifra strong { font-size: 20px; font-weight: 700; }
+.monitor-lector-cifra:nth-child(1) strong { color: var(--cgr-azul-frio); }
+.monitor-lector-cifra:nth-child(2) strong { color: var(--cgr-verde); }
+.monitor-lector-cifra:nth-child(3) strong { color: var(--cgr-naranja); }
+.monitor-lector-cifra span { font-size: 12px; color: var(--text-muted); }
+.monitor-log--lector { height: 200px; flex: none; }
+.log-linea--lector-ok .log-mensaje { color: var(--cgr-verde); }
+.status-dot.waiting { background: var(--cgr-naranja); }
+.status-dot.stopped { background: var(--cgr-accent); }
+/* Con el lector encima, el registro del servidor cede sitio. */
+.monitor-logs--con-lector { height: calc(100vh - 820px); min-height: 200px; }
+@media (max-width: 768px) {
+    .monitor-lector-cifras { grid-template-columns: 1fr; }
+    .monitor-lector-botones { margin-left: 0; width: 100%; }
+    .monitor-lector-botones .btn { flex: 1 1 auto; justify-content: center; }
+}
+
 /* ============================================================================
    MONITOR: EL REGISTRO
    ============================================================================

@@ -250,6 +250,13 @@ def api_stop_worker(usuario: UsuarioSesion = Depends(exige("worker:operar"))):
 
 class HeartbeatRequest(BaseModel):
     secret_key: str
+    # Lo que la aplicación de escritorio quiere que el Monitor enseñe: sus
+    # últimas líneas de registro (marca en UTC, nivel, origen, mensaje, id),
+    # sus contadores acumulados y en qué está. Todo opcional: un latido a
+    # secas sigue valiendo.
+    lineas: list[dict] = []
+    totales: dict | None = None
+    estado: str | None = None
 
 
 @app.post("/api/worker/heartbeat", tags=["worker"])
@@ -278,7 +285,12 @@ def api_worker_heartbeat(payload: HeartbeatRequest):
 
     global _last_heartbeat_time
     _last_heartbeat_time = time.time()
-    return {"status": "ok", "message": "Heartbeat received"}
+    nuevas = 0
+    if payload.lineas or payload.totales or payload.estado:
+        from api.routes import status as estado_mod
+        nuevas = estado_mod.registrar_escritorio(
+            payload.lineas[-200:], payload.totales, payload.estado)
+    return {"status": "ok", "message": "Heartbeat received", "lineas": nuevas}
 
 
 # ---------------------------------------------------------------------------
