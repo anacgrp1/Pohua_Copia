@@ -117,11 +117,12 @@ const Assistant = (() => {
                 <tr>
                     <td><a href="/rfq-detail?id=${encodeURIComponent(p.rfq_id)}"
                            class="assistant-enlace" data-rfq="${esc(p.rfq_id)}">${esc(p.rfq_id)}</a></td>
-                    <td>${esc(p.cliente_id || '—')}</td>
+                    <td>${esc(p.cliente_nombre || p.cliente_id || '—')}</td>
                     <td>${esc(p.part_number || '—')}</td>
                     <td><span class="badge">${esc(p.estado)}</span></td>
                     <td>${esc(p.dias_esperando)} d</td>
-                    <td class="${p.criticas > 0 ? 'assistant-critico' : ''}">${esc(p.bandera || '—')}</td>
+                    <td class="${p.criticas > 0 ? 'assistant-critico' : ''}">${esc(p.bandera
+                        || I18N.t('motivo.' + (p.motivo === 'validacion' ? 'validacion' : 'revision')))}</td>
                 </tr>`).join('');
 
             mostrar(

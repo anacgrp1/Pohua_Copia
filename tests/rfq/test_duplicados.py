@@ -66,13 +66,22 @@ class TestEsDuplicado(unittest.TestCase):
 
 class TestRegistrar(unittest.TestCase):
 
-    def test_apunta_tambien_el_entry_id(self):
+    def test_el_entry_id_va_en_la_misma_fila(self):
+        """Un correo, UNA fila: la pantalla Mail cuenta filas como correos."""
         cur = CursorFalso(fila=(7,))
         correo = {"message_id": "<m@x>", "remitente": "a@b", "asunto": "RFQ", "fecha": ""}
         with mock.patch.object(duplicates, "conexion_bd", _conexion(cur)):
             self.assertTrue(duplicates.registrar_correo(correo, otras_claves=["ENTRY", "<m@x>"]))
-        claves = [p[0] for _, p in cur.ejecutados]
-        self.assertEqual(claves, ["<m@x>", "ENTRY"])
+        self.assertEqual(len(cur.ejecutados), 1)
+        sql, params = cur.ejecutados[0]
+        self.assertIn("entry_id", sql)
+        self.assertEqual((params[0], params[4]), ("<m@x>", "ENTRY"))
+
+    def test_busca_tambien_por_entry_id(self):
+        cur = CursorFalso(resultado=(1,))
+        with mock.patch.object(duplicates, "conexion_bd", _conexion(cur)):
+            self.assertTrue(duplicates.es_duplicado("<m@x>", otras_claves=["ENTRY"]))
+        self.assertIn("entry_id = ANY", cur.ejecutados[0][0])
 
     def test_olvidar_quita_todas_las_claves(self):
         cur = CursorFalso()
@@ -80,7 +89,8 @@ class TestRegistrar(unittest.TestCase):
             duplicates.olvidar_correo("<m@x>", otras_claves=["ENTRY"])
         sql, params = cur.ejecutados[0]
         self.assertTrue(sql.startswith("DELETE FROM correos_procesados"))
-        self.assertEqual(params, (["<m@x>", "ENTRY"],))
+        self.assertIn("entry_id = ANY", sql)
+        self.assertEqual(params, {"c": ["<m@x>", "ENTRY"]})
 
 
 if __name__ == "__main__":

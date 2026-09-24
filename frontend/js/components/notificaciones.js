@@ -86,9 +86,10 @@ const Notificaciones = (() => {
                     <span class="notif-item-rfq">${esc(p.rfq_id)}</span>
                     <span class="notif-item-dias">${esc(I18N.t('notif.dias', { n: dias }))}</span>
                 </span>
-                <span class="notif-item-cliente">${esc(p.cliente_id || '—')}${
+                <span class="notif-item-cliente">${esc(p.cliente_nombre || p.cliente_id || '—')}${
                     p.part_number ? ' · ' + esc(p.part_number) : ''}</span>
-                <span class="notif-item-motivo">${esc(p.bandera || p.estado || '')}</span>
+                <span class="notif-item-motivo">${esc(p.bandera
+                    || I18N.t('motivo.' + (p.motivo === 'validacion' ? 'validacion' : 'revision')))}</span>
             </button>`;
     }
 
@@ -122,7 +123,12 @@ const Notificaciones = (() => {
         if (!p) return;
 
         const hayAvisos = !!(avisos && avisos.avisos && avisos.avisos.length);
-        const hayCola = !!(datos && datos.pendientes && datos.pendientes.length);
+        // La cola son TODOS los RFQ sin dictamen. Los que ya tienen su aviso
+        // arriba no se repiten abajo: el mismo RFQ dos veces en la campana
+        // es ruido, no información.
+        const avisados = new Set(hayAvisos ? avisos.avisos.map((a) => a.rfq_id) : []);
+        const cola = ((datos && datos.pendientes) || []).filter((p) => !avisados.has(p.rfq_id));
+        const hayCola = cola.length > 0;
 
         const cabecera = (cuenta) => `
             <div class="notif-cabecera">
@@ -173,7 +179,7 @@ const Notificaciones = (() => {
                 : '')
             + (hayCola
                 ? rotulo('notif.cola')
-                  + `<div class="notif-lista">${datos.pendientes.map(fila).join('')}</div>`
+                  + `<div class="notif-lista">${cola.map(fila).join('')}</div>`
                 : '')
             + pie;
         pintarPie();

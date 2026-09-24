@@ -147,12 +147,30 @@ def _resumen() -> dict:
     }
 
 
+# Por qué espera cada RFQ, de lo que la base sabe con certeza.
+MOTIVO_REVISION = "revision"          # en revisión, o con banderas del sistema
+MOTIVO_VALIDACION = "validacion"      # factible y cotizado: falta el visto bueno
+
+
+def _motivo(estado: str, criticas: int, avisos: int) -> str:
+    if estado == "RequiresReview" or criticas or avisos:
+        return MOTIVO_REVISION
+    return MOTIVO_VALIDACION
+
+
 def _atencion(limite: int = 20) -> dict:
     """RFQs que esperan a una persona, con los días que llevan esperando.
 
-    No es un modelo de riesgo: es lo que la base sabe decir con certeza —quién
-    está parado en revisión, quién tiene banderas críticas y desde cuándo—.
-    Llamarlo de otra forma sería vender una predicción que no existe.
+    Es TODO lo que todavía no tiene dictamen, no sólo lo que tiene banderas.
+    Un RFQ factible con score 100 también espera: le falta que el PM valide
+    la cotización, y es justo el que la campana anuncia como «Quote
+    validation required». Hasta 2026-09 aquí sólo salían los parados en
+    revisión y los marcados, así que la campana decía «1 waiting» y este
+    panel «Nothing is waiting»: dos respuestas a la misma pregunta.
+
+    No es un modelo de riesgo: es lo que la base sabe decir con certeza —qué
+    espera, por qué (`motivo`) y desde cuándo—. Sólo cuenta la última versión
+    de cada RFQ: un dictamen se apunta en esa versión.
     """
     with get_db() as conn:
         with conn.cursor() as cur:
@@ -166,14 +184,15 @@ def _atencion(limite: int = 20) -> dict:
                            (ARRAY_AGG(b.titulo ORDER BY
                                 CASE b.nivel WHEN 'crit' THEN 0 ELSE 1 END)
                             FILTER (WHERE b.nivel IN ('crit', 'warn')))[1],
-                           '')
+                           ''),
+                       NULLIF(r.datos_json->>'customer', '')
                 FROM rfqs r
                 LEFT JOIN rfq_banderas b ON b.rfq_version_id = r.id
                 WHERE r.estado NOT IN ('Approved', 'Declined')
+                  AND r.version = (SELECT MAX(x.version) FROM rfqs x
+                                    WHERE x.rfq_id = r.rfq_id)
                 GROUP BY r.id, r.rfq_id, r.version, r.cliente_id, r.part_number,
-                         r.estado, r.score, r.fecha_registro
-                HAVING r.estado = 'RequiresReview'
-                    OR COUNT(*) FILTER (WHERE b.nivel IN ('crit', 'warn')) > 0
+                         r.estado, r.score, r.fecha_registro, r.datos_json
                 ORDER BY COUNT(*) FILTER (WHERE b.nivel = 'crit') DESC,
                          r.fecha_registro ASC
                 LIMIT %s;
@@ -181,8 +200,11 @@ def _atencion(limite: int = 20) -> dict:
             filas = cur.fetchall()
 
     columnas = ("rfq_id", "version", "cliente_id", "part_number", "estado",
-                "score", "dias_esperando", "criticas", "avisos", "bandera")
+                "score", "dias_esperando", "criticas", "avisos", "bandera",
+                "cliente_nombre")
     pendientes = [dict(zip(columnas, f)) for f in filas]
+    for p in pendientes:
+        p["motivo"] = _motivo(p["estado"], p["criticas"], p["avisos"])
 
     return {
         "pendientes": pendientes,

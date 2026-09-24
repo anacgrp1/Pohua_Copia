@@ -120,6 +120,16 @@ const ResumenPage = (() => {
             </li>`).join('')}</ul>`;
     }
 
+    /**
+     * Por qué espera: la bandera del sistema si la hay y, si no, lo que le
+     * falta al RFQ (validar la cotización o revisar la factibilidad). Antes
+     * aquí salía el estado a secas —"New"— que no dice qué hay que hacer.
+     */
+    function motivoDe(p) {
+        if (p.bandera) return p.bandera;
+        return I18N.t('motivo.' + (p.motivo === 'validacion' ? 'validacion' : 'revision'));
+    }
+
     function filaEspera(p) {
         const dias = Number(p.dias_esperando) || 0;
         const nivel = p.criticas ? 'critico' : (p.avisos ? 'aviso' : 'normal');
@@ -129,13 +139,13 @@ const ResumenPage = (() => {
                     <strong>${esc(p.rfq_id)}</strong>
                 </td>
                 <td data-etiqueta="${esc(I18N.t('resumen.col.cliente'))}">
-                    ${esc(p.cliente_id || '—')}${p.part_number ? ' · ' + esc(p.part_number) : ''}
+                    ${esc(p.cliente_nombre || p.cliente_id || '—')}${p.part_number ? ' · ' + esc(p.part_number) : ''}
                 </td>
                 <td data-etiqueta="${esc(I18N.t('resumen.col.espera'))}">
                     ${esc(I18N.t('notif.dias', { n: dias }))}
                 </td>
                 <td data-etiqueta="${esc(I18N.t('resumen.col.motivo'))}">
-                    ${esc(p.bandera || p.estado || '—')}
+                    ${esc(motivoDe(p))}
                 </td>
             </tr>`;
     }

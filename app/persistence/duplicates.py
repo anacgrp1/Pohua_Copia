@@ -105,7 +105,8 @@ def es_duplicado(message_id, otras_claves=()):
         return False
 
     sql = """
-        SELECT (SELECT COUNT(1) FROM correos_procesados WHERE message_id = ANY(%(c)s))
+        SELECT (SELECT COUNT(1) FROM correos_procesados
+                 WHERE message_id = ANY(%(c)s) OR entry_id = ANY(%(c)s))
              + (SELECT COUNT(1) FROM rfqs WHERE message_id = ANY(%(c)s));
     """
     with conexion_bd() as conn:
@@ -131,8 +132,9 @@ def olvidar_correo(message_id, otras_claves=()) -> None:
         return
     with conexion_bd() as conn:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM correos_procesados WHERE message_id = ANY(%s);",
-                        (claves,))
+            cur.execute("DELETE FROM correos_procesados "
+                        "WHERE message_id = ANY(%(c)s) OR entry_id = ANY(%(c)s);",
+                        {"c": claves})
 
 
 def registrar_correo(correo, otras_claves=()):
@@ -141,30 +143,30 @@ def registrar_correo(correo, otras_claves=()):
     ON CONFLICT DO NOTHING evita errores si dos ejecuciones se cruzan.
     Retorna True si se insertó (correo nuevo), False si ya existía.
 
-    ``otras_claves`` (el EntryID de Outlook) se apuntan también, cada una en
-    su fila: así el correo se reconoce tanto si la próxima vez llega con su
-    Message-ID como si el guardián de Outlook sólo deja ver el EntryID.
+    ``otras_claves`` (el EntryID de Outlook) va en la MISMA fila, en
+    ``entry_id``: así el correo se reconoce tanto si la próxima vez llega con
+    su Message-ID como si el guardián de Outlook sólo deja ver el EntryID, y
+    sigue siendo un correo —el recorrido de la pantalla Mail cuenta filas—.
     """
     sql = """
-    INSERT INTO correos_procesados (message_id, remitente, asunto, fecha_correo)
-    VALUES (%s, %s, %s, %s)
+    INSERT INTO correos_procesados (message_id, remitente, asunto, fecha_correo, entry_id)
+    VALUES (%s, %s, %s, %s, %s)
     ON CONFLICT (message_id) DO NOTHING
     RETURNING id;
     """
+    extra = [c for c in (otras_claves or ()) if c and c != correo["message_id"]]
     valores = (
         correo["message_id"],
         correo.get("remitente", ""),
         correo.get("asunto", ""),
         correo.get("fecha", ""),
+        extra[0] if extra else None,
     )
 
-    extra = [c for c in (otras_claves or ()) if c and c != correo["message_id"]]
     with conexion_bd() as conn:
         with conn.cursor() as cur:
             cur.execute(sql, valores)
             fila = cur.fetchone()
-            for clave in extra:
-                cur.execute(sql, (clave, *valores[1:]))
             return fila is not None
 
 
