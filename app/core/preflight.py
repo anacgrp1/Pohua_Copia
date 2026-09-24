@@ -294,8 +294,8 @@ def _envio(inf):
 
     if automatico:
         inf.ojo("ENVIO_AUTOMATICO encendido: el sistema escribe solo",
-                "Peticiones de datos, declinaciones y recordatorios salen sin "
-                "que nadie los mire. Con un buzón de clientes reales, llegan.")
+                "Peticiones de datos y recordatorios salen sin que nadie los "
+                "mire. Con un buzón de clientes reales, llegan.")
     else:
         inf.ok("ENVIO_AUTOMATICO apagado",
                "Lo que el sistema manda solo se construye y se registra, pero "
@@ -304,12 +304,12 @@ def _envio(inf):
     # El de la oferta es OTRO interruptor, y es el que la gente busca cuando
     # dice "no me llegó la cotización".
     if manual:
-        inf.ok("ENVIO_MANUAL encendido: la oferta del PM sí sale",
-               "Es el botón «Enviar oferta», con el destinatario delante.")
+        inf.ok("ENVIO_MANUAL encendido: lo que decide el PM sí sale",
+               "La oferta al aprobar y la declinación al declinar.")
     else:
-        inf.ojo("ENVIO_MANUAL apagado: la oferta no saldrá",
-                "El PDF se genera y queda archivado, pero el correo al cliente "
-                "no se despacha.")
+        inf.ojo("ENVIO_MANUAL apagado: ni la oferta ni la declinación saldrán",
+                "El PDF se genera y queda archivado, pero ningún correo al "
+                "cliente se despacha.")
 
 
 def _avisos(inf):

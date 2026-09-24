@@ -140,9 +140,16 @@ def notificar_declinacion(rfq_id, datos, destinatario=None) -> bool:
     Construye (COT-59) y despacha (COT-57/58) el correo de declinación.
 
     Devuelve ``True`` si el correo salió; ``False`` si sólo se construyó
-    (``ENVIO_AUTOMATICO`` apagado), si no había a quién escribirle o si falló
+    (``ENVIO_MANUAL`` apagado), si no había a quién escribirle o si falló
     el despacho. Ningún fallo aquí propaga: el dictamen del PM ya está
     registrado y lo que queda pendiente es sólo el aviso.
+
+    Va con el interruptor MANUAL, el mismo de la oferta: la declinación la
+    decide una persona pulsando «Decline», no el sistema por su cuenta.
+    Hasta 2026-09 iba con ``ENVIO_AUTOMATICO``, que en operación está
+    apagado, y el cliente del RFQ aprobado recibía su oferta mientras el del
+    declinado no recibía nada: un dictamen que sale y otro que se queda en
+    el registro.
     """
     import app.email.outbound as outbound
 
@@ -165,9 +172,9 @@ def notificar_declinacion(rfq_id, datos, destinatario=None) -> bool:
         log.error("RFQ=%s: no se pudo construir la declinación: %s", rfq_id, error)
         return False
 
-    if not outbound.envio_habilitado():
+    if not outbound.envio_habilitado(manual=True):
         log.info("RFQ=%s: correo de declinación LISTO pero no enviado "
-                 "(ENVIO_AUTOMATICO apagado). Para: %s", rfq_id, destino)
+                 "(ENVIO_MANUAL apagado). Para: %s", rfq_id, destino)
         return False
 
     try:

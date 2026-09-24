@@ -75,6 +75,16 @@ class TestDeclinar(BaseDecision):
         self.enviar.assert_called_once()
         self.assertTrue(resultado["correo_enviado"])
 
+    def test_la_declinacion_va_con_el_interruptor_manual(self):
+        """Declinar lo decide una persona: sale con ENVIO_MANUAL, como la
+        oferta. Con ENVIO_AUTOMATICO (apagado en operación) el aprobado
+        recibía su oferta y el declinado no recibía nada."""
+        self.habilitado.side_effect = lambda manual=False: manual
+        resultado = pm_decision.declinar("RFQ-1")
+        self.enviar.assert_called_once()
+        self.assertTrue(resultado["correo_enviado"])
+        self.assertEqual(self.habilitado.call_args.kwargs, {"manual": True})
+
     def test_usa_la_plantilla_de_declinacion(self):
         pm_decision.declinar("RFQ-1")
         tipo, params = self.construir.call_args[0]

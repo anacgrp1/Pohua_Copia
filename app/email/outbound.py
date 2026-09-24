@@ -61,14 +61,13 @@ def envio_habilitado(manual: bool = False) -> bool:
 
     Hay DOS interruptores porque son dos decisiones distintas:
 
-    * Lo que el sistema manda SOLO —la petición de datos al comprador, la
-      declinación, los recordatorios— va con ``ENVIO_AUTOMATICO``, apagado por
-      defecto. Es un buzón de clientes reales: el robot no escribe por
-      arrastre del cableado.
+    * Lo que el sistema manda SOLO —la petición de datos al comprador y los
+      recordatorios— va con ``ENVIO_AUTOMATICO``, apagado por defecto. Es un
+      buzón de clientes reales: el robot no escribe por arrastre del cableado.
 
     * Lo que manda UNA PERSONA pulsando un botón, con el destinatario y las
-      condiciones delante —hoy, la oferta— va con ``ENVIO_MANUAL``, encendido
-      por defecto. Ahí ya hay alguien decidiendo; exigirle además encender el
+      condiciones delante —la oferta al aprobar y la declinación al
+      declinar— va con ``ENVIO_MANUAL``, encendido por defecto. Ahí ya hay alguien decidiendo; exigirle además encender el
       envío automático significaba que, para que llegara UNA oferta, el robot
       quedaba suelto contestándole a cualquiera.
 
