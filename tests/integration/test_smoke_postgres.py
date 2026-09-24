@@ -23,10 +23,6 @@ try:
 except ImportError:  # psycopg2 no instalado
     psycopg2 = None
 
-_SQL = os.path.join(os.path.dirname(__file__), "..", "..", "sql")
-_SCHEMA = os.path.join(_SQL, "schema.sql")
-_MIGRACION_PREP = os.path.join(_SQL, "migrations", "004_prep_base.sql")
-_MIGRACION_EXT = os.path.join(_SQL, "migrations", "005_extension_costeo.sql")
 
 # Muestra representativa de las 36 tablas de la extensión de costeo (paso 1).
 _TABLAS_EXTENSION = {
@@ -81,11 +77,17 @@ _TABLAS_ESPERADAS = {
 _FKS_ESPERADAS = {"fk_rfqs_resorte", "fk_resortes_cotizacion_resorte", "fk_rfqs_cliente"}
 
 
+def _conectar(**kwargs):
+    if psycopg2 is None:
+        raise RuntimeError("psycopg2 no está disponible")
+    return psycopg2.connect(**kwargs)
+
+
 def _pg_disponible() -> bool:
     if psycopg2 is None:
         return False
     try:
-        conn = psycopg2.connect(connect_timeout=3, **_PG)
+        conn = _conectar(connect_timeout=3, **_PG)
         conn.close()
         return True
     except Exception:
@@ -93,12 +95,16 @@ def _pg_disponible() -> bool:
 
 
 def _aplicar_ddl(cursor) -> None:
-    """Carga esquema + migraciones. Orden: base, paso 0 (DER), paso 1 (extensión).
+    """Carga esquema + todas las migraciones en orden.
 
-    Los tres scripts son idempotentes, así que puede llamarlo cualquier clase
+    Garantiza que el esquema de prueba tenga todas las tablas, columnas
+    e índices actuales (incluyendo rfq_banderas.codigo y rfq_banderas.datos de la migración 022).
+    Los scripts son idempotentes, así que puede llamarlo cualquier clase
     sin depender de que otra haya corrido antes.
     """
-    for ruta in (_SCHEMA, _MIGRACION_PREP, _MIGRACION_EXT):
+    from app.persistence.migraciones import archivos as migraciones_archivos
+
+    for ruta in migraciones_archivos():
         with open(ruta, encoding="utf-8") as fh:
             cursor.execute(fh.read())
 
@@ -111,7 +117,7 @@ class TestSmokePostgres(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.conn = psycopg2.connect(**_PG)
+        cls.conn = _conectar(**_PG)
         cls.conn.autocommit = True
         with cls.conn.cursor() as cur:
             _aplicar_ddl(cur)
@@ -224,14 +230,14 @@ class TestVeredictoFactibilidadPostgres(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        conn = psycopg2.connect(**_PG)
+        conn = _conectar(**_PG)
         conn.autocommit = True
         with conn.cursor() as cur:
             _aplicar_ddl(cur)
         conn.close()
 
     def setUp(self):
-        self.conn = psycopg2.connect(**_PG)   # sin autocommit: se revierte al final
+        self.conn = _conectar(**_PG)   # sin autocommit: se revierte al final
 
     def tearDown(self):
         self.conn.rollback()
