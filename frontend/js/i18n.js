@@ -62,6 +62,29 @@ const I18N = (() => {
         'pagina.perfil.subAdmin':    { en: 'Your account, users and system settings', es: 'Tu cuenta, usuarios y configuración del sistema', fr: 'Votre compte, les utilisateurs et la configuration' },
 
         // --- Portada y acceso -------------------------------------------
+        // --- Información legal (js/components/legal.js, /legal/) -----------
+        'legal.privacidad': { en: 'Privacy notice', es: 'Aviso de privacidad', fr: 'Politique de confidentialité' },
+        'legal.cookies':    { en: 'Cookies', es: 'Cookies', fr: 'Cookies' },
+        'legal.terminos':   { en: 'Terms of use', es: 'Términos de uso', fr: "Conditions d’utilisation" },
+        'legal.banner':     { en: 'Pohua only uses one technical cookie and local storage that it needs to work and to remember your preferences. No advertising, analytics or third-party cookies.',
+                              es: 'Pohua sólo usa una cookie técnica y almacenamiento local necesarios para funcionar y para recordar sus preferencias. No usamos cookies de publicidad, de analítica ni de terceros.',
+                              fr: 'Pohua utilise uniquement un cookie technique et un stockage local nécessaires à son fonctionnement et à la mémorisation de vos préférences. Aucun cookie publicitaire, de mesure d’audience ou tiers.' },
+        'legal.entendido':  { en: 'Got it', es: 'Entendido', fr: 'J’ai compris' },
+        'legal.masCookies': { en: 'Cookie policy', es: 'Política de cookies', fr: 'Politique cookies' },
+        'legal.aceptTitulo':{ en: 'Privacy notice and terms of use', es: 'Aviso de privacidad y términos de uso', fr: 'Politique de confidentialité et conditions d’utilisation' },
+        'legal.aceptTexto': { en: 'Before you continue, please read the Pohua privacy notice and terms of use. Your acceptance is recorded with the date and version.',
+                              es: 'Antes de continuar, lea el aviso de privacidad y los términos de uso de Pohua. Su aceptación queda registrada con la fecha y la versión.',
+                              fr: 'Avant de continuer, lisez la politique de confidentialité et les conditions d’utilisation de Pohua. Votre acceptation est enregistrée avec la date et la version.' },
+        'legal.aceptCambio':{ en: 'The documents have changed since you last accepted them.', es: 'Los documentos cambiaron desde su última aceptación.', fr: 'Les documents ont changé depuis votre dernière acceptation.' },
+        'legal.aceptCasilla':{ en: 'I have read the privacy notice and I accept the terms of use.', es: 'He leído el aviso de privacidad y acepto los términos de uso.', fr: 'J’ai lu la politique de confidentialité et j’accepte les conditions d’utilisation.' },
+        'legal.aceptar':    { en: 'Accept and continue', es: 'Aceptar y continuar', fr: 'Accepter et continuer' },
+        'legal.salir':      { en: 'Log out', es: 'Salir', fr: 'Se déconnecter' },
+        'legal.fallo':      { en: 'Could not record your acceptance: {motivo}', es: 'No se pudo registrar la aceptación: {motivo}', fr: 'Impossible d’enregistrer votre acceptation : {motivo}' },
+        'legal.login':      { en: 'By signing in you accept the {terminos}. See the {privacidad} and the {cookies}.',
+                              es: 'Al entrar acepta los {terminos}. Consulte el {privacidad} y la {cookies}.',
+                              fr: 'En vous connectant, vous acceptez les {terminos}. Consultez la {privacidad} et la {cookies}.' },
+        'legal.loginCookies':{ en: 'cookie policy', es: 'política de cookies', fr: 'politique cookies' },
+
         'home.subtitulo': { en: 'Automatic quoting for industrial springs', es: 'Cotización automática de resortes industriales', fr: 'Chiffrage automatique de ressorts industriels' },
         'home.entrar':    { en: 'Sign In', es: 'Entrar', fr: 'Se connecter' },
 

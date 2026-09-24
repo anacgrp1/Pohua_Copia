@@ -65,6 +65,8 @@ const LoginPage = {
                     <button type="submit" class="btn btn-primary login-submit" id="loginSubmit"
                             data-i18n="login.entrar">${I18N.t('login.entrar')}</button>
                 </form>
+
+                <p class="login-legal" id="loginLegal"></p>
             </div>
         `;
 
@@ -77,6 +79,8 @@ const LoginPage = {
         }
 
         // El submit del formulario cubre tanto el botón como la tecla Enter.
+        if (typeof Legal !== 'undefined') Legal.notaLogin(document.getElementById('loginLegal'));
+
         document.getElementById('loginForm').addEventListener('submit', (e) => {
             e.preventDefault();
             this.entrar();

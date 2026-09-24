@@ -396,6 +396,42 @@ def _lector(inf):
                 "scripts/vendorizar_nucleo.py las regenera.")
 
 
+def _legal(inf):
+    """Los datos del responsable en el aviso de privacidad.
+
+    Los llena el área legal en ``frontend/legal/responsable.js``. Mientras
+    falten, la página los enseña en rojo como pendientes y el aviso no cumple:
+    sin la identidad y el domicilio del responsable no hay aviso de privacidad.
+    """
+    import re
+
+    from app.legal import VERSION_LEGAL
+
+    inf.en("Aviso de privacidad")
+    ruta = os.path.join(RAIZ, "frontend", "legal", "responsable.js")
+    try:
+        with open(ruta, encoding="utf-8") as f:
+            texto = f.read()
+    except OSError:
+        inf.falta("No está frontend/legal/responsable.js")
+        return
+    obligatorios = ("razonSocial", "domicilio", "correoPrivacidad",
+                    "departamentoDatos", "jurisdiccion")
+    huecos = [c for c in obligatorios
+              if re.search(r"\b%s:\s*null\b" % c, texto)]
+    if huecos:
+        inf.ojo("Faltan datos del responsable en el aviso de privacidad",
+                "Completar en frontend/legal/responsable.js: " + ", ".join(huecos) +
+                ". Hasta entonces la página /legal/ los enseña como pendientes.")
+    else:
+        inf.ok("Los datos del responsable están completos")
+    version = re.search(r"VERSION:\s*'([^']+)'", texto)
+    if not version or version.group(1) != VERSION_LEGAL:
+        inf.falta("La versión de los documentos legales no coincide",
+                  "responsable.js dice %s y app/legal.py %s: tienen que ser la misma."
+                  % (version.group(1) if version else "—", VERSION_LEGAL))
+
+
 # --------------------------------------------------------------------------- #
 # Público
 # --------------------------------------------------------------------------- #
@@ -426,6 +462,7 @@ def revisar(con_buzon: bool = True, desde_escritorio: bool = False) -> Dict[str,
         lambda: _avisos(inf),
         lambda: _recordatorio(inf),
         lambda: _lector(inf),
+        lambda: _legal(inf),
     ):
         # Una comprobación que reviente no puede llevarse por delante el resto
         # del informe: es justo cuando más falta hace verlo entero.

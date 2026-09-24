@@ -36,6 +36,7 @@ from api.routes import rfqs as rfqs_router
 from api.routes import status as status_router
 from api.routes import notificaciones as notificaciones_router
 from api.routes import push as push_router
+from api.routes import legal as legal_router
 from api.routes import users as users_router
 from api.security import exige
 import app.rfq.horario as horario
@@ -208,6 +209,7 @@ app.include_router(nube_router.router)
 app.include_router(users_router.router)
 app.include_router(notificaciones_router.router)
 app.include_router(push_router.router)
+app.include_router(legal_router.router)
 
 
 # ---------------------------------------------------------------------------
@@ -306,6 +308,9 @@ def _ruta_segura(peticion: str) -> Path | None:
     if candidato != _FRONTEND_RAIZ and _FRONTEND_RAIZ not in candidato.parents:
         log.warning("Intento de salir de frontend/ con la ruta %r.", peticion)
         return None
+    if candidato.is_dir():
+        # `/legal/` es una página con su propio index.html, no la SPA.
+        candidato = candidato / "index.html"
     return candidato if candidato.is_file() else None
 
 

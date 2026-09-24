@@ -35,6 +35,9 @@ class UsuarioPublico(BaseModel):
     # Entró con una contraseña temporal (alta o restablecimiento del
     # administrador): la aplicación le pide la suya nada más entrar.
     debe_cambiar_password: bool = False
+    # La versión del aviso de privacidad y los términos que tiene que aceptar
+    # antes de seguir (app/legal.py), o None si ya aceptó la vigente.
+    legal_pendiente: Optional[str] = None
 
 
 class LoginResponse(BaseModel):

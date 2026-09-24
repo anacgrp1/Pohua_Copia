@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pohua · Información legal</title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+    <!-- Pública a propósito: el aviso de privacidad tiene que poder leerse
+         ANTES de entrar, y también quien nos manda un RFQ sin tener cuenta. -->
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('cgr-tema');
+                if (t !== 'light' && t !== 'dark') {
+                    t = (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+                }
+                document.documentElement.setAttribute('data-theme', t);
+            } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
+        })();
+    </script>
+    <link rel="stylesheet" href="/legal/legal.css">
+</head>
+<body>
+    <header class="lg-cabecera">
+        <a class="lg-marca" href="/" id="lgVolver">
+            <img src="/assets/isc-logo.png" alt="ISC">
+            <img src="/assets/logo.png" alt="CGR">
+            <span>Pohua</span>
+        </a>
+        <div class="lg-acciones">
+            <select id="lgIdioma" aria-label="Idioma / Language / Langue">
+                <option value="es">Español</option>
+                <option value="en">English</option>
+                <option value="fr">Français</option>
+            </select>
+            <button type="button" id="lgImprimir"></button>
+        </div>
+    </header>
+
+    <nav class="lg-pestanas" id="lgPestanas" role="tablist"></nav>
+
+    <main class="lg-doc" id="lgDoc" tabindex="-1"></main>
+
+    <script src="/legal/responsable.js"></script>
+    <script src="/legal/contenido.es.js"></script>
+    <script src="/legal/contenido.en.js"></script>
+    <script src="/legal/contenido.fr.js"></script>
+    <script src="/legal/legal.js"></script>
+</body>
+</html>

@@ -18,6 +18,9 @@ const APP = {
     statusTimer: null,    // temporizador del sondeo de estado
 
     async init() {
+        // El aviso de cookies sale en el primer contacto, antes de entrar.
+        if (typeof Legal !== 'undefined') Legal.banner();
+
         // Registrar el service worker (PWA)
         // El service worker sirve el CSS y el JS desde la caché ANTES de ir a la
         // red. Eso es lo que se quiere en producción (la PWA abre al instante y
@@ -225,6 +228,7 @@ const APP = {
             this.iniciarSondeo();
             this.handleRoute();
             this.exigirPasswordPropia();
+            this.exigirAvisoLegal();
         } else {
             this.arrancar();
         }
@@ -236,6 +240,17 @@ const APP = {
      * instante a que la vista esté montada: el diálogo se abre encima de la
      * aplicación, no encima del login.
      */
+    /**
+     * Quien no aceptó la versión vigente del aviso de privacidad y de los
+     * términos lo hace antes de seguir (js/components/legal.js). Un poco
+     * después que el de la contraseña, para quedar encima de él.
+     */
+    exigirAvisoLegal() {
+        const yo = API.getUsuario();
+        if (!yo || !yo.legal_pendiente || typeof Legal === 'undefined') return;
+        setTimeout(() => Legal.exigirAceptacion(), 350);
+    },
+
     exigirPasswordPropia() {
         const yo = API.getUsuario();
         if (!yo || !yo.debe_cambiar_password) return;
@@ -406,6 +421,7 @@ const APP = {
         this.aplicarPermisos();
         this.conectarLogo();
         this.exigirPasswordPropia();
+        this.exigirAvisoLegal();
 
         if (this.arrancada) {
             this.updateStatus();

@@ -19,10 +19,9 @@
     <!-- iOS no lee los iconos del manifest y redondea las esquinas él mismo. -->
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- La fuente (Inter) se sirve desde /assets/fonts: ver style.css. Ya no
+         se pide nada a Google, así que no sale la IP de nadie a un tercero. -->
+    <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 
     <!-- Tema claro/oscuro.
          Va aquí, antes de la hoja de estilos, y a propósito no está en un
@@ -280,6 +279,7 @@
                     <span class="status-dot" id="workerDot"></span>
                     <span id="workerLabel" data-i18n="barra.servicioParado">Service stopped</span>
                 </div>
+                <nav class="sidebar-legal" id="sidebarLegal"></nav>
             </div>
         </aside>
 
@@ -359,6 +359,8 @@
     <script src="/js/starfield.js"></script>
     <script src="/js/hero.js"></script>
     <script src="/js/api.js"></script>
+    <script src="/legal/responsable.js"></script>
+    <script src="/js/components/legal.js"></script>
     <script src="/js/components/toast.js"></script>
     <script src="/js/components/confirmar.js"></script>
     <script src="/js/components/assistant.js"></script>
@@ -382,5 +384,9 @@
     <script src="/js/pages/monitor.js"></script>
     <script src="/js/pages/perfil.js"></script>
     <script src="/js/app.js"></script>
+    <script>
+        // Los enlaces legales del pie de la barra lateral.
+        if (typeof Legal !== 'undefined') Legal.enlaces(document.getElementById('sidebarLegal'));
+    </script>
 </body>
 </html>

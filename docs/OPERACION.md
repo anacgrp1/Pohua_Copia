@@ -354,7 +354,42 @@ Planeación a mano.
 
 ---
 
-## 7. Notas de operación
+## 7. Aviso de privacidad, cookies y términos
+
+Los tres documentos son páginas públicas en `/legal/` (se leen sin entrar), en
+español, inglés y francés. Pohua enseña el aviso de cookies al primer acceso,
+enlaza los documentos en el login, la portada y la barra lateral, y pide a cada
+usuario aceptar la versión vigente al entrar; la aceptación queda en la tabla
+`aceptaciones_legales` (migración 027) con la fecha y la versión.
+
+**Lo que falta y no puede hacer el código:**
+
+1. Llenar `frontend/legal/responsable.js`: razón social, domicilio y RFC/EIN/SIREN
+   de cada empresa, el correo de privacidad, la persona o departamento de datos
+   personales, el delegado de protección de datos si lo hay y la jurisdicción.
+   Mientras falten, la página los enseña en rojo y `scripts/comprobar_flujo.py`
+   lo avisa.
+2. Que un abogado de cada país (México, EE. UU. y Francia) revise los textos
+   de `frontend/legal/contenido.*.js`. Son un borrador técnico fiel a lo que hace
+   Pohua, no una opinión legal.
+3. Verificar con cada proveedor (Render, Neon, Anthropic, Microsoft) que hay
+   contrato de encargado / DPA y la garantía de transferencia internacional que
+   dice el aviso (cláusulas contractuales tipo o Data Privacy Framework).
+4. En Francia: informar y, si corresponde, consultar al CSE antes de usar una
+   herramienta que registra la actividad del personal; y llevar el registro de
+   actividades de tratamiento (art. 30 RGPD).
+5. Tener un procedimiento interno para contestar las solicitudes de derechos
+   en plazo (México: 20 + 15 días; UE: un mes) y para notificar vulneraciones.
+
+**Si cambian los textos:** cambiar a la vez `VERSION` en `responsable.js` y
+`VERSION_LEGAL` en `app/legal.py` (una prueba comprueba que coinciden). Al
+siguiente acceso, Pohua pide a todos aceptar la nueva versión.
+
+**Si algún día se añade analítica, un chat o cualquier script de terceros:** no
+se carga sin consentimiento. `Legal.permitido('categoria')` vale `false` hasta
+que la persona lo acepte, y hay que añadirlo a la política de cookies.
+
+## 8. Notas de operación
 
 **Conexiones a Neon.** El código abre y cierra una conexión por operación. Se
 corrigieron seis puntos donde no se cerraban (usaban la conexión de psycopg2
@@ -374,7 +409,7 @@ configuración la aplica cada punto de entrada — `app/main.py`, `api/server.py
 
 ---
 
-## 8. Pendientes conocidos
+## 9. Pendientes conocidos
 
 Cosas detectadas y **no** resueltas, para que no se pierdan:
 

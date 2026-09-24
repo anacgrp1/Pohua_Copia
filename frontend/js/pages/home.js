@@ -63,6 +63,7 @@ const HomePage = (() => {
                                 <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
                             </svg>
                         </button>
+                        <nav class="portada-legal" id="portadaLegal"></nav>
                     </div>
                 </div>
             </div>`;
@@ -82,6 +83,8 @@ const HomePage = (() => {
         // El lienzo se mide con el contenedor ya en pantalla: si se midiera
         // antes, tendría ancho 0 y no se dibujaría nada.
         requestAnimationFrame(() => Hero.init(document.getElementById('heroCanvas')));
+
+        if (typeof Legal !== 'undefined') Legal.enlaces(contenedor.querySelector('#portadaLegal'));
 
         const boton = contenedor.querySelector('#btnGoLogin');
         if (boton && typeof onLogin === 'function') {

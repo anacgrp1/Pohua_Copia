@@ -207,10 +207,24 @@ const API = {
             'GET', `/api/rfqs?estado=Approved,Declined&limit=${limit}`);
     },
     approveRFQ(rfqId, body = {}) {
-        return this.request('POST', `/api/rfqs/${rfqId}/approve`, body);
+        return this.request('POST', `/api/rfqs/${rfqId}/approve`, body)
+            .then((r) => { this.avisarDictamen(rfqId); return r; });
     },
     declineRFQ(rfqId, body = {}) {
-        return this.request('POST', `/api/rfqs/${rfqId}/decline`, body);
+        return this.request('POST', `/api/rfqs/${rfqId}/decline`, body)
+            .then((r) => { this.avisarDictamen(rfqId); return r; });
+    },
+    /** Un RFQ dictaminado: la calculadora olvida lo que llevaba escrito de él
+        y, si lo tiene abierto, queda limpia (`pages/quoting.js`). */
+    /** Deja constancia de que la sesión aceptó esa versión de los documentos. */
+    aceptarLegal(version) {
+        return this.request('POST', '/api/legal/aceptar', { version });
+    },
+    avisarDictamen(rfqId) {
+        try {
+            window.dispatchEvent(new CustomEvent('pohua:rfq-dictaminado',
+                                                 { detail: { rfq: rfqId } }));
+        } catch (_) { /* un navegador sin CustomEvent: se olvida al reabrir */ }
     },
     // La ventana de revisión del PM: el RFQ ya costeado por tramos.
     rfqRevision(rfqId) { return this.request('GET', `/api/rfqs/${rfqId}/revision`); },

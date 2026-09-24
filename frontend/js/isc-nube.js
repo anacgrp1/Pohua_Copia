@@ -141,6 +141,160 @@
         }
     }
 
+    // ------------------------------------------ la hoja es del RFQ que se abre
+
+    /*
+     * La calculadora SIEMPRE abre limpia. Sólo se llena al abrir un RFQ, y se
+     * vuelve a limpiar al salir de él.
+     *
+     * Antes el borrador vivía en este navegador y se quedaba puesto: entrabas
+     * a Quoting a cotizar otra cosa y te encontrabas el último RFQ que alguien
+     * abrió, con su cliente, sus notas y su número. Así es como se mezclan dos
+     * cotizaciones.
+     *
+     * Lo escrito en un RFQ no se pierde al limpiar: se guarda en el documento
+     * de Neon (`shared.drafts`, el mismo sitio donde la calculadora ya sube
+     * sus borradores) y vuelve al abrir ESE RFQ otra vez, desde cualquier
+     * computadora. Se olvida cuando el RFQ se dictamina —aprobado o
+     * declinado—: ya no hay nada que seguir escribiendo.
+     *
+     * Una cotización tecleada a mano, sin RFQ y sin guardar en el Quote Log,
+     * no se tira nunca sin preguntar: es trabajo de una persona que no está
+     * en ningún otro sitio.
+     */
+    var docListo = null;     // se resuelve cuando el documento de Neon ya manda
+
+    /** Lo que necesita `shared.drafts` espera a que llegue el documento de
+        Neon: escrito antes, `adoptar()` lo pisaría al reemplazar `shared`. */
+    function cuandoDoc(fn) {
+        (docListo || Promise.resolve()).then(fn, fn);
+    }
+
+    function aPohuaDirecto(mensaje) {
+        try { window.parent.postMessage(mensaje, '*'); } catch (e) {}
+    }
+
+    function compartir() {
+        if (typeof queueShared === 'function') queueShared();
+        else if (typeof SFS !== 'undefined' && SFS.write) SFS.write();
+    }
+
+    function esDeRfq(q) { return !!(q && q.pohuaRfq && !q.pohuaConsulta); }
+
+    function trabajoSuelto(q) {
+        return !!q && !q.pohuaRfq && !q.number &&
+               typeof quoteVirgen === 'function' && !quoteVirgen(q);
+    }
+
+    /** Lo escrito en un RFQ, al documento compartido. */
+    function archivar(q) {
+        if (!esDeRfq(q) || typeof shared === 'undefined' || !shared) return;
+        try {
+            shared.drafts = shared.drafts || {};
+            shared.drafts[q.id] = {
+                guardadoEn: (typeof nowStr === 'function') ? nowStr() : new Date().toISOString(),
+                guardadoPor: (typeof CUR !== 'undefined' && CUR) ? CUR.email : '\u2014',
+                pns: (q.pns || []).map(function (p) { return p.pn; }).filter(Boolean).join(', '),
+                pohuaRfq: q.pohuaRfq,
+                data: JSON.parse(JSON.stringify(q))
+            };
+            compartir();
+        } catch (e) {
+            console.warn('[nube] No se pudo guardar lo escrito en ' + q.pohuaRfq + ': ' + e.message);
+        }
+    }
+
+    /** El borrador más reciente de un RFQ, o null. */
+    function guardadoDe(rfqId) {
+        var d = (typeof shared !== 'undefined' && shared && shared.drafts) || {};
+        var mejor = null;
+        Object.keys(d).forEach(function (k) {
+            var e = d[k];
+            if (!e || !e.data || e.data.pohuaRfq !== rfqId) return;
+            if (!mejor || String(e.guardadoEn || '') > String(mejor.guardadoEn || '')) mejor = e;
+        });
+        return mejor ? mejor.data : null;
+    }
+
+    function rfqsGuardados() {
+        var d = (typeof shared !== 'undefined' && shared && shared.drafts) || {};
+        var ids = [];
+        Object.keys(d).forEach(function (k) {
+            var r = d[k] && d[k].data && d[k].data.pohuaRfq;
+            if (r && ids.indexOf(r) < 0) ids.push(r);
+        });
+        return ids;
+    }
+
+    function repintar() {
+        intentar(function () { if (typeof renderQuote === 'function') renderQuote(); }, 'pintar la hoja');
+        intentar(function () { if (typeof updateSummaryTab === 'function') updateSummaryTab(); }, 'refrescar el resumen');
+    }
+
+    function dejarEnBlanco() {
+        var viejo = Q();
+        if (viejo && typeof shared !== 'undefined' && shared && shared.locks && shared.locks[viejo.id]) {
+            delete shared.locks[viejo.id];
+            compartir();
+        }
+        local.draft = blankQuote();
+        if (typeof saveLocal === 'function') saveLocal();
+        repintar();
+    }
+
+    /** Guarda lo del RFQ abierto y deja la hoja en blanco. */
+    function limpiar() {
+        if (enConsulta()) {
+            // Se estaba mirando un caso cerrado encima de otro trabajo.
+            var aparte = null;
+            try { aparte = JSON.parse(borradorGuardado); } catch (e) {}
+            borradorGuardado = null;
+            if (trabajoSuelto(aparte)) {
+                local.draft = aparte;
+                if (typeof saveLocal === 'function') saveLocal();
+                repintar();
+                return;
+            }
+            archivar(aparte);
+            dejarEnBlanco();
+            return;
+        }
+        var q = Q();
+        if (trabajoSuelto(q)) return;
+        archivar(q);
+        dejarEnBlanco();
+    }
+
+    /** Los RFQ dictaminados: su borrador ya no sirve. */
+    function olvidar(ids) {
+        if (!ids || !ids.length) return;
+        var d = (typeof shared !== 'undefined' && shared && shared.drafts) || {};
+        var quitados = 0;
+        Object.keys(d).forEach(function (k) {
+            var r = d[k] && d[k].data && d[k].data.pohuaRfq;
+            if (r && ids.indexOf(r) >= 0) { delete d[k]; quitados++; }
+        });
+        if (quitados) compartir();
+        var q = Q();
+        if (esDeRfq(q) && ids.indexOf(q.pohuaRfq) >= 0) dejarEnBlanco();
+    }
+
+    /** Vuelve a poner lo que se llevaba escrito en ese RFQ. */
+    function reabrir(data, d) {
+        var q = JSON.parse(JSON.stringify(data));
+        delete q.pohuaConsulta;
+        local.draft = (typeof migrateQuote === 'function') ? migrateQuote(q) : q;
+        if (typeof saveLocal === 'function') saveLocal();
+        repintar();
+        var pn = local.draft.pns && local.draft.pns[local.draft.activePn || 0];
+        if (pn && pn.drawing) {
+            intentar(function () {
+                if (typeof openSpringCalc === 'function') openSpringCalc(false);
+            }, 'pasar la geometría a la hoja de resortes');
+        }
+        aviso(t('rfqRecuperado', { rfq: d.rfq_id }));
+    }
+
     // ------------------------------------------------- lo que se le dice a quien mira
 
     /*
@@ -166,7 +320,8 @@
             actualizado: 'Quotes updated by {quien}.',
             otroUsuario: 'another user',
             abrirTitulo: 'Open {rfq}',
-            abrirTexto: 'The sheet has a half-finished quote. It will be saved to the log and {rfq} opened in its place.',
+            abrirTexto: 'The sheet has a quote typed by hand that is not saved in the Quote Log. Opening {rfq} discards it.',
+            rfqRecuperado: 'RFQ {rfq} reopened with what you had written.',
             noAbrio: 'Could not open {rfq} in the sheet: {error}',
             clienteNuevo: 'Customer "{cliente}" was not in the catalog: it was created as {codigo} with Net 30. Review terms and rep.',
             variosFicheros: 'There are {n} files from the email in the box; the first one is read ({nombre}). The rest, by hand.',
@@ -190,7 +345,8 @@
             actualizado: 'Cotizaciones actualizadas por {quien}.',
             otroUsuario: 'otro usuario',
             abrirTitulo: 'Abrir {rfq}',
-            abrirTexto: 'La hoja tiene una cotización a medias. Se guarda en el registro y se abre {rfq} en su lugar.',
+            abrirTexto: 'La hoja tiene una cotización tecleada a mano que no está guardada en el Quote Log. Al abrir {rfq} se descarta.',
+            rfqRecuperado: 'RFQ {rfq} abierto con lo que llevabas escrito.',
             noAbrio: 'No se pudo abrir {rfq} en la hoja: {error}',
             clienteNuevo: 'El cliente "{cliente}" no estaba en el catálogo: se dio de alta como {codigo} con Net 30. Revisa términos y representante.',
             variosFicheros: 'Hay {n} ficheros del correo en la casilla; se lee el primero ({nombre}). Los demás, a mano.',
@@ -214,7 +370,8 @@
             actualizado: 'Devis mis à jour par {quien}.',
             otroUsuario: 'un autre utilisateur',
             abrirTitulo: 'Ouvrir {rfq}',
-            abrirTexto: "La feuille contient un devis à moitié fait. Il sera enregistré dans le journal et {rfq} ouvert à sa place.",
+            abrirTexto: "La feuille contient un devis saisi à la main qui n'est pas enregistré dans le Quote Log. Ouvrir {rfq} le supprime.",
+            rfqRecuperado: 'RFQ {rfq} rouvert avec ce que vous aviez saisi.',
             noAbrio: "Impossible d'ouvrir {rfq} dans la feuille : {error}",
             clienteNuevo: 'Le client « {cliente} » ne figurait pas au catalogue : il a été créé comme {codigo} avec Net 30. Vérifiez les conditions et le représentant.',
             variosFicheros: "Il y a {n} fichiers du courrier dans la case ; le premier est lu ({nombre}). Les autres, à la main.",
@@ -1009,9 +1166,17 @@
             } else if (d.tipo === 'cargar-rfq') {
                 cargarRfq(d.datos, d.consulta);
             } else if (d.tipo === 'salir-consulta') {
-                var volvio = devolverBorrador();
-                aPohua({ source: 'isc-nube', tipo: 'consulta-cerrada',
-                         volvio: volvio });
+                /* Salir de mirar un caso cerrado es salir de un RFQ: la hoja
+                   queda limpia, y lo que hubiera debajo se guarda o se
+                   devuelve según sea de un RFQ o hecho a mano. */
+                cuandoDoc(function () {
+                    limpiar();
+                    aPohua({ source: 'isc-nube', tipo: 'consulta-cerrada', volvio: true });
+                });
+            } else if (d.tipo === 'limpiar') {
+                cuandoDoc(limpiar);
+            } else if (d.tipo === 'olvidar-rfqs') {
+                cuandoDoc(function () { olvidar(d.ids || []); });
             }
         });
     }
@@ -1043,7 +1208,11 @@
     function cargarRfq(d, consulta) {
         if (!d || !d.pn) return;
         if (typeof Q !== 'function' || typeof blankQuote !== 'function') return;
+        // Necesita el documento de Neon: ahí está lo que se llevaba escrito.
+        cuandoDoc(function () { cargarRfqYa(d, consulta); });
+    }
 
+    function cargarRfqYa(d, consulta) {
         var q = Q();
         if (q && q.pohuaRfq === d.rfq_id) {       // ya está abierto: no se toca
             avisarCargado(d.rfq_id, false);
@@ -1060,17 +1229,28 @@
             return;
         }
 
-        var vacio = !q || (!q.number && !q.header.customerCode &&
-                           !(q.pns && q.pns[0] && q.pns[0].pn));
-        if (vacio) { ponerRfq(d); return; }
+        // Se estaba mirando un caso cerrado: primero se devuelve lo de debajo.
+        if (enConsulta()) { devolverBorrador(); q = Q(); }
 
+        if (!trabajoSuelto(q)) { abrirRfq(d); return; }
+
+        // Sólo pregunta cuando hay trabajo hecho a mano que no está en ningún
+        // otro sitio: lo de otro RFQ se guarda solo y vuelve al reabrirlo.
         var texto = t('abrirTexto', { rfq: d.rfq_id });
         if (typeof confirmBox === 'function') {
             confirmBox(t('abrirTitulo', { rfq: d.rfq_id }), texto,
-                       function () { ponerRfq(d); });
+                       function () { abrirRfq(d); });
         } else if (window.confirm(texto)) {
-            ponerRfq(d);
+            abrirRfq(d);
         }
+    }
+
+    /** Guarda lo del RFQ que hubiera y abre este: lo que ya llevaba, o nuevo. */
+    function abrirRfq(d) {
+        archivar(Q());
+        var guardado = guardadoDe(d.rfq_id);
+        if (guardado) reabrir(guardado, d);
+        else ponerRfq(d);
     }
 
     /** Un paso que puede fallar sin llevarse los demás. */
@@ -1774,6 +1954,21 @@
     }
 
     esperarCalculadora(function () {
+        /* La hoja arranca limpia. Lo que dejó puesto este navegador se aparta
+           ya —para no enseñarlo ni un instante— y, si era de un RFQ, se guarda
+           en Neon en cuanto llegue el documento. */
+        var alArrancar = null;
+        try {
+            alArrancar = Q();
+            if (alArrancar && !trabajoSuelto(alArrancar)) {
+                local.draft = blankQuote();
+                if (typeof saveLocal === 'function') saveLocal();
+                repintar();
+            } else {
+                alArrancar = null;
+            }
+        } catch (e) { alArrancar = null; }
+
         /* Pohua espera esta señal para mandar el RFQ que hay que abrir. Sin
            ella tendría que adivinar cuándo terminó de arrancar la calculadora
            —el `load` del marco llega mucho antes— y el mensaje se perdería. */
@@ -1795,7 +1990,7 @@
         if (typeof renderShareBar === 'function') {
             try { renderShareBar = pintarBarra; } catch (e) {}
         }
-        adoptar().then(function (como) {
+        docListo = adoptar().then(function (como) {
             pintarBarra();
             if (como === 'sembrado') {
                 aviso(t('sembrado'));
@@ -1804,6 +1999,11 @@
             SFS.healthy = false;
             pintarBarra();
             aviso(t('noLeyoEstado', { error: err.message }));
+        }).then(function () {
+            archivar(alArrancar);
+            // Pohua comprueba cuáles de estos RFQ ya se dictaminaron.
+            aPohuaDirecto({ source: 'isc-nube', tipo: 'rfqs-guardados',
+                            ids: rfqsGuardados() });
         });
     });
 })();

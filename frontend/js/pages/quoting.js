@@ -73,6 +73,10 @@ const QuotingPage = {
 
         if (this.montado && contenedor === this.contenedor &&
             contenedor.querySelector('#quotingMarcos')) {
+            // Entrar sin RFQ es entrar a una hoja limpia: lo del RFQ que
+            // estuviera abierto se guarda (ver `isc-nube.js`) y vuelve al
+            // reabrir ese RFQ.
+            if (!pedido && this.rfqAbierto) this.limpiarHoja();
             this.cambiar(pedido ? 'precio' : this.vista);
             this.pintarVolver();
             if (pedido) this.abrirRfq(pedido, this.consulta);
@@ -243,6 +247,57 @@ const QuotingPage = {
         boton.textContent = I18N.t('quoting.volverCalculo');
         boton.addEventListener('click', () => this.salirConsulta());
         caja.appendChild(cinta);
+    },
+
+    /** Deja la calculadora en blanco: se sale del RFQ que hubiera abierto. */
+    limpiarHoja() {
+        this.postAlMarco({ source: 'pohua', tipo: 'limpiar' });
+        this.consulta = false;
+        this.rfqAbierto = null;
+        this.rfqPendiente = null;
+        this.pintarVolver();
+        this.pintarConsulta();
+    },
+
+    postAlMarco(mensaje) {
+        const marco = this.contenedor && this.contenedor.querySelector('#quotingMarco');
+        try {
+            if (marco && marco.contentWindow) marco.contentWindow.postMessage(mensaje, '*');
+        } catch (_) { /* sin marco no hay hoja que limpiar */ }
+    },
+
+    /**
+     * Un RFQ dictaminado —aprobado o declinado— ya no tiene nada que seguir
+     * escribiendo: su borrador se olvida y, si es el que está abierto, la hoja
+     * queda limpia.
+     */
+    olvidarRfq(ids) {
+        const lista = (Array.isArray(ids) ? ids : [ids]).filter(Boolean);
+        if (!lista.length) return;
+        if (this.rfqAbierto && !this.consulta && lista.includes(this.rfqAbierto)) {
+            this.rfqAbierto = null;
+            this.pintarVolver();
+        }
+        this.postAlMarco({ source: 'pohua', tipo: 'olvidar-rfqs', ids: lista });
+    },
+
+    /**
+     * La hoja dice de qué RFQ guarda borrador; se olvidan los que ya se
+     * dictaminaron, aunque fuera en otra computadora. Uno que ya no existe
+     * (404) también: no hay adónde volver.
+     */
+    async revisarGuardados(ids) {
+        const cerrados = [];
+        for (const id of (ids || []).slice(0, 50)) {
+            try {
+                const r = await API.getRFQ(id);
+                if (r && ['Approved', 'Declined'].includes(r.estado)) cerrados.push(id);
+            } catch (err) {
+                if (err && err.sesionExpirada) return;
+                if (err && err.status === 404) cerrados.push(id);
+            }
+        }
+        this.olvidarRfq(cerrados);
     },
 
     /** Devuelve el borrador de trabajo y sale de la consulta. */
@@ -419,6 +474,11 @@ const QuotingPage = {
         if (this.centralitaPuesta) return;
         this.centralitaPuesta = true;
 
+        // Aprobado o declinado desde cualquier pantalla (ver `api.js`).
+        window.addEventListener('pohua:rfq-dictaminado', (ev) => {
+            this.olvidarRfq(ev.detail && ev.detail.rfq);
+        });
+
         window.addEventListener('message', (ev) => {
             const d = ev.data || {};
             const precio = this.contenedor && this.contenedor.querySelector('#quotingMarco');
@@ -434,6 +494,11 @@ const QuotingPage = {
             if (dePrecio && d.source === 'isc-nube' && d.tipo === 'hoja-lista') {
                 this.hojaLista = true;
                 this.entregarRfq();
+                return;
+            }
+
+            if (dePrecio && d.source === 'isc-nube' && d.tipo === 'rfqs-guardados') {
+                this.revisarGuardados(d.ids);
                 return;
             }
 

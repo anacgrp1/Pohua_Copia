@@ -21,6 +21,7 @@ from api.models.schemas import (
     UsuarioPublico,
 )
 from api.security import usuario_actual
+from app import legal
 from app.auth import passwords, repository
 from app.auth.tokens import UsuarioSesion, emitir
 
@@ -67,6 +68,7 @@ def login(body: LoginRequest):
     respuesta = emitir(usuario)
     respuesta["usuario"].update(_estado_foto(usuario.id))
     respuesta["usuario"]["debe_cambiar_password"] = _debe_cambiar(usuario.id)
+    respuesta["usuario"]["legal_pendiente"] = legal.pendiente(usuario.id)
     if respuesta["usuario"]["debe_cambiar_password"]:
         _recordar_cambio(usuario.id)
     return respuesta
@@ -127,6 +129,7 @@ def yo(usuario: UsuarioSesion = Depends(usuario_actual)):
         id=usuario.id, correo=usuario.correo, nombre=usuario.nombre,
         rol=usuario.rol, permisos=usuario.permisos,
         debe_cambiar_password=_debe_cambiar(usuario.id),
+        legal_pendiente=legal.pendiente(usuario.id),
         **_estado_foto(usuario.id),
     )
 
