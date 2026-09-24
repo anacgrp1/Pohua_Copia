@@ -127,27 +127,17 @@ def empaque(peso_lb: Optional[float], descripcion: str,
     Devuelve ``{"id", "ppb", "boxWt", "tierWt"}`` o ``None`` si no se pudo
     preguntar o faltan el peso y la cantidad.
     """
-    if not peso_lb or not cantidad:
+    # La regla necesita saber qué cajas EXISTEN para no devolver una que la
+    # planta no compra. Las pasa quien llama, leídas de `empaques` en Neon: el
+    # catálogo no se versiona, así que no hay otro sitio de donde sacarlas.
+    if not peso_lb or not cantidad or not cajas:
         return None
     r = _preguntar({"op": "empaque", "peso_lb": peso_lb,
                     "descripcion": descripcion, "cantidad": cantidad,
-                    "cajas": cajas or _cajas_del_catalogo()})
+                    "cajas": cajas})
     if r is None:
         return None
     return r.get("empaque")
-
-
-def _cajas_del_catalogo() -> List[Dict[str, Any]]:
-    """La lista de cajas del catálogo vendorizado.
-
-    La regla necesita saber qué cajas EXISTEN para no devolver una que la
-    planta no compra. Se lee del mismo `catalogo.json` que usa la calculadora.
-    """
-    try:
-        ruta = Path(__file__).resolve().parent / "nucleo" / "catalogo.json"
-        return json.loads(ruta.read_text(encoding="utf-8")).get("packing") or []
-    except (OSError, ValueError):
-        return []
 
 
 def tope_por_material(maquina_nombre: str,

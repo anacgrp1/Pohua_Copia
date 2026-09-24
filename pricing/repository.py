@@ -159,6 +159,23 @@ _SQL_MAQUINA = """
 """
 
 
+def cajas(conexion=None) -> List[Dict[str, Any]]:
+    """Las cajas activas del catálogo, con la forma que usa la regla de empaque.
+
+    Es la misma lista que recibe la hoja (`pricing/proyeccion_hoja.py`), para
+    que la caja que elige el servidor y la que elige la hoja salgan de las
+    mismas filas.
+    """
+    from pricing import proyeccion_hoja
+    try:
+        with _conexion(conexion) as conn:
+            with conn.cursor() as cur:
+                return proyeccion_hoja.cajas(cur)
+    except Exception as err:
+        log.warning("No se pudieron leer las cajas del catálogo: %s", err)
+        return []
+
+
 _SQL_TIENE_TOPE = """
     SELECT count(*) FROM information_schema.columns
     WHERE table_name = 'maquinas'

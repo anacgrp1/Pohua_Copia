@@ -1,8 +1,22 @@
 origen  https://github.com/dasniela/ISCQuotingCore
-commit  d0ea69177af3b7bd31b72457623eed00ecfd33c8
-fecha   2026-09-10T15:53:26+00:00
+commit  9a7c966c89f3c406d503e1ec07e76d5733b6efc4
+fecha   2026-09-24T02:34:53+00:00
 
 Copia hecha por scripts/vendorizar_nucleo.py.
 El catálogo de las calculadoras se vació al copiar: los datos
 salen de Neon. Para actualizar, vuelve a pasar el script sobre un
 clon al día y revisa el diff.
+
+ACTUALIZACIÓN PARCIAL a 9a7c966 ("SPRING WIRE" es music wire):
+  - pricing/nucleo/reglas.js, resortes.js      de 9a7c966
+  - pricing/nucleo/engine.js                   igual en 9a7c966
+  - vendor/isc_extractor/adapter.py            de 9a7c966
+  - vendor/isc_extractor/coherencia.py         de 9a7c966
+  - Spring Engineering Calculator V2.html      sólo el alias SPRINGWIRE de Music Wire
+  - ISC Price Calculator V7 to Automate.html   sin tocar (su motor ya es el de 9a7c966)
+
+Las dos calculadoras NO se regeneraron enteras: la copia de Pohua
+lleva CSS propio para ir dentro del iframe (fondo transparente,
+barra y reloj escondidos, móvil) que vendorizar_nucleo.py no produce
+y que se perdería. Antes de volver a pasar el script hay que
+enseñarle a conservar ese bloque.

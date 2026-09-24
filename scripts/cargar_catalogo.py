@@ -354,6 +354,37 @@ def cargar_acabados(cur, carpeta: Path) -> None:
     contar("acabado_alias", alias_nuevos, 0, alias_omitidos)
 
 
+# El día que Miguel Rodea validó el extracto. Es la fecha que se le pone a un
+# precio que llegó SIN la suya: no dice cuándo empezó a valer, pero sí que valía
+# como muy tarde ese día, que es lo único que se sabe de él.
+FECHA_VALIDACION = "2026-09-03"
+
+
+def _vigencia_servicio(f) -> str:
+    """Desde cuándo vale un servicio de subcontrato.
+
+    `subcontratista_servicios.vigente_desde` no admite null, y los tres
+    servicios de Commercial Plating llegaron sin fecha —su proveedor tampoco la
+    trae—. El INSERT reventaba en la primera de las tres filas.
+
+    Y reventaba en el peor sitio: esta función corre DESPUÉS de precios y
+    cajas y ANTES de máquinas y parámetros. Mientras la conexión iba en
+    autocommit, eso dejaba en Neon los precios de alambre cargados y las
+    máquinas de 2026 y los overheads de la V7 sin cargar: un catálogo a medias
+    que cotiza con los valores de marcador de la migración 007.
+
+    No se tiran las filas —son precios reales de un proveedor— ni se les
+    inventa una fecha: se les pone la de la validación y se dice.
+    """
+    propia = fecha(f.get("vigente_desde"))
+    if propia:
+        return propia
+    avisar(f"subcontratista_servicios: «{(f.get('etiqueta') or '').strip()}» de "
+           f"{f.get('subcontratista_nombre')} no trae fecha de vigencia; se le "
+           f"pone la de la validación del extracto ({FECHA_VALIDACION}).")
+    return FECHA_VALIDACION
+
+
 def cargar_subcontratistas(cur, carpeta: Path) -> None:
     proveedores = mapa(cur, "SELECT nombre, id FROM proveedores")
     nuevos = 0
@@ -408,7 +439,7 @@ def cargar_subcontratistas(cur, carpeta: Path) -> None:
             RETURNING (xmax = 0)
         """, (sid, acabado_id, (f["etiqueta"] or "").strip(),
               num(f.get("minimo_usd")), num(f.get("precio_lb")),
-              num(f.get("precio_pieza")), fecha(f.get("vigente_desde"))))
+              num(f.get("precio_pieza")), _vigencia_servicio(f)))
         serv_nuevos += 1 if cur.fetchone()[0] else 0
     contar("subcontratista_servicios", serv_nuevos)
     if sin_acabado:
@@ -516,15 +547,30 @@ def cargar_maquinas(cur, carpeta: Path) -> None:
                         OR ccv_objetivo_h IS DISTINCT FROM %s)
             """, (maquina_id, costo, ccv))
             if cur.fetchone():
+                # Si la tarifa abierta empezó HOY, no hay histórico que
+                # conservar: es una corrección del mismo día, y se corrige en su
+                # sitio. Cerrarla con fecha de hoy la dejaría con
+                # vigente_hasta = vigente_desde, que la restricción
+                # `ck_tarifa_rango` prohíbe —con razón: sería una tarifa que no
+                # estuvo vigente ni un día—. Pasaba al correr esto dos veces el
+                # mismo día, y la carga entera se deshacía por ello.
                 cur.execute("""
-                    UPDATE maquina_tarifas SET vigente_hasta = CURRENT_DATE
+                    UPDATE maquina_tarifas
+                       SET costo_hora = %s, ccv_objetivo_h = %s
                      WHERE maquina_id = %s AND vigente_hasta IS NULL
-                """, (maquina_id,))
-                cur.execute("""
-                    INSERT INTO maquina_tarifas
-                           (maquina_id, costo_hora, ccv_objetivo_h, vigente_desde)
-                    VALUES (%s, %s, %s, CURRENT_DATE)
-                """, (maquina_id, costo, ccv))
+                       AND vigente_desde = CURRENT_DATE
+                """, (costo, ccv, maquina_id))
+                if cur.rowcount == 0:
+                    cur.execute("""
+                        UPDATE maquina_tarifas SET vigente_hasta = CURRENT_DATE
+                         WHERE maquina_id = %s AND vigente_hasta IS NULL
+                           AND vigente_desde < CURRENT_DATE
+                    """, (maquina_id,))
+                    cur.execute("""
+                        INSERT INTO maquina_tarifas
+                               (maquina_id, costo_hora, ccv_objetivo_h, vigente_desde)
+                        VALUES (%s, %s, %s, CURRENT_DATE)
+                    """, (maquina_id, costo, ccv))
                 tarifas += 1
         actualizadas += 1
 
@@ -615,6 +661,22 @@ def main() -> int:
     import app.persistence.duplicates as duplicates
 
     conn = duplicates.conectar_bd()
+    # `conectar_bd()` devuelve la conexión en AUTOCOMMIT: cada sentencia se
+    # confirma sola. Con eso, las dos promesas de este script eran falsas:
+    #
+    #   · `--seco` escribía de verdad. El `rollback()` del final no tenía nada
+    #     que deshacer, porque cada INSERT ya se había confirmado al ejecutarse.
+    #     Correrlo "para ver los avisos antes de tocar producción" tocaba
+    #     producción.
+    #
+    #   · "O entra todo o no entra nada" tampoco: un error a mitad de la carga
+    #     dejaba confirmado todo lo anterior. Un catálogo a medias, que es
+    #     justo lo que la cabecera de este fichero dice que es peor que uno
+    #     vacío, porque cotiza.
+    #
+    # Apagarlo aquí hace que la carga entera sea UNA transacción, que es lo
+    # que el resto del script ya daba por hecho.
+    conn.autocommit = False
     try:
         with conn.cursor() as cur:
             # El orden no es negociable: los proveedores primero porque casi

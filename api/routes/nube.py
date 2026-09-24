@@ -94,6 +94,16 @@ def leer_estado(usuario: UsuarioSesion = Depends(_sesion)) -> Dict[str, Any]:
         import app.clients.catalogo_hoja as catalogo
         catalogo.aplicar(estado["documento"], conn)
 
+        # Y lo mismo con el catálogo de costeo: máquinas, precios de alambre,
+        # cajas, recargos, subcontratistas y parámetros. La hoja que va en
+        # Pohua lleva el SEED vacío —el catálogo no se versiona—, y sin esto
+        # cotizaba con las bases que tuviera el documento, que estaban vacías:
+        # la máquina salía en blanco, la caja costaba cero y el 004-222 salía
+        # a $1.234 donde la calculadora de la planta da $0.3946.
+        # Ver `pricing/proyeccion_hoja.py`.
+        import pricing.proyeccion_hoja as proyeccion
+        proyeccion.aplicar(estado["documento"], conn)
+
     return {
         "estado": "datos",
         # Se devuelve como TEXTO y no como objeto: la calculadora hace

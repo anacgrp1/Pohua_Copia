@@ -42,6 +42,19 @@ MATERIAL_REGLAS = [
 ]
 
 
+# "SPRING WIRE" a secas no es un material: es la familia entera. Pero en ISC se
+# cotiza como music wire, asi que se resuelve a MW. Va DESPUES de las reglas de
+# arriba y no dentro de ellas: "stainless spring wire", "oil tempered spring
+# wire" o "hard drawn spring wire" tienen que seguir cayendo en su material, y
+# ahi la palabra concreta manda.
+#
+# Lo destapo el 004-222, que dice "SPRING WIRE" y nada mas: sin codigo no habia
+# modulo G, y sin G el lector no podia ni calcular las espiras ni comprobarlas
+# contra la rigidez del plano.
+MATERIAL_GENERICO = (r"\bspring\s*(steel\s*)?wire\b",
+                     r"\balambre\s+de\s+muelle\b")
+
+
 def codigo_material(texto):
     """Texto libre del plano -> uno de los 8 codigos que entiende la calculadora."""
     if not texto:
@@ -51,6 +64,9 @@ def codigo_material(texto):
         for p in patrones:
             if re.search(p, t):
                 return codigo
+    for p in MATERIAL_GENERICO:
+        if re.search(p, t):
+            return "MW"
     return None
 
 
@@ -1046,6 +1062,47 @@ def _completar_espiras(spec, tipo, codigo_material):
     esp = spec.get("espiras") or {}
     if _num(esp.get("numero_espiras_totales")) is not None:
         return spec, []                       # el plano las acota: mandan ellas
+
+    # LAS ACTIVAS, QUE MUCHOS PLANOS DAN EN VEZ DE LAS TOTALES. Sumarles las
+    # espiras muertas de sus extremos es todo lo que hace falta: ni material ni
+    # rigidez. Por eso va ANTES del calculo por rigidez, que necesita las dos
+    # cosas.
+    #
+    # El 004-222 ensena por que importa. Dice "ACTIVE COILS 10 TO 10.5 APPROX"
+    # y, en material, "SPRING WIRE" -- una categoria, no un material, asi que no
+    # resuelve a ningun codigo ISC y el calculo por rigidez no podia. Sin
+    # totales, las activas acababan viajando en el campo de las TOTALES con una
+    # nota de aviso; la nota la lee una persona, la calculadora no, y les
+    # restaba las dos espiras de los extremos: 8,25 activas en vez de 10,25. Con
+    # ellas, un 24 % mas de rigidez, un 24 % mas de carga y un 16 % menos de
+    # peso, que es el que va al precio.
+    #
+    # Solo compresion: en extension el numero del plano ya son las espiras del
+    # cuerpo, y la calculadora lo usa tal cual.
+    Na = _num(esp.get("numero_espiras_activas"))
+    if tipo == "compresion" and Na is not None and Na > 0:
+        muertas, de_donde = coherencia.muertas_por_extremo(spec, tipo)
+        Nt = Na + muertas
+        nuevo_spec = copy.deepcopy(spec)
+        nuevo_spec.setdefault("espiras", {})["numero_espiras_totales"] = round(Nt, 2)
+        meta = nuevo_spec.setdefault("metadatos_extraccion", {})
+        est = [e for e in (meta.get("campos_estimados") or [])
+               if not (isinstance(e, dict)
+                       and str(e.get("campo") or "") == "espiras.numero_espiras_totales")]
+        est.append({"campo": "espiras.numero_espiras_totales",
+                    "valor": round(Nt, 2),
+                    "metodo": "active coils + %.1f dead coils, from %s"
+                              % (muertas, de_donde),
+                    "confianza": "alta" if "stated" in de_donde else "media"})
+        meta["campos_estimados"] = est
+        return nuevo_spec, [{
+            "text": "TOTAL COILS WORKED OUT: the drawing states %.2f ACTIVE "
+                    "coils and not the total, so the total is the active coils "
+                    "plus %.1f dead ones (%s): %.2f. The calculator subtracts "
+                    "the same dead coils, so it works with the %.2f active "
+                    "coils the drawing states."
+                    % (Na, muertas, de_donde, Nt, Na),
+            "severity": "info"}]
 
     r = coherencia.espiras_de_la_rigidez(spec, tipo, codigo_material)
     if not r:

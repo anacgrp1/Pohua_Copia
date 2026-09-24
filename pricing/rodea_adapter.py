@@ -565,6 +565,10 @@ def build_pn_for_engine(
             "scrapPct": scrap_pct,
         })
 
+    # Las cajas que existen, una vez para todos los tramos: la regla elige
+    # entre ellas según el peso de cada tramo.
+    lista_cajas = repository.cajas(conexion=conexion) if not tipo_desconocido else []
+
     pn: Dict[str, Any] = {
         "pn": rfq_id,
         "desc": desc,
@@ -575,7 +579,12 @@ def build_pn_for_engine(
             # que el motor lo señale, en lugar de sustituirlo por "MW".
             "code": material.get("codigo") or material_codigo,
             "diaIn": (diam_mm / 25.4) if diam_mm else None,
-            "weightLb": peso_lb,
+            # A cinco decimales, como lo guarda la calculadora en todos sus
+            # caminos (`Math.round(w*100000)/100000`): es el peso con el que
+            # se cotiza en la planta. Sin redondear, el tramo de 50.000 piezas
+            # del 004-222 compraba 335.8 lb en vez de 335.9 y la oferta salía
+            # un dólar por debajo de la de la calculadora.
+            "weightLb": (round(peso_lb, 5) if peso_lb is not None else None),
             "devLenIn": dev_len,
             "basePerLb": material.get("precio_lb"),
             "surchPerLb": material.get("surcharge_lb") or 0,
@@ -592,7 +601,8 @@ def build_pn_for_engine(
         # sobran hasta cinco van vacíos, que es como el motor los ignora.
         "tiers": [
             _tramo(q, routing, empaque,
-                   reglas.empaque(peso_lb, desc, q) if not tipo_desconocido else None)
+                   reglas.empaque(peso_lb, desc, q, lista_cajas)
+                   if not tipo_desconocido else None)
             if q is not None else dict(_TIER_VACIO)
             for q in (cantidades + [None] * 5)[:5]
         ],

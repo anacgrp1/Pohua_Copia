@@ -13,9 +13,9 @@ Lo que hacía falta para llegar aquí, por orden de dinero:
   · El orden de preferencia. La columna `orden_uso` existía desde la migración
     013 y nadie la llenó, así que se elegía por coste — y salía una máquina
     que ni siquiera corre ese alambre.
-  · Los precios de alambre. La tabla estaba vacía: cero de 186 filas. El Music
-    Wire de .039" son 1.80 $/lb.
-  · Las cajas. Dos de dieciséis. La de este tramo, la COR11050, no existía.
+  · Que la hoja reciba el catálogo. La que va en Pohua lleva el SEED vacío y
+    sólo recibía de Neon los clientes: máquinas, precios y cajas se quedaban
+    vacíos. Ver `test_proyeccion_hoja.py`.
   · El ángulo de hélice en el peso. El alambre no da vueltas planas: avanza un
     paso en cada vuelta. Medio por ciento en esta pieza, y siempre hacia abajo.
 """
@@ -77,31 +77,9 @@ class TestElPesoDeLaPieza:
 
 
 class TestLaRuta:
-    """Pantalla 3: tres operaciones con sus tarifas."""
-
-    ESPERADA = [
-        ("TORIN W11A", "COILER", 3.0, 1500.0, 15.0, 40.0),
-        ("Grinder A", "SECONDARY", 1.0, 500.0, 15.0, 27.0),
-        ("Stationary Oven", "SECONDARY", 3.0, 400.0, 10.0, 27.0),
-    ]
-
-    @staticmethod
-    @pytest.fixture(scope="class")
-    def taller():
-        import json
-        from pathlib import Path
-        ruta = Path(__file__).resolve().parents[2] / "pricing" / "nucleo" / "taller_2026.json"
-        d = json.loads(ruta.read_text(encoding="utf-8"))
-        return {m["name"]: m for m in d["coilers"] + d["secondary"]}
-
-    @pytest.mark.parametrize("nombre,familia,setup,pph,maq,labor", ESPERADA)
-    def test_cada_operacion_con_sus_numeros(self, taller, nombre, familia,
-                                            setup, pph, maq, labor):
-        m = taller[nombre]
-        assert m["setupH"] == setup
-        assert m["pph"] == pph
-        assert m["machineRateH"] == maq
-        assert m["laborRateH"] == labor
+    """Pantalla 3: la ruta. Los valores de cada máquina vienen de Neon —los
+    carga `scripts/cargar_catalogo.py` desde el extracto validado— y se prueban
+    en `test_proyeccion_hoja.py`. Aquí, qué operaciones pide el plano."""
 
     def test_el_esmerilado_lo_pide_el_plano(self):
         from pricing import reglas
@@ -185,9 +163,14 @@ class TestLaPoliticaDelHorno:
 class TestElEmpaque:
     """Pantalla 3: COR11050, 2,000 por caja, 11.52 lb, tramo 57.6 lb."""
 
+    # Sólo los códigos: la regla elige entre las cajas que existen. Los precios
+    # viven en Neon y no hacen falta para elegir.
+    CAJAS = [{"id": c} for c in ("COR100803", "COR11050", "COR121212U",
+                                 "barrels no lids", "GAYLORD")]
+
     def test_la_caja_del_tramo_de_10000(self):
         from pricing import reglas
-        e = reglas.empaque(0.00576, "Compression Spring", 10000)
+        e = reglas.empaque(0.00576, "Compression Spring", 10000, self.CAJAS)
         assert e["id"] == "COR11050"
         assert e["ppb"] == 2000
         assert round(e["boxWt"], 2) == 11.52
@@ -196,25 +179,11 @@ class TestElEmpaque:
     def test_otro_tramo_puede_llevar_otra_caja(self):
         # La elige el peso TOTAL, así que 50.000 no van en la misma.
         from pricing import reglas
-        assert reglas.empaque(0.00576, "Compression Spring", 50000)["id"] != "COR11050"
+        assert reglas.empaque(0.00576, "Compression Spring", 50000,
+                              self.CAJAS)["id"] != "COR11050"
 
-
-class TestElMaterial:
-    """Pantalla 3: MW, 1.80 $/lb base, 0.30 transporte, 6 % markup."""
-
-    def test_el_precio_del_calibre(self):
-        import json
-        from pathlib import Path
-        ruta = Path(__file__).resolve().parents[2] / "pricing" / "nucleo" / "catalogo.json"
-        precios = json.loads(ruta.read_text(encoding="utf-8"))["materialPrices"]
-        mw039 = [p for p in precios if p["code"] == "MW" and p["dia"] == 0.039]
-        assert mw039 and mw039[0]["latest"] == 1.8
-
-    def test_el_precio_va_por_calibre_no_por_material(self):
-        # El mismo Music Wire vale 2.80 a .020" y 1.80 a .039".
-        import json
-        from pathlib import Path
-        ruta = Path(__file__).resolve().parents[2] / "pricing" / "nucleo" / "catalogo.json"
-        precios = json.loads(ruta.read_text(encoding="utf-8"))["materialPrices"]
-        mw = {p["dia"]: p["latest"] for p in precios if p["code"] == "MW"}
-        assert mw[0.02] != mw[0.039]
+    def test_sin_lista_de_cajas_no_elige(self):
+        # Sin saber qué cajas existen, cualquier código que devolviera podría
+        # ser uno que la planta no compra.
+        from pricing import reglas
+        assert reglas.empaque(0.00576, "Compression Spring", 10000, []) is None

@@ -282,7 +282,29 @@
                 }
             }
             // Base vacía: se siembra con lo que haya aquí.
-            return SFS.write().then(function () { return 'sembrado'; });
+            //
+            // Y después se vuelve a leer UNA vez. La hoja de Pohua lleva el
+            // SEED vacío —el catálogo no se versiona—, así que lo que acaba de
+            // sembrar no trae máquinas, ni precios, ni cajas. El servidor sí
+            // los pone al servir el documento (`pricing/proyeccion_hoja.py`),
+            // pero sólo al LEERLO: sin esta segunda lectura, la primera sesión
+            // cotizaría con las bases vacías. Una sola vez y sin volver a
+            // `adoptar()`, para que un guardado que falle no se convierta en
+            // un bucle.
+            return SFS.write().then(function () {
+                return pedir(ESTADO).then(function (r2) {
+                    if (r2.estado === 'datos' && r2.texto) {
+                        var doc2 = JSON.parse(r2.texto);
+                        if (doc2 && doc2.dbs) {
+                            shared = doc2;
+                            revConocida = r2.rev;
+                            try { ensureV7Dbs(shared); } catch (e) {}
+                            try { refreshSeedDriven(); } catch (e) {}
+                        }
+                    }
+                    return 'sembrado';
+                }, function () { return 'sembrado'; });
+            });
         });
     }
 

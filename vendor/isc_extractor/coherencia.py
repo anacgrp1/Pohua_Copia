@@ -68,6 +68,15 @@ E_MPA = {
 # lo normal en extremos cerrados, que es la mayoria.
 MUERTAS_POR_DEFECTO = 2.0
 
+# Espiras muertas por tipo de extremo. Es la MISMA tabla que END_TYPES del
+# Spring Engineering Calculator, y tiene que seguir siendolo: el lector manda
+# TOTALES y la calculadora resta estas mismas para volver a las activas. Si las
+# dos tablas se separan, las activas salen desplazadas, y con ellas la rigidez,
+# la carga y el esfuerzo. Estaban separadas: aqui "plain & ground" no descontaba
+# ninguna y alli descuenta una.
+MUERTAS_POR_TIPO = {"closed_ground": 2.0, "closed": 2.0,
+                    "plain_ground": 1.0, "plain": 0.0}
+
 
 def _num(v):
     if isinstance(v, bool) or v is None:
@@ -199,8 +208,7 @@ def revisar_espiras(spec, codigo_material):
         return None
 
     if Na is None:
-        muertas = _num(esp.get("numero_espiras_muertas_totales"))
-        Na = Nt - (MUERTAS_POR_DEFECTO if muertas is None else muertas)
+        Na = Nt - muertas_por_extremo(spec, spec.get("tipo_resorte"))[0]
     if Na is None or Na <= 0:
         return None
 
@@ -302,6 +310,34 @@ def _geometria(spec):
     return d, D
 
 
+def muertas_por_extremo(spec, tipo=None):
+    """-> (espiras muertas, de donde sale). Nunca falla.
+
+    Por orden: las que acote el plano, las que implique el tipo de extremo que
+    el plano escriba, y si no dice nada, dos -- extremos cerrados, que es lo que
+    supone el resto del lector y lo que dicen cinco de los seis planos de
+    compresion de ISC.
+
+    En extension no hay espiras muertas: todas las del cuerpo trabajan, y la
+    calculadora usa ese numero directamente como activas.
+    """
+    if tipo == "tension":
+        return 0.0, "an extension spring has no dead coils"
+    esp = spec.get("espiras") or {}
+    m = _num(esp.get("numero_espiras_muertas_totales"))
+    if m is not None:
+        return m, "the dead coils stated on the drawing"
+    m = _num(esp.get("numero_espiras_muertas_por_extremo"))
+    if m is not None:
+        return m * 2.0, "the dead coils per end stated on the drawing"
+    escrito = extremo_escrito(spec)
+    if escrito in MUERTAS_POR_TIPO:
+        return (MUERTAS_POR_TIPO[escrito],
+                "the end type stated on the drawing (%s)" % escrito.replace("_", " "))
+    return (MUERTAS_POR_DEFECTO,
+            "closed ends assumed - the drawing does not state the end type")
+
+
 def espiras_de_la_rigidez(spec, tipo, codigo_material):
     """Calcula las espiras en vez de contarlas. -> dict o None.
 
@@ -331,12 +367,7 @@ def espiras_de_la_rigidez(spec, tipo, codigo_material):
     if not (0.5 <= Na <= 500):
         return None
 
-    muertas = _num((spec.get("espiras") or {}).get("numero_espiras_muertas_totales"))
-    if muertas is None:
-        ext = str(((spec.get("extremos") or {}).get("tipo")) or "").lower()
-        # Extremos abiertos no aportan espiras muertas; cerrados, dos.
-        muertas = 0.0 if any(x in ext for x in ("plain", "open", "abiert")) \
-                  else MUERTAS_POR_DEFECTO
+    muertas, _ = muertas_por_extremo(spec, tipo)
     return {"activas": Na, "totales": Na + muertas, "muertas": muertas,
             "k": k, "fuente": fuente,
             "comprobacion": _comprobar_calculo(spec, tipo, cod, d, D, Na, k)}
@@ -513,9 +544,7 @@ def _comprobar_calculo(spec, tipo, cod, d, D, Na, k):
     # rigidez ni por el material, asi que un error en cualquiera de los dos se
     # delataria aqui.
     if tipo != "torsion":
-        muertas = _num((spec.get("espiras") or {}).get(
-            "numero_espiras_muertas_totales")) or MUERTAS_POR_DEFECTO
-        Nt_calc = Na + muertas
+        Nt_calc = Na + muertas_por_extremo(spec, tipo)[0]
         Nt_bloque = espiras_del_bloque(spec, d)
         if Nt_bloque and Nt_bloque > 0:
             dif = abs(Nt_calc - Nt_bloque) / Nt_bloque
