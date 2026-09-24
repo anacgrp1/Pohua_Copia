@@ -104,6 +104,33 @@ def origen(pieza: str) -> Optional[str]:
     return None
 
 
+def parametros_del_motor() -> Dict[str, object]:
+    """``DEFAULT_PARAMS`` del motor: los parámetros con los que cotiza la calculadora.
+
+    Se leen del propio ``engine.js`` para no tener una segunda copia que
+    envejezca por su cuenta. Son la referencia con la que se comparan los
+    parámetros vigentes en la base (``param_juegos``): si Neon dice una
+    escalera de overheads y el motor otra, la ventana del RFQ y la calculadora
+    de la planta dan dos precios del mismo resorte. Vacío si no hay motor.
+    """
+    import json
+    import re
+
+    motor = ruta("motor")
+    if motor is None or not motor.is_file():
+        return {}
+    texto = motor.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"const DEFAULT_PARAMS\s*=\s*\{(.*?)\};", texto, re.S)
+    if not m:
+        return {}
+    # Un objeto JS con claves sin comillas: se le ponen y se lee como JSON.
+    cuerpo = re.sub(r"([A-Za-z_]\w*)\s*:", r'"\1":', m.group(1))
+    try:
+        return json.loads("{" + cuerpo + "}")
+    except ValueError:
+        return {}
+
+
 def huella(ruta_fichero: Optional[Path]) -> Optional[str]:
     """Los 12 primeros caracteres del SHA-256, para comparar dos copias.
 

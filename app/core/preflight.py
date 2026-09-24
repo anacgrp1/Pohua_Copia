@@ -414,11 +414,36 @@ def _catalogo(inf):
         return
     if "transpPerLb" in (params or {}):
         inf.ok("El catálogo validado del taller está cargado")
+    else:
+        inf.falta("El catálogo validado del taller NO está cargado en la base",
+                  "El precio del flujo no va a coincidir con la calculadora. Se carga "
+                  "una vez, desde la carpeta del proyecto: python scripts/cargar_catalogo.py "
+                  "--carpeta _extracto_catalogo")
+
+    # Y los parámetros del motor tienen que ser los de la calculadora V7. Con
+    # la escalera de overheads de la calculadora vieja (12/16/20/24) en vez de
+    # la de la V7 (30 plano) la ventana daba $0.3223 donde la calculadora da
+    # $0.3946.
+    _parametros_del_motor(inf, params or {})
+
+
+def _parametros_del_motor(inf, params):
+    from pricing import nucleo
+
+    motor = nucleo.parametros_del_motor()
+    if not motor:
         return
-    inf.falta("El catálogo validado del taller NO está cargado en la base",
-              "El precio del flujo no va a coincidir con la calculadora. Se carga "
-              "una vez, desde la carpeta del proyecto: python scripts/cargar_catalogo.py "
-              "--carpeta _extracto_catalogo")
+    distintos = [f"{clave}: base {params[clave]!r}, motor {valor!r}"
+                 for clave, valor in motor.items()
+                 if clave in params and params[clave] != valor]
+    if distintos:
+        inf.falta("Los parámetros vigentes en la base no son los del motor",
+                  "; ".join(distintos) + ". La ventana del RFQ y la calculadora "
+                  "dan precios distintos. Los pone la migración 030 (o "
+                  "scripts/cargar_catalogo.py); si se cambiaron a propósito, "
+                  "hay que cambiarlos igual en la calculadora.")
+    else:
+        inf.ok("Los parámetros del motor son los de la calculadora")
 
 
 def _legal(inf):

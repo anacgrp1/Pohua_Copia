@@ -199,3 +199,26 @@ class TestElCatalogo(unittest.TestCase):
                         return_value={"transpPerLb": 0.3}):
             preflight._catalogo(inf)
         assert inf.puntos[0]["estado"] == "ok"
+
+    def test_la_escalera_de_la_v5_se_denuncia(self):
+        """El caso real: Neon con 12/16/20/24 y el motor con 30 plano."""
+        from app.core import preflight
+        inf = preflight._Informe()
+        with mock.patch("pricing.repository.parametros_vigentes",
+                        return_value={"transpPerLb": 0.3, "ohLadder": [12, 16, 20, 24],
+                                      "ohSub": 28, "matMk": 6}):
+            preflight._catalogo(inf)
+        faltas = [p for p in inf.puntos if p["estado"] == "falta"]
+        assert len(faltas) == 1
+        assert "ohLadder" in faltas[0]["detalle"] and "ohSub" in faltas[0]["detalle"]
+        assert "matMk" not in faltas[0]["detalle"]
+        assert "030" in faltas[0]["detalle"]
+
+    def test_con_los_parametros_del_motor_esta_bien(self):
+        from app.core import preflight
+        from pricing import nucleo
+        inf = preflight._Informe()
+        vigentes = dict(nucleo.parametros_del_motor(), transpPerLb=0.3)
+        with mock.patch("pricing.repository.parametros_vigentes", return_value=vigentes):
+            preflight._catalogo(inf)
+        assert all(p["estado"] == "ok" for p in inf.puntos)

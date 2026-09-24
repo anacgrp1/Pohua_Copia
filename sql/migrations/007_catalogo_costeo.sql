@@ -1,10 +1,11 @@
 -- =====================================================================
 -- 007 — Catálogo de costeo inicial  (COT-101)
 --
--- Generado a partir de la constante SEED que vive dentro de pricing/engine.js.
--- Esos datos (máquinas, tarifas, materiales, empaques y parámetros) estaban
--- escritos dentro del código JavaScript, así que no se podían consultar,
--- versionar ni corregir sin editar el motor y volver a desplegar.
+-- Generado a partir de la constante SEED que vivía dentro del motor de la
+-- calculadora (hoy pricing/nucleo/engine.js). Esos datos (máquinas, tarifas,
+-- materiales, empaques y parámetros) estaban escritos dentro del código
+-- JavaScript, así que no se podían consultar, versionar ni corregir sin
+-- editar el motor y volver a desplegar.
 --
 -- A partir de aquí la fuente de verdad es la base: pricing/repository.py lee
 -- de estas tablas y el motor recibe lo que salga de ellas.
@@ -206,7 +207,9 @@ ON CONFLICT (codigo) DO UPDATE
 
 -- ---------------------------------------------------------------------
 -- Parámetros del motor (juego vigente)
--- Eran las constantes DEFAULT_PARAMS de engine.js. Ahora se pueden cambiar sin
+-- Son DEFAULT_PARAMS de pricing/nucleo/engine.js, el motor de la calculadora
+-- V7 de la planta (overheads 30 % plano, 35 % con subcontratación), más el
+-- transporte del alambre. Ahora se pueden cambiar sin
 -- tocar código: se crea un juego nuevo con vigente_desde futuro y se cierra el
 -- anterior. El histórico queda, así que una cotización vieja se puede
 -- reconstruir con los parámetros que estaban vigentes ese día.
@@ -215,30 +218,31 @@ UPDATE param_juegos SET vigente_hasta = CURRENT_DATE
 WHERE vigente_hasta IS NULL AND vigente_desde < CURRENT_DATE;
 
 INSERT INTO param_juegos (nombre, vigente_desde, nota)
-SELECT 'Parámetros base (migrados de engine.js)', CURRENT_DATE,
-       'Generado por sql/migrations/007. Valores idénticos a DEFAULT_PARAMS del motor.'
+SELECT 'Parámetros de la calculadora (V7)', CURRENT_DATE,
+       'Generado por sql/migrations/007. DEFAULT_PARAMS del motor de la calculadora V7, más transpPerLb.'
 WHERE NOT EXISTS (
     SELECT 1 FROM param_juegos
-    WHERE nombre = 'Parámetros base (migrados de engine.js)'
+    WHERE nombre = 'Parámetros de la calculadora (V7)'
       AND vigente_desde = CURRENT_DATE
 );
 
 INSERT INTO param_valores (param_juego_id, clave, valor) VALUES
-    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros base (migrados de engine.js)' ORDER BY vigente_desde DESC LIMIT 1), 'matMk', '6'::jsonb),
-    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros base (migrados de engine.js)' ORDER BY vigente_desde DESC LIMIT 1), 'compMk', '6'::jsonb),
-    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros base (migrados de engine.js)' ORDER BY vigente_desde DESC LIMIT 1), 'consMk', '6'::jsonb),
-    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros base (migrados de engine.js)' ORDER BY vigente_desde DESC LIMIT 1), 'subMk', '50'::jsonb),
-    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros base (migrados de engine.js)' ORDER BY vigente_desde DESC LIMIT 1), 'contribution', '20'::jsonb),
-    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros base (migrados de engine.js)' ORDER BY vigente_desde DESC LIMIT 1), 'hq', '5'::jsonb),
-    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros base (migrados de engine.js)' ORDER BY vigente_desde DESC LIMIT 1), 'commissionNic', '5'::jsonb),
-    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros base (migrados de engine.js)' ORDER BY vigente_desde DESC LIMIT 1), 'ohLadder', '[12, 16, 20, 24]'::jsonb),
-    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros base (migrados de engine.js)' ORDER BY vigente_desde DESC LIMIT 1), 'ohSub', '28'::jsonb),
-    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros base (migrados de engine.js)' ORDER BY vigente_desde DESC LIMIT 1), 'ohMin', '10'::jsonb),
-    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros base (migrados de engine.js)' ORDER BY vigente_desde DESC LIMIT 1), 'ohMax', '35'::jsonb),
-    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros base (migrados de engine.js)' ORDER BY vigente_desde DESC LIMIT 1), 'floorBase', '800'::jsonb),
-    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros base (migrados de engine.js)' ORDER BY vigente_desde DESC LIMIT 1), 'floorPerOp', '200'::jsonb),
-    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros base (migrados de engine.js)' ORDER BY vigente_desde DESC LIMIT 1), 'scrapDefault', '5'::jsonb),
-    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros base (migrados de engine.js)' ORDER BY vigente_desde DESC LIMIT 1), 'wireMaxIn', '0.59'::jsonb)
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'matMk', '6'::jsonb),
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'compMk', '6'::jsonb),
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'consMk', '6'::jsonb),
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'subMk', '50'::jsonb),
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'contribution', '20'::jsonb),
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'hq', '5'::jsonb),
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'commissionNic', '5'::jsonb),
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'ohLadder', '[30, 30, 30, 30]'::jsonb),
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'ohSub', '35'::jsonb),
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'ohMin', '10'::jsonb),
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'ohMax', '35'::jsonb),
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'floorBase', '800'::jsonb),
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'floorPerOp', '200'::jsonb),
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'scrapDefault', '5'::jsonb),
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'wireMaxIn', '0.59'::jsonb),
+    ((SELECT id FROM param_juegos WHERE nombre = 'Parámetros de la calculadora (V7)' ORDER BY vigente_desde DESC LIMIT 1), 'transpPerLb', '0.3'::jsonb)
 ON CONFLICT (param_juego_id, clave) DO UPDATE SET valor = EXCLUDED.valor;
 
 COMMIT;
