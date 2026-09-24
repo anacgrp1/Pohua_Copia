@@ -54,8 +54,23 @@ body {
     padding: 14px 16px; border-bottom: 1px solid var(--lg-borde);
     background: var(--lg-panel); position: sticky; top: 0; z-index: 2;
 }
-.lg-marca { display: flex; align-items: center; gap: 8px; color: inherit; text-decoration: none; font-weight: 700; }
-.lg-marca img { height: 28px; background: #fff; border-radius: 6px; padding: 2px 4px; }
+.lg-marca { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; font-weight: 700; font-size: 18px; }
+
+/* El conjunto de logos, igual que en la aplicación (style.css, "lockup"):
+   un solo blanco, ISC más alto porque es vertical, y un filete entre los dos. */
+.logo-lockup {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: #fff; border-radius: 10px; padding: 6px 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); flex: 0 0 auto;
+}
+:root[data-theme="light"] .logo-lockup { border: 1px solid var(--lg-borde); box-shadow: none; }
+.logo-lockup img { display: block; width: auto; max-width: 100%; object-fit: contain; }
+.logo-lockup__isc { height: 38px; }
+.logo-lockup__cgr {
+    height: 24px; padding-left: 10px; margin-left: -2px;
+    border-left: 1px solid rgba(15, 23, 42, 0.14); box-sizing: content-box;
+}
+@media print { .logo-lockup { box-shadow: none; border: 1px solid #ddd; } }
 .lg-acciones { display: flex; gap: 8px; }
 .lg-acciones select, .lg-acciones button, .lg-boton {
     font: inherit; font-size: 14px; color: var(--lg-texto); background: var(--lg-fondo);
@@ -108,6 +123,7 @@ body {
     :root, :root[data-theme="light"] {
         --lg-fondo: #fff; --lg-panel: #fff; --lg-texto: #000; --lg-suave: #333; --lg-borde: #bbb;
     }
-    .lg-cabecera, .lg-pestanas, .lg-boton, #lgBorrado { display: none !important; }
+    .lg-acciones, .lg-pestanas, .lg-boton, #lgBorrado { display: none !important; }
+    .lg-cabecera { position: static; border: none; padding: 0 0 16px; }
     .lg-doc { border: none; margin: 0; padding: 0; max-width: none; }
 }

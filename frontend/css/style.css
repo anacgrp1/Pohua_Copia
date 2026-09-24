@@ -5151,6 +5151,21 @@ body.menu-abierto { overflow: hidden; }
     /* El lema ya no va pegado al nombre, así que recupera su propio aire. */
     .portada-lema { margin: 0; }
     .portada-cta  { margin-top: 0; }
+
+    /* Lema y botón, más abajo: que el resorte se vea entero. Los enlaces
+       legales van FUERA de la pila, pegados al borde de la pantalla; dentro
+       de ella empujaban el lema y el botón hacia arriba, encima de las
+       espiras. */
+    .portada { padding-bottom: 44px; }
+    .portada-contenido { min-height: calc(100dvh - var(--sp-8) - 44px); }
+    .portada-legal {
+        position: absolute;
+        left: 50%;
+        bottom: -30px;
+        transform: translateX(-50%);
+        margin: 0;
+        white-space: nowrap;
+    }
 }
 
 

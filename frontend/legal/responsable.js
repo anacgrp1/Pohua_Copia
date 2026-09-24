@@ -24,31 +24,45 @@ window.POHUA_LEGAL = {
     // razón social, dejar una y borrar las demás.
     responsables: [
         {
-            sede: 'Querétaro, México',
-            razonSocial: null,          // p. ej. "CGR International, S.A. de C.V."
-            domicilio: null,            // calle, número, colonia, C.P., municipio, estado
+            // De cgr-international.com/company/contact-us/ (Planta 1) y del
+            // directorio de Dun & Bradstreet, consultados 2026-09-24. Confirmar
+            // con contabilidad que este es el domicilio FISCAL (la Planta 2 está
+            // en Libre a Celaya Km 7.9 Int 5, mismo parque). El RFC que publican
+            // directorios de terceros es CME030424I94: verificarlo contra la
+            // constancia antes de ponerlo aquí.
+            sede: 'Corregidora, Querétaro, México',
+            razonSocial: 'CGR de México, S.A. de C.V.',
+            domicilio: 'Calle Sin Nombre # 7, Fracc. Industrial Balvanera, C.P. 76920, Corregidora, Querétaro, México',
             rfcOIdentificador: null,    // RFC
         },
         {
-            sede: 'Kansas City, Missouri, EE. UU.',
-            razonSocial: null,
-            domicilio: null,
+            // De isckc.com (portada y /contact-us/, consultado 2026-09-24).
+            // La página «About» la llama "Industrial Spring Corporation of
+            // Kansas City": confirmar cuál es la razón social registrada.
+            sede: 'North Kansas City, Missouri, EE. UU.',
+            razonSocial: 'Industrial Spring Corporation (a CGR company)',
+            domicilio: '1801 Bedford Ave., North Kansas City, MO 64116, United States · Tel. +1 816 741 6073',
             rfcOIdentificador: null,    // EIN, si se quiere mostrar
         },
         {
+            // De cgr-international.com/legal-notice/ (consultado 2026-09-24).
             sede: 'Sevran, Francia',
-            razonSocial: null,
-            domicilio: null,
-            rfcOIdentificador: null,    // SIREN / SIRET
+            razonSocial: 'CGR International SAS',
+            domicilio: '2 rue Henri Poincaré, ZI Les Beaudottes, 93270 Sevran, France',
+            rfcOIdentificador: 'RCS Bobigny 511 322 059',
         },
     ],
 
     // El buzón al que se mandan las solicitudes de derechos (ARCO / RGPD).
-    correoPrivacidad: null,             // p. ej. "privacidad@cgr-international.com"
+    // Elegido por Ana (2026-09-24). Quien lea este buzón tiene que contestar
+    // las solicitudes en plazo: México 20 días, UE un mes.
+    correoPrivacidad: 'info@isckc.com',
     // Persona o departamento de datos personales (México, art. 29 LFPDPPP).
     departamentoDatos: null,
     // Delegado de protección de datos (RGPD). null si no se ha designado.
-    delegadoProteccionDatos: null,
+    // El que declara el aviso legal de cgr-international.com para CGR
+    // International SAS (consultado 2026-09-24).
+    delegadoProteccionDatos: 'Philippe Tissot (CGR International SAS)',
     // Ley y tribunales para los términos de uso de cada sede.
     jurisdiccion: null,                 // p. ej. "tribunales de Querétaro, Qro., México"
 };
