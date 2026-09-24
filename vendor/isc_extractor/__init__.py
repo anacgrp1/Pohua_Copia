@@ -2,8 +2,8 @@
 
 Pipeline:
     1. render      : PDF/imagen -> paginas PNG + capa de texto (PyMuPDF, sin poppler)
-    2. router      : claude-haiku-4-5   -> compresion | tension | torsion | wireform
-    3. extractor   : claude-opus-5 (thinking adaptativo, effort high) -> JSON v4
+    2. router      : modelo router  -> compresion | tension | torsion | wireform
+    3. extractor   : modelo extractor (thinking adaptativo, effort high) -> JSON v4
     4. validacion  : jsonschema + una reparacion dirigida si no conforma
     5. localizacion: word_indices/nbox -> cajas reales sobre la pagina
     6. adapter     : JSON de ingenieria -> campos planos que consume la calculadora

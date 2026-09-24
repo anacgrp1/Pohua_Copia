@@ -14,15 +14,15 @@ pythonpath = ["."]
 [tool.ruff]
 target-version = "py310"
 line-length = 100
-# Faltaban api, pricing, pdf y scripts, así que ruff los trataba como paquetes
+# Faltaban api, pricing y scripts, así que ruff los trataba como paquetes
 # de terceros y ordenaba sus imports mezclados con los de fastapi.
-src = ["app", "api", "pricing", "pdf", "scripts", "tests"]
+src = ["app", "api", "pricing", "desktop_app", "scripts", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["app", "api", "pricing", "pdf", "scripts", "tests"]
+known-first-party = ["app", "api", "pricing", "desktop_app", "scripts", "tests"]
 
 [tool.mypy]
 python_version = "3.10"

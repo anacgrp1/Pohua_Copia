@@ -49,7 +49,7 @@ def _num(valor: Any) -> Optional[float]:
 
 # Densidad del alambre en lb/pulg³, por código de material.
 #
-# Copia EXACTA de WIRE_DENS de pricing/engine.js — mismas claves y mismos
+# Copia EXACTA de WIRE_DENS de pricing/nucleo/engine.js — mismas claves y mismos
 # valores. No se añade ninguna que el motor no tenga: si aquí hubiera un
 # material de más, el peso que calculamos y el que el motor habría calculado
 # dejarían de coincidir para ese material, y el costo de materia prima saldría
@@ -64,8 +64,8 @@ def _num(valor: Any) -> Optional[float]:
 # "inconel"), así que `reglas/factibilidad.json` hace lo mismo y un RFQ de
 # Inconel se pesa con .321. Si algún día ISC le da código propio, hay que
 # sembrar la fila en `materiales` con 8250 kg/m³ y añadir INCX750: .298 en
-# CUATRO sitios a la vez: aquí, pricing/engine.js, el HTML de la calculadora
-# y la tabla `materiales`.
+# TRES sitios a la vez: aquí, el motor del núcleo (que es también el de la
+# calculadora, vía scripts/vendorizar_nucleo.py) y la tabla `materiales`.
 _DENSIDAD_LB_IN3 = {
     "MW": .284, "CSI": .284, "HD": .284, "OT": .284, "GMW": .284,
     "GHD": .284, "SG": .284, "BB": .284,
@@ -568,6 +568,7 @@ def build_pn_for_engine(
     # Las cajas que existen, una vez para todos los tramos: la regla elige
     # entre ellas según el peso de cada tramo.
     lista_cajas = repository.cajas(conexion=conexion) if not tipo_desconocido else []
+    catalogo.dbs_motor = {"packing": _cajas_para_el_motor(lista_cajas, empaque)}
 
     pn: Dict[str, Any] = {
         "pn": rfq_id,
@@ -622,8 +623,25 @@ def build_pn_for_engine(
     return pn, catalogo
 
 
+def _cajas_para_el_motor(lista_cajas, empaque) -> List[Dict[str, Any]]:
+    """`dbs.packing` del motor: cada caja con su precio, buscada por código.
+
+    El motor calcula el empaque como precio / piezas por caja, y la caja la
+    busca aquí. Si no está, el empaque sale en cero sin decir nada: pasaba con
+    la COR11050 del 004-222 mientras el motor traía su propia lista de dos
+    cajas escritas a mano.
+    """
+    cajas = [{"id": c["id"], "price": c.get("price")}
+             for c in (lista_cajas or []) if c.get("id")]
+    codigo = (empaque or {}).get("codigo")
+    if codigo and not any(c["id"] == codigo for c in cajas):
+        cajas.append({"id": codigo, "price": empaque.get("precio")})
+    return cajas
+
+
 def overrides_de_parametros(parametros: Dict[str, Any],
-                            representante: Optional[str] = None) -> Dict[str, Any]:
+                            representante: Optional[str] = None,
+                            dbs: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Traduce los parámetros de la base al ``ctx_overrides`` del motor JS.
 
     Sólo se mandan las claves que existan en la base: las demás las pone el
@@ -632,10 +650,14 @@ def overrides_de_parametros(parametros: Dict[str, Any],
     ``representante`` es el vendedor asignado a la cuenta; el motor lo usa para
     decidir si aplica comisión. Antes venía escrito a mano en ``runner.js``, así
     que todas las cotizaciones salían a nombre de la misma persona.
+
+    ``dbs`` son las bases que el motor consulta por código (``Catalogo.dbs_motor``).
     """
     overrides: Dict[str, Any] = {}
     if parametros:
         overrides["params"] = dict(parametros)
     if representante:
         overrides["rep"] = representante
+    if dbs:
+        overrides["dbs"] = dict(dbs)
     return overrides

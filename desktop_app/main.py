@@ -50,7 +50,7 @@ if str(RAIZ) not in sys.path:
 # se lee el fichero.
 os.chdir(RAIZ)
 
-from PySide6.QtCore import Qt, QThread, QTimer, Signal          # noqa: E402
+from PySide6.QtCore import QThread, QTimer, Signal          # noqa: E402
 from PySide6.QtGui import QFont                                  # noqa: E402
 from PySide6.QtWidgets import (                                  # noqa: E402
     QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,

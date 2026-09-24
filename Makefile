@@ -1,5 +1,16 @@
-# Atajos de base de datos para el Cotizador RFQ (requiere Docker).
-.PHONY: db-up db-down db-reset db-psql db-smoke
+# Atajos del Cotizador. Los de base de datos requieren Docker.
+.PHONY: help db-up db-down db-reset db-psql db-smoke usuario test lint
+
+# Lista los atajos.
+help:
+	@echo "db-up     Levanta PostgreSQL y carga el esquema"
+	@echo "db-down   Detiene el contenedor (conserva los datos)"
+	@echo "db-reset  Borra los datos y recrea la base"
+	@echo "db-psql   Abre psql contra la base local"
+	@echo "db-smoke  Test de humo del DDL contra la base levantada"
+	@echo "usuario   Alta de usuario: make usuario CORREO=... NOMBRE=\"...\" ROL=admin|pm|quoter"
+	@echo "test      Corre la suite de pruebas"
+	@echo "lint      Revisa el estilo con ruff"
 
 # Levanta PostgreSQL y carga el esquema.
 db-up:
@@ -20,4 +31,14 @@ db-psql:
 
 # Corre el test de humo del DDL contra la base ya levantada.
 db-smoke:
-	python -m unittest tests.test_smoke_postgres -v
+	python -m unittest tests.integration.test_smoke_postgres -v
+
+# Alta de usuario. La contraseña se pide por consola (no queda en el historial).
+usuario:
+	python scripts/crear_usuario.py --correo "$(CORREO)" --nombre "$(NOMBRE)" --rol "$(ROL)"
+
+test:
+	python -m pytest -q
+
+lint:
+	ruff check .

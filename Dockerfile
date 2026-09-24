@@ -1,12 +1,10 @@
 # Imagen de despliegue del Cotizador (Render).
 #
-# Existe porque la app necesita tres cosas que el runtime de Python de Render no
+# Existe porque la app necesita dos cosas que el runtime de Python de Render no
 # trae por sí solo:
-#   1. Node.js — el motor de costeo (pricing/engine.js) corre en un subproceso
+#   1. Node.js — el motor de costeo (pricing/nucleo/engine.js) corre en un subproceso
 #      de Node. Sin él, POST /api/price devuelve 502 con el motivo.
-#   2. Las librerías nativas de WeasyPrint (pango, cairo) para generar el PDF
-#      de la cotización.
-#   3. El cliente de PostgreSQL, para poder aplicar migraciones desde el propio
+#   2. El cliente de PostgreSQL, para poder aplicar migraciones desde el propio
 #      contenedor si hace falta.
 
 FROM python:3.12-slim
@@ -17,18 +15,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 # --- Dependencias del sistema ---------------------------------------------
 # nodejs      : motor de costeo
-# libpango/cairo/gdk-pixbuf : WeasyPrint
 # postgresql-client : psql para migraciones
 RUN apt-get update && apt-get install -y --no-install-recommends \
         nodejs \
         postgresql-client \
-        libpango-1.0-0 \
-        libpangoft2-1.0-0 \
-        libcairo2 \
-        libgdk-pixbuf-2.0-0 \
-        libffi8 \
-        shared-mime-info \
-        fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -41,7 +31,7 @@ COPY . .
 
 # Comprobación de arranque: si Node no está, el costeo no funciona y es mejor
 # enterarse al construir la imagen que cuando un usuario pida un precio.
-RUN node --version && python -c "import jwt, jinja2, fastapi; print('deps python OK')"
+RUN node --version && python -c "import jwt, fastapi, flask, fitz; print('deps python OK')"
 
 # Usuario sin privilegios: la app no necesita root para nada.
 RUN useradd --create-home --shell /bin/bash cotizador \

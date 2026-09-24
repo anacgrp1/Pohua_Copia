@@ -88,7 +88,7 @@ class Settings:
 
     # --- El relevado de esfuerzos en compresión ---
     #
-    # El taller contestó esto en `taller_2026.json`, y lo contestó CORRIGIENDO
+    # El taller contestó esto (en el núcleo, `taller_2026.json`), y lo contestó CORRIGIENDO
     # una suposición anterior: «not all compression — only very big springs and
     # 17-7 SS material (aging); otherwise only when the drawing requires it».
     # Por eso la regla del núcleo no pone el horno en un Music Wire corriente.

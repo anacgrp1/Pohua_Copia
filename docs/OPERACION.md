@@ -74,6 +74,13 @@ reales de ISC y unos ficticios sólo darían resultados que no significan nada.
 Los pasos anteriores no sacan los archivos de los **commits anteriores**:
 cualquiera con acceso al repositorio los sigue teniendo.
 
+Además de los cinco de arriba, en 2026-09 llegaron a subirse
+`pricing/nucleo/catalogo.json`, `taller_2026.json` y las migraciones 025 y 026,
+con precios de proveedor y la cartera de clientes; `scripts/parse_contacts.py`
+lleva los códigos de los doce clientes principales, y `check_api.py` /
+`check_db.py`, una contraseña de prueba de la cuenta de ventas. Ya no están en
+el árbol, pero sí en el historial: van en la misma purga.
+
 **Cómo purgarlos.** Avisa antes al equipo: esto reescribe el historial y todos
 tendrán que volver a clonar.
 
@@ -91,6 +98,13 @@ git filter-repo \
   --path sql/seed_clientes_top12.sql \
   --path isc_customer_contacts.sql \
   --path isc_schema_postgres.sql \
+  --path pricing/nucleo/catalogo.json \
+  --path pricing/nucleo/taller_2026.json \
+  --path sql/migrations/025_taller_2026.sql \
+  --path sql/migrations/026_catalogo_compra.sql \
+  --path scripts/parse_contacts.py \
+  --path check_api.py \
+  --path check_db.py \
   --invert-paths
 
 # 4. Volver a apuntar al remoto y forzar
@@ -257,10 +271,11 @@ pip install -r requirements.txt
 
 ## 5. Despliegue en Render
 
-El repositorio trae un `Dockerfile` porque la aplicación necesita tres cosas
+El repositorio trae un `Dockerfile` porque la aplicación necesita dos cosas
 que el runtime de Python de Render no incluye: **Node.js** (el motor de costeo
-corre en un subproceso de Node), las librerías nativas de **WeasyPrint** para
-el PDF, y el cliente de **PostgreSQL**.
+corre en un subproceso de Node) y el cliente de **PostgreSQL**. El PDF de la
+oferta lo hace PyMuPDF (`vendor/lector/quote_pdf.py`), que no necesita
+librerías del sistema.
 
 En Render: *New → Web Service → Docker*, y define las variables de entorno de
 `.env.example`. Como mínimo:

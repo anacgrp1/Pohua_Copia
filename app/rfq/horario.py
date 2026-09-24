@@ -24,7 +24,7 @@ navegador los pinte en su hora sin que aquí haya que saber nada de idiomas.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 log = logging.getLogger("cotizador.horario")

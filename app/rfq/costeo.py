@@ -165,7 +165,8 @@ def costear(rfq_id: str, datos: dict, resorte: dict, material_rfq=None) -> dict:
             from pricing.rodea_adapter import build_pn_for_engine, overrides_de_parametros
             pn, catalogo = build_pn_for_engine(rfq_id, datos_resorte)
             resultado = compute_price_via_node(
-                pn, ctx_overrides=overrides_de_parametros(catalogo.parametros, None))
+                pn, ctx_overrides=overrides_de_parametros(
+                    catalogo.parametros, None, catalogo.dbs_motor))
             params = catalogo.parametros or {}
             objetivo = num(params.get("contribution")) or 20.0
             tramos = [tramo_para_ventana(t, objetivo)

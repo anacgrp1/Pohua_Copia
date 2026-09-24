@@ -101,7 +101,7 @@ def comprobar_dependencias() -> bool:
     faltan = []
     for modulo, paquete in [("fastapi", "fastapi"), ("uvicorn", "uvicorn[standard]"),
                             ("psycopg2", "psycopg2-binary"), ("jwt", "pyjwt"),
-                            ("jinja2", "jinja2")]:
+                            ("flask", "Flask")]:
         try:
             __import__(modulo)
         except ImportError:

@@ -1,10 +1,10 @@
 """
 SUBTAREA 1 [Código - IA]
-Pipeline del modelo multimodal de visión (Anthropic Claude) para la
+Pipeline del modelo multimodal de visión para la
 extracción de información de dibujos técnicos de resortes.
 
 Recibe los archivos en BYTES y soporta las extensiones:
-    .pdf  -> bloque "document" (Claude lee el PDF de forma nativa)
+    .pdf  -> bloque "document" (el modelo lee el PDF de forma nativa)
     .png  -> bloque "image"
     .stp / .step -> STUB (CAD ISO-10303 de texto, no es imagen) -> pendiente
 

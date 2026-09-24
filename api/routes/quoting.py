@@ -36,7 +36,6 @@ log = logging.getLogger("cotizador.api.quoting")
 router = APIRouter(prefix="/api/quoting", tags=["quoting"])
 
 RAIZ = Path(__file__).resolve().parent.parent.parent
-MOTOR_LOCAL = RAIZ / "pricing" / "engine.js"
 
 # Los dos HTML que se abren con doble clic en la planta y que la pantalla va a
 # alojar. Se generan desde el núcleo con `apps/calculadora/construir.py`: no se
@@ -75,39 +74,22 @@ def _node() -> Dict[str, Any]:
 
 
 def _motor() -> Dict[str, Any]:
-    """El motor de coste: dónde está, y si el del núcleo y el local coinciden.
+    """El motor de coste: el del núcleo, que es el único que hay.
 
-    El Cotizador lleva hoy su propia copia en ``pricing/engine.js``. El núcleo
-    existe justamente para que deje de llevarla. Este diagnóstico no cambia
-    nada: compara las dos y lo dice, porque cambiar de motor sin mirar es cómo
-    se cambia un precio sin querer.
+    El costeo del servidor (``pricing/runner.js``) y la calculadora de la
+    planta corren el mismo fichero. Hasta 2026-09 el servidor llevaba su
+    propia copia en ``pricing/engine.js``, que daba otro precio con las mismas
+    entradas; este diagnóstico existía para ver esa diferencia, y ya no hay
+    dos que comparar.
     """
     estado = nucleo.estado()
     motor = estado["piezas"]["motor"]
-    huella_local = nucleo.huella(MOTOR_LOCAL)
-
-    if not motor["encontrado"]:
-        return _pieza(
-            False,
-            "El núcleo no está instalado. El costeo sigue funcionando con la "
-            "copia local de pricing/engine.js, pero nada garantiza que dé el "
-            "mismo precio que la calculadora de la planta.",
-            nucleo=estado, motor_local=huella_local, coinciden=None)
-
-    coinciden = (huella_local is not None and huella_local == motor["huella"])
-    if coinciden:
-        detalle = "El motor del núcleo y la copia local son el mismo fichero."
-    else:
-        detalle = ("El motor del núcleo y la copia local de pricing/engine.js "
-                   "NO son el mismo fichero. Hasta decidir cuál manda, el "
-                   "costeo sigue usando la copia local, y nada garantiza que "
-                   "dé el mismo precio que la calculadora de la planta.")
-
-    # Que el núcleo esté no basta: la pieza sólo está BIEN si los dos motores
-    # son el mismo fichero. Dos copias distintas es justo el fallo que este
-    # diagnóstico existe para ver, y darlo por bueno en verde lo escondería.
-    return _pieza(coinciden, detalle, nucleo=estado,
-                  motor_local=huella_local, coinciden=coinciden)
+    if not motor["encontrado"] or motor.get("hueco"):
+        return _pieza(False, "No está el motor del núcleo: el costeo del servidor "
+                             "no puede calcular. Se vendoriza con "
+                             "scripts/vendorizar_nucleo.py.", nucleo=estado)
+    return _pieza(True, "El costeo usa el motor del núcleo, el mismo que la "
+                        "calculadora de la planta.", nucleo=estado)
 
 
 def _lector() -> Dict[str, Any]:

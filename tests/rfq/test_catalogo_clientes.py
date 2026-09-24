@@ -26,7 +26,6 @@ base de producción no es un banco de pruebas.
 
 import sqlite3
 
-import pytest
 
 import app.clients.catalogo_hoja as catalogo
 

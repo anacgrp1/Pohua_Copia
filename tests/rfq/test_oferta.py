@@ -111,7 +111,7 @@ class TestEnviar(unittest.TestCase):
             oferta.enviar("RFQ-1", usuario="pm@x", forzar=True)
 
     def test_con_envio_apagado_se_genera_pero_no_sale(self):
-        parches = self._con(self._parches(_rfq(), _costeado(), habilitado=False))
+        self._con(self._parches(_rfq(), _costeado(), habilitado=False))
         salida = oferta.enviar("RFQ-1", usuario="pm@x")
         self.assertFalse(salida["enviado"])
         self.assertFalse(salida["envio_habilitado"])

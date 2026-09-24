@@ -1,7 +1,9 @@
 """Envoltorio Python del motor de costeo.
 
-Ejecuta el motor JavaScript original en un subproceso de Node para garantizar
-paridad matemática al 100 % con la calculadora de Rodea.
+Ejecuta el motor JavaScript del núcleo en un subproceso de Node: el mismo
+fichero que lleva la calculadora de la planta, localizado por
+``pricing/nucleo.py``. Así el precio de la ventana del RFQ y el de la
+calculadora salen del mismo cálculo.
 
 Como esto depende de que exista ``node`` en el entorno de despliegue, el error
 de "Node no está instalado" se distingue del error "el motor calculó mal": el
@@ -12,10 +14,13 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, Optional, cast
+
+from pricing import nucleo
 
 log = logging.getLogger("cotizador.pricing.engine")
 
@@ -52,12 +57,21 @@ def compute_price_via_node(
     if not RUNNER_JS.is_file():
         raise ErrorMotorCosteo(f"No se encontró el motor de costeo en {RUNNER_JS}.")
 
+    motor = nucleo.ruta("motor")
+    if motor is None or nucleo.es_hueco("motor"):
+        raise ErrorMotorCosteo(
+            "No está el motor del núcleo (pricing/nucleo/engine.js). Se "
+            "vendoriza con scripts/vendorizar_nucleo.py."
+        )
+
     payload = {"pn": pn, "ctx_overrides": ctx_overrides}
+    entorno = dict(os.environ, ISC_NUCLEO_MOTOR=str(motor))
 
     try:
         proc = subprocess.run(
             ["node", str(RUNNER_JS)],
             input=json.dumps(payload),
+            env=entorno,
             text=True,
             capture_output=True,
             check=True,

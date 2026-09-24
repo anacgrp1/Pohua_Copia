@@ -52,7 +52,8 @@ def compute_price(
         result = compute_price_via_node(
             pn_data,
             ctx_overrides=overrides_de_parametros(
-                catalogo.parametros, datos_resorte.get("representante")
+                catalogo.parametros, datos_resorte.get("representante"),
+                catalogo.dbs_motor,
             ),
         )
     except ErrorMotorCosteo as err:

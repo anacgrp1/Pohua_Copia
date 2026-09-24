@@ -37,7 +37,7 @@ import logging
 import os
 import tempfile
 from email.utils import format_datetime
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from app.core.config import settings
 from app.email.base_provider import BaseEmailProvider, EmailAttachment, EmailMessage

@@ -14,7 +14,6 @@ pantalla mala: 10.25 totales, 8.25 activas, 4.892 lbf/in, 0.00483 lb. Y como
 "SPRING WIRE" no casaba con ningún material, REQUIRES REVIEW.
 """
 
-import io
 import re
 import subprocess
 import json
@@ -93,45 +92,50 @@ class TestLaCalculadoraDePrecios:
         assert norm(tramo(html)) == norm(tramo(js))
 
 
+def _pn_004_222():
+    """Las entradas de la imagen 3: la ruta, el alambre y la caja de cada tramo."""
+    ruta = lambda maq, fam, setup, pph, mh, lh: {
+        "machine": maq, "family": fam, "setupH": setup, "pph": pph,
+        "machH": mh, "laborH": lh, "ratio": None, "scrapPct": 5, "tgtH": mh}
+    vacio = {"machine": "", "setupH": None, "pph": None, "family": "",
+             "machH": None, "laborH": None, "ratio": None, "scrapPct": 5, "tgtH": None}
+    # La caja la elige el peso del tramo (regla `embalaje` del núcleo): por
+    # eso la imagen 2 dice $0.0004 en el primer tramo y $0.0003 en los otros.
+    caja = {10000: ("COR11050", 2000), 22000: ("COR100803", 2500),
+            50000: ("COR121212U", 2500)}
+    tramo = lambda q: {
+        "qty": q, "routing": [ruta("TORIN (FENN) W11A", "COILER", 3, 1500, 15, 40),
+                              ruta("Grinder A", "SECONDARY", 1, 500, 15, 27),
+                              ruta("Stationary Oven", "SECONDARY", 3, 400, 10, 27)]
+                             + [dict(vacio) for _ in range(5)],
+        "tooling": {"desc": "", "cost": None, "amortQty": None},
+        "sub": {"supplier": "", "service": "", "minUsd": None, "perLb": None,
+                "perPc": None, "partsPerBatch": None, "shareSkid": "NO"},
+        "packing": {"id": caja[q][0], "qtyPerBox": caja[q][1]},
+        "prodBatch": None, "moqMode": "SHIP", "shipQty": None,
+        "override": None, "killed": False, "contribPct": None, "ohPct": None}
+    return {"pn": "004-222", "desc": "Compression Spring", "unit": "pc",
+            "material": {"code": "MW", "diaIn": 0.039016, "weightLb": 0.00576,
+                         "basePerLb": 1.8, "surchPerLb": 0, "transpPerLb": 0.3,
+                         "mkPct": 6, "moqLb": None, "devLenIn": None},
+            "components": [{"desc": "", "usd": None}, {"desc": "", "usd": None}],
+            "consumable": {"desc": "", "usd": None},
+            "tiers": [tramo(10000), tramo(22000), tramo(50000)],
+            "selTier": 0, "opsTier": 0, "ohOverride": None}
+
+
+_DBS = {"packing": [{"id": "COR11050", "price": 0.83},
+                    {"id": "COR100803", "price": 0.63},
+                    {"id": "COR121212U", "price": 0.73}],
+        "surchargeAppliesTo": ["SS", "SS177", "316"]}
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="sin Node")
 class TestElPrecioDeLaPantalla:
     """Imagen 2, tramo 1: el motor, con las entradas de la imagen 3."""
 
     def test_da_0_3946(self, tmp_path):
-        ruta = lambda maq, fam, setup, pph, mh, lh: {
-            "machine": maq, "family": fam, "setupH": setup, "pph": pph,
-            "machH": mh, "laborH": lh, "ratio": None, "scrapPct": 5, "tgtH": mh}
-        vacio = {"machine": "", "setupH": None, "pph": None, "family": "",
-                 "machH": None, "laborH": None, "ratio": None, "scrapPct": 5, "tgtH": None}
-        # La caja la elige el peso del tramo (regla `embalaje` del núcleo):
-        # por eso la imagen 2 dice $0.0004 en el primer tramo y $0.0003 en los
-        # otros dos.
-        caja = {10000: ("COR11050", 2000), 22000: ("COR100803", 2500),
-                50000: ("COR121212U", 2500)}
-        tramo = lambda q: {
-            "qty": q, "routing": [ruta("TORIN (FENN) W11A", "COILER", 3, 1500, 15, 40),
-                                  ruta("Grinder A", "SECONDARY", 1, 500, 15, 27),
-                                  ruta("Stationary Oven", "SECONDARY", 3, 400, 10, 27)]
-                                 + [dict(vacio) for _ in range(5)],
-            "tooling": {"desc": "", "cost": None, "amortQty": None},
-            "sub": {"supplier": "", "service": "", "minUsd": None, "perLb": None,
-                    "perPc": None, "partsPerBatch": None, "shareSkid": "NO"},
-            "packing": {"id": caja[q][0], "qtyPerBox": caja[q][1]},
-            "prodBatch": None, "moqMode": "SHIP", "shipQty": None,
-            "override": None, "killed": False, "contribPct": None, "ohPct": None}
-        pn = {"pn": "004-222", "desc": "Compression Spring", "unit": "pc",
-              "material": {"code": "MW", "diaIn": 0.039016, "weightLb": 0.00576,
-                           "basePerLb": 1.8, "surchPerLb": 0, "transpPerLb": 0.3,
-                           "mkPct": 6, "moqLb": None, "devLenIn": None},
-              "components": [{"desc": "", "usd": None}, {"desc": "", "usd": None}],
-              "consumable": {"desc": "", "usd": None},
-              "tiers": [tramo(10000), tramo(22000), tramo(50000)],
-              "selTier": 0, "opsTier": 0, "ohOverride": None}
-        dbs = {"packing": [{"id": "COR11050", "price": 0.83},
-                           {"id": "COR100803", "price": 0.63},
-                           {"id": "COR121212U", "price": 0.73}],
-               "surchargeAppliesTo": ["SS", "SS177", "316"]}
-        (tmp_path / "in.json").write_text(json.dumps({"pn": pn, "dbs": dbs}))
+        (tmp_path / "in.json").write_text(json.dumps({"pn": _pn_004_222(), "dbs": _DBS}))
         js = f"""
         const {{ ENGINE, DEFAULT_PARAMS }} = require({json.dumps(str(RAIZ / 'pricing' / 'nucleo' / 'engine.js'))});
         const d = JSON.parse(require('fs').readFileSync({json.dumps(str(tmp_path / 'in.json'))}, 'utf8'));
@@ -147,3 +151,24 @@ class TestElPrecioDeLaPantalla:
         assert t[0][2] == 3 and round(t[0][3], 1) == 30.0
         assert [round(x[4], 1) for x in t] == [67.2, 147.8, 335.9]
         assert [round(x[5], 1) for x in t] == [63.3, 130.8, 288.3]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="sin Node")
+class TestElServidorDaLoMismo:
+    """La ventana del RFQ costea por `pricing/runner.js`, no por la hoja.
+
+    Hasta 2026-09 el runner cargaba su propia copia del motor (V5, con un SEED
+    escrito a mano) y con estas mismas entradas daba $0.5098: la ventana y la
+    calculadora enseñaban dos precios del mismo resorte.
+    """
+
+    def test_el_runner_da_el_precio_de_la_calculadora(self):
+        from pricing.engine import compute_price_via_node
+        r = compute_price_via_node(_pn_004_222(), ctx_overrides={
+            "dbs": _DBS, "rep": "John Tvrdy", "contribution": 20})
+        assert [round(t["sell"], 4) for t in r["tiers"][:3]] == [0.3946, 0.3425, 0.3020]
+
+    def test_no_hay_otra_copia_del_motor(self):
+        assert not (RAIZ / "pricing" / "engine.js").exists()
+        runner = (RAIZ / "pricing" / "runner.js").read_text(encoding="utf-8")
+        assert "ISC_NUCLEO_MOTOR" in runner and "SEED" not in runner.split("require(MOTOR)")[1]

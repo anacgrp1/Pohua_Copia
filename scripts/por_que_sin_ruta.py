@@ -220,7 +220,7 @@ def main() -> int:
     print(f"{len(filas)} máquina(s) en el catálogo:\n")
     sirven = []
     for fila in filas:
-        cod, nom, familia, activo = fila[0], fila[1], fila[2], fila[3]
+        cod, nom = fila[0], fila[1]
         porque = motivos(fila, tipo_col, args.alambre, args.od)
         costo = fila[10]
         if porque:

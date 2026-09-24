@@ -9,7 +9,7 @@ Se **salta solo** si no hay una base disponible (nadie sin Docker rompe la
 suite). Para correrlo:
 
     make db-up           # levanta PostgreSQL y carga el esquema
-    make db-smoke        # o: python -m unittest tests.test_smoke_postgres
+    make db-smoke        # o: python -m unittest tests.integration.test_smoke_postgres
 
 Parámetros de conexión desde el entorno (mismos defaults que config.py):
     PG_HOST PG_PORT PG_DATABASE PG_USER PG_PASSWORD

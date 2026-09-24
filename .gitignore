@@ -104,6 +104,8 @@ vendor/lector/_crops/
 vendor/lector/_uploads/
 vendor/lector/_specs/
 vendor/lector/api_key.txt
+# Lo que lleva gastado el lector en el modelo: lo reescribe en cada lectura.
+vendor/lector/_gasto.json
 vendor/Quotes/
 vendor/**/__pycache__/
 

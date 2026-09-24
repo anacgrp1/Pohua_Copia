@@ -143,8 +143,8 @@ Cotizador/
 │   └── factibilidad.json            ← Rangos/materiales para factibilidad
 │
 ├── 📁 pricing/                      ← Costeo
-│   ├── engine.js                    ← Motor de Rodea (JavaScript, no tocar)
-│   ├── runner.js                    ← Puente stdin/stdout con Node
+│   ├── 📁 nucleo/                   ← Copia del núcleo: motor, reglas y resortes (no tocar)
+│   ├── runner.js                    ← Puente stdin/stdout con el motor del núcleo
 │   ├── engine.py                    ← Envoltorio Python del motor
 │   ├── repository.py                ← Lee el catálogo de costeo de PostgreSQL
 │   └── rodea_adapter.py             ← Datos del resorte → esquema PN del motor
@@ -157,7 +157,7 @@ Cotizador/
 │
 ├── run_web.py                       ← Lanzador del servidor web
 ├── ver_local.bat                    ← Vista local en Windows (doble clic)
-├── Dockerfile                       ← Imagen de despliegue (Python + Node + WeasyPrint)
+├── Dockerfile                       ← Imagen de despliegue (Python + Node + cliente de PostgreSQL)
 ├── package.json                     ← Declara Node para el motor de costeo
 ├── docker-compose.yml               ← PostgreSQL 16 (dev local); PostgREST opcional
 ├── postgrest.conf                   ← Config PostgREST (solo dev local)

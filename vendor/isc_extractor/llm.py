@@ -1,7 +1,7 @@
 """Llamadas al modelo: router barato + extractor especializado con validacion.
 
-Paso 1  router     : claude-haiku-4-5  -> {tipo, confianza, razon}
-Paso 2  extractor  : claude-opus-5     -> JSON conforme a schemas/<tipo>.json
+Paso 1  router     : modelo router     -> {tipo, confianza, razon}
+Paso 2  extractor  : modelo extractor  -> JSON conforme a schemas/<tipo>.json
 Paso 3  reparacion : si el JSON no valida, se le devuelven los errores al modelo.
 """
 
@@ -257,8 +257,9 @@ def extraer(cli, bloques_img, tipo, listado_palabras, cfg, log=None):
 
     msg = _crear(cli, cfg, system, messages, max_tokens)
 
-    diag = {"uso": [_uso(msg)], "reparaciones": 0,
-            "truncado": msg.stop_reason == "max_tokens"}
+    usos = [_uso(msg)]
+    reparaciones = 0
+    truncado = msg.stop_reason == "max_tokens"
     texto = _texto(msg)
     spec, errs = _evaluar(texto, tipo)
 
@@ -268,7 +269,7 @@ def extraer(cli, bloques_img, tipo, listado_palabras, cfg, log=None):
     # que se vuelve a truncar: una llamada entera del extractor tirada. Y el
     # mensaje generico mandaba a inspeccionar _fallos/ cuando lo que hay que
     # hacer es subir max_tokens.
-    if diag["truncado"] and spec is None:
+    if truncado and spec is None:
         _guardar_fallo(texto, tipo)
         raise RuntimeError(
             "The model ran out of room before it finished the JSON "
@@ -290,9 +291,9 @@ def extraer(cli, bloques_img, tipo, listado_palabras, cfg, log=None):
             {"role": "user", "content": _peticion_reparacion(spec is None, errs)},
         ]
         msg = _crear(cli, cfg, system, messages, max_tokens)
-        diag["uso"].append(_uso(msg))
-        diag["reparaciones"] += 1
-        diag["truncado"] = diag["truncado"] or msg.stop_reason == "max_tokens"
+        usos.append(_uso(msg))
+        reparaciones += 1
+        truncado = truncado or msg.stop_reason == "max_tokens"
         texto = _texto(msg)
         spec_nuevo, errs_nuevo = _evaluar(texto, tipo)
 
@@ -314,8 +315,15 @@ def extraer(cli, bloques_img, tipo, listado_palabras, cfg, log=None):
             "inspected." % ("; ".join(errs or []))[:200])
 
     if errs is None:
-        diag["jsonschema"] = "no instalado"
+        jsonschema_diag = "no instalado"
     else:
-        diag["jsonschema"] = "errores" if errs else "ok"
-    diag["errores_schema"] = errs or []
+        jsonschema_diag = "errores" if errs else "ok"
+
+    diag = {
+        "uso": usos,
+        "reparaciones": reparaciones,
+        "truncado": truncado,
+        "jsonschema": jsonschema_diag,
+        "errores_schema": errs or [],
+    }
     return spec, diag

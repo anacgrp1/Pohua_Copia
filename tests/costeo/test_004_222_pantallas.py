@@ -22,7 +22,6 @@ Lo que hacía falta para llegar aquí, por orden de dinero:
 
 import math
 
-import pytest
 
 from pricing.rodea_adapter import longitud_desarrollada_pulg, peso_alambre_lb
 

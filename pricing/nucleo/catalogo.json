@@ -1,1 +1,0 @@
-{"_retirado": "Este fichero llevaba el catalogo de ISC (clientes y precios de proveedor) y no debe estar en el repositorio. Borralo con: git rm pricing/nucleo/catalogo.json"}

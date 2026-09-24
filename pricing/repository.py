@@ -68,6 +68,10 @@ class Catalogo:
     # pueda decir en el idioma que tenga puesto (pricing/mensajes.py).
     faltantes_i18n: List[Dict[str, Any]] = field(default_factory=list)
     origen: Dict[str, str] = field(default_factory=dict)
+    # Las bases que el motor busca por código dentro de cada tramo (hoy, las
+    # cajas con su precio). Las llena el adaptador y viajan en
+    # ``ctx_overrides.dbs``: el motor no trae catálogo propio.
+    dbs_motor: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def completo(self) -> bool:

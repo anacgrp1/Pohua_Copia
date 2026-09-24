@@ -15,7 +15,7 @@ lxml>=5.0                   # Parser HTML rápido para BeautifulSoup (COT-53)
 python-dotenv>=1.0          # Variables de entorno (.env)
 
 # --- IA ---
-anthropic>=0.39             # Claude: visión de planos y extracción del correo
+anthropic>=0.39             # Visión de planos y extracción del correo
 
 # --- Almacenamiento de planos ---
 azure-storage-blob>=12.19   # Persistencia de planos en modo <Token> (COT-56)
@@ -30,16 +30,10 @@ pydantic>=2.0               # Validación de datos de la API
 # librería de JWT para los tokens de sesión.
 pyjwt>=2.8
 
-# --- Generación de cotizaciones en PDF ---
-# Faltaban las dos: pdf/generator.py importa jinja2 a nivel de módulo, así que
-# sin ella cualquier import de ese módulo reventaba con ImportError.
-jinja2>=3.1
-weasyprint>=61.0            # Requiere libpango y libcairo (ver Dockerfile)
-
 # imaplib, email, hashlib, secrets y json son parte de la stdlib de Python.
 #
-# NOTA: el motor de costeo (pricing/engine.js) corre sobre Node.js, que no se
-# instala con pip. Ver Dockerfile y package.json.
+# NOTA: el motor de costeo (pricing/nucleo/engine.js, vía pricing/runner.js)
+# corre sobre Node.js, que no se instala con pip. Ver Dockerfile y package.json.
 
 # --- Núcleo de cotización (dasniela/ISCQuotingCore) -------------------------
 # El lector de planos es una aplicación Flask que se monta dentro de esta API

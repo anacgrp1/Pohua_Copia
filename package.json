@@ -7,7 +7,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "check": "node --check pricing/engine.js && node --check pricing/runner.js"
+    "check": "node --check pricing/nucleo/engine.js && node --check pricing/runner.js"
   },
   "dependencies": {}
 }

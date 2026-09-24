@@ -83,8 +83,9 @@ MARCA_FIN = "/* ===== fin de los datos ===== */"
 #   MAQUINAS   (7 KB)  MCH_DEFAULTS: rangos de alambre, OD, qué tipos hace...
 #                      y `rateH`, el costo por hora de cada máquina.
 #
-# `rateH` es dato interno de ISC, sí. Pero YA ESTÁ en este repositorio desde
-# antes: `pricing/engine.js` lleva `costRateH` de las 30 máquinas en su SEED, y
+# `rateH` es dato interno de ISC, sí. Pero ya estaba en este repositorio: la
+# copia vieja del motor, `pricing/engine.js` (retirada en 2026-09), llevaba
+# `costRateH` de las 30 máquinas en su SEED, sigue en el historial de git, y
 # de ahí salió la migración 007. Conservarlo no expone nada nuevo.
 #
 # Y vaciarlo rompería algo real: a diferencia de la calculadora de precios,

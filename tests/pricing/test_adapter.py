@@ -94,7 +94,7 @@ class TestGeometria(unittest.TestCase):
         nuestro = rodea_adapter.peso_alambre_lb(longitud, 1.6, "MW")
 
         script = (
-            "const {ENGINE}=require('./pricing/engine.js');"
+            "const {ENGINE}=require('./pricing/nucleo/engine.js');"
             f"process.stdout.write(String(ENGINE.wireFormWeight({longitud!r},{1.6/25.4!r},'MW')))"
         )
         try:
@@ -113,10 +113,15 @@ class TestGeometria(unittest.TestCase):
         calculado no coincidían, y el costo de materia prima salía distinto
         según por dónde se mirara.
         """
+        # Las claves salen de la tabla del propio motor (WIRE_DENS), no de la
+        # nuestra: así se nota tanto una que falte aquí como una de más.
         script = (
-            "const {ENGINE, SEED}=require('./pricing/engine.js');"
+            "const fs=require('fs');"
+            "const {ENGINE}=require('./pricing/nucleo/engine.js');"
+            "const src=fs.readFileSync('./pricing/nucleo/engine.js','utf8');"
+            "const tabla=src.match(/WIRE_DENS=\\{([^}]*)\\}/)[1];"
             "const o={};"
-            "for(const c of Object.keys(SEED.materialLegend)) o[c]=ENGINE.wireDensity(c);"
+            "for(const par of tabla.split(',')) {const c=par.split(':')[0].trim(); if(c) o[c]=ENGINE.wireDensity(c);}"
             "process.stdout.write(JSON.stringify(o))"
         )
         try:
@@ -127,6 +132,7 @@ class TestGeometria(unittest.TestCase):
 
         import json
         del_motor = json.loads(salida.stdout)
+        self.assertEqual(set(del_motor), set(rodea_adapter._DENSIDAD_LB_IN3))
         for codigo, densidad_motor in del_motor.items():
             with self.subTest(material=codigo):
                 nuestra = rodea_adapter._DENSIDAD_LB_IN3.get(
@@ -150,7 +156,17 @@ class TestGeometria(unittest.TestCase):
 class TestArmadoDelPn(unittest.TestCase):
 
     def test_los_valores_salen_del_catalogo_no_de_constantes(self):
-        pn, cat = rodea_adapter.build_pn_for_engine("RFQ-1", _RESORTE, conexion=_conn())
+        # Un catálogo completo también trae las capacidades de la máquina, su
+        # tope por material (aquí, ninguno) y el transporte del alambre: sin
+        # ellos el adaptador lo anota como faltante, y con razón.
+        from unittest import mock
+        from pricing import repository
+        cap = {"alambre_min_mm": 0.5, "alambre_max_mm": 3.0, "od_max_mm": 40.0}
+        with mock.patch.object(repository, "capacidad_de_maquina", return_value=cap), \
+             mock.patch.object(repository, "tope_de_maquina", return_value={}):
+            pn, cat = rodea_adapter.build_pn_for_engine(
+                "RFQ-1", _RESORTE,
+                conexion=_conn([("matMk", 6), ("scrapDefault", 5), ("transpPerLb", 0.3)]))
 
         ruta = pn["tiers"][0]["routing"][0]
         self.assertEqual(ruta["machine"], "NUCOIL CSF-200")   # no "AIM 3000"
@@ -241,6 +257,33 @@ class TestOverrides(unittest.TestCase):
 
     def test_sin_representante_no_lo_incluye(self):
         self.assertNotIn("rep", rodea_adapter.overrides_de_parametros({"matMk": 6}))
+
+    def test_manda_las_cajas_al_motor(self):
+        overrides = rodea_adapter.overrides_de_parametros(
+            {"matMk": 6}, None, {"packing": [{"id": "COR11050", "price": 0.83}]})
+        self.assertEqual(overrides["dbs"]["packing"][0]["price"], 0.83)
+
+
+class TestLasCajasDelMotor(unittest.TestCase):
+    """El motor busca la caja del tramo por código en `dbs.packing`: si no
+    está, el empaque sale en cero y nadie lo ve."""
+
+    def test_van_las_del_catalogo_con_su_precio(self):
+        cajas = rodea_adapter._cajas_para_el_motor(
+            [{"id": "COR11050", "price": 0.83, "desc": "x"},
+             {"id": "COR100803", "price": 0.63}], {})
+        self.assertEqual(cajas, [{"id": "COR11050", "price": 0.83},
+                                 {"id": "COR100803", "price": 0.63}])
+
+    def test_el_empaque_del_catalogo_entra_si_no_estaba(self):
+        cajas = rodea_adapter._cajas_para_el_motor(
+            [], {"codigo": "GAYLORD", "precio": 30.0})
+        self.assertEqual(cajas, [{"id": "GAYLORD", "price": 30.0}])
+
+    def test_el_pn_armado_las_lleva(self):
+        pn, cat = rodea_adapter.build_pn_for_engine("RFQ-1", _RESORTE, conexion=_conn())
+        ids = {c["id"] for c in cat.dbs_motor["packing"]}
+        self.assertIn(pn["tiers"][0]["packing"]["id"], ids)
 
 
 if __name__ == "__main__":
