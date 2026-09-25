@@ -452,15 +452,16 @@ customer* y se piden, en vez de costearse con las del correo de la vez pasada.
 **Cuarentena de adjuntos.** Antes de abrir nada con el modelo, dar de alta o
 contestar, `app/email/cuarentena.py` revisa los adjuntos: extensiones que no
 son de un plano (ejecutables, scripts, instaladores, comprimidos, HTML,
-Office con macros), extensión doble (`plano.pdf.exe`), cabecera que no
-corresponde al nombre (un «.pdf» que empieza por `MZ`), PDF con contenido
-activo (`/JavaScript`, `/Launch`, `/EmbeddedFile`), y, si la máquina tiene
+Office con macros), extensión doble (`plano.pdf.exe`), un ejecutable con
+otro nombre (un «.pdf» que empieza por `MZ`), PDF con contenido activo (`/JavaScript`, `/Launch`, `/EmbeddedFile`), y, si la máquina tiene
 Windows Defender, un análisis con `MpCmdRun.exe` del archivo. Lo sospechoso
 **no se procesa ni se contesta** (contestar le confirma al remitente que el
 buzón existe): se marca como leído, se apunta como procesado y queda una
 línea `WARNING CUARENTENA …` con el motivo en el registro y en el Monitor,
-para que una persona lo revise en Outlook. No sustituye al antivirus del
-equipo.
+para que una persona lo revise en Outlook. Los `.png` y `.pdf` se aceptan
+siempre aunque su cabecera sea rara (Outlook guarda las imágenes pegadas en
+el cuerpo como objetos OLE): sólo un ejecutable disfrazado se para. No
+sustituye al antivirus del equipo.
 
 **La portada como pantalla de espera.** Dentro de la aplicación, el logo de la
 barra lateral lleva a la portada (los logos, «Pohua · RFQ Quoter» y el

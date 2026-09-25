@@ -43,9 +43,15 @@ class TestAdjuntos(unittest.TestCase):
         motivos = cuarentena.motivos_del_adjunto(adjunto("plano.pdf", EXE))
         self.assertTrue(any("ejecutable" in m for m in motivos), motivos)
 
-    def test_un_pdf_que_no_es_pdf(self):
-        motivos = cuarentena.motivos_del_adjunto(adjunto("plano.pdf", b"<html>hola</html>"))
-        self.assertTrue(any("no es un PDF" in m for m in motivos), motivos)
+    def test_png_y_pdf_se_aceptan_aunque_la_cabecera_sea_rara(self):
+        # Outlook guarda las imágenes pegadas en el cuerpo como objetos OLE:
+        # «image.png» no empieza por la cabecera PNG y sigue siendo inocente.
+        # Regla de ventas: el sistema acepta .png y .pdf. Sólo un ejecutable
+        # disfrazado se para.
+        ole = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 16
+        self.assertEqual(cuarentena.motivos_del_adjunto(adjunto("image.png", ole)), [])
+        self.assertEqual(
+            cuarentena.motivos_del_adjunto(adjunto("plano.pdf", b"<html>hola</html>")), [])
 
     def test_pdf_con_javascript(self):
         malo = b"%PDF-1.7\n1 0 obj << /OpenAction << /S /JavaScript /JS (app.alert(1)) >> >>"

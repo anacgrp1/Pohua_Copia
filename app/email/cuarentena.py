@@ -16,9 +16,11 @@ Qué se mira (sin ejecutar nada)
   STEP; lo demás no tiene por qué venir en una petición de cotización.
 * **Extensión doble** («plano.pdf.exe»): la manera clásica de disfrazar un
   ejecutable.
-* **El contenido no es lo que dice el nombre**: un ``.pdf`` que no empieza por
-  ``%PDF``, una ``.png`` sin cabecera PNG. Lo que no es lo que dice, no se
-  abre.
+* **Un ejecutable con otro nombre**: lo que empieza por ``MZ`` (Windows) o
+  ``\x7fELF`` se llame como se llame. Un ``.png`` o un ``.pdf`` cuya cabecera
+  simplemente no es la esperada se deja pasar (Outlook guarda las imágenes
+  pegadas en el cuerpo como objetos OLE y no como PNG): el sistema tiene que
+  aceptar .png y .pdf, y lo que no se pueda abrir lo dirá el lector de planos.
 * **PDF con contenido activo**: ``/JavaScript``, ``/JS``, ``/Launch``,
   ``/EmbeddedFile``, ``/OpenAction`` con acción. Un plano no ejecuta nada.
 * **Windows Defender**, si está en la computadora: se le pide que analice
@@ -128,7 +130,17 @@ def motivos_del_adjunto(adjunto: Dict[str, Any]) -> List[str]:
     if cabecera[:2] == _MAGIA_EJECUTABLE[0] or cabecera[:4] == _MAGIA_EJECUTABLE[1]:
         motivos.append(f"«{nombre}» es un ejecutable, diga lo que diga el nombre")
     elif ext in _MAGIA and contenido and not any(cabecera.startswith(m) for m in _MAGIA[ext]):
-        motivos.append(f"«{nombre}» no es un {ext[1:].upper()} de verdad")
+        # Un .png o un .pdf cuya cabecera no es la esperada NO se pone en
+        # cuarentena (regla de ventas, 2026-09-25: el sistema tiene que
+        # aceptar .png y .pdf). Outlook guarda las imágenes pegadas en el
+        # cuerpo como objetos OLE, y al escribirlas a disco «image.png» no
+        # empieza por la cabecera PNG aunque sea una captura inocente: con
+        # esta comprobación cinco correos de prueba acabaron en cuarentena.
+        # Lo peligroso —un ejecutable con otro nombre— ya se atrapó arriba;
+        # lo que sólo es raro se deja pasar y, si el lector de planos no lo
+        # puede abrir, lo dirá él. Queda una traza para poder investigarlo.
+        log.debug("«%s» no empieza por la cabecera de un %s (%r); se deja pasar.",
+                  nombre, ext[1:].upper(), cabecera)
 
     if ext == ".pdf" and contenido:
         activo = [m.decode("latin-1").strip() for m in _PDF_ACTIVO if m in contenido]
