@@ -211,8 +211,11 @@
         <!-- ============================================================= -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
+                <!-- El logo lleva a la portada (la pantalla de espera), sin
+                     cerrar la sesión: App.mostrarPortada(). -->
                 <button type="button" class="logo-boton" id="logoSidebar"
-                        title="Go to Dashboard" aria-label="Go to Dashboard">
+                        title="Home screen" aria-label="Home screen"
+                        data-i18n-titulo="nav.portada">
                     <span class="logo-lockup">
                         <img src="/assets/isc-logo.png" alt="ISC" class="logo-lockup__isc">
                         <img src="/assets/logo.png" alt="CGR" class="logo-lockup__cgr">

@@ -79,7 +79,40 @@ def clasificar(correo):
                   or f"INT-{uuid.uuid4().hex[:8].upper()}")
         return RFQ_NUEVO, rfq_id
 
+    # Sin palabras clave. En la carpeta de peticiones, lo que manda una
+    # persona es una petición igual: se da de alta y, si le falta el plano o
+    # las cantidades, se le piden. Sólo lo automático va a la basura.
+    if _carpeta_solo_rfq() and not remitente_automatico(correo):
+        return RFQ_NUEVO, f"INT-{uuid.uuid4().hex[:8].upper()}"
+
     return TRASH, None
+
+
+def _carpeta_solo_rfq() -> bool:
+    import app.core.config as config
+    return bool(getattr(config.settings, "CARPETA_SOLO_RFQ", True))
+
+
+# Remitentes que no son una persona pidiendo nada: contestarles es escribirle
+# a un robot, y a veces a un bucle de respuestas automáticas.
+_REMITENTES_AUTOMATICOS = (
+    "no-reply", "noreply", "no_reply", "donotreply", "do-not-reply",
+    "mailer-daemon", "postmaster", "bounce", "notification", "notifications",
+    "newsletter", "marketing", "alerts", "alert@",
+)
+_ASUNTOS_AUTOMATICOS = (
+    "automatic reply", "respuesta automática", "out of office", "fuera de la oficina",
+    "undeliverable", "delivery status", "no se puede entregar", "mail delivery",
+)
+
+
+def remitente_automatico(correo) -> bool:
+    """¿Este correo lo mandó un sistema y no una persona?"""
+    remitente = str(correo.get("remitente") or "").lower()
+    asunto = str(correo.get("asunto") or "").lower()
+    if any(marca in remitente for marca in _REMITENTES_AUTOMATICOS):
+        return True
+    return any(marca in asunto for marca in _ASUNTOS_AUTOMATICOS)
 
 
 # --------------------------------------------------------------------------- #
@@ -199,6 +232,13 @@ def campos_gate_temprano(extraccion_correo):
     ella, se omiten los que dependen de esa extracción: el gate sigue
     filtrando lo que sí se puede saber (quién escribe y si vino plano) sin
     rechazar RFQ por un dato que nadie está leyendo todavía.
+
+    «Sin ella» es que el modelo NO corrió (``extraer_datos_correo`` devolvió
+    ``{}``: cuerpo vacío o fallo). Si corrió y no encontró cantidades —un
+    «Hola, test»— el volumen SÍ se exige: la regla de ISC (2026-09-25) es que
+    toda petición trae sus volúmenes, y si no los trae se le piden antes de
+    gastar la visión. Por eso se le pasa la extracción entera, no sólo sus
+    campos: ``{"campos": {}}`` es «corrió y no había nada».
     """
     import app.shared.field_validator as field_validator
     campos = field_validator.CAMPOS_SOLO_CORREO
@@ -211,9 +251,15 @@ def campos_gate_temprano(extraccion_correo):
 # propósito: el asunto, el cuerpo, el remitente o los adjuntos son de ESTE
 # correo y no se heredan nunca; lo que se arrastra son los datos de la pieza,
 # que es lo que la conversación va reuniendo.
+#
+# El VOLUMEN no se hereda, por regla de ISC (2026-09-25): cada petición de
+# cotización tiene que traer sus cantidades («Volumes (EAU): 333000, 222000,
+# 111000»). Heredarlas hacía que una respuesta sin cantidades se costeara con
+# las de un correo anterior del mismo hilo, como si fueran las de hoy. Sin
+# volumen el RFQ va a «esperando al cliente» y se le pide por correo.
 _SE_HEREDA_DEL_HILO = (
     "cliente_id", "customer", "nombre_proyecto",
-    "part_number", "volumen", "material", "escalones_cantidad",
+    "part_number", "material",
     "tiene_adjunto", "resorte",
     "moneda", "incoterm", "fecha_entrega_requerida",
     "contacto_nombre", "contacto_correo",
@@ -226,11 +272,12 @@ def heredar_del_hilo(datos: dict, rfq_id: str) -> list:
     El comprador manda el plano el lunes y el material el martes, y en el
     martes no vuelve a adjuntar nada —los clientes de correo ni siquiera
     adjuntan el original al responder—. Sin memoria, esa respuesta se juzgaba
-    sola: sin plano y sin volumen, así que el sistema volvía a pedir lo que ya
-    tenía guardado y la conversación no avanzaba nunca.
+    sola: sin plano, así que el sistema volvía a pedir lo que ya tenía
+    guardado y la conversación no avanzaba nunca.
 
     Lo que trae el correo nuevo MANDA: si el comprador corrige el material,
-    vale el nuevo. Lo de antes sólo rellena huecos.
+    vale el nuevo. Lo de antes sólo rellena huecos. Las cantidades son la
+    excepción: nunca se heredan (ver ``_SE_HEREDA_DEL_HILO``).
 
     Devuelve los nombres de los campos que se heredaron, para el registro.
     """
@@ -757,7 +804,7 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
 
     # 3. Gate temprano: no gastar la llamada de visión si ni siquiera sabemos
     #    quién escribe, no vino un plano, o (con COT-61 listo) falta el volumen.
-    campos = campos_gate_temprano(campos_correo)
+    campos = campos_gate_temprano(extraccion)
     temprano = validar(datos, campos)
     if not temprano["es_valido"]:
         faltantes = temprano["campos_faltantes"]

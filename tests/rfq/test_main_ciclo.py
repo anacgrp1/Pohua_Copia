@@ -155,6 +155,38 @@ class TestCicloDeteccion(unittest.TestCase):
         self.assertIn("PROPIO", self.provider.leidos)
         self.assertTrue(any("propio buzón" in d for d in resultado.detalles))
 
+    def test_lo_que_parece_malware_no_se_procesa_ni_se_contesta(self):
+        """Un ejecutable disfrazado de plano se queda en cuarentena.
+
+        No se abre, no se da de alta y no se contesta —contestar le confirma
+        al remitente que el buzón existe—. Se marca como leído y se apunta
+        como procesado para no volver a mirarlo; el motivo queda en el
+        registro para que una persona lo revise.
+        """
+        class Adjunto:
+            filename = "plano.pdf"
+            content = b"MZ\x90\x00" + b"\x00" * 40
+            content_type = "application/pdf"
+            content_id = None
+
+        malo = FakeMensaje("MALO")
+        malo.attachments = [Adjunto()]
+        self.provider._mensajes = [FakeMensaje("A"), malo]
+
+        with mock.patch.object(main, "procesar_correo", return_value="RFQ_NUEVO") as procesar, \
+             mock.patch("app.persistence.duplicates.registrar_correo",
+                        return_value=True) as registrar, \
+             mock.patch("app.email.cuarentena.analizar_con_defender", return_value=""):
+            resultado = main.ciclo_deteccion()
+
+        procesados = [c.args[0]["remitente"] for c in procesar.call_args_list]
+        self.assertEqual(procesados, ["comprador+A@neogen.com"])
+        self.assertIn("MALO", self.provider.leidos)
+        apuntados = [c.args[0]["message_id"] for c in registrar.call_args_list]
+        self.assertIn("<MALO@cliente.com>", apuntados)
+        self.assertTrue(any("Cuarentena" in d for d in resultado.detalles), resultado.detalles)
+        self.assertEqual(resultado.errores, 0)
+
     def test_el_duplicado_se_busca_tambien_por_entry_id(self):
         """El EntryID de Outlook también cuenta como clave del correo.
 

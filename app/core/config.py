@@ -215,6 +215,15 @@ class Settings:
     # que haga falta sin tener que mandar uno nuevo cada vez.
     REPROCESAR_REPETIDOS: bool = False
 
+    # La carpeta vigilada es la de las peticiones de cotización (COT, 2026-09):
+    # todo correo que una persona deje ahí ES una petición, diga o no «RFQ» o
+    # «quote». Un «Hola, test» sin plano y sin cantidades se da de alta como
+    # incompleto y se le contesta pidiendo el plano y los volúmenes, en vez de
+    # tirarse a la basura por no llevar una palabra clave. Sólo se descartan
+    # los remitentes automáticos (no-reply, mailer-daemon, respuestas de
+    # ausencia). Apagado, vuelve el filtro por palabras clave.
+    CARPETA_SOLO_RFQ: bool = True
+
     # Logo de la firma de los correos al cliente. Vacío = el que trae el
     # proyecto (app/email/assets/firma.png, el logo de la casa a 320 px).
     # Se manda incrustado en el mensaje, no enlazado.

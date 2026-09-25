@@ -87,6 +87,8 @@ const I18N = (() => {
 
         'home.subtitulo': { en: 'Automatic quoting for industrial springs', es: 'Cotización automática de resortes industriales', fr: 'Chiffrage automatique de ressorts industriels' },
         'home.entrar':    { en: 'Sign In', es: 'Entrar', fr: 'Se connecter' },
+        'home.continuar': { en: 'Continue', es: 'Continuar', fr: 'Continuer' },
+        'nav.portada':    { en: 'Home screen', es: 'Pantalla de inicio', fr: 'Écran d’accueil' },
 
         'login.titulo':   { en: 'Sign In', es: 'Entrar', fr: 'Connexion' },
         'login.ayuda':    { en: 'Enter your credentials to access the quoter.', es: 'Escribe tus credenciales para entrar al cotizador.', fr: 'Saisissez vos identifiants pour accéder au chiffrage.' },

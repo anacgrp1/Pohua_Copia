@@ -16,6 +16,7 @@ import schedule
 
 import app.clients.mapper as mapper
 import app.core.config as config
+import app.email.cuarentena as cuarentena
 import app.persistence.duplicates as duplicates
 import app.persistence.spring_repository as spring_repository
 import app.rfq.flow as flow
@@ -214,6 +215,25 @@ def ciclo_deteccion(*, forzar: bool = False) -> ResultadoCiclo:
                          correo.get("asunto") or "sin asunto")
                 resultado.detalles.append(
                     f"Del propio buzón, omitido: {correo.get('asunto', '?')}")
+                provider.mark_as_read(msg.id)
+                continue
+
+            # Cuarentena: antes de abrir ningún adjunto con el modelo, de dar
+            # de alta nada y de contestar, se mira que el correo no sea
+            # malware (ejecutables disfrazados de plano, PDF con scripts,
+            # extensión doble, lo que diga Windows Defender). Lo sospechoso se
+            # apunta como procesado y se marca como leído para no volver a
+            # mirarlo, y NO se contesta: contestarle a un remitente malicioso
+            # le confirma que el buzón existe. Queda en el registro para que
+            # una persona lo revise a mano.
+            motivos = cuarentena.revisar(correo)
+            if motivos:
+                log.warning("CUARENTENA %s | %s: %s. No se procesa ni se contesta.",
+                            correo.get("remitente", "?"), correo.get("asunto", "?"),
+                            "; ".join(motivos))
+                resultado.detalles.append(
+                    f"Cuarentena ({correo.get('remitente', '?')}): {'; '.join(motivos)}")
+                duplicates.registrar_correo(correo, otras_claves=[entry_id])
                 provider.mark_as_read(msg.id)
                 continue
 

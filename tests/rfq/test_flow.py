@@ -13,9 +13,10 @@ os.environ.setdefault("IMAP_SERVER", "smtp.test.local")
 os.environ.setdefault("IMAP_USER", "remitente@cgr.com")
 os.environ.setdefault("IMAP_PASSWORD", "secreto")
 
+import app.core.config as config
 import app.rfq.flow as flow
 
-PDF = {"nombre": "plano.pdf", "contenido": b"%PDF-fake"}
+PDF ={"nombre": "plano.pdf", "contenido": b"%PDF-fake"}
 
 # Resorte que pasa las directrices provisionales de reglas/factibilidad.json
 # (COT-74): sirve para ejercitar la rama de alta de punta a punta, motor real
@@ -127,6 +128,11 @@ class TestGateTemprano(unittest.TestCase):
         # Si el modelo no entregó nada, exigir volumen rechazaría todo.
         campos = flow.campos_gate_temprano({})
         self.assertCountEqual(campos, ["tiene_adjunto", "customer"])
+
+    def test_si_el_modelo_corrio_y_no_hallo_cantidades_el_volumen_se_exige(self):
+        # «Hola, test»: el modelo corrió y no había volúmenes. Se piden.
+        campos = flow.campos_gate_temprano({"campos": {}, "en_revision": {}})
+        self.assertIn("volumen", campos)
 
     def test_con_extraccion_el_gate_usa_campos_solo_correo_completo(self):
         import app.shared.field_validator as field_validator
@@ -244,6 +250,35 @@ class TestOrquestacion(unittest.TestCase):
         self.assertEqual(resultado["etapa"], "gate_temprano")
         self.assertEqual(resultado["campos_faltantes"], ["volumen"])
         vision.assert_not_called()
+
+    def test_una_respuesta_sin_cantidades_espera_al_cliente(self):
+        """Regla de ISC: sin volumen en ESTE correo no se cotiza.
+
+        El hilo ya tenía cantidades (el correo anterior las trajo), pero la
+        respuesta no. Antes se heredaban y se costeaba con las viejas; ahora
+        el RFQ se da de alta como incompleto y se le piden por correo, sin
+        gastar la lectura del plano.
+        """
+        previos = {"volumen": 50000, "escalones_cantidad": [10000, 22000, 50000],
+                   "part_number": "1060-022", "tiene_adjunto": True,
+                   "customer": "neogen.com"}
+        with mock.patch("app.clients.mapper.mapear_cliente", return_value=None), \
+             mock.patch("app.rfq.repository.datos_anteriores", return_value=previos), \
+             mock.patch.object(flow, "extraer_datos_correo",
+                               return_value={"campos": {"material": "Music wire"}}), \
+             mock.patch.object(flow, "procesar_dibujos") as vision, \
+             mock.patch.object(flow, "persistir", return_value=None) as persistir, \
+             mock.patch.object(flow, "responder_datos_faltantes") as responder:
+            resultado = flow.avanzar_a_parsing(
+                correo_base(asunto="RE: RFQ 4500 [RFQ RFQ-1]"), flow.RESPUESTA_RFQ, "RFQ-1")
+
+        self.assertEqual(resultado["etapa"], "gate_temprano")
+        self.assertEqual(resultado["campos_faltantes"], ["volumen"])
+        vision.assert_not_called()
+        # A «esperando al cliente», y se le escribe pidiendo las cantidades.
+        self.assertEqual(persistir.call_args.kwargs["estado"], flow._estado_incompleto())
+        responder.assert_called_once()
+        self.assertEqual(responder.call_args[0][1], ["volumen"])
 
     def test_los_datos_del_correo_entran_al_dict_del_rfq(self):
         with mock.patch("app.clients.mapper.mapear_cliente", return_value=None), \
@@ -567,8 +602,10 @@ class TestLaRespuestaHeredaElHilo(unittest.TestCase):
             heredados = flow.heredar_del_hilo(datos, "COT-75")
 
         self.assertEqual(datos["part_number"], "1060-022")
-        self.assertEqual(datos["volumen"], 50000)
         self.assertTrue(datos["tiene_adjunto"])
+        # Las cantidades NO se heredan: cada petición trae las suyas.
+        self.assertNotIn("volumen", datos)
+        self.assertNotIn("escalones_cantidad", datos)
         # Lo de este correo se respeta, y lo que es de cada correo no viaja.
         self.assertEqual(datos["material"], "music wire ASTM A228")
         self.assertEqual(datos["asunto"], "RE: test rfq")
@@ -584,8 +621,8 @@ class TestLaRespuestaHeredaElHilo(unittest.TestCase):
         self.assertEqual(datos["part_number"], "1060-023")
 
     def test_con_lo_heredado_la_respuesta_ya_completa_el_rfq(self):
-        """La prueba que importa: deja de pedir lo que ya le dieron."""
-        datos = {"material": "music wire ASTM A228"}
+        """Deja de pedir lo que ya le dieron… salvo las cantidades."""
+        datos = {"material": "music wire ASTM A228", "volumen": 12000}
         with mock.patch("app.rfq.repository.datos_anteriores",
                         return_value=self.PREVIOS):
             flow.heredar_del_hilo(datos, "COT-75")
@@ -593,8 +630,74 @@ class TestLaRespuestaHeredaElHilo(unittest.TestCase):
         self.assertTrue(flow.validar(datos)["es_valido"],
                         flow.validar(datos)["campos_faltantes"])
 
+    def test_sin_cantidades_en_este_correo_se_piden_aunque_el_hilo_las_tuviera(self):
+        """Regla de ISC: el volumen viene en el correo o no se cotiza.
+
+        Con la herencia, una respuesta sin cantidades se costeaba con las del
+        correo anterior. Ahora falta «volumen» y el RFQ va a esperar al
+        cliente.
+        """
+        datos = {"material": "music wire ASTM A228"}
+        with mock.patch("app.rfq.repository.datos_anteriores",
+                        return_value=self.PREVIOS):
+            flow.heredar_del_hilo(datos, "COT-75")
+        self.assertIn("volumen", flow.validar(datos)["campos_faltantes"])
+
     def test_sin_rfq_previo_no_se_inventa_nada(self):
         datos = {"material": "SAE 1070"}
         with mock.patch("app.rfq.repository.datos_anteriores", return_value={}):
             self.assertEqual(flow.heredar_del_hilo(datos, "COT-99"), [])
         self.assertEqual(datos, {"material": "SAE 1070"})
+
+
+class TestTodoCorreoDeLaCarpetaEsUnaPeticion(unittest.TestCase):
+    """La carpeta vigilada es la de peticiones de cotización.
+
+    Un «Hola, test» sin plano y sin cantidades no lleva «RFQ» ni «quote», y
+    antes iba a la basura sin más. Regla de ISC (2026-09-25): es una petición
+    igual; se da de alta como incompleta y se le contesta pidiendo el plano y
+    los volúmenes. Sólo lo automático se descarta.
+    """
+
+    def _correo(self, **extra):
+        datos = {"message_id": "<hola@cgr.com>", "remitente": "daniela.diaz@cgr-international.com",
+                 "asunto": "TEST", "cuerpo": "Hola,\n\nTest\n\nSaludos", "adjuntos": []}
+        datos.update(extra)
+        return datos
+
+    def test_sin_palabras_clave_sigue_siendo_una_peticion(self):
+        with mock.patch("app.rfq.thread_validator.validar_respuesta", return_value=None):
+            clasificacion, rfq_id = flow.clasificar(self._correo())
+        self.assertEqual(clasificacion, flow.RFQ_NUEVO)
+        self.assertTrue(rfq_id.startswith("INT-"))
+
+    def test_y_se_le_piden_el_plano_y_las_cantidades(self):
+        with mock.patch("app.rfq.thread_validator.validar_respuesta", return_value=None), \
+             mock.patch("app.rfq.thread_validator.registrar_en_historial"), \
+             mock.patch.object(flow, "_envio_habilitado", return_value=False), \
+             mock.patch.object(flow, "_avisar", return_value=True), \
+             mock.patch("app.clients.mapper.mapear_cliente", return_value=None), \
+             mock.patch.object(flow, "extraer_datos_correo", return_value={"campos": {}}), \
+             mock.patch.object(flow, "procesar_dibujos") as vision, \
+             mock.patch.object(flow, "persistir", return_value=None) as persistir, \
+             mock.patch.object(flow, "responder_datos_faltantes") as responder:
+            resultado = flow.avanzar_a_parsing(self._correo(), flow.RFQ_NUEVO, "INT-1")
+        self.assertEqual(resultado["etapa"], "gate_temprano")
+        self.assertEqual(set(resultado["campos_faltantes"]), {"tiene_adjunto", "volumen"})
+        vision.assert_not_called()
+        self.assertEqual(persistir.call_args.kwargs["estado"], flow._estado_incompleto())
+        self.assertEqual(set(responder.call_args[0][1]), {"tiene_adjunto", "volumen"})
+
+    def test_lo_automatico_va_a_la_basura(self):
+        with mock.patch("app.rfq.thread_validator.validar_respuesta", return_value=None):
+            for correo in (self._correo(remitente="no-reply@proveedor.com"),
+                           self._correo(asunto="Automatic reply: TEST"),
+                           self._correo(remitente="MAILER-DAEMON@outlook.com")):
+                self.assertEqual(flow.clasificar(correo)[0], flow.TRASH, correo)
+
+    def test_con_el_interruptor_apagado_vuelve_el_filtro_de_palabras(self):
+        with mock.patch("app.rfq.thread_validator.validar_respuesta", return_value=None), \
+             mock.patch.object(config.settings, "CARPETA_SOLO_RFQ", False):
+            self.assertEqual(flow.clasificar(self._correo())[0], flow.TRASH)
+            self.assertEqual(flow.clasificar(self._correo(asunto="Spring quote"))[0],
+                             flow.RFQ_NUEVO)

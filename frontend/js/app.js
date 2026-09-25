@@ -333,21 +333,61 @@ const APP = {
         Toast.success(I18N.t('aviso.sesionCerrada'));
     },
 
-    /** El logo de la barra lateral lleva a la pantalla principal de la app.
+    /** El logo de la barra lateral lleva a la portada, con la sesión abierta.
      *
-     * "Principal" es la misma que al entrar: el primer apartado del menú de esa
-     * persona (`inicio()`). Antes era Mail a secas, y para el pm eso significaba
-     * que el logo lo sacaba de su pantalla de mando.
-     *
-     * Ojo: NO lleva a la portada de antes del login. Estando dentro, salir a
-     * esa pantalla parecería que se cerró la sesión; desde el login, el logo sí
-     * vuelve a la portada.
+     * Antes llevaba a la pantalla principal (`inicio()`), y a propósito no a
+     * la portada, para que no pareciera que se había cerrado la sesión. Desde
+     * 2026-09-25 la portada ES la pantalla de espera de Pohua (pedido de
+     * ventas): el resorte de estrellas mientras no se está trabajando, y un
+     * botón «Continuar» que devuelve a donde se estaba. La sesión no se toca.
      */
     conectarLogo() {
         const logo = document.getElementById('logoSidebar');
         if (!logo || logo.dataset.conectado) return;
         logo.dataset.conectado = '1';
-        logo.addEventListener('click', () => this.navigate(this.inicio()));
+        logo.addEventListener('click', () => this.mostrarPortada());
+    },
+
+    /**
+     * La portada como pantalla de espera, ya dentro de la aplicación.
+     *
+     * El logo de la barra lateral lleva aquí: la misma portada del principio
+     * —los logos, el nombre y el resorte de estrellas— pero SIN cerrar la
+     * sesión. Es donde se deja Pohua cuando no se está trabajando en ella (la
+     * pantalla de la planta, la computadora que lee el correo): un cielo con
+     * el resorte en vez de una tabla a medio leer. El botón, que aquí dice
+     * «Continuar» y no «Entrar», devuelve a la página en la que se estaba.
+     * El sondeo del estado y los avisos siguen corriendo por detrás.
+     */
+    mostrarPortada() {
+        if (!API.getToken()) {
+            this.mostrarHome();
+            return;
+        }
+        const layout = document.querySelector('.app-layout');
+        const home = document.getElementById('homeScreen');
+        if (!home) return;
+
+        this.cerrarMenu();
+        if (layout) layout.hidden = true;
+        for (const id of ['mobileToggle', 'perfilMenu', 'notificaciones']) {
+            const el = document.getElementById(id);
+            if (el) el.hidden = true;
+        }
+        home.hidden = false;
+        HomePage.render(home, {
+            conSesion: true,
+            onLogin: () => this.volverDeLaPortada(),
+        });
+    },
+
+    volverDeLaPortada() {
+        // ocultarLogin() esconde la portada y vuelve a enseñar el esqueleto;
+        // pintarUsuario() devuelve el menú del perfil y la campana.
+        this.ocultarLogin();
+        this.pintarUsuario();
+        this.aplicarPermisos();
+        this.handleRoute();
     },
 
     /** Muestra nombre, correo y rol del usuario en la barra lateral. */

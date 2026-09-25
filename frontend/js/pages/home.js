@@ -22,7 +22,11 @@
 const HomePage = (() => {
     'use strict';
 
-    function plantilla() {
+    function plantilla({ conSesion = false } = {}) {
+        // Con sesión abierta la portada es la pantalla de espera (se llega
+        // desde el logo de la barra lateral) y el botón devuelve adentro:
+        // dice «Continuar», no «Entrar».
+        const claveBoton = conSesion ? 'home.continuar' : 'home.entrar';
         return `
             <div class="portada">
                 <!-- El lienzo va en su propia capa, sin eventos: los clics
@@ -56,7 +60,7 @@ const HomePage = (() => {
                              botón entero borraría la flecha: data-i18n escribe
                              textContent y se llevaría por delante el <svg>. -->
                         <button class="btn btn-primary portada-cta" id="btnGoLogin">
-                            <span data-i18n="home.entrar">${I18N.t('home.entrar')}</span>
+                            <span data-i18n="${claveBoton}">${I18N.t(claveBoton)}</span>
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
                                  stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                  stroke-linejoin="round" aria-hidden="true">
@@ -69,8 +73,8 @@ const HomePage = (() => {
             </div>`;
     }
 
-    function render(contenedor, { onLogin } = {}) {
-        contenedor.innerHTML = plantilla();
+    function render(contenedor, { onLogin, conSesion = false } = {}) {
+        contenedor.innerHTML = plantilla({ conSesion });
 
         // El cielo de la aplicación se apaga: aquí las estrellas las pinta el
         // lienzo de la portada, que además las convierte en el resorte.

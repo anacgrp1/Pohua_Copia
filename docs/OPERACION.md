@@ -434,6 +434,40 @@ quita que Outlook confíe en el programa (antivirus válido en el Centro de
 confianza o directiva de TI). El lector sigue leyendo únicamente la carpeta
 `MAIL_FOLDER` (hoy `TEST`); Ixtli recorre todas y eso NO se copió.
 
+**Todo correo de la carpeta es una petición.** Desde 2026-09-25
+(`CARPETA_SOLO_RFQ=true`), cualquier correo que una persona deje en la
+carpeta vigilada se trata como petición de cotización, lleve o no «RFQ» o
+«quote» en el asunto: un «Hola, test» sin plano y sin cantidades se da de
+alta como *Incomplete* y se le contesta pidiendo el plano y los volúmenes
+(*Waiting on customer*). Sólo se descartan los remitentes automáticos
+(`no-reply`, `mailer-daemon`, respuestas de ausencia). Con la variable en
+`false` vuelve el filtro por palabras clave de antes.
+
+**El volumen tiene que venir en cada correo.** Regla de ISC: la petición trae
+sus cantidades («Volumes (EAU): 333000, 222000, 111000»). Una respuesta en un
+hilo hereda del RFQ anterior el plano, el número de parte y el material, pero
+**no** los volúmenes: sin cantidades en ese correo el RFQ va a *Waiting on
+customer* y se piden, en vez de costearse con las del correo de la vez pasada.
+
+**Cuarentena de adjuntos.** Antes de abrir nada con el modelo, dar de alta o
+contestar, `app/email/cuarentena.py` revisa los adjuntos: extensiones que no
+son de un plano (ejecutables, scripts, instaladores, comprimidos, HTML,
+Office con macros), extensión doble (`plano.pdf.exe`), cabecera que no
+corresponde al nombre (un «.pdf» que empieza por `MZ`), PDF con contenido
+activo (`/JavaScript`, `/Launch`, `/EmbeddedFile`), y, si la máquina tiene
+Windows Defender, un análisis con `MpCmdRun.exe` del archivo. Lo sospechoso
+**no se procesa ni se contesta** (contestar le confirma al remitente que el
+buzón existe): se marca como leído, se apunta como procesado y queda una
+línea `WARNING CUARENTENA …` con el motivo en el registro y en el Monitor,
+para que una persona lo revise en Outlook. No sustituye al antivirus del
+equipo.
+
+**La portada como pantalla de espera.** Dentro de la aplicación, el logo de la
+barra lateral lleva a la portada (los logos, «Pohua · RFQ Quoter» y el
+resorte de estrellas) **sin cerrar la sesión**; el botón dice «Continuar» y
+devuelve a la página en la que se estaba. Es donde se deja Pohua en una
+pantalla que no se está usando.
+
 **Logs.** Van a consola y a `app.log` (rotativo, 5 MB × 5 archivos). La
 configuración la aplica cada punto de entrada — `app/main.py`, `api/server.py`,
 `desktop_app/main.py` —, ya no un import con efectos secundarios.
