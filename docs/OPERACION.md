@@ -420,10 +420,10 @@ la web en los dos sentidos; la elección se guarda entre sesiones. Las
 líneas del registro no se traducen: son las mismas que lee el Monitor.
 
 **Volver a leer un correo ya apuntado.** Basta con marcarlo como **no leído**
-en Outlook: un correo apuntado hace más de 10 minutos, **sin RFQ** y otra vez
+en Outlook: un correo apuntado hace más de 5 minutos, **sin RFQ** y otra vez
 sin leer se toma como un reintento pedido por una persona («Reintento: …» en
 el registro) y se procesa de nuevo. Con RFQ ya dado de alta sigue siendo
-«Duplicado omitido». Los 10 minutos evitan que dos lectores cruzados (el del
+«Duplicado omitido». Los 5 minutos evitan que dos lectores cruzados (el del
 servidor y el de escritorio) lo tomen por reintento. Para quitar marcas a
 mano está `python scripts/reintentar_correos.py --remitente quien@dominio.com
 --hoy --si` (sólo a los que no tienen RFQ).

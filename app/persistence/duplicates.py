@@ -115,7 +115,7 @@ def es_duplicado(message_id, otras_claves=()):
             return (cur.fetchone()[0] or 0) > 0
 
 
-def se_puede_reintentar(message_id, otras_claves=(), minutos=10) -> bool:
+def se_puede_reintentar(message_id, otras_claves=(), minutos=5) -> bool:
     """¿Este correo, ya apuntado, se volvió a poner como no leído a propósito?
 
     El lector marca como leído todo lo que apunta —procesado, duplicado o en
