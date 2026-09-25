@@ -118,6 +118,34 @@ class TestCicloDeteccion(unittest.TestCase):
         self.assertEqual(resultado.procesados, 0)
         self.assertTrue(any("Duplicado omitido" in d for d in resultado.detalles))
 
+    def test_el_repetido_sin_rfq_que_alguien_volvio_a_marcar_se_reintenta(self):
+        """Apuntado hace rato, sin RFQ y otra vez sin leer: se vuelve a leer.
+
+        Es lo que hace una persona cuando un correo se quedó sin atender
+        (una cuarentena de más, por ejemplo): lo marca como no leído. Antes
+        el lector lo saltaba para siempre con «Duplicado omitido».
+        """
+        with mock.patch("app.persistence.duplicates.es_duplicado", return_value=True), \
+             mock.patch("app.persistence.duplicates.se_puede_reintentar",
+                        return_value=True), \
+             mock.patch("app.persistence.duplicates.olvidar_correo") as olvidar, \
+             mock.patch.object(main, "procesar_correo", return_value="RFQ_NUEVO") as procesar:
+            resultado = main.ciclo_deteccion()
+        self.assertEqual(procesar.call_count, 3)
+        self.assertEqual(olvidar.call_count, 3)
+        self.assertEqual(resultado.rfqs, 3)
+        self.assertTrue(any("Reintento" in d for d in resultado.detalles))
+
+    def test_el_repetido_reciente_o_con_rfq_sigue_siendo_duplicado(self):
+        with mock.patch("app.persistence.duplicates.es_duplicado", return_value=True), \
+             mock.patch("app.persistence.duplicates.se_puede_reintentar",
+                        return_value=False), \
+             mock.patch.object(main, "procesar_correo") as procesar:
+            resultado = main.ciclo_deteccion()
+        procesar.assert_not_called()
+        self.assertEqual(self.provider.leidos, ["A", "B", "C"])
+        self.assertTrue(any("Duplicado omitido" in d for d in resultado.detalles))
+
     def test_en_modo_prueba_el_repetido_se_vuelve_a_procesar(self):
         """Con REPROCESAR_REPETIDOS se repite el MISMO correo a propósito.
 

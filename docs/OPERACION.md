@@ -419,11 +419,14 @@ tema claro/oscuro, con los botones de la esquina— y van sincronizados con
 la web en los dos sentidos; la elección se guarda entre sesiones. Las
 líneas del registro no se traducen: son las mismas que lee el Monitor.
 
-**Volver a leer un correo ya apuntado.** Un correo que el sistema apuntó como
-procesado no se vuelve a leer aunque se marque como no leído en Outlook
-(«Duplicado omitido»). `python scripts/reintentar_correos.py --remitente
-quien@dominio.com --hoy --si` le quita la marca (sólo a los que no tienen
-RFQ); después se marca como no leído en Outlook y el lector lo toma.
+**Volver a leer un correo ya apuntado.** Basta con marcarlo como **no leído**
+en Outlook: un correo apuntado hace más de 10 minutos, **sin RFQ** y otra vez
+sin leer se toma como un reintento pedido por una persona («Reintento: …» en
+el registro) y se procesa de nuevo. Con RFQ ya dado de alta sigue siendo
+«Duplicado omitido». Los 10 minutos evitan que dos lectores cruzados (el del
+servidor y el de escritorio) lo tomen por reintento. Para quitar marcas a
+mano está `python scripts/reintentar_correos.py --remitente quien@dominio.com
+--hoy --si` (sólo a los que no tienen RFQ).
 
 **Un solo lector de correo.** Si la app de escritorio está corriendo, manda un
 latido cada minuto y el worker del servidor se queda en espera, para que no

@@ -115,6 +115,38 @@ def es_duplicado(message_id, otras_claves=()):
             return (cur.fetchone()[0] or 0) > 0
 
 
+def se_puede_reintentar(message_id, otras_claves=(), minutos=10) -> bool:
+    """¿Este correo, ya apuntado, se volvió a poner como no leído a propósito?
+
+    El lector marca como leído todo lo que apunta —procesado, duplicado o en
+    cuarentena—, así que un correo que está apuntado, **sin RFQ** y otra vez
+    sin leer es que una persona lo volvió a marcar para que se lea de nuevo
+    (pasó con cinco correos que la cuarentena paró por una comprobación de
+    más: al corregirla seguían saltándose como «Duplicado omitido»).
+
+    Sólo si la marca tiene más de ``minutos``: dos lectores a la vez (el del
+    servidor y el de escritorio) se cruzan en segundos, y el que llega
+    segundo ve la marca del primero ANTES de que exista el RFQ; con el
+    margen, ese cruce sigue siendo un duplicado y no un reintento.
+    """
+    claves = [c for c in [message_id, *(otras_claves or ())] if c]
+    if not claves:
+        return False
+    sql = """
+        SELECT COUNT(1)
+          FROM correos_procesados c
+         WHERE (c.message_id = ANY(%(c)s) OR c.entry_id = ANY(%(c)s))
+           AND c.fecha_registro < NOW() - (%(m)s * INTERVAL '1 minute')
+           AND NOT EXISTS (SELECT 1 FROM rfqs r
+                            WHERE r.message_id = ANY(%(c)s)
+                               OR r.message_id = c.message_id);
+    """
+    with conexion_bd() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, {"c": claves, "m": int(minutos)})
+            return (cur.fetchone()[0] or 0) > 0
+
+
 def hay_rfq_del_correo(message_id) -> bool:
     """¿Se llegó a dar de alta un RFQ con este correo?"""
     if not message_id:

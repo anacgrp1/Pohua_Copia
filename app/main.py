@@ -78,6 +78,15 @@ def buzon_propio() -> str:
     return ""
 
 
+def _reintento_pedido(correo, entry_id) -> bool:
+    """Nunca lanza: si no se puede saber, se trata como duplicado."""
+    try:
+        return duplicates.se_puede_reintentar(correo["message_id"], otras_claves=[entry_id])
+    except Exception as error:
+        log.debug("No se pudo saber si el correo se volvió a marcar: %s", error)
+        return False
+
+
 def map_email_message(msg):
     """Mapea un objeto EmailMessage al formato de diccionario requerido por el cotizador."""
     headers = {k.lower(): v for k, v in msg.raw_headers.items()}
@@ -196,16 +205,26 @@ def ciclo_deteccion(*, forzar: bool = False) -> ResultadoCiclo:
             entry_id = str(getattr(msg, "id", "") or "")
             if not repetidos_permitidos and duplicates.es_duplicado(
                     correo["message_id"], otras_claves=[entry_id]):
-                log.debug("Duplicado ignorado: %s", correo["message_id"])
-                resultado.detalles.append(f"Duplicado omitido: {correo['message_id']}")
-                # Ya se atendió: se marca como leído. Si no, se volvía a leer
-                # en cada ciclo, para siempre —y en Outlook, cada lectura es
-                # otra ventana de permiso—.
-                try:
-                    provider.mark_as_read(msg.id)
-                except Exception as error:
-                    log.debug("No se pudo marcar el repetido como leído: %s", error)
-                continue
+                # Apuntado, sin RFQ y otra vez sin leer: alguien lo volvió a
+                # marcar para que se lea de nuevo. Se le quita la marca y
+                # sigue su camino como un correo nuevo.
+                if _reintento_pedido(correo, entry_id):
+                    log.info("Correo vuelto a marcar como no leído y sin RFQ: se "
+                             "vuelve a intentar (%s).", correo.get("asunto", "?"))
+                    resultado.detalles.append(
+                        f"Reintento: {correo.get('asunto', '?')}")
+                    duplicates.olvidar_correo(correo["message_id"], otras_claves=[entry_id])
+                else:
+                    log.debug("Duplicado ignorado: %s", correo["message_id"])
+                    resultado.detalles.append(f"Duplicado omitido: {correo['message_id']}")
+                    # Ya se atendió: se marca como leído. Si no, se volvía a
+                    # leer en cada ciclo, para siempre —y en Outlook, cada
+                    # lectura es otra ventana de permiso—.
+                    try:
+                        provider.mark_as_read(msg.id)
+                    except Exception as error:
+                        log.debug("No se pudo marcar el repetido como leído: %s", error)
+                    continue
 
             # Correo salido de este mismo buzón: no se contesta. Se marca
             # como leído porque no hay nada que hacer con él, y si se dejara
