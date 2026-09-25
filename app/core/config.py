@@ -223,6 +223,10 @@ class Settings:
     # los remitentes automáticos (no-reply, mailer-daemon, respuestas de
     # ausencia). Apagado, vuelve el filtro por palabras clave.
     CARPETA_SOLO_RFQ: bool = True
+    # Cuarentena de adjuntos (app/email/cuarentena.py). APAGADA por defecto
+    # (2026-09-25): el análisis con Defender daba «amenaza» en todo en la
+    # computadora del lector y los correos se quedaban sin leer.
+    CUARENTENA_ADJUNTOS: bool = False
 
     # Logo de la firma de los correos al cliente. Vacío = el que trae el
     # proyecto (app/email/assets/firma.png, el logo de la casa a 320 px).

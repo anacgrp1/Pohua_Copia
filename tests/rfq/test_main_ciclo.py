@@ -201,7 +201,8 @@ class TestCicloDeteccion(unittest.TestCase):
         malo.attachments = [Adjunto()]
         self.provider._mensajes = [FakeMensaje("A"), malo]
 
-        with mock.patch.object(main, "procesar_correo", return_value="RFQ_NUEVO") as procesar, \
+        with mock.patch.object(config.settings, "CUARENTENA_ADJUNTOS", True), \
+             mock.patch.object(main, "procesar_correo", return_value="RFQ_NUEVO") as procesar, \
              mock.patch("app.persistence.duplicates.registrar_correo",
                         return_value=True) as registrar, \
              mock.patch("app.email.cuarentena.analizar_con_defender", return_value=""):
@@ -214,6 +215,21 @@ class TestCicloDeteccion(unittest.TestCase):
         self.assertIn("<MALO@cliente.com>", apuntados)
         self.assertTrue(any("Cuarentena" in d for d in resultado.detalles), resultado.detalles)
         self.assertEqual(resultado.errores, 0)
+
+    def test_la_cuarentena_esta_apagada_por_defecto(self):
+        class Adjunto:
+            filename = "plano.pdf"
+            content = b"MZ\x90\x00" + b"\x00" * 40
+            content_type = "application/pdf"
+            content_id = None
+
+        malo = FakeMensaje("MALO")
+        malo.attachments = [Adjunto()]
+        self.provider._mensajes = [malo]
+        with mock.patch.object(main, "procesar_correo", return_value="RFQ_NUEVO") as procesar:
+            resultado = main.ciclo_deteccion()
+        procesar.assert_called_once()
+        self.assertFalse(any("Cuarentena" in d for d in resultado.detalles))
 
     def test_el_duplicado_se_busca_tambien_por_entry_id(self):
         """El EntryID de Outlook también cuenta como clave del correo.

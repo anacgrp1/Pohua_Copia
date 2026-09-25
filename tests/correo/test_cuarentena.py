@@ -87,14 +87,20 @@ class TestRevisar(unittest.TestCase):
     def test_defender_solo_se_consulta_si_lo_propio_no_vio_nada(self):
         correo = {"adjuntos": [adjunto("virus.exe", EXE)]}
         with mock.patch.object(cuarentena, "analizar_con_defender") as defender:
-            cuarentena.revisar(correo)
+            cuarentena.revisar(correo, con_antivirus=True)
+        defender.assert_not_called()
+
+    def test_defender_apagado_por_defecto(self):
+        correo = {"adjuntos": [adjunto("plano.pdf", PDF_LIMPIO)]}
+        with mock.patch.object(cuarentena, "analizar_con_defender") as defender:
+            self.assertEqual(cuarentena.revisar(correo), [])
         defender.assert_not_called()
 
     def test_lo_que_diga_defender_cuenta(self):
         correo = {"adjuntos": [adjunto("plano.pdf", PDF_LIMPIO)]}
         with mock.patch.object(cuarentena, "analizar_con_defender",
                                return_value="Windows Defender detectó una amenaza en «plano.pdf»"):
-            motivos = cuarentena.revisar(correo)
+            motivos = cuarentena.revisar(correo, con_antivirus=True)
         self.assertEqual(len(motivos), 1)
         self.assertIn("Defender", motivos[0])
 

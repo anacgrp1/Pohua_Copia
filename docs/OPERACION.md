@@ -474,7 +474,12 @@ el historial y el resorte leído se apunta ahí; el RFQ anterior no se toca.
 El mismo número de parte con otro archivo (una revisión) sigue siendo una
 respuesta del mismo RFQ.
 
-**Cuarentena de adjuntos.** Antes de abrir nada con el modelo, dar de alta o
+**Cuarentena de adjuntos (APAGADA).** `CUARENTENA_ADJUNTOS=false` por
+defecto desde 2026-09-25: en la computadora del lector Defender está
+desactivado (el antivirus es Avast) y `MpCmdRun` devolvía «amenaza» para
+todos los adjuntos, así que los correos de prueba se quedaban sin leer. El
+análisis con Defender ya no se hace ni con la cuarentena encendida. Con
+`true`, antes de abrir nada con el modelo, dar de alta o
 contestar, `app/email/cuarentena.py` revisa los adjuntos: extensiones que no
 son de un plano (ejecutables, scripts, instaladores, comprimidos, HTML,
 Office con macros), extensión doble (`plano.pdf.exe`), un ejecutable con

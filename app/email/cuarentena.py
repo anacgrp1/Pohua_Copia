@@ -150,11 +150,16 @@ def motivos_del_adjunto(adjunto: Dict[str, Any]) -> List[str]:
     return motivos
 
 
-def revisar(correo: Dict[str, Any], con_antivirus: bool = True) -> List[str]:
+def revisar(correo: Dict[str, Any], con_antivirus: bool = False) -> List[str]:
     """Los motivos para poner el correo en cuarentena. Vacío si está limpio.
 
     Las imágenes incrustadas (la firma) se miran igual: un logo también puede
     ser un ejecutable con otro nombre.
+
+    ``con_antivirus`` va APAGADO por defecto: en la máquina del lector
+    Defender está desactivado (el antivirus es otro) y ``MpCmdRun`` devolvía
+    2 para todo, que es el mismo código de «amenaza»; cinco correos limpios
+    acabaron en cuarentena por eso.
     """
     motivos: List[str] = []
     for adjunto in correo.get("adjuntos") or []:

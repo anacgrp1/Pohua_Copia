@@ -78,6 +78,19 @@ def buzon_propio() -> str:
     return ""
 
 
+def _cuarentena_encendida() -> bool:
+    """La cuarentena está APAGADA salvo que CUARENTENA_ADJUNTOS=true.
+
+    Se apagó el 2026-09-25 a petición de ventas: en la computadora del lector
+    el análisis con Windows Defender marcaba «amenaza» en todos los adjuntos
+    (Defender está desactivado ahí porque el antivirus es otro, y el código
+    de salida de MpCmdRun no distingue «amenaza» de «no pude analizar»), y
+    los correos de prueba se quedaban sin leer. Las comprobaciones propias
+    siguen en app/email/cuarentena.py para cuando se vuelva a encender.
+    """
+    return bool(getattr(config.settings, "CUARENTENA_ADJUNTOS", False))
+
+
 def _reintento_pedido(correo, entry_id) -> bool:
     """Nunca lanza: si no se puede saber, se trata como duplicado."""
     try:
@@ -245,7 +258,7 @@ def ciclo_deteccion(*, forzar: bool = False) -> ResultadoCiclo:
             # mirarlo, y NO se contesta: contestarle a un remitente malicioso
             # le confirma que el buzón existe. Queda en el registro para que
             # una persona lo revise a mano.
-            motivos = cuarentena.revisar(correo)
+            motivos = cuarentena.revisar(correo) if _cuarentena_encendida() else []
             if motivos:
                 log.warning("CUARENTENA %s | %s: %s. No se procesa ni se contesta.",
                             correo.get("remitente", "?"), correo.get("asunto", "?"),
