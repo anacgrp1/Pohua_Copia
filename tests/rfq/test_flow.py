@@ -218,6 +218,12 @@ class TestOrquestacion(unittest.TestCase):
             # dejaba un «RFQ-1» de neogen.com en la base a la que apuntara
             # el .env de quien la corría.
             mock.patch.object(flow, "persistir", return_value=None),
+            # Lo que mira el hilo para saber si la respuesta es del mismo
+            # resorte, y dónde apunta el resorte leído: todo va a la base.
+            mock.patch("app.rfq.repository.datos_anteriores", return_value={}),
+            mock.patch("app.persistence.blueprint_store.listar_de_base", return_value=[]),
+            mock.patch("app.persistence.spring_repository.guardar"),
+            mock.patch("app.rfq.thread_validator.reasociar_en_historial"),
         ]
         for parche in parches:
             parche.start()
@@ -648,6 +654,120 @@ class TestLaRespuestaHeredaElHilo(unittest.TestCase):
         with mock.patch("app.rfq.repository.datos_anteriores", return_value={}):
             self.assertEqual(flow.heredar_del_hilo(datos, "COT-99"), [])
         self.assertEqual(datos, {"material": "SAE 1070"})
+
+
+class TestElMismoCompradorPideVariosResortes(unittest.TestCase):
+    """Un comprador pide varios números de parte en correos seguidos.
+
+    El hilo (mismo remitente, mismo asunto, o contestando al anterior) los
+    tomaba todos por respuestas del primero, y el segundo resorte quedaba
+    como una versión del primero con su plano y su número de parte
+    heredados. Ahora, si el correo pide OTRO resorte, abre su propio RFQ.
+    """
+
+    PREVIOS = {"part_number": "1060-022", "tiene_adjunto": True,
+               "customer": "neogen.com", "material": "Music wire"}
+
+    def setUp(self):
+        parches = [
+            mock.patch("app.rfq.thread_validator.registrar_en_historial"),
+            mock.patch.object(flow, "_envio_habilitado", return_value=False),
+            mock.patch.object(flow, "_avisar", return_value=True),
+            mock.patch.object(flow, "registrar_veredicto"),
+            mock.patch("app.clients.mapper.mapear_cliente", return_value=None),
+            mock.patch("app.rfq.repository.datos_anteriores", return_value=self.PREVIOS),
+            mock.patch("app.persistence.blueprint_store.listar_de_base",
+                       return_value=[{"nombre": "plano-022.pdf", "tipo": "pdf", "bytes": 9}]),
+        ]
+        self.guardar = mock.patch("app.persistence.spring_repository.guardar").start()
+        self.reasociar = mock.patch("app.rfq.thread_validator.reasociar_en_historial").start()
+        self.addCleanup(mock.patch.stopall)
+        for parche in parches:
+            parche.start()
+
+    # --- la regla, sola ---
+
+    def test_otro_numero_de_parte_es_otro_resorte(self):
+        motivo = flow.pide_otro_resorte({"part_number": "1060-023"}, correo_base(), "RFQ-1")
+        self.assertIn("1060-023", motivo)
+
+    def test_el_mismo_numero_de_parte_es_el_mismo_aunque_traiga_otro_archivo(self):
+        correo = correo_base(adjuntos=[{"nombre": "plano-022-rev-B.pdf", "contenido": b"%PDF"}])
+        self.assertEqual(flow.pide_otro_resorte({"part_number": "1060 022"}, correo, "RFQ-1"), "")
+
+    def test_sin_numero_de_parte_decide_el_plano(self):
+        # El RFQ ya tenía plano y llega otro con otro nombre: otro resorte.
+        correo = correo_base(adjuntos=[{"nombre": "plano-023.pdf", "contenido": b"%PDF"}])
+        self.assertIn("otro plano", flow.pide_otro_resorte({}, correo, "RFQ-1"))
+        # El mismo archivo, o ninguno: respuesta.
+        correo = correo_base(adjuntos=[{"nombre": "plano-022.pdf", "contenido": b"%PDF"}])
+        self.assertEqual(flow.pide_otro_resorte({}, correo, "RFQ-1"), "")
+        self.assertEqual(flow.pide_otro_resorte({}, correo_base(adjuntos=[]), "RFQ-1"), "")
+
+    def test_si_el_rfq_no_tenia_plano_el_que_llega_es_el_que_faltaba(self):
+        with mock.patch("app.persistence.blueprint_store.listar_de_base", return_value=[]):
+            self.assertEqual(flow.pide_otro_resorte({}, correo_base(), "RFQ-1"), "")
+
+    def test_el_numero_de_parte_del_plano_tambien_cuenta(self):
+        motivo = flow.pide_otro_resorte({}, correo_base(adjuntos=[]), "RFQ-1",
+                                        resorte={"num_parte": "1060-023"})
+        self.assertIn("1060-023", motivo)
+
+    # --- en el flujo ---
+
+    def test_la_respuesta_con_otro_pn_abre_su_propio_rfq(self):
+        resorte = dict(RESORTE_FACTIBLE, num_parte="1060-023")
+        with mock.patch.object(flow, "extraer_datos_correo",
+                               return_value={"campos": {"part_number": "1060-023",
+                                                        "volumen": 5000}}), \
+             mock.patch.object(flow, "procesar_dibujos", return_value=[resorte]) as vision, \
+             mock.patch.object(flow, "persistir", return_value={}) as persistir:
+            resultado = flow.avanzar_a_parsing(
+                correo_base(asunto="RE: RFQ 4500"), flow.RESPUESTA_RFQ, "RFQ-1")
+
+        self.assertEqual(resultado["clasificacion"], flow.RFQ_NUEVO)
+        self.assertNotEqual(resultado["rfq_id"], "RFQ-1")
+        self.assertTrue(resultado["rfq_id"].startswith("INT-"))
+        self.assertEqual(resultado["hilo_anterior"], "RFQ-1")
+        # Se da de alta como RFQ nuevo, no como versión del viejo, y el
+        # correo pasa al historial del nuevo.
+        self.assertFalse(persistir.call_args.kwargs["es_seguimiento"])
+        self.assertEqual(persistir.call_args[0][2], resultado["rfq_id"])
+        self.reasociar.assert_called_once_with(resultado["rfq_id"], "<abc@cliente.com>")
+        # Y el plano se lee (y se apunta) ya con el RFQ nuevo, no con el viejo.
+        self.assertEqual(vision.call_args[0][1], resultado["rfq_id"])
+        self.assertTrue(vision.call_args.kwargs.get("guardar", True))
+
+    def test_si_el_pn_solo_esta_en_el_plano_se_decide_tras_leerlo(self):
+        """El correo no dice el número de parte; el plano sí, y es otro."""
+        resorte = dict(RESORTE_FACTIBLE, num_parte="1060-023")
+        with mock.patch.object(flow, "extraer_datos_correo",
+                               return_value={"campos": {"volumen": 5000}}), \
+             mock.patch("app.persistence.blueprint_store.listar_de_base", return_value=[]), \
+             mock.patch.object(flow, "procesar_dibujos", return_value=[resorte]), \
+             mock.patch.object(flow, "persistir", return_value={}) as persistir:
+            resultado = flow.avanzar_a_parsing(correo_base(), flow.RESPUESTA_RFQ, "RFQ-1")
+
+        self.assertEqual(resultado["clasificacion"], flow.RFQ_NUEVO)
+        datos = persistir.call_args[0][0]
+        # Lo heredado del hilo se soltó: el número de parte es el del plano nuevo.
+        self.assertEqual(datos["part_number"], "1060-023")
+        self.assertEqual(datos["hilo_anterior"], "RFQ-1")
+        self.assertEqual(self.guardar.call_args[0][0], resultado["rfq_id"])
+
+    def test_la_respuesta_de_verdad_sigue_siendo_seguimiento(self):
+        resorte = dict(RESORTE_FACTIBLE, num_parte="1060-022")
+        with mock.patch.object(flow, "extraer_datos_correo",
+                               return_value={"campos": {"volumen": 5000}}), \
+             mock.patch.object(flow, "procesar_dibujos", return_value=[resorte]), \
+             mock.patch.object(flow, "persistir", return_value={}) as persistir:
+            resultado = flow.avanzar_a_parsing(
+                correo_base(adjuntos=[]), flow.RESPUESTA_RFQ, "RFQ-1")
+
+        self.assertEqual(resultado["rfq_id"], "RFQ-1")
+        self.assertTrue(persistir.call_args.kwargs["es_seguimiento"])
+        self.reasociar.assert_not_called()
+        self.assertEqual(self.guardar.call_args[0][0], "RFQ-1")
 
 
 class TestTodoCorreoDeLaCarpetaEsUnaPeticion(unittest.TestCase):

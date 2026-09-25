@@ -45,6 +45,20 @@ def registrar_en_historial(rfq_id, message_id, asunto=""):
             cursor.execute(sql, (rfq_id, message_id, asunto))
 
 
+def reasociar_en_historial(rfq_id, message_id):
+    """Mueve un correo del historial de un RFQ al de otro.
+
+    Pasa cuando un correo que parecía del hilo (mismo remitente, mismo
+    asunto) resulta pedir OTRO resorte: se abre un RFQ nuevo y el correo tiene
+    que colgar de ese, no del viejo, para que la siguiente respuesta del
+    comprador encuentre el hilo correcto.
+    """
+    sql = "UPDATE rfq_historial SET rfq_id = %s WHERE message_id = %s;"
+    with duplicates.conexion_bd() as conexion:
+        with conexion.cursor() as cursor:
+            cursor.execute(sql, (rfq_id, message_id))
+
+
 def validar_respuesta(correo):
     """
     Determina si el correo es RESPUESTA de un RFQ existente.

@@ -296,6 +296,55 @@ def heredar_del_hilo(datos: dict, rfq_id: str) -> list:
     return heredados
 
 
+def _pn_normal(valor) -> str:
+    """Un número de parte comparable: sin espacios ni guiones, en mayúsculas."""
+    texto = str(valor or "").strip().upper()
+    return "".join(c for c in texto if c.isalnum())
+
+
+def nuevo_rfq_id() -> str:
+    return f"INT-{uuid.uuid4().hex[:8].upper()}"
+
+
+def pide_otro_resorte(datos, correo, rfq_id, previos=None, resorte=None) -> str:
+    """Por qué este correo, aunque conteste a un hilo, pide OTRO resorte.
+
+    Devuelve el motivo, o "" si es del mismo resorte (una respuesta de
+    verdad). Un mismo comprador pide varios números de parte en correos
+    seguidos —el mismo asunto, a veces contestando al anterior—, y el hilo
+    los tomaba todos por respuestas del primero: el segundo resorte acababa
+    como una versión del primero, heredando su plano y su número de parte.
+
+    Se decide por lo que se sabe:
+    * Si los dos correos dicen número de parte y no coinciden, es otro
+      resorte. Si coinciden, es el mismo aunque traiga otro archivo (una
+      revisión del plano).
+    * Si el número de parte no se sabe por el correo, vale el que el modelo
+      leyó en el plano (``resorte``), comparado con el que tenía el RFQ.
+    * Si el RFQ ya tenía plano y este correo trae uno con OTRO nombre —y no
+      hay número de parte con qué comparar—, es otro resorte. Sin plano
+      previo, el que llega es el que faltaba: respuesta.
+    """
+    import app.persistence.blueprint_store as almacen
+    import app.rfq.repository as repository
+
+    previos = previos if previos is not None else (repository.datos_anteriores(rfq_id) or {})
+    pn_previo = _pn_normal(previos.get("part_number"))
+    pn_nuevo = _pn_normal(datos.get("part_number")) or _pn_normal((resorte or {}).get("num_parte"))
+    if pn_previo and pn_nuevo:
+        if pn_nuevo != pn_previo:
+            return (f"número de parte {datos.get('part_number') or resorte.get('num_parte')} "
+                    f"≠ {previos.get('part_number')}")
+        return ""
+
+    nuevos = [str(a.get("nombre") or "") for a in almacen.solo_planos(correo.get("adjuntos"))]
+    if nuevos:
+        de_antes = {p["nombre"].strip().lower() for p in almacen.listar_de_base(rfq_id)}
+        if de_antes and not any(n.strip().lower() in de_antes for n in nuevos):
+            return f"trae otro plano ({', '.join(nuevos)})"
+    return ""
+
+
 def volumen_de_escalones(campos):
     """El EAU cuando el comprador mandó una escalera y ningún volumen suelto.
 
@@ -338,7 +387,7 @@ def validar(datos, campos_requeridos=None):
 # Etapa 4: dibujos
 # --------------------------------------------------------------------------- #
 
-def procesar_dibujos(correo, rfq_id, informe=None):
+def procesar_dibujos(correo, rfq_id, informe=None, guardar=True):
     """
     Si el correo trae dibujos adjuntos soportados (.pdf/.png/.jpg; .stp/.step
     se omiten por ahora), los envia al modelo de vision, interpreta el JSON y
@@ -353,6 +402,10 @@ def procesar_dibujos(correo, rfq_id, informe=None):
     Espera correo["adjuntos"] = [{"nombre": str, "contenido": bytes}, ...],
     que es lo que ya entregan dev_provider (walk del MIME) y token_provider
     (/attachments de Graph).
+
+    Con ``guardar=False`` el resorte leído no se apunta en la base: lo hace
+    quien llama, cuando ya sabe a qué RFQ pertenece (una respuesta que
+    resulta pedir otro resorte se apunta en un RFQ nuevo, no en el del hilo).
 
     Los imports son perezosos para no exigir anthropic al importar
     este modulo, y para que un fallo de vision no rompa el ciclo de correos.
@@ -394,8 +447,11 @@ def procesar_dibujos(correo, rfq_id, informe=None):
         # el de app/vision queda de respaldo si el núcleo no está o falla.
         import app.vision.lector_nucleo as lector_nucleo
         datos = lector_nucleo.leer_planos(soportados)
-        spring_repository.guardar(
-            rfq_id, correo.get("message_id", ""), nombres, datos)
+        if guardar:
+            spring_repository.guardar(
+                rfq_id, correo.get("message_id", ""), nombres, datos)
+        else:
+            anotar({"ficheros_leidos": nombres})
         resultados.append(datos)
         anotar({"estado": "leido", "ficheros": [a.get("nombre", "?") for a in soportados]})
         log.info("RFQ=%s: resorte extraido (listo_para_cotizar=%s).",
@@ -728,6 +784,40 @@ def responder_datos_faltantes(datos, faltantes, rfq_id):
 # Orquestación
 # --------------------------------------------------------------------------- #
 
+def _abrir_otro_rfq(resultado, datos, correo, rfq_id, motivo):
+    """El correo del hilo pide otro resorte: se le abre su propio RFQ.
+
+    Devuelve ``(RFQ_NUEVO, nuevo_id, rfq_id_anterior)``. El correo se
+    reasocia en el historial al RFQ nuevo, para que la siguiente respuesta
+    del comprador encuentre este hilo y no el viejo.
+    """
+    nuevo = nuevo_rfq_id()
+    log.info("RFQ=%s: el correo del hilo pide OTRO resorte (%s); se abre %s.",
+             rfq_id, motivo, nuevo)
+    try:
+        thread_validator.reasociar_en_historial(nuevo, correo.get("message_id", ""))
+    except Exception as error:
+        log.warning("RFQ=%s: no se pudo reasociar el correo al RFQ %s: %s",
+                    rfq_id, nuevo, error)
+    datos["rfq_id"] = nuevo
+    datos["hilo_anterior"] = rfq_id
+    datos["motivo_rfq_aparte"] = motivo
+    resultado["rfq_id"] = nuevo
+    resultado["clasificacion"] = RFQ_NUEVO
+    resultado["hilo_anterior"] = rfq_id
+    return RFQ_NUEVO, nuevo, rfq_id
+
+
+def _guardar_resorte(rfq_id, correo, lectura_plano, resorte):
+    """Apunta el resorte leído en el RFQ al que de verdad pertenece."""
+    try:
+        import app.persistence.spring_repository as spring_repository
+        nombres = (lectura_plano or {}).get("ficheros_leidos") or ""
+        spring_repository.guardar(rfq_id, correo.get("message_id", ""), nombres, resorte)
+    except Exception as error:
+        log.error("RFQ=%s: no se pudo guardar el resorte leído: %s", rfq_id, error)
+
+
 def avanzar_a_parsing(correo, clasificacion, rfq_id):
     """
     Recorre la cadena completa del RFQ y devuelve el resultado del proceso:
@@ -794,13 +884,22 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
                  "se toma el mayor (%s) como EAU.", rfq_id, escalera)
 
     # Si esto es una respuesta, el RFQ ya sabe cosas: el plano que vino el
-    # primer día, las cantidades, el número de parte. Se heredan antes de
-    # juzgar si falta algo.
+    # primer día, el número de parte, el material. Se heredan antes de juzgar
+    # si falta algo. Pero antes se mira que de verdad sea el MISMO resorte:
+    # un comprador pide varios números de parte en correos seguidos, con el
+    # mismo asunto, y cada uno es un RFQ aparte.
+    heredados: list = []
+    hilo_anterior = None
     if clasificacion == RESPUESTA_RFQ:
-        heredados = heredar_del_hilo(datos, rfq_id)
-        if heredados:
-            log.info("RFQ=%s: la respuesta hereda del hilo: %s.",
-                     rfq_id, ", ".join(heredados))
+        motivo = pide_otro_resorte(datos, correo, rfq_id)
+        if motivo:
+            clasificacion, rfq_id, hilo_anterior = _abrir_otro_rfq(
+                resultado, datos, correo, rfq_id, motivo)
+        else:
+            heredados = heredar_del_hilo(datos, rfq_id)
+            if heredados:
+                log.info("RFQ=%s: la respuesta hereda del hilo: %s.",
+                         rfq_id, ", ".join(heredados))
 
     # 3. Gate temprano: no gastar la llamada de visión si ni siquiera sabemos
     #    quién escribe, no vino un plano, o (con COT-61 listo) falta el volumen.
@@ -827,7 +926,20 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
 
     # 4. Dibujos + fusión de ambas fuentes
     lectura_plano = {}
-    resortes = procesar_dibujos(correo, rfq_id, lectura_plano)
+    es_respuesta = clasificacion == RESPUESTA_RFQ
+    resortes = procesar_dibujos(correo, rfq_id, lectura_plano, guardar=not es_respuesta)
+    if es_respuesta and resortes:
+        # Con el plano leído ya se sabe el número de parte aunque el correo
+        # no lo dijera: si es otro, este correo abre su propio RFQ y lo que
+        # se había heredado del hilo se suelta.
+        propios = {k: v for k, v in datos.items() if k not in heredados}
+        motivo = pide_otro_resorte(propios, correo, rfq_id, resorte=resortes[0] or {})
+        if motivo:
+            for clave in heredados:
+                datos[clave] = None
+            clasificacion, rfq_id, hilo_anterior = _abrir_otro_rfq(
+                resultado, datos, correo, rfq_id, motivo)
+        _guardar_resorte(rfq_id, correo, lectura_plano, resortes[0])
     datos = fusionar(datos, resortes)
     # Por qué el resorte salió (o no) del plano. Se guarda con el RFQ para que
     # la ficha lo pueda decir en vez de enseñar seis rayas.

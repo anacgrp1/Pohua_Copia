@@ -459,6 +459,18 @@ hilo hereda del RFQ anterior el plano, el número de parte y el material, pero
 **no** los volúmenes: sin cantidades en ese correo el RFQ va a *Waiting on
 customer* y se piden, en vez de costearse con las del correo de la vez pasada.
 
+**Un comprador pide varios resortes en correos seguidos.** Cada correo trae
+un resorte con sus volúmenes; el mismo comprador manda varios, uno por
+número de parte, a veces con el mismo asunto o contestando al anterior. El
+hilo (remitente + asunto, o cabeceras de respuesta) los tomaba por
+respuestas del primero. Ahora, antes de heredar nada del hilo, se mira si el
+correo pide **otro** resorte: número de parte distinto (del correo o, tras
+leerlo, del plano), o un plano con otro nombre cuando el RFQ ya tenía plano.
+Si es otro, se abre un RFQ nuevo (`INT-…`), el correo se reasocia a ese en
+el historial y el resorte leído se apunta ahí; el RFQ anterior no se toca.
+El mismo número de parte con otro archivo (una revisión) sigue siendo una
+respuesta del mismo RFQ.
+
 **Cuarentena de adjuntos.** Antes de abrir nada con el modelo, dar de alta o
 contestar, `app/email/cuarentena.py` revisa los adjuntos: extensiones que no
 son de un plano (ejecutables, scripts, instaladores, comprimidos, HTML,
