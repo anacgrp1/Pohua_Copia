@@ -63,7 +63,8 @@ if str(RAIZ) not in sys.path:
 os.chdir(RAIZ)
 
 from PySide6.QtCore import (                                             # noqa: E402
-    QFile, QIODevice, QLockFile, QObject, QThread, QTimer, QUrl, Signal, Slot,
+    QFile, QIODevice, QLockFile, QObject, QSettings, Qt, QThread, QTimer, QUrl, Signal,
+    Slot,
 )
 from PySide6.QtGui import QDesktopServices, QFont, QIcon                  # noqa: E402
 from PySide6.QtWidgets import (                                           # noqa: E402
@@ -105,30 +106,64 @@ configure_logging()
 # --------------------------------------------------------------------------- #
 # Los colores de la casa (los mismos del brand book que usa la PWA)
 # --------------------------------------------------------------------------- #
+#
+# El panel del lector tiene los mismos dos modos que Pohua —tema claro y
+# oscuro— y los mismos tres idiomas (EN / ES / FR), con los mismos botones en
+# la esquina. Los valores de cada tema son los de frontend/css/style.css
+# (--bg-*, --text-*), para que las dos pestañas se vean de la misma familia.
+# La elección se guarda (QSettings) y se sincroniza con la pestaña Pohua en
+# los dos sentidos: cambiar aquí cambia la web, y al revés.
 
-FONDO = "#0f172a"
-PANEL = "#1e293b"
-LINEA = "rgba(255,255,255,0.08)"
-TINTA = "#f8fafc"
-APAGADO = "#94a3b8"
 AZUL = "#148ec2"
 VERDE = "#a4ae2d"
 NARANJA = "#d67c2f"
 ROSA = "#b31671"
 NAVY = "#1e3a8a"
 
-COLOR_NIVEL = {"info": APAGADO, "ok": VERDE, "aviso": NARANJA, "error": ROSA}
+PALETAS = {
+    "dark": {
+        "fondo": "#0f172a", "panel": "#1e293b", "linea": "rgba(255,255,255,0.10)",
+        "tinta": "#f8fafc", "apagado": "#94a3b8", "registro": "#0b1220",
+        "hora": "#64748b", "boton": "#1e293b", "apagado_boton": "#64748b",
+        "info": "#94a3b8",
+    },
+    "light": {
+        "fondo": "#c3cddf", "panel": "#d9e1ef", "linea": "rgba(15,23,42,0.14)",
+        "tinta": "#0f172a", "apagado": "#414c63", "registro": "#e3e9f5",
+        "hora": "#6b7588", "boton": "#e3e9f5", "apagado_boton": "#8a94a8",
+        "info": "#414c63",
+    },
+}
 
-ESTILO = f"""
-QWidget {{ background: {FONDO}; color: {TINTA};
+# Compatibilidad con lo que ya usaba estos nombres.
+FONDO = PALETAS["dark"]["fondo"]
+PANEL = PALETAS["dark"]["panel"]
+LINEA = PALETAS["dark"]["linea"]
+TINTA = PALETAS["dark"]["tinta"]
+APAGADO = PALETAS["dark"]["apagado"]
+
+
+def colores_del_nivel(tema: str) -> dict:
+    """El color de cada nivel del registro; el «info» cambia con el tema."""
+    return {"info": PALETAS.get(tema, PALETAS["dark"])["info"],
+            "ok": VERDE, "aviso": NARANJA, "error": ROSA}
+
+
+COLOR_NIVEL = colores_del_nivel("dark")
+
+
+def estilo(tema: str) -> str:
+    p = PALETAS.get(tema, PALETAS["dark"])
+    return f"""
+QWidget {{ background: {p['fondo']}; color: {p['tinta']};
            font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; }}
-QFrame#tarjeta {{ background: {PANEL}; border: 1px solid {LINEA};
+QFrame#tarjeta {{ background: {p['panel']}; border: 1px solid {p['linea']};
                   border-radius: 10px; }}
 QLabel#titulo {{ font-size: 19px; font-weight: 700; }}
-QLabel#sub    {{ color: {APAGADO}; font-size: 12px; }}
+QLabel#sub    {{ color: {p['apagado']}; font-size: 12px; }}
 QLabel#cifra  {{ font-size: 21px; font-weight: 700; }}
-QLabel#pie    {{ color: {APAGADO}; font-size: 11px; }}
-QPushButton {{ background: {PANEL}; border: 1px solid {LINEA}; border-radius: 8px;
+QLabel#pie    {{ color: {p['apagado']}; font-size: 11px; }}
+QPushButton {{ background: {p['boton']}; border: 1px solid {p['linea']}; border-radius: 8px;
                padding: 9px 16px; font-weight: 600; }}
 QPushButton:hover:!disabled {{ border-color: {AZUL}; }}
 QPushButton#principal {{ background: {AZUL}; border-color: {AZUL}; color: white; }}
@@ -137,19 +172,81 @@ QPushButton#parar {{ background: {ROSA}; border-color: {ROSA}; color: white; }}
 /* Un botón apagado tiene que PARECER apagado: con el color de marca puesto,
    "Detener" se veía igual de encendido con el lector parado que corriendo. */
 QPushButton:disabled, QPushButton#principal:disabled, QPushButton#parar:disabled {{
-    background: transparent; border-color: {LINEA}; color: #64748b; }}
+    background: transparent; border-color: {p['linea']}; color: {p['apagado_boton']}; }}
+/* Los botones de la esquina, redondos como los de la web. */
+QPushButton#esquina {{ background: {p['panel']}; border: 1px solid {p['linea']};
+                       border-radius: 15px; padding: 4px 12px; min-height: 20px;
+                       color: {p['apagado']}; font-weight: 700; font-size: 12px; }}
+QPushButton#esquina:hover {{ color: {p['tinta']}; border-color: {p['apagado']}; }}
 /* Las etiquetas heredaban el fondo del tema de Fusion y dibujaban una barra
    clara debajo de cada cifra. */
 QFrame#tarjeta QLabel {{ background: transparent; }}
-QTextEdit {{ background: #0b1220; border: 1px solid {LINEA}; border-radius: 10px;
+QTextEdit {{ background: {p['registro']}; border: 1px solid {p['linea']}; border-radius: 10px;
              font-family: Consolas, 'Courier New', monospace; font-size: 12px; }}
 QTabWidget::pane {{ border: none; }}
-QTabBar::tab {{ background: transparent; color: {APAGADO}; padding: 10px 18px;
+QTabBar::tab {{ background: transparent; color: {p['apagado']}; padding: 10px 18px;
                 border-bottom: 2px solid transparent; font-weight: 600; }}
-QTabBar::tab:selected {{ color: {TINTA}; border-bottom-color: {ROSA}; }}
-QTabBar::tab:hover:!selected {{ color: {TINTA}; }}
-QLabel#estadoLector {{ color: {APAGADO}; font-size: 12px; padding: 0 6px; }}
+QTabBar::tab:selected {{ color: {p['tinta']}; border-bottom-color: {ROSA}; }}
+QTabBar::tab:hover:!selected {{ color: {p['tinta']}; }}
+QLabel#estadoLector {{ color: {p['apagado']}; font-size: 12px; padding: 0 6px; }}
 """
+
+
+ESTILO = estilo("dark")
+
+# Los idiomas de Pohua, en el mismo orden que su selector (frontend/js/i18n.js).
+IDIOMAS = ("en", "es", "fr")
+
+# Lo que el panel enseña, en los tres idiomas. Las líneas del registro NO se
+# traducen: son las mismas que escribe el servidor y las lee el Monitor.
+TEXTOS = {
+    "pestana.lector": {"en": "Local reader", "es": "Lector local", "fr": "Lecteur local"},
+    "titulo": {"en": "Pohua · Local reader", "es": "Pohua · Lector local",
+               "fr": "Pohua · Lecteur local"},
+    "donde": {"en": "{buzon} · folder {carpeta} · {como}",
+              "es": "{buzon} · carpeta {carpeta} · {como}",
+              "fr": "{buzon} · dossier {carpeta} · {como}"},
+    "como.outlook": {"en": "via desktop Outlook", "es": "por el Outlook de escritorio",
+                     "fr": "par Outlook de bureau"},
+    "como.graph": {"en": "via Microsoft Graph", "es": "por Microsoft Graph",
+                   "fr": "par Microsoft Graph"},
+    "como.imap": {"en": "via IMAP", "es": "por IMAP", "fr": "par IMAP"},
+    "buzon.defecto": {"en": "(default mailbox)", "es": "(buzón por defecto)",
+                      "fr": "(boîte par défaut)"},
+    "estado.leyendo": {"en": "Reading the mailbox", "es": "Leyendo el buzón",
+                       "fr": "Lecture de la boîte"},
+    "estado.espera": {"en": "Waiting (outside hours)", "es": "En espera (fuera de horario)",
+                      "fr": "En attente (hors horaires)"},
+    "estado.parado": {"en": "Stopped", "es": "Detenido", "fr": "Arrêté"},
+    "esquina": {"en": "Reader: {estado}", "es": "Lector: {estado}", "fr": "Lecteur : {estado}"},
+    "btn.arrancar": {"en": "Start reader", "es": "Iniciar lector", "fr": "Démarrer le lecteur"},
+    "btn.ahora": {"en": "Read now", "es": "Leer ahora", "fr": "Lire maintenant"},
+    "btn.parar": {"en": "Stop", "es": "Detener", "fr": "Arrêter"},
+    "cifra.correos": {"en": "Emails read", "es": "Correos leídos", "fr": "Courriels lus"},
+    "cifra.rfqs": {"en": "RFQs created", "es": "RFQ dados de alta", "fr": "RFQ créés"},
+    "cifra.errores": {"en": "With errors", "es": "Con error", "fr": "En erreur"},
+    "pie.inicial": {"en": "The heartbeat tells the server the mailbox is read from here.",
+                    "es": "El latido avisa al servidor de que aquí se está leyendo.",
+                    "fr": "Le battement prévient le serveur que la lecture se fait ici."},
+    "sinweb": {"en": "This computer lacks Qt's web engine (PySide6-Addons): Pohua opens "
+                     "in the browser and the reader stays here.",
+               "es": "En esta computadora falta el motor web de Qt (PySide6-Addons): "
+                     "Pohua se abre en el navegador y aquí queda el lector.",
+               "fr": "Cet ordinateur n'a pas le moteur web de Qt (PySide6-Addons) : Pohua "
+                     "s'ouvre dans le navigateur et le lecteur reste ici."},
+    "btn.abrir": {"en": "Open Pohua in the browser", "es": "Abrir Pohua en el navegador",
+                  "fr": "Ouvrir Pohua dans le navigateur"},
+    "idioma.titulo": {"en": "Language", "es": "Idioma", "fr": "Langue"},
+    "tema.titulo": {"en": "Light / dark theme", "es": "Tema claro / oscuro",
+                    "fr": "Thème clair / sombre"},
+}
+
+
+def texto(clave: str, idioma: str, **datos: Any) -> str:
+    """Un texto del panel en el idioma pedido (en inglés si falta)."""
+    opciones = TEXTOS.get(clave, {})
+    plantilla = opciones.get(idioma) or opciones.get("en") or clave
+    return plantilla.format(**datos) if datos else plantilla
 
 
 def direccion_web() -> str:
@@ -363,6 +460,21 @@ class PuenteLector(QObject):
         import json
         return json.dumps(list(self._ventana.historial), ensure_ascii=False)
 
+    # Los modos de Pohua (idioma y tema), de la web hacia el panel del lector:
+    # quien cambia el idioma en la web cambia también el del lector.
+    @Slot(str)
+    def fijar_idioma(self, codigo):
+        self._ventana.cambiar_idioma(str(codigo), desde_web=True)
+
+    @Slot(str)
+    def fijar_tema(self, tema):
+        self._ventana.cambiar_tema(str(tema), desde_web=True)
+
+    @Slot(str, str)
+    def sincronizar(self, codigo, tema):
+        """Al cargar la web: si el lector no tiene modo elegido, toma el suyo."""
+        self._ventana.adoptar_modos_de_la_web(str(codigo), str(tema))
+
 
 def _qwebchannel_js() -> str:
     """El cliente JavaScript de QWebChannel, sacado de los recursos de Qt.
@@ -390,6 +502,29 @@ _ARRANQUE_JS = """
         window.pohuaLector = canal.objects.lector;
         window.POHUA_ESCRITORIO = true;
         document.dispatchEvent(new CustomEvent('pohua:lector-listo'));
+
+        // Los modos de Pohua, de la web al lector: el idioma (I18N) y el tema
+        // (data-tema en <html>). I18N y Tema se definen al final del <body>,
+        // así que se espera al DOM. Al cargar se le ofrece al lector el modo
+        // de la web, por si todavía no tiene uno propio.
+        function enganchar() {
+            var raiz = document.documentElement;
+            var lector = window.pohuaLector;
+            if (window.I18N && I18N.alCambiar) {
+                I18N.alCambiar(function (codigo) { lector.fijar_idioma(codigo); });
+            }
+            if (window.MutationObserver) {
+                new MutationObserver(function () {
+                    lector.fijar_tema(raiz.dataset.tema || 'dark');
+                }).observe(raiz, { attributes: true, attributeFilter: ['data-tema'] });
+            }
+            lector.sincronizar(raiz.getAttribute('lang') || 'en', raiz.dataset.tema || 'dark');
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', enganchar);
+        } else {
+            enganchar();
+        }
     });
 })();
 """
@@ -405,7 +540,17 @@ class Ventana(QMainWindow):
         super().__init__()
         self.setWindowTitle("Pohua")
         self.resize(1280, 800)
-        self.setStyleSheet(ESTILO)
+        # Los modos de Pohua: idioma y tema, guardados entre sesiones. Vacíos
+        # hasta que alguien elige; mientras, se toma lo que tenga la web.
+        self.ajustes = QSettings("CGR", "Pohua")
+        self.idioma = str(self.ajustes.value("idioma", "") or "")
+        self.tema = str(self.ajustes.value("tema", "") or "")
+        if self.idioma not in IDIOMAS:
+            self.idioma = ""
+        if self.tema not in ("dark", "light"):
+            self.tema = ""
+        self._traducibles: dict[str, Any] = {}
+        self.setStyleSheet(estilo(self.tema or "dark"))
         if ICONO.is_file():
             self.setWindowIcon(QIcon(str(ICONO)))
 
@@ -462,7 +607,7 @@ class Ventana(QMainWindow):
         titulo.setObjectName("sub")
         fila.addWidget(valor)
         fila.addWidget(titulo)
-        return caja, valor
+        return caja, valor, titulo
 
     def _montar(self):
         """Dos pestañas: Pohua (la web, dentro) y el Lector local.
@@ -475,12 +620,135 @@ class Ventana(QMainWindow):
         self.pestanas.setDocumentMode(True)
         if HAY_WEB:
             self.pestanas.addTab(self._pagina_web(), "Pohua")
-        self.pestanas.addTab(self._pagina_lector(), "Lector local")
-        # El estado del lector, siempre a la vista, esté en la pestaña que esté.
-        self.estado_pestanas = QLabel("Lector: detenido")
+        self.pestanas.addTab(self._pagina_lector(), self._t("pestana.lector"))
+        self._traducibles["pestana.lector"] = self.pestanas
+        # En la esquina: el estado del lector, siempre a la vista, esté en la
+        # pestaña que esté, y los dos modos de Pohua —idioma y tema— con los
+        # mismos botones que la web lleva en su esquina.
+        esquina = QWidget()
+        fila = QHBoxLayout(esquina)
+        fila.setContentsMargins(0, 0, 8, 0)
+        fila.setSpacing(8)
+        self.estado_pestanas = QLabel(self._t("esquina", estado=self._t("estado.parado").lower()))
         self.estado_pestanas.setObjectName("estadoLector")
-        self.pestanas.setCornerWidget(self.estado_pestanas)
+        self.btn_idioma = QPushButton()
+        self.btn_idioma.setObjectName("esquina")
+        self.btn_idioma.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_idioma.clicked.connect(self._siguiente_idioma)
+        self.btn_tema = QPushButton()
+        self.btn_tema.setObjectName("esquina")
+        self.btn_tema.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_tema.clicked.connect(self._alternar_tema)
+        for widget in (self.estado_pestanas, self.btn_idioma, self.btn_tema):
+            fila.addWidget(widget)
+        self.pestanas.setCornerWidget(esquina)
         self.setCentralWidget(self.pestanas)
+        self._pintar_modos()
+
+    # ----------------------------------------------------- idioma y tema
+
+    def _t(self, clave: str, **datos: Any) -> str:
+        return texto(clave, self.idioma or "es", **datos)
+
+    def _pintar_modos(self):
+        """Los botones de la esquina dicen el idioma y el tema en curso."""
+        idioma = (self.idioma or "es").upper()
+        self.btn_idioma.setText(f"🌐 {idioma}")
+        self.btn_idioma.setToolTip(self._t("idioma.titulo"))
+        oscuro = (self.tema or "dark") == "dark"
+        self.btn_tema.setText("☀" if oscuro else "☾")
+        self.btn_tema.setToolTip(self._t("tema.titulo"))
+
+    def _siguiente_idioma(self):
+        actual = self.idioma or "es"
+        siguiente = IDIOMAS[(IDIOMAS.index(actual) + 1) % len(IDIOMAS)]
+        self.cambiar_idioma(siguiente)
+
+    def _alternar_tema(self):
+        self.cambiar_tema("light" if (self.tema or "dark") == "dark" else "dark")
+
+    def cambiar_idioma(self, codigo: str, desde_web: bool = False):
+        """El idioma del panel; se guarda y, si vino de aquí, se le dice a la web."""
+        if codigo not in IDIOMAS or codigo == self.idioma:
+            return
+        self.idioma = codigo
+        self.ajustes.setValue("idioma", codigo)
+        self._retraducir()
+        if not desde_web:
+            self._decir_a_la_web(
+                f"(function(){{ if (window.I18N && I18N.fijar) I18N.fijar('{codigo}'); }})()")
+
+    def cambiar_tema(self, tema: str, desde_web: bool = False):
+        if tema not in ("dark", "light") or tema == self.tema:
+            return
+        self.tema = tema
+        self.ajustes.setValue("tema", tema)
+        self.setStyleSheet(estilo(tema))
+        self._pintar_modos()
+        self._repintar_registro()
+        if not desde_web:
+            self._decir_a_la_web(
+                f"(function(){{ if (window.Tema && Tema.actual && Tema.actual() !== '{tema}') "
+                f"Tema.alternar(); }})()")
+
+    def adoptar_modos_de_la_web(self, codigo: str, tema: str):
+        """Al cargar la web: lo que el lector no tenga elegido lo toma de ella."""
+        if not self.idioma and codigo in IDIOMAS:
+            self.cambiar_idioma(codigo, desde_web=True)
+        if not self.tema and tema in ("dark", "light"):
+            self.cambiar_tema(tema, desde_web=True)
+        if self.idioma and codigo != self.idioma:
+            self._decir_a_la_web(
+                f"(function(){{ if (window.I18N && I18N.fijar) I18N.fijar('{self.idioma}'); }})()")
+        if self.tema and tema != self.tema:
+            self._decir_a_la_web(
+                f"(function(){{ if (window.Tema && Tema.actual && Tema.actual() !== '{self.tema}') "
+                f"Tema.alternar(); }})()")
+
+    def _decir_a_la_web(self, guion: str):
+        if self.web is None:
+            return
+        pagina = self.web.page()
+        if pagina is not None:
+            pagina.runJavaScript(guion)
+
+    def _retraducir(self):
+        """Vuelve a poner cada texto fijo del panel en el idioma en curso."""
+        for clave, widget in self._traducibles.items():
+            if clave == "pestana.lector":
+                widget.setTabText(widget.count() - 1, self._t(clave))
+            elif clave == "donde":
+                widget.setText(self._texto_donde())
+            elif clave.startswith("btn.") or clave.startswith("cifra.") or clave in (
+                    "titulo", "sinweb"):
+                widget.setText(self._t(clave))
+            elif clave == "pie.inicial" and not getattr(self, "_pie_dinamico", False):
+                widget.setText(self._t(clave))
+        self.pintar_estado(self.estado_actual)
+        self._pintar_modos()
+
+    def _texto_donde(self) -> str:
+        buzon = ajuste("OUTLOOK_BUZON", "") or ajuste("IMAP_USER", "") or self._t("buzon.defecto")
+        carpeta = ajuste("MAIL_FOLDER", "INBOX")
+        modo = str(ajuste("MAIL_MODE", "imap")).lower()
+        como = self._t({"outlook": "como.outlook", "graph": "como.graph"}.get(modo, "como.imap"))
+        return self._t("donde", buzon=buzon, carpeta=carpeta, como=como)
+
+    def _repintar_registro(self):
+        """El registro se vuelve a pintar con los colores del tema nuevo."""
+        if self.registro is None:
+            return
+        import html as _html
+        colores = colores_del_nivel(self.tema or "dark")
+        hora_color = PALETAS.get(self.tema or "dark", PALETAS["dark"])["hora"]
+        self.registro.clear()
+        for linea in self.historial:
+            color = colores.get(linea["nivel"], colores["info"])
+            self.registro.append(
+                f'<span style="color:{hora_color}">{linea["hora"]}</span> '
+                f'<span style="color:{color}">{_html.escape(str(linea["texto"]))}</span>')
+        barra = self.registro.verticalScrollBar()
+        barra.setValue(barra.maximum())
 
     def _pagina_web(self):
         """Pohua entera, dentro de la ventana.
@@ -582,26 +850,24 @@ class Ventana(QMainWindow):
         capa.setSpacing(14)
 
         if not HAY_WEB:
-            aviso = QLabel("En esta computadora falta el motor web de Qt (PySide6-Addons): "
-                           "Pohua se abre en el navegador y aquí queda el lector.")
+            aviso = QLabel(self._t("sinweb"))
             aviso.setObjectName("sub")
             aviso.setWordWrap(True)
-            abrir = QPushButton("Abrir Pohua en el navegador")
+            abrir = QPushButton(self._t("btn.abrir"))
             abrir.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(direccion_web())))
             capa.addWidget(aviso)
             capa.addWidget(abrir)
+            self._traducibles["sinweb"] = aviso
+            self._traducibles["btn.abrir"] = abrir
 
         # --- cabecera: qué es esto y de dónde lee ---
         cabecera = QVBoxLayout()
-        titulo = QLabel("Pohua · Lector local")
+        titulo = QLabel(self._t("titulo"))
         titulo.setObjectName("titulo")
-        buzon = ajuste("OUTLOOK_BUZON", "") or ajuste("IMAP_USER", "(buzón por defecto)")
-        carpeta = ajuste("MAIL_FOLDER", "INBOX")
-        modo = str(ajuste("MAIL_MODE", "imap")).lower()
-        como = {"outlook": "por el Outlook de escritorio",
-                "graph": "por Microsoft Graph"}.get(modo, "por IMAP")
-        self.donde = QLabel(f"{buzon} · carpeta {carpeta} · {como}")
+        self._traducibles["titulo"] = titulo
+        self.donde = QLabel(self._texto_donde())
         self.donde.setObjectName("sub")
+        self._traducibles["donde"] = self.donde
         cabecera.addWidget(titulo)
         cabecera.addWidget(self.donde)
         capa.addLayout(cabecera)
@@ -615,44 +881,50 @@ class Ventana(QMainWindow):
 
         self.punto = QLabel("●")
         self.punto.setStyleSheet(f"color: {ROSA}; font-size: 16px;")
-        self.estado = QLabel("Detenido")
+        self.estado = QLabel(self._t("estado.parado"))
         self.estado.setFont(QFont("Segoe UI", 11, QFont.Weight.DemiBold))
         fila.addWidget(self.punto)
         fila.addWidget(self.estado)
         fila.addStretch(1)
 
-        self.btn_arrancar = QPushButton("Iniciar lector")
+        self.btn_arrancar = QPushButton(self._t("btn.arrancar"))
         self.btn_arrancar.setObjectName("principal")
         self.btn_arrancar.clicked.connect(self.arrancar)
-        self.btn_ahora = QPushButton("Leer ahora")
+        self.btn_ahora = QPushButton(self._t("btn.ahora"))
         self.btn_ahora.clicked.connect(self.leer_ahora)
         self.btn_ahora.setEnabled(False)
-        self.btn_parar = QPushButton("Detener")
+        self.btn_parar = QPushButton(self._t("btn.parar"))
         self.btn_parar.setObjectName("parar")
         self.btn_parar.clicked.connect(self.parar)
         self.btn_parar.setEnabled(False)
         for b in (self.btn_ahora, self.btn_arrancar, self.btn_parar):
             fila.addWidget(b)
         capa.addWidget(barra)
+        self._traducibles.update({"btn.arrancar": self.btn_arrancar,
+                                  "btn.ahora": self.btn_ahora,
+                                  "btn.parar": self.btn_parar})
 
         # --- las cifras del día ---
         cifras = QHBoxLayout()
         cifras.setSpacing(12)
-        caja_c, self.val_correos = self._cifra("Correos leídos", AZUL)
-        caja_r, self.val_rfqs = self._cifra("RFQ dados de alta", VERDE)
-        caja_e, self.val_errores = self._cifra("Con error", NARANJA)
+        caja_c, self.val_correos, et_c = self._cifra(self._t("cifra.correos"), AZUL)
+        caja_r, self.val_rfqs, et_r = self._cifra(self._t("cifra.rfqs"), VERDE)
+        caja_e, self.val_errores, et_e = self._cifra(self._t("cifra.errores"), NARANJA)
         for caja in (caja_c, caja_r, caja_e):
             cifras.addWidget(caja)
         capa.addLayout(cifras)
+        self._traducibles.update({"cifra.correos": et_c, "cifra.rfqs": et_r,
+                                  "cifra.errores": et_e})
 
         # --- el registro ---
         self.registro = QTextEdit()
         self.registro.setReadOnly(True)
         capa.addWidget(self.registro, 1)
 
-        self.pie = QLabel("El latido avisa al servidor de que aquí se está leyendo.")
+        self.pie = QLabel(self._t("pie.inicial"))
         self.pie.setObjectName("pie")
         capa.addWidget(self.pie)
+        self._traducibles["pie.inicial"] = self.pie
         return raiz
 
     # -------------------------------------------------------------- decir
@@ -668,11 +940,13 @@ class Ventana(QMainWindow):
         """
         import html as _html
 
-        color = COLOR_NIVEL.get(nivel, APAGADO)
+        colores = colores_del_nivel(self.tema or "dark")
+        color = colores.get(nivel, colores["info"])
+        hora_color = PALETAS.get(self.tema or "dark", PALETAS["dark"])["hora"]
         hora = time.strftime("%H:%M:%S")
         if self.registro is not None:
             self.registro.append(
-                f'<span style="color:#64748b">{hora}</span> '
+                f'<span style="color:{hora_color}">{hora}</span> '
                 f'<span style="color:{color}">{_html.escape(str(texto))}</span>')
             barra = self.registro.verticalScrollBar()
             barra.setValue(barra.maximum())
@@ -706,16 +980,17 @@ class Ventana(QMainWindow):
             self._enviar_pronto.start(2000)
 
     def pintar_estado(self, cual):
-        colores = {"leyendo": (VERDE, "Leyendo el buzón"),
-                   "espera": (NARANJA, "En espera (fuera de horario)"),
-                   "parado": (ROSA, "Detenido")}
-        color, texto = colores.get(cual, (ROSA, "Detenido"))
+        colores = {"leyendo": VERDE, "espera": NARANJA, "parado": ROSA}
+        if cual not in colores:
+            cual = "parado"
+        color = colores[cual]
+        etiqueta = self._t(f"estado.{cual}")
         if self.punto is not None and self.estado is not None:
             self.punto.setStyleSheet(f"color: {color}; font-size: 16px;")
-            self.estado.setText(texto)
-        self.estado_actual = cual if cual in colores else "parado"
+            self.estado.setText(etiqueta)
+        self.estado_actual = cual
         if getattr(self, "estado_pestanas", None) is not None:
-            self.estado_pestanas.setText(f"Lector: {texto.lower()}")
+            self.estado_pestanas.setText(self._t("esquina", estado=etiqueta.lower()))
             self.estado_pestanas.setStyleSheet(f"color: {color}; padding: 0 6px;")
         self._avisar_a_la_web()
 
@@ -867,6 +1142,7 @@ class Ventana(QMainWindow):
 
     def _pie(self, texto):
         """El renglón del latido, en el panel de respaldo y en el registro."""
+        self._pie_dinamico = True
         if self.pie is not None:
             self.pie.setText(texto)
         else:

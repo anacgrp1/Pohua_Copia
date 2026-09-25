@@ -414,6 +414,16 @@ del lector juntos y cuente los correos de los dos. La sesión web se guarda en
 el perfil de la ventana. La web necesita el motor de Qt (`PySide6-Addons`,
 que viene con el paquete `PySide6` completo); si falta, la ventana enseña el
 panel del lector de siempre y un botón para abrir Pohua en el navegador.
+La pestaña del lector tiene los mismos modos que Pohua —idioma EN/ES/FR y
+tema claro/oscuro, con los botones de la esquina— y van sincronizados con
+la web en los dos sentidos; la elección se guarda entre sesiones. Las
+líneas del registro no se traducen: son las mismas que lee el Monitor.
+
+**Volver a leer un correo ya apuntado.** Un correo que el sistema apuntó como
+procesado no se vuelve a leer aunque se marque como no leído en Outlook
+(«Duplicado omitido»). `python scripts/reintentar_correos.py --remitente
+quien@dominio.com --hoy --si` le quita la marca (sólo a los que no tienen
+RFQ); después se marca como no leído en Outlook y el lector lo toma.
 
 **Un solo lector de correo.** Si la app de escritorio está corriendo, manda un
 latido cada minuto y el worker del servidor se queda en espera, para que no
