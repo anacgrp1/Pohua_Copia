@@ -95,7 +95,7 @@ const Assistant = (() => {
                  </div>
                  <div class="assistant-columnas">
                     <div><h4>${esc(I18N.t('asis.porEstado'))}</h4><ul class="assistant-lista">
-                        ${lista(d.por_estado.map(e => [e.estado, e.total]), I18N.t('asis.sinRfqs'))}
+                        ${lista(d.por_estado.map(e => [I18N.estado(e.estado), e.total]), I18N.t('asis.sinRfqs'))}
                     </ul></div>
                     <div><h4>${esc(I18N.t('asis.materiales'))}</h4><ul class="assistant-lista">
                         ${lista(d.materiales.map(m => [m.material, m.total]), I18N.t('asis.sinMaterial'))}
@@ -119,7 +119,7 @@ const Assistant = (() => {
                            class="assistant-enlace" data-rfq="${esc(p.rfq_id)}">${esc(p.rfq_id)}</a></td>
                     <td>${esc(p.cliente_nombre || p.cliente_id || '—')}</td>
                     <td>${esc(p.part_number || '—')}</td>
-                    <td><span class="badge">${esc(p.estado)}</span></td>
+                    <td><span class="badge">${esc(I18N.estado(p.estado))}</span></td>
                     <td>${esc(p.dias_esperando)} d</td>
                     <td class="${p.criticas > 0 ? 'assistant-critico' : ''}">${esc(p.bandera
                         || I18N.t('motivo.' + (p.motivo === 'validacion' ? 'validacion' : 'revision')))}</td>
@@ -193,7 +193,7 @@ const Assistant = (() => {
                 if (!iso) return '—';
                 const d = new Date(iso);
                 return isNaN(d) ? String(iso)
-                    : d.toLocaleString(I18N.locale ? I18N.locale() : undefined,
+                    : d.toLocaleString(I18N.locale || undefined,
                                        { hour: '2-digit', minute: '2-digit',
                                          day: 'numeric', month: 'short' });
             };
@@ -255,7 +255,18 @@ const Assistant = (() => {
                     + `<p class="assistant-vacio">${esc(I18N.t('asis.sinDatos'))}</p>`);
                 return;
             }
-            const filas = etapas.map(e => `
+            // Las etapas en el idioma puesto, como en el Monitor (dashboard.js):
+            // el texto del servidor sólo si no hay traducción.
+            const traducir = (clave, vars, respaldo) => {
+                const texto = I18N.t(clave, vars);
+                return texto === clave ? (respaldo || '') : texto;
+            };
+            const filas = etapas.map(e => {
+                const etiqueta = traducir('etapa.' + e.clave, null, e.etiqueta);
+                const n = (/\d+/.exec(e.detalle || '') || [''])[0];
+                const detalle = traducir('etapa.' + e.clave + '.det', { n }, e.detalle);
+                return { ...e, etiqueta, detalle };
+            }).map(e => `
                 <li class="${e.espera ? 'assistant-etapa--espera' : ''}">
                     <span>${esc(e.etiqueta)}${e.detalle ? ` <small>${esc(e.detalle)}</small>` : ''}</span>
                     <b>${esc(e.total)}</b>

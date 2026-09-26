@@ -470,6 +470,37 @@ def agregar_nota(rfq_id: str, nota: str, estado: Optional[str] = None,
             conn.close()
 
 
+def anotar_datos(rfq_id: str, cambios: dict, conexion=None) -> dict:
+    """Escribe claves sueltas en ``datos_json`` de la última versión del RFQ.
+
+    ``cambios`` es clave → valor; ``None`` quita la clave. Lo usan las
+    versiones de la cotización del PM (``app/rfq/versiones_pm.py``), que
+    tocan varias claves a la vez y tienen que quedar juntas.
+    """
+    if not rfq_id:
+        raise ValueError("anotar_datos requiere rfq_id.")
+    propia = conexion is None
+    conn = conexion or duplicates.conectar_bd()
+    try:
+        fila = _ultima_version_id(rfq_id, conexion=conn)
+        if not fila:
+            raise ValueError(f"No existe el RFQ {rfq_id}.")
+        datos = _a_dict(fila.get("datos_json"))
+        for clave, valor in (cambios or {}).items():
+            if valor is None:
+                datos.pop(clave, None)
+            else:
+                datos[clave] = valor
+        with conn.cursor() as cur:
+            cur.execute("UPDATE rfqs SET datos_json = %s WHERE id = %s;",
+                        (json.dumps(datos, ensure_ascii=False, default=str), fila["id"]))
+        return {"id": fila["id"], "rfq_id": rfq_id, "version": fila["version"],
+                "datos": datos}
+    finally:
+        if propia:
+            conn.close()
+
+
 def anotar_cotizacion_pm(rfq_id: str, cotizacion: Optional[dict],
                          conexion=None) -> dict:
     """Guarda (o borra, con ``None``) la cotización que el PM dejó en la calculadora.

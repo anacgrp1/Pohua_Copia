@@ -20,6 +20,7 @@ preguntar por ellas ni exportarlas.
 from __future__ import annotations
 
 import io
+import json
 import logging
 from datetime import datetime
 
@@ -315,16 +316,72 @@ _COLUMNAS = (
     ("Cliente", 30),
     ("¿Nuevo?", 10),
     ("Contacto", 32),
-    ("Proyecto", 22),
+    ("Asunto / proyecto", 34),
     ("N° de parte", 18),
     ("Volumen", 12),
+    ("Cantidades pedidas", 24),
     ("Material", 34),
-    ("Estado", 18),
+    ("Estado", 20),
     ("Veredicto del sistema", 22),
-    ("Dictamen final", 18),
     ("Score", 8),
+    ("Dictamen final", 18),
+    ("Precio tramo 1 (US$/pza)", 14),
+    ("Cotizado por", 22),
+    ("Falta", 30),
     ("Entró", 18),
 )
+
+# Lo que la base guarda en inglés, como se lee en la hoja (en español: la hoja
+# la lee ventas en Querétaro). Lo desconocido sale tal cual.
+_ESTADOS = {"New": "Nuevo", "RequiresReview": "En revisión", "Approved": "Aprobado",
+            "Declined": "Rechazado", "Incomplete": "Esperando al cliente"}
+_VEREDICTOS = {"feasible": "Factible", "requires review": "Requiere revisión",
+               "not feasible": "No factible"}
+_FALTANTES = {"volumen": "volumen", "tiene_adjunto": "plano", "part_number": "número de parte",
+              "material": "material", "customer": "cliente"}
+
+
+def _texto(mapa, valor):
+    return mapa.get(str(valor), valor) if valor not in (None, "") else ""
+
+
+def _datos_de_la_fila(fila, datos: dict) -> dict:
+    """Lo que falta en las columnas de `rfqs`, buscado en `datos_json`.
+
+    La hoja salía con «Proyecto», «Veredicto del sistema» y «Score» en blanco:
+    esas columnas sólo se llenan en unos caminos del flujo (el veredicto se
+    escribe al dictaminar; el proyecto casi nunca lo dice el comprador),
+    mientras que `datos_json` sí lo tiene siempre —la factibilidad completa,
+    el asunto, los escalones—. Se toma de la columna y, si está vacía, de ahí.
+    """
+    factibilidad = datos.get("factibilidad") if isinstance(datos.get("factibilidad"), dict) else {}
+    escalones = datos.get("escalones_cantidad")
+    if isinstance(escalones, list):
+        cantidades = " / ".join(f"{int(float(str(x).replace(',', ''))):,}" for x in escalones
+                                if str(x).replace(",", "").replace(".", "", 1).isdigit())
+    else:
+        cantidades = str(escalones or "")
+    pm = datos.get("cotizacion_pm") if isinstance(datos.get("cotizacion_pm"), dict) else None
+    precio = None
+    if pm:
+        tiers = ((pm.get("resultado") or {}).get("tiers") or [])
+        primero = next((t for t in tiers if isinstance(t, dict)), None)
+        try:
+            venta = primero.get("sell") if primero else None
+            precio = float(venta) if venta is not None else None
+        except (TypeError, ValueError):
+            precio = None
+    faltan = datos.get("campos_faltantes") or []
+    return {
+        "proyecto": fila[3] or datos.get("nombre_proyecto") or datos.get("asunto") or "",
+        "cantidades": cantidades,
+        "veredicto": fila[8] or factibilidad.get("veredicto"),
+        "score": fila[10] if fila[10] is not None else factibilidad.get("score"),
+        "precio": precio,
+        "cotizado_por": (f"PM v{pm.get('n')} · {str(pm.get('por') or '').split('@')[0]}"
+                         if pm else ("Sistema" if factibilidad else "")),
+        "falta": ", ".join(_FALTANTES.get(f, f) for f in faltan) if fila[7] == "Incomplete" else "",
+    }
 
 
 def _cliente_de(fila) -> tuple:
@@ -366,13 +423,19 @@ def exportar(
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT r.rfq_id, r.version, r.cliente_id, r.nombre_proyecto,
-                       r.part_number, r.volumen, r.material, r.estado,
-                       r.veredicto_sistema, r.veredicto_final, r.score,
-                       r.fecha_registro, c.razon_social, r.datos_json
-                FROM rfqs r
-                LEFT JOIN clientes c ON c.cliente_id = r.cliente_id
-                ORDER BY r.fecha_registro DESC
+                SELECT * FROM (
+                    -- Una fila por RFQ: su última versión. Antes salía una
+                    -- por versión y el mismo RFQ aparecía repetido.
+                    SELECT DISTINCT ON (r.rfq_id)
+                           r.rfq_id, r.version, r.cliente_id, r.nombre_proyecto,
+                           r.part_number, r.volumen, r.material, r.estado,
+                           r.veredicto_sistema, r.veredicto_final, r.score,
+                           r.fecha_registro, c.razon_social, r.datos_json
+                    FROM rfqs r
+                    LEFT JOIN clientes c ON c.cliente_id = r.cliente_id
+                    ORDER BY r.rfq_id, r.version DESC
+                ) ultimas
+                ORDER BY fecha_registro DESC
                 LIMIT %s;
             """, (limit,))
             filas = cur.fetchall()
@@ -394,6 +457,12 @@ def exportar(
     for fila in filas:
         cliente, nuevo = _cliente_de(fila)
         datos = fila[13] or {}
+        if isinstance(datos, str):
+            try:
+                datos = json.loads(datos)
+            except ValueError:
+                datos = {}
+        extra = _datos_de_la_fila(fila, datos)
         volumen = fila[5]
         try:
             volumen = int(str(volumen).replace(",", "")) if volumen else None
@@ -403,11 +472,25 @@ def exportar(
         if fecha is not None and getattr(fecha, "tzinfo", None):
             # Excel no guarda zonas horarias; con una dentro, openpyxl falla.
             fecha = fecha.replace(tzinfo=None)
+        score = extra["score"]
+        try:
+            score = float(score) if score is not None else None
+        except (TypeError, ValueError):
+            score = None
+        contacto = datos.get("contacto_nombre") or ""
+        remitente = datos.get("remitente") or ""
         hoja.append([
             fila[0], fila[1], cliente, nuevo,
-            (datos.get("remitente") or ""), fila[3], fila[4], volumen,
-            fila[6], fila[7], fila[8], fila[9],
-            float(fila[10]) if fila[10] is not None else None,
+            f"{contacto} <{remitente}>" if contacto and remitente else (remitente or contacto),
+            extra["proyecto"], fila[4] or datos.get("part_number") or "", volumen,
+            extra["cantidades"],
+            fila[6] or datos.get("material") or "",
+            _texto(_ESTADOS, fila[7]),
+            _texto(_VEREDICTOS, extra["veredicto"]),
+            score,
+            (_texto(_VEREDICTOS, fila[9])
+             or ("Pendiente" if fila[7] not in ("Approved", "Declined") else "")),
+            extra["precio"], extra["cotizado_por"], extra["falta"],
             fecha,
         ])
 
@@ -415,8 +498,9 @@ def exportar(
     for f in range(2, ultima + 1):
         hoja.cell(row=f, column=8).number_format = "#,##0"          # volumen
         hoja.cell(row=f, column=13).number_format = "0"             # score
+        hoja.cell(row=f, column=15).number_format = "$#,##0.0000"   # precio
         # Sin microsegundos: la fecha se lee, no se audita.
-        hoja.cell(row=f, column=14).number_format = "yyyy-mm-dd hh:mm"
+        hoja.cell(row=f, column=18).number_format = "yyyy-mm-dd hh:mm"
 
     # La cabecera se queda a la vista al bajar, y con filtros para ordenar por
     # cliente o por estado sin tener que preparar nada.

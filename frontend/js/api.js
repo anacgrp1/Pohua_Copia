@@ -232,6 +232,10 @@ const API = {
     rfqCotizacionPM(rfqId, cotizacion) {
         return this.request('POST', `/api/rfqs/${rfqId}/cotizacion-pm`, cotizacion);
     },
+    /** Escoge qué versión del PM vale; `null` = el cálculo del sistema. */
+    rfqUsarVersionPM(rfqId, version) {
+        return this.request('POST', `/api/rfqs/${rfqId}/cotizacion-pm/version`, { version });
+    },
     // Con lo que la calculadora abre este RFQ: el PN ya armado.
     rfqCotizacionInicial(rfqId) {
         return this.request('GET', `/api/rfqs/${rfqId}/cotizacion-inicial`);

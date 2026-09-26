@@ -97,7 +97,7 @@ const QuoteReviewPage = {
                     ${volver}
                     <div class="rfqd-ident">
                         <h2 class="rfqd-id">${I18N.t('oferta.titulo')}: ${e(id)}</h2>
-                        <span class="badge ${aprobado ? 'badge-approved' : 'badge-review'}"><span class="badge-dot"></span>${e(o.estado)}</span>
+                        <span class="badge ${aprobado ? 'badge-approved' : 'badge-review'}"><span class="badge-dot"></span>${e(I18N.estado(o.estado))}</span>
                     </div>
                     <div class="rfqd-acciones">
                         <button class="btn btn-secondary" onclick="QuoteReviewPage.verPdf()" ${tramos.length ? '' : 'disabled'}>${I18N.t('oferta.verPdf')}</button>

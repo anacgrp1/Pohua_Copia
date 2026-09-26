@@ -211,6 +211,7 @@
         Object.keys(d).forEach(function (k) {
             var e = d[k];
             if (!e || !e.data || e.data.pohuaRfq !== rfqId) return;
+            if (hojaVacia(e.data)) return;      // un guardado vacío no es trabajo
             if (!mejor || String(e.guardadoEn || '') > String(mejor.guardadoEn || '')) mejor = e;
         });
         return mejor ? mejor.data : null;
@@ -288,8 +289,41 @@
         };
     }
 
+    /*
+     * Abrir no es corregir. La hoja guarda sola al cargarse, y sin esto sólo
+     * con abrir la calculadora el RFQ pasaba a «Cotizado por el PM» con los
+     * mismos números del sistema. Al cargar desde Pohua se apunta cómo quedó
+     * la hoja (`pohuaBase`) y sólo se manda cuando el PM cambia algo.
+     */
+    function firmaDeLaHoja(q) {
+        try {
+            var pn = q.pns[q.activePn || 0] || q.pns[0];
+            return JSON.stringify({ pn: pn, c: q.contribution });
+        } catch (e) { return ''; }
+    }
+
+    function marcarBase(q) {
+        if (!q) return;
+        q.pohuaBase = 'pendiente';
+        setTimeout(function () {
+            var actual = (typeof Q === 'function') ? Q() : null;
+            if (actual && actual === q && q.pohuaBase === 'pendiente') {
+                q.pohuaBase = firmaDeLaHoja(q);
+            }
+        }, 600);
+    }
+
+    function sinCambios(q) {
+        if (!q || q.pohuaBase === undefined || q.pohuaBase === null) return false;
+        if (q.pohuaBase === 'pendiente') { q.pohuaBase = firmaDeLaHoja(q); return true; }
+        if (q.pohuaBase === firmaDeLaHoja(q)) return true;
+        q.pohuaBase = null;                 // ya cambió: desde aquí todo cuenta
+        return false;
+    }
+
     function publicarCotizacion(motivo) {
         var q = (typeof Q === 'function') ? Q() : null;
+        if (sinCambios(q)) return false;
         var carga = cotizacionParaPohua(q);
         if (!carga) return false;
         carga.source = 'isc-nube';
@@ -416,6 +450,8 @@
             abrirTitulo: 'Open {rfq}',
             abrirTexto: 'The sheet has a quote typed by hand that is not saved in the Quote Log. Opening {rfq} discards it.',
             rfqRecuperado: 'RFQ {rfq} reopened with what you had written.',
+            restaurada: 'Version {v} chosen in the review is loaded.',
+            restauradaSistema: 'The system costing chosen in the review is loaded.',
             noAbrio: 'Could not open {rfq} in the sheet: {error}',
             clienteNuevo: 'Customer "{cliente}" was not in the catalog: it was created as {codigo} with Net 30. Review terms and rep.',
             variosFicheros: 'There are {n} files from the email in the box; the first one is read ({nombre}). The rest, by hand.',
@@ -441,6 +477,8 @@
             abrirTitulo: 'Abrir {rfq}',
             abrirTexto: 'La hoja tiene una cotización tecleada a mano que no está guardada en el Quote Log. Al abrir {rfq} se descarta.',
             rfqRecuperado: 'RFQ {rfq} abierto con lo que llevabas escrito.',
+            restaurada: 'Cargada la versión {v} escogida en la revisión.',
+            restauradaSistema: 'Cargado el cálculo del sistema escogido en la revisión.',
             noAbrio: 'No se pudo abrir {rfq} en la hoja: {error}',
             clienteNuevo: 'El cliente "{cliente}" no estaba en el catálogo: se dio de alta como {codigo} con Net 30. Revisa términos y representante.',
             variosFicheros: 'Hay {n} ficheros del correo en la casilla; se lee el primero ({nombre}). Los demás, a mano.',
@@ -466,6 +504,8 @@
             abrirTitulo: 'Ouvrir {rfq}',
             abrirTexto: "La feuille contient un devis saisi à la main qui n'est pas enregistré dans le Quote Log. Ouvrir {rfq} le supprime.",
             rfqRecuperado: 'RFQ {rfq} rouvert avec ce que vous aviez saisi.',
+            restaurada: 'Version {v} choisie dans la revue chargée.',
+            restauradaSistema: 'Chiffrage du système choisi dans la revue chargé.',
             noAbrio: "Impossible d'ouvrir {rfq} dans la feuille : {error}",
             clienteNuevo: 'Le client « {cliente} » ne figurait pas au catalogue : il a été créé comme {codigo} avec Net 30. Vérifiez les conditions et le représentant.',
             variosFicheros: "Il y a {n} fichiers du courrier dans la case ; le premier est lu ({nombre}). Les autres, à la main.",
@@ -1314,10 +1354,62 @@
         cuandoDoc(function () { cargarRfqYa(d, consulta); });
     }
 
+    /*
+     * La versión que el PM escogió en la ventana de revisión.
+     *
+     * Si escogió una versión anterior (o volvió al cálculo del sistema), la
+     * hoja tiene que abrir ESA y no su último borrador: si no, la ventana
+     * diría un precio y la calculadora otro. Se aplica una sola vez por
+     * elección (`pohuaRestauracion` guarda cuál), así que lo que el PM
+     * escriba después ya no se pisa.
+     */
+    function aplicarRestauracion(d) {
+        var r = d && d.restauracion;
+        var q = (typeof Q === 'function') ? Q() : null;
+        if (!r || !r.en || !q || q.pohuaRfq !== d.rfq_id) return false;
+        if (q.pohuaRestauracion === r.en) return false;
+        var fuente = r.pn || d.pn;
+        if (!fuente) return false;
+        try {
+            var pn = JSON.parse(JSON.stringify(fuente));
+            if (typeof completarPn === 'function') pn = completarPn(pn);
+            q.pns = [pn];
+            q.activePn = 0;
+            q.pohuaRestauracion = r.en;
+            marcarBase(q);
+            if (typeof saveLocal === 'function') saveLocal();
+            repintar();
+            aviso(r.version === null || r.version === undefined
+                  ? t('restauradaSistema')
+                  : t('restaurada', { v: r.version }));
+            return true;
+        } catch (e) {
+            console.warn('[nube] No se pudo cargar la versión escogida: ' + e.message);
+            return false;
+        }
+    }
+
+    /** ¿La hoja de este RFQ se quedó sin nada (ni número de parte ni cantidades)? */
+    function hojaVacia(q) {
+        var pns = (q && q.pns) || [];
+        return !pns.some(function (p) {
+            return p && (p.pn || (p.tiers || []).some(function (x) { return x && x.qty; }));
+        });
+    }
+
     function cargarRfqYa(d, consulta) {
         var q = Q();
-        if (q && q.pohuaRfq === d.rfq_id) {       // ya está abierto: no se toca
-            avisarCargado(d.rfq_id, false);
+        if (q && q.pohuaRfq === d.rfq_id && !consulta) {
+            // Ya está abierto. Si la hoja se quedó vacía, se vuelve a llenar
+            // —con lo que llevaba escrito si lo hay, o con lo del RFQ—; si
+            // tiene trabajo, no se toca, salvo que el PM haya escogido otra
+            // versión desde la revisión.
+            if (hojaVacia(q)) {
+                delete q.pohuaRfq;              // para que `abrirRfq` no lo archive vacío
+                abrirRfq(d);
+                return;
+            }
+            if (!aplicarRestauracion(d)) avisarCargado(d.rfq_id, false);
             return;
         }
 
@@ -1353,6 +1445,7 @@
         var guardado = guardadoDe(d.rfq_id);
         if (guardado) reabrir(guardado, d);
         else ponerRfq(d);
+        aplicarRestauracion(d);
     }
 
     /** Un paso que puede fallar sin llevarse los demás. */
@@ -1368,6 +1461,13 @@
         try {
             var q = blankQuote();
             q.pohuaRfq = d.rfq_id;              // para no volver a cargarlo encima
+            // Lo que llega de Pohua no es una corrección del PM (ver `sinCambios`).
+            q.pohuaBase = 'pendiente';
+            // Una elección hecha antes de abrir la hoja por primera vez ya
+            // viene en `d.pn`/`restauracion`; no hay borrador que pisar.
+            if (d.restauracion && d.restauracion.en && !d.restauracion.pn) {
+                q.pohuaRestauracion = d.restauracion.en;
+            }
             // Marca lo que se está mirando. La pantalla la usa para enseñar la
             // cinta de "estás viendo un caso cerrado" y el botón de volver.
             if (consulta) q.pohuaConsulta = d.rfq_id;

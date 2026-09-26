@@ -35,24 +35,24 @@ def kc(dia, hora, minuto=0):
 class TestVentana(unittest.TestCase):
 
     def test_dentro_de_horario(self):
-        self.assertTrue(horario.abierto(kc(14, 6)))      # lunes al abrir
+        self.assertTrue(horario.abierto(kc(14, 7)))      # lunes al abrir
         self.assertTrue(horario.abierto(kc(16, 12)))     # miércoles a mediodía
-        self.assertTrue(horario.abierto(kc(18, 17, 59)))  # viernes, el último minuto
+        self.assertTrue(horario.abierto(kc(18, 16, 59)))  # viernes, el último minuto
 
     def test_fuera_de_horario(self):
-        self.assertFalse(horario.abierto(kc(14, 5, 59)))  # lunes, un minuto antes
-        self.assertFalse(horario.abierto(kc(14, 18)))     # a las 18:00 en punto, cerrado
+        self.assertFalse(horario.abierto(kc(14, 6, 59)))  # lunes, un minuto antes
+        self.assertFalse(horario.abierto(kc(14, 17)))     # a las 17:00 en punto, cerrado
         self.assertFalse(horario.abierto(kc(14, 3)))      # madrugada
         self.assertFalse(horario.abierto(kc(19, 10)))     # sábado
         self.assertFalse(horario.abierto(kc(20, 10)))     # domingo
 
     def test_la_hora_que_cuenta_es_la_de_la_planta(self):
-        """Las 7:00 de Querétaro son las 6:00 de Kansas: abierto.
+        """Las 8:00 de Querétaro son las 7:00 de Kansas: abierto.
 
         Y las 12:00 de Sevran son las 5:00 de Kansas: todavía cerrado. El
         mismo instante, dos lecturas, una sola respuesta.
         """
-        self.assertTrue(horario.abierto(datetime(2026, 9, 14, 7, 0, tzinfo=QRO)))
+        self.assertTrue(horario.abierto(datetime(2026, 9, 14, 8, 0, tzinfo=QRO)))
         self.assertFalse(horario.abierto(datetime(2026, 9, 14, 12, 0, tzinfo=SEV)))
 
     def test_se_puede_apagar(self):
@@ -87,22 +87,22 @@ class TestDias(unittest.TestCase):
 class TestProximaApertura(unittest.TestCase):
 
     def test_hoy_si_aun_no_ha_abierto(self):
-        self.assertEqual(horario.proxima_apertura(kc(14, 4)), kc(14, 6))
+        self.assertEqual(horario.proxima_apertura(kc(14, 4)), kc(14, 7))
 
     def test_manana_si_ya_cerro(self):
-        self.assertEqual(horario.proxima_apertura(kc(14, 19)), kc(15, 6))
+        self.assertEqual(horario.proxima_apertura(kc(14, 19)), kc(15, 7))
 
     def test_el_viernes_por_la_noche_apunta_al_lunes(self):
         """El caso que importa: lo que llega el sábado espera al lunes."""
-        self.assertEqual(horario.proxima_apertura(kc(18, 20)), kc(21, 6))
-        self.assertEqual(horario.proxima_apertura(kc(19, 11)), kc(21, 6))
-        self.assertEqual(horario.proxima_apertura(kc(20, 23)), kc(21, 6))
+        self.assertEqual(horario.proxima_apertura(kc(18, 20)), kc(21, 7))
+        self.assertEqual(horario.proxima_apertura(kc(19, 11)), kc(21, 7))
+        self.assertEqual(horario.proxima_apertura(kc(20, 23)), kc(21, 7))
 
     def test_abierto_no_tiene_proxima_apertura(self):
         self.assertIsNone(horario.proxima_apertura(kc(16, 9)))
 
     def test_cierre(self):
-        self.assertEqual(horario.proximo_cierre(kc(16, 9)), kc(16, 18))
+        self.assertEqual(horario.proximo_cierre(kc(16, 9)), kc(16, 17))
         self.assertIsNone(horario.proximo_cierre(kc(16, 20)))
 
 
@@ -113,17 +113,17 @@ class TestEstado(unittest.TestCase):
         self.assertFalse(e["abierto"])
         self.assertTrue(e["activo"])
         self.assertEqual(e["ciudad"], "Kansas City")
-        self.assertEqual((e["desde"], e["hasta"]), (6, 18))
+        self.assertEqual((e["desde"], e["hasta"]), (7, 17))
         self.assertEqual(e["dias"], [1, 2, 3, 4, 5])
         # El instante lleva su huso: el navegador lo pinta en su ciudad.
-        self.assertTrue(e["proxima_apertura"].startswith("2026-09-21T06:00:00-05"))
+        self.assertTrue(e["proxima_apertura"].startswith("2026-09-21T07:00:00-05"))
         self.assertIsNone(e["proximo_cierre"])
 
     def test_abierto(self):
         e = horario.estado(kc(16, 9))
         self.assertTrue(e["abierto"])
         self.assertIsNone(e["proxima_apertura"])
-        self.assertTrue(e["proximo_cierre"].startswith("2026-09-16T18:00:00-05"))
+        self.assertTrue(e["proximo_cierre"].startswith("2026-09-16T17:00:00-05"))
 
     def test_la_ciudad_sale_de_la_zona(self):
         with mock.patch.object(config.settings, "HORARIO_ZONA", "America/Mexico_City"):
@@ -134,7 +134,7 @@ class TestEstado(unittest.TestCase):
     def test_motivo_cerrado_dice_hasta_cuando(self):
         motivo = horario.motivo_cerrado(kc(19, 11))
         self.assertIn("Kansas City", motivo)
-        self.assertIn("2026-09-21T06:00:00", motivo)
+        self.assertIn("2026-09-21T07:00:00", motivo)
 
 
 class TestCicloRespetaElHorario(unittest.TestCase):

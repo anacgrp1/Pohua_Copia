@@ -82,8 +82,8 @@ class Settings:
     # cosa: la misma hora dicha en su huso.
     HORARIO_ACTIVO: bool = True
     HORARIO_ZONA: str = "America/Chicago"      # Kansas City, la planta
-    HORARIO_DESDE: int = 6                     # 6:00
-    HORARIO_HASTA: int = 18                    # 18:00 (a las 18:00 en punto, cerrado)
+    HORARIO_DESDE: int = 7                     # 7:00 (ventas, 2026-09-26)
+    HORARIO_HASTA: int = 17                    # 17:00 (a las 17:00 en punto, cerrado)
     HORARIO_DIAS: str = "1-5"                  # lunes a viernes (1=lunes, 7=domingo)
 
     # --- El relevado de esfuerzos en compresión ---
@@ -237,7 +237,12 @@ class Settings:
         """Inicializa las configuraciones cargando el archivo .env si existe."""
         # Ruta del archivo .env (por defecto el directorio actual de ejecución o raíz del proyecto)
         if env_file_path is None:
-            env_file_path = os.path.join(os.getcwd(), ".env")
+            # Las pruebas no leen el .env de quien las corre (tests/conftest.py):
+            # con el de la máquina de desarrollo heredaban el buzón, la carpeta
+            # y el modo de correo reales, y fallaban unas u otras según lo que
+            # tuviera cada uno. Un fichero pedido a propósito sí se lee.
+            env_file_path = ("" if os.environ.get("POHUA_SIN_DOTENV")
+                             else os.path.join(os.getcwd(), ".env"))
 
         # 1. Cargar archivo .env en os.environ si no está definido en el sistema
         self._load_dotenv(env_file_path)
@@ -253,6 +258,8 @@ class Settings:
 
     def _load_dotenv(self, file_path: str) -> None:
         """Lee un archivo .env y carga las variables a os.environ si no existen en el sistema."""
+        if not file_path:          # las pruebas: no se lee ninguno
+            return
         path = Path(file_path)
         if not path.is_file():
             logger.warning(

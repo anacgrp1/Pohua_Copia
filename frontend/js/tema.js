@@ -76,8 +76,10 @@ const Tema = (() => {
         const boton = document.getElementById('btnTema');
         if (boton) {
             const siguiente = tema === CLARO ? 'dark' : 'light';
-            boton.title = `Switch to ${siguiente} mode`;
-            boton.setAttribute('aria-label', `Switch to ${siguiente} mode`);
+            const texto = (typeof I18N !== 'undefined')
+                ? I18N.t('tema.cambiarA.' + siguiente) : `Switch to ${siguiente} mode`;
+            boton.title = texto;
+            boton.setAttribute('aria-label', texto);
         }
     }
 

@@ -203,7 +203,8 @@ def costear_con_el_pm(pm: dict) -> dict:
               "banderas_motor": [f.get("m") for f in (resultado.get("flags") or [])
                                  if isinstance(f, dict)],
               "pm": {"por": pm.get("por"), "en": pm.get("en"),
-                     "numero": (pm.get("cabecera") or {}).get("numero")}}
+                     "numero": (pm.get("cabecera") or {}).get("numero"),
+                     "version": pm.get("n")}}
     return {"cantidades": cantidades, "tramos": tramos, "costeo": costeo,
             "comunes": comunes, "error_costeo": None}
 

@@ -17,10 +17,11 @@
  *     de la pantalla, no.
  *   - El inglés es la red de seguridad: si una clave existe en inglés pero
  *     todavía no en francés, sale en inglés en vez de desaparecer.
- *   - Los datos NO se traducen: nombres de clientes, materiales, estados que
- *     vienen de la base de datos y mensajes del registro se enseñan tal cual.
- *     Traducir un 'RequiresReview' que la base guarda así sólo confundiría al
- *     compararlo con la propia base.
+ *   - Los datos NO se traducen: nombres de clientes, materiales y mensajes
+ *     del registro se enseñan tal cual. Los ESTADOS del RFQ sí (2026-09-26,
+ *     a petición de ventas: «que el idioma esté bien en todo el entorno»):
+ *     `I18N.estado('RequiresReview')` → «En revisión». La base los sigue
+ *     guardando en inglés; sólo cambia lo que se pinta.
  */
 const I18N = (() => {
     'use strict';
@@ -539,7 +540,37 @@ const I18N = (() => {
         'rev.todosTramos':   { en: 'All tiers', es: 'Todos los tramos', fr: 'Tous les paliers' },
         'rev.tramos':        { en: 'Quantity tiers', es: 'Tramos de cantidad', fr: 'Paliers de quantité' },
         'rev.material':      { en: 'Material', es: 'Material', fr: 'Matière' },
+        'rfqEstado.New':            { en: 'New', es: 'Nuevo', fr: 'Nouveau' },
+        'rfqEstado.RequiresReview': { en: 'Requires review', es: 'En revisión', fr: 'À réviser' },
+        'rfqEstado.Approved':       { en: 'Approved', es: 'Aprobado', fr: 'Approuvé' },
+        'rfqEstado.Declined':       { en: 'Declined', es: 'Rechazado', fr: 'Refusé' },
+        'rfqEstado.Incomplete':     { en: 'Waiting on customer', es: 'Esperando al cliente', fr: 'En attente du client' },
+        'rev.cotizacion':    { en: 'Quote {n}', es: 'Cotización {n}', fr: 'Devis {n}' },
+        'rev.tramo':         { en: 'Tier {n}', es: 'Tramo {n}', fr: 'Palier {n}' },
+        'rev.pzas':          { en: 'pcs', es: 'pzas', fr: 'pcs' },
+        'rev.pza':           { en: 'pc', es: 'pza', fr: 'pc' },
+        'rev.cascada':       { en: 'Margin waterfall', es: 'Cascada de margen', fr: 'Cascade de marge' },
+        'rev.porPieza':      { en: 'Per piece', es: 'Por pieza', fr: 'Par pièce' },
+        'rev.maquinaH':      { en: 'machine h', es: 'h máquina', fr: 'h machine' },
+        'rev.ccvHora':       { en: 'C/CV per h', es: 'C/CV por h', fr: 'C/CV par h' },
+        'rev.ccvHoraLargo':  { en: 'C/CV per machine hour', es: 'C/CV por hora máquina', fr: 'C/CV par heure machine' },
+        'rev.pdfError':      { en: 'Could not generate the PDF', es: 'Error al generar el PDF', fr: 'Impossible de générer le PDF' },
+        'ficha.cotizar':     { en: 'Quote →', es: 'Cotizar →', fr: 'Chiffrer →' },
+        'quoting.tab.quote': { en: 'Quote', es: 'Cotización', fr: 'Devis' },
+        'quoting.tab.spring':{ en: 'Spring Calc', es: 'Calc. de resortes', fr: 'Calc. ressorts' },
+        'tema.cambiarA.light': { en: 'Switch to light mode', es: 'Cambiar a modo claro', fr: 'Passer en mode clair' },
+        'tema.cambiarA.dark':  { en: 'Switch to dark mode', es: 'Cambiar a modo oscuro', fr: 'Passer en mode sombre' },
         'rev.pm.cotizado':   { en: 'Quoted by the PM', es: 'Cotizado por el PM', fr: 'Chiffré par le PM' },
+        'rev.ver.boton':     { en: 'Versions ({n})', es: 'Versiones ({n})', fr: 'Versions ({n})' },
+        'rev.ver.titulo':    { en: 'PM quote versions', es: 'Versiones de la cotización del PM', fr: 'Versions du devis du PM' },
+        'rev.ver.nota':      { en: 'Each time the PM comes back from the full calculator a version is kept. The one in use is what this window and the offer show; the calculator opens with it too.', es: 'Cada vez que el PM vuelve de la calculadora completa se guarda una versión. La que está en uso es la que enseña esta ventana y la que lleva la oferta; la calculadora también se abre con ella.', fr: 'Chaque retour du PM depuis la calculatrice complète garde une version. Celle en usage est celle de cette fenêtre et de l’offre ; la calculatrice s’ouvre aussi avec elle.' },
+        'rev.ver.usar':      { en: 'Use this one', es: 'Usar esta', fr: 'Utiliser celle-ci' },
+        'rev.ver.enUso':     { en: 'In use', es: 'En uso', fr: 'En usage' },
+        'rev.ver.enCurso':   { en: 'being edited', es: 'en curso', fr: 'en cours' },
+        'rev.ver.sistema':   { en: 'System costing', es: 'Cálculo del sistema', fr: 'Chiffrage du système' },
+        'rev.ver.sistemaAyuda': { en: 'what Pohua costed from the email and the drawing', es: 'lo que Pohua costeó con el correo y el plano', fr: 'ce que Pohua a chiffré à partir du courriel et du plan' },
+        'rev.ver.usando':    { en: 'Using version {n}. The calculator will open with it.', es: 'Usando la versión {n}. La calculadora se abrirá con ella.', fr: 'Version {n} utilisée. La calculatrice s’ouvrira avec elle.' },
+        'rev.ver.usandoSistema': { en: 'Back to the system costing. The PM versions are kept.', es: 'De vuelta al cálculo del sistema. Las versiones del PM se conservan.', fr: 'Retour au chiffrage du système. Les versions du PM sont conservées.' },
         'rev.pm.ayuda':      { en: 'These numbers are the ones the PM left in the full calculator; they are what the offer will carry. Recalculating with new dimensions returns to the system costing.', es: 'Estos números son los que el PM dejó en la calculadora completa; son los que llevará la oferta. Recalcular con cotas nuevas vuelve al costeo del sistema.', fr: 'Ces chiffres sont ceux que le PM a laissés dans la calculatrice complète ; ce sont ceux de l’offre. Recalculer avec de nouvelles cotes revient au chiffrage du système.' },
         'rev.peso':          { en: 'Weight', es: 'Peso', fr: 'Poids' },
         'rev.base':          { en: 'Base', es: 'Base', fr: 'Base' },
@@ -865,6 +896,30 @@ const I18N = (() => {
      * entrada entera: un hueco en blanco pasa desapercibido, un 'perfil.foto'
      * en mitad de la pantalla no.
      */
+    /** Un estado del RFQ, en el idioma puesto. Lo desconocido, tal cual. */
+    function estado(valor) {
+        if (valor === null || valor === undefined || valor === '') return '';
+        const clave = 'rfqEstado.' + valor;
+        return TEXTOS[clave] ? t(clave) : String(valor);
+    }
+
+    /** El tipo de resorte ('Compresion', 'compression', 'torsión'…) traducido. */
+    function tipoResorte(valor) {
+        if (!valor) return '';
+        const base = String(valor).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        const mapa = { compression: 'compresion', compresion: 'compresion',
+                       extension: 'extension', tension: 'extension', traccion: 'extension',
+                       torsion: 'torsion' };
+        const codigo = mapa[base] || base;
+        const clave = 'rev.tipo.' + codigo;
+        return TEXTOS[clave] ? t(clave) : String(valor);
+    }
+
+    /** El `locale` de fechas y números del idioma puesto. */
+    function locale() {
+        return { es: 'es-MX', fr: 'fr-FR', en: 'en-US' }[actual] || 'en-US';
+    }
+
     function t(clave, vars) {
         const entrada = TEXTOS[clave];
         if (!entrada) return clave;
@@ -989,7 +1044,8 @@ const I18N = (() => {
         return texto === clave ? respaldo : texto;
     }
 
-    return { t, motivo, aplicar, fijar, alCambiar, init, IDIOMAS,
+    return { t, motivo, aplicar, fijar, alCambiar, init, IDIOMAS, estado, tipoResorte,
+             get locale() { return locale(); },
              get idioma() { return actual; } };
 })();
 

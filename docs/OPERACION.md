@@ -511,6 +511,36 @@ vuelve al costeo del sistema; la calculadora conserva su borrador, así que
 si se cambian cotas en la ventana conviene reabrir la calculadora y
 guardar de nuevo.
 
+**Versiones de la cotización del PM.** Cada vez que el PM vuelve de la
+calculadora («← Volver a la revisión») queda una versión fijada
+(`datos_json.cotizacion_pm_versiones`, hasta 20; `app/rfq/versiones_pm.py`).
+Mientras escribe sólo se actualiza la versión en curso, y abrir la
+calculadora sin cambiar nada no cuenta como corrección. En la ventana de
+revisión, «Versiones (n)» lista cada una (hora, quién, precio por tramo) con
+«Usar esta», más «Cálculo del sistema». La elegida es la que costea la
+ventana y la oferta, y la calculadora la carga la próxima vez que se abra ese
+RFQ (`POST /api/rfqs/{id}/cotizacion-pm/version`, marca `pm_restauracion`).
+
+**El RFQ siempre llega a la calculadora.** «Abrir cotización completa» manda
+el RFQ aunque Pohua crea que ya está abierto, y si el marco se recarga se le
+vuelve a mandar; una hoja del RFQ que quedó vacía se vuelve a llenar. Así ya
+no sale el botón «Volver a la revisión · INT-…» sobre una hoja en blanco.
+
+**Idioma.** Los estados del RFQ, el tipo de resorte y todos los rótulos de la
+ventana de revisión, la ficha, el Resumen y el asistente siguen el idioma
+elegido (`I18N.estado`, `I18N.tipoResorte`); la base los sigue guardando en
+inglés. La calculadora de precios se traduce con `frontend/js/isc-idioma.js`
+(generado desde `scripts/isc_idioma_diccionario.py` con
+`python scripts/generar_isc_idioma.py`). La aplicación de escritorio traduce
+su registro al pintarlo (`desktop_app/textos_registro.py`; una prueba avisa si
+un mensaje nuevo no tiene traducción) y lleva el estado, el idioma y el tema
+en la cabecera del Lector local.
+
+**Horario de atención: 7:00–17:00 Kansas City, lunes a viernes**
+(`HORARIO_DESDE=7`, `HORARIO_HASTA=17`). Si Render o el `.env` de la
+computadora del lector tienen otros valores, mandan ésos: hay que cambiarlos
+allí también.
+
 **La portada como pantalla de espera.** Dentro de la aplicación, el logo de la
 barra lateral lleva a la portada (los logos, «Pohua · RFQ Quoter» y el
 resorte de estrellas) **sin cerrar la sesión**; el botón dice «Continuar» y

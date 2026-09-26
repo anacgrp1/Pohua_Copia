@@ -24,6 +24,7 @@ from api.models.schemas import (
     RFQDetail,
     RFQListResponse,
     RFQSummary,
+    VersionPMRequest,
 )
 from api.security import exige
 from app.auth.tokens import UsuarioSesion
@@ -397,6 +398,15 @@ def _espiras_calculadas(resorte: dict) -> dict:
             "espiras_origen": porque}
 
 
+def _versiones_pm(datos):
+    import app.rfq.versiones_pm as versiones_pm
+    try:
+        return versiones_pm.resumen(datos)
+    except Exception as error:      # un historial raro no tumba la ventana
+        log.warning("No se pudieron leer las versiones del PM: %s", error)
+        return {"versiones": [], "en_uso": None, "sistema_en_uso": True}
+
+
 def _ventana(detalle, usuario, resorte=None, lectura=None, recalculo=None):
     """La respuesta de la ventana de revisión, en un solo sitio.
 
@@ -447,6 +457,9 @@ def _ventana(detalle, usuario, resorte=None, lectura=None, recalculo=None):
         "comunes": costeado["comunes"],
         "cantidades": costeado["cantidades"],
         "tramos": costeado["tramos"],
+        # Las versiones que el PM trajo de la calculadora, para elegir entre
+        # ellas (app/rfq/versiones_pm.py).
+        "versiones_pm": _versiones_pm(datos),
         "factibilidad": {
             "veredicto": factibilidad.get("veredicto"),
             "score": costeo_rfq.num(factibilidad.get("score")),
@@ -512,6 +525,7 @@ def guardar_cotizacion_pm(
     from datetime import datetime, timezone
 
     import app.rfq.repository as repository
+    import app.rfq.versiones_pm as versiones_pm
 
     detalle = get_rfq(rfq_id, None, usuario)          # 404 si no existe
     if not any(t for t in (body.resultado.get("tiers") or [])):
@@ -527,10 +541,60 @@ def guardar_cotizacion_pm(
         "por": usuario.correo,
         "en": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
-    repository.anotar_cotizacion_pm(rfq_id, cotizacion)
-    detalle.datos_json = dict(detalle.datos_json or {}, cotizacion_pm=cotizacion)
-    log.info("RFQ %s: cotización del PM guardada por %s (%s tramo/s).",
-             rfq_id, usuario.correo, len([t for t in cotizacion["resultado"]["tiers"] if t]))
+    # Versión en curso mientras se escribe; fijada al volver a la revisión.
+    # Lo que no cambió (reabrir la hoja sin tocar nada) no escribe nada.
+    cambios = versiones_pm.registrar(detalle.datos_json or {}, cotizacion,
+                                     motivo=body.motivo)
+    if cambios:
+        repository.anotar_datos(rfq_id, cambios)
+        detalle.datos_json = _con_cambios(detalle.datos_json, cambios)
+        actual = cambios.get(versiones_pm.CLAVE_ACTUAL) or {}
+        log.info("RFQ %s: cotización del PM v%s %s por %s.", rfq_id, actual.get("n"),
+                 "fijada" if actual.get("fijada") else "en curso", usuario.correo)
+    return _ventana(detalle, usuario)
+
+
+def _con_cambios(datos, cambios):
+    """``datos_json`` con los cambios aplicados (None quita la clave)."""
+    fuera = dict(datos or {})
+    for clave, valor in (cambios or {}).items():
+        if valor is None:
+            fuera.pop(clave, None)
+        else:
+            fuera[clave] = valor
+    return fuera
+
+
+@router.post("/{rfq_id}/cotizacion-pm/version")
+def usar_version_pm(
+    rfq_id: str,
+    body: VersionPMRequest,
+    usuario: UsuarioSesion = Depends(exige("rfq:dictaminar")),
+):
+    """Elige qué versión de la cotización del PM vale (o el cálculo del sistema).
+
+    La elegida pasa a ser la actual: la ventana y la oferta usan ésa. Y queda
+    marcada para que la calculadora, la próxima vez que se abra este RFQ,
+    cargue esa versión en vez de su último borrador.
+    """
+    from datetime import datetime, timezone
+
+    import app.rfq.repository as repository
+    import app.rfq.versiones_pm as versiones_pm
+
+    detalle = get_rfq(rfq_id, None, usuario)
+    ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    try:
+        cambios = versiones_pm.restaurar(detalle.datos_json or {}, body.version,
+                                         usuario.correo, ahora)
+    except KeyError:
+        raise HTTPException(status_code=404,
+                            detail=f"No existe la versión {body.version} de este RFQ.")
+    repository.anotar_datos(rfq_id, cambios)
+    detalle.datos_json = _con_cambios(detalle.datos_json, cambios)
+    log.info("RFQ %s: %s elegida por %s.", rfq_id,
+             f"versión {body.version} del PM" if body.version is not None
+             else "cálculo del sistema", usuario.correo)
     return _ventana(detalle, usuario)
 
 
@@ -581,10 +645,17 @@ def recalcular_rfq(
     # de ahora. La calculadora se abre otra vez con las cotas corregidas.
     if recalculo["tocados"] and (detalle.datos_json or {}).get("cotizacion_pm"):
         import app.rfq.repository as repository
+        import app.rfq.versiones_pm as versiones_pm
         try:
-            repository.anotar_cotizacion_pm(rfq_id, None)
-            detalle.datos_json = {k: v for k, v in (detalle.datos_json or {}).items()
-                                  if k != "cotizacion_pm"}
+            # Las versiones se quedan (se puede volver a una); sólo deja de
+            # haber una en uso. La marca hace que la calculadora se reabra
+            # con el PN del sistema, que ya lleva las cotas corregidas.
+            from datetime import datetime, timezone
+            cambios = versiones_pm.restaurar(
+                detalle.datos_json or {}, None, usuario.correo,
+                datetime.now(timezone.utc).isoformat(timespec="seconds"))
+            repository.anotar_datos(rfq_id, cambios)
+            detalle.datos_json = _con_cambios(detalle.datos_json, cambios)
         except Exception as error:
             log.warning("RFQ %s: no se pudo soltar la cotización del PM: %s", rfq_id, error)
 
@@ -685,9 +756,22 @@ def cotizacion_inicial(
     if pn and detalle.part_number:
         pn["pn"] = detalle.part_number
 
+    # Si el PM eligió una versión (o volvió al sistema) desde la ventana de
+    # revisión, la calculadora tiene que abrir ESA y no su último borrador.
+    import app.rfq.versiones_pm as versiones_pm
+    restauracion = versiones_pm.pn_restaurado(datos)
+    if restauracion and restauracion.get("pn"):
+        pn_restaurado = dict(restauracion["pn"])
+        if detalle.part_number:
+            pn_restaurado["pn"] = pn_restaurado.get("pn") or detalle.part_number
+        restauracion = dict(restauracion, pn=pn_restaurado)
+
     return {
         "rfq_id": detalle.rfq_id,
         "pn": pn,
+        # {en, version, pn}: la calculadora reemplaza su borrador por esto una
+        # sola vez (recuerda `en`). `pn` None = el del sistema, que es `pn`.
+        "restauracion": restauracion,
         "header": {
             # El nombre tal como vino; la calculadora lo casa contra su
             # catálogo de clientes y, si no está, lo deja dicho en vez de

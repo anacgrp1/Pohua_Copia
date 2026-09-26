@@ -98,11 +98,11 @@ const QuotingPage = {
                     <nav class="quoting-tabs" role="tablist" id="quotingTabs" hidden>
                         <button type="button" class="quoting-tab active" data-vista="precio"
                                 role="tab" aria-selected="true">
-                            ${this.icono('precio')}<span>Quote</span>
+                            ${this.icono('precio')}<span data-i18n="quoting.tab.quote">${I18N.t('quoting.tab.quote')}</span>
                         </button>
                         <button type="button" class="quoting-tab" data-vista="resortes"
                                 role="tab" aria-selected="false">
-                            ${this.icono('resortes')}<span>Spring Calc</span>
+                            ${this.icono('resortes')}<span data-i18n="quoting.tab.spring">${I18N.t('quoting.tab.spring')}</span>
                         </button>
                     </nav>
                     <!-- La vuelta a la ventana de revisión. Sólo sale cuando se
@@ -149,8 +149,18 @@ const QuotingPage = {
      * así que un mensaje mandado ahí se pierde sin ruido. Se espera a que
      * `isc-nube.js` avise con "hoja-lista"; si ya avisó, se manda en el acto.
      */
+    /*
+     * El RFQ se abre SIEMPRE en la hoja, se venga de donde se venga.
+     *
+     * Antes, si Pohua creía tenerlo ya abierto, no hacía nada; y la hoja podía
+     * estar en blanco (se recargó el marco, o se limpió al salir a otra
+     * pantalla) con el botón «Volver a la revisión · INT-…» puesto encima, que
+     * es lo peor: parece abierto y no lo está. Ahora se le manda siempre; la
+     * calculadora ya sabe no pisar lo que se esté escribiendo de ESE RFQ
+     * (`isc-nube.js`, `cargarRfqYa`) y rellenar la hoja si está vacía.
+     */
     async abrirRfq(id, consulta) {
-        if (!id || this.rfqAbierto === id) return;
+        if (!id) return;
         if (consulta !== undefined) this.consulta = !!consulta;
         try {
             const datos = await API.rfqCotizacionInicial(id);
@@ -315,6 +325,9 @@ const QuotingPage = {
             await API.rfqCotizacionPM(d.rfq_id, {
                 pn: d.pn, resultado: d.resultado, contribution: d.contribution,
                 cabecera: d.cabecera || {}, material_nombre: d.material_nombre || null,
+                // "volver" fija la versión en el historial; "guardado" sólo
+                // actualiza la que está en curso.
+                motivo: d.motivo === 'volver' ? 'volver' : 'guardado',
             });
             this.ultimaCotizacion = { rfq: d.rfq_id, en: Date.now() };
             window.dispatchEvent(new CustomEvent('pohua:rfq-cotizado', { detail: { rfq: d.rfq_id } }));
@@ -549,6 +562,12 @@ const QuotingPage = {
             // La calculadora terminó de arrancar: ya se le puede mandar el RFQ.
             if (dePrecio && d.source === 'isc-nube' && d.tipo === 'hoja-lista') {
                 this.hojaLista = true;
+                // El marco se recargó (una actualización, por ejemplo) con un
+                // RFQ abierto: arranca limpio, así que se le vuelve a mandar.
+                if (!this.rfqPendiente && this.rfqAbierto && !this.consulta) {
+                    this.abrirRfq(this.rfqAbierto);
+                    return;
+                }
                 this.entregarRfq();
                 return;
             }

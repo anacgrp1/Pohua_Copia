@@ -97,6 +97,15 @@ const APP = {
         // Al cambiar de idioma se repinta lo que está en pantalla: el título,
         // el estado del servicio y la página actual, que se genera desde JS y
         // no lleva marcas data-i18n.
+        // El botón del tema dice lo que hará, en el idioma puesto.
+        I18N.alCambiar(() => {
+            const boton = document.getElementById('btnTema');
+            if (!boton || typeof Tema === 'undefined') return;
+            const texto = I18N.t('tema.cambiarA.' + (Tema.actual() === 'light' ? 'dark' : 'light'));
+            boton.title = texto;
+            boton.setAttribute('aria-label', texto);
+        });
+
         I18N.alCambiar(() => {
             // La portada y el login se traducen solos: llevan data-i18n y de
             // ellos ya se encargó I18N.aplicar(). Y no se vuelven a montar a
@@ -412,6 +421,54 @@ const APP = {
         } else {
             window.addEventListener('resize', publicar, { passive: true });
         }
+        this.vigilarReloj();
+    },
+
+    /**
+     * El reloj no puede pisar el título de la página.
+     *
+     * Va centrado en la ventana, y el CSS lo baja bajo la barra de la esquina
+     * por debajo de 1100 px. Pero el choque depende del título, no sólo del
+     * ancho: «Detalle de RFQ» o un título en francés es más largo que
+     * «Monitor», y a 1860 px ya quedaba debajo del reloj. Así que se mide:
+     * si el título llega a donde empieza el reloj, se baja (`reloj-abajo`,
+     * las mismas reglas que en pantallas estrechas).
+     */
+    vigilarReloj() {
+        if (this.relojVigilado) return;
+        this.relojVigilado = true;
+        const raiz = document.documentElement;
+        const comprobar = () => {
+            const reloj = document.getElementById('reloj');
+            const layout = document.querySelector('.app-layout');
+            const titulo = document.getElementById('pageTitle');
+            if (!reloj || !layout || layout.hidden || !titulo) {
+                raiz.classList.remove('reloj-abajo');
+                return;
+            }
+            // Se mide en su sitio de siempre: sin la clase puesta.
+            raiz.classList.remove('reloj-abajo');
+            const r = reloj.getBoundingClientRect();
+            const bloque = titulo.parentElement || titulo;
+            const rango = document.createRange();
+            let derecha = 0;
+            for (const el of [titulo, document.getElementById('pageSubtitle')]) {
+                if (!el || !el.textContent.trim()) continue;
+                rango.selectNodeContents(el);
+                derecha = Math.max(derecha, rango.getBoundingClientRect().right);
+            }
+            const arriba = bloque.getBoundingClientRect();
+            const choca = r.width > 0 && derecha > r.left - 16 && arriba.top < r.bottom;
+            raiz.classList.toggle('reloj-abajo', choca);
+        };
+        this.comprobarReloj = () => requestAnimationFrame(comprobar);
+        window.addEventListener('resize', this.comprobarReloj, { passive: true });
+        I18N.alCambiar(this.comprobarReloj);
+        if (window.ResizeObserver) {
+            const reloj = document.getElementById('reloj');
+            if (reloj) new ResizeObserver(this.comprobarReloj).observe(reloj);
+        }
+        this.comprobarReloj();
     },
 
     /** Refresca la ficha del usuario, que vive en el menú de arriba. */
@@ -696,6 +753,7 @@ const APP = {
         if (!this.claveTitulo) { t.textContent = 'Pohua'; sub.textContent = ''; return; }
         t.textContent = I18N.t(`pagina.${this.claveTitulo}.titulo`);
         sub.textContent = I18N.t(`pagina.${this.claveTitulo}.sub`);
+        if (this.comprobarReloj) this.comprobarReloj();
     },
 
     async correrCiclo() {

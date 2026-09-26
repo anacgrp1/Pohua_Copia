@@ -2,7 +2,7 @@
 
 Los RFQ llegan a cualquier hora —un comprador en Alemania escribe a las 3 de
 la madrugada en Kansas— pero contestarlos es un acto de la empresa, y la
-empresa tiene horario: de lunes a viernes, de 6:00 a 18:00.
+empresa tiene horario: de lunes a viernes, de 7:00 a 17:00.
 
 QUÉ HACE FUERA DE HORA. Nada, y esa es la decisión. El ciclo ni siquiera abre
 el buzón: el correo se queda sin leer donde está y entra en el primer ciclo de

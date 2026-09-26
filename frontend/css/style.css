@@ -1762,7 +1762,7 @@ a:hover { color: var(--cgr-primary); }
 .detail-key   { flex: none; }
 .detail-value { min-width: 0; overflow-wrap: anywhere; }
 .detail-value--correo { word-break: break-all; }
-.detail-value--tipo   { text-transform: capitalize; }
+.detail-value--tipo   { text-transform: none; }   /* ya llega traducido: I18N.tipoResorte */
 
 .detail-key {
     color: var(--text-muted);
@@ -4461,6 +4461,24 @@ body.menu-abierto { overflow: hidden; }
 
     .usuario-rol { flex: 1 1 auto; min-width: 0; }
 
+    /* En ficha, el texto se parte. En la tabla de escritorio el RFQ, el
+       cliente y la espera van en una línea (`white-space: nowrap`), pero en
+       la ficha del teléfono eso obligaba a la ficha a medir lo que midiera
+       «cgr-international.com · 004-222» más la etiqueta: la página quedaba
+       más ancha que la pantalla, el navegador la alejaba para que cupiera y
+       aparecía una franja vacía a la derecha —y el menú lateral ya no llegaba
+       hasta abajo—. */
+    .tabla-usuarios td,
+    .resumen-tabla td:first-child,
+    .resumen-tabla td:nth-child(2),
+    .resumen-tabla td:nth-child(3) {
+        white-space: normal;
+        width: 100%;               /* la tabla de escritorio las deja al 1 % */
+        min-width: 0;
+        overflow-wrap: break-word;
+    }
+    .tabla-caja { max-width: 100%; }
+
     /* La ficha lleva su "⋯" arriba a la derecha, como una tarjeta. */
     .tabla-usuarios tr { position: relative; }
     .tabla-usuarios td:first-child { padding-right: 44px; }
@@ -4796,6 +4814,26 @@ body.menu-abierto { overflow: hidden; }
         min-height: calc(40px + var(--sp-2) + 34px + var(--sp-5));
     }
     .page-header > div { max-width: calc(100% - 128px); }
+}
+
+/* Lo mismo a cualquier ancho cuando el título llegaría al reloj (lo mide
+   `APP.vigilarReloj`): un título largo —«Detalle de RFQ», o en francés— lo
+   alcanzaba en pantallas grandes, donde el corte de 1100 no aplica. */
+:root.reloj-abajo .reloj,
+:root.reloj-abajo .instalar-barra ~ .reloj {
+    top: calc(var(--alto-instalar, 0px) + var(--sp-3) + 40px + var(--sp-2));
+    left: auto;
+    right: var(--sp-4);
+    transform: none;
+}
+:root.reloj-abajo .page-header {
+    min-height: calc(40px + var(--sp-2) + 34px + var(--sp-5));
+}
+
+/* Nada puede hacer la página más ancha que el teléfono: si pasa, el navegador
+   la aleja entera y todo se ve pequeño con un hueco a la derecha. */
+@media (max-width: 768px) {
+    html, body { max-width: 100%; overflow-x: hidden; }
 }
 
 @media (max-width: 840px) {
@@ -5743,6 +5781,32 @@ body.revision-abierta { overflow: hidden; }
     display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 2px 0 0 26px;
     font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums;
 }
+/* Versiones de la cotización del PM (js/components/revision.js). */
+.revision-pill--versiones { cursor: pointer; font: inherit; font-weight: 600; }
+.revision-pill--versiones:hover { border-color: var(--cgr-accent-light); }
+.revision-versiones .revision-ver-nota { margin: 0 0 10px; font-size: 13px; color: var(--text-secondary); }
+.revision-ver-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.revision-ver-fila {
+    display: grid; grid-template-columns: minmax(180px, 1.2fr) 2fr auto; gap: 6px 16px;
+    align-items: center; padding: 10px 14px;
+    border: 1px solid var(--border-default); border-radius: var(--radius-md, 10px);
+    background: var(--bg-card);
+}
+.revision-ver-fila.en-uso { border-color: var(--cgr-accent); background: var(--cgr-accent-glow); }
+.revision-ver-cab { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; font-size: 13px; color: var(--text-secondary); }
+.revision-ver-cab b { color: var(--text-primary); font-size: 14px; }
+.revision-ver-precios { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.revision-ver-precio { white-space: nowrap; }
+.revision-ver-accion { justify-self: end; }
+.revision-ver-marca { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+.revision-ver-marca--uso { color: var(--cgr-accent-light); }
+:root[data-tema="light"] .revision-ver-marca--uso { color: var(--cgr-accent); }
+@media (max-width: 768px) {
+    .revision-ver-fila { grid-template-columns: 1fr auto; }
+    .revision-ver-precios { grid-column: 1 / -1; grid-row: 2; }
+    .revision-ver-accion { grid-row: 1; grid-column: 2; }
+}
+
 /* La píldora que dice que los números son los del PM (calculadora completa). */
 .revision-pill--pm {
     border-color: var(--cgr-accent);

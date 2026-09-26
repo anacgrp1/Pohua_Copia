@@ -91,6 +91,16 @@ CUERPO = r'''
         return m[1] + nuevo + m[3];
     }
 
+    /** Un <option> sin atributo value TOMA SU VALOR DEL TEXTO: traducirlo
+     *  cambiaría lo que lee la calculadora (`select.value` daría "Resorte de
+     *  compresión" en vez de "Compression Spring", y `select.value = 'Net 30'`
+     *  dejaría de encontrar su opción). Antes de traducir se le fija el value
+     *  con el texto en inglés; lo que se traduce es sólo lo que se ve. */
+    function fijarValor(n) {
+        const op = n.parentNode;
+        if (op && op.tagName === 'OPTION' && !op.hasAttribute('value')) op.setAttribute('value', op.value);
+    }
+
     function nodoTexto(n) {
         const en = (n.__en != null) ? n.__en : n.nodeValue;
         if (n.__en == null && idioma !== 'en') n.__en = n.nodeValue;
@@ -100,8 +110,9 @@ CUERPO = r'''
             return;
         }
         const tr = traducir(en, idx);
+        if (tr != null) fijarValor(n);
         const salida = tr == null ? en : conBordes(en, tr);
-        if (n.nodeValue !== salida) n.nodeValue = salida;
+        if (n.nodeValue !== salida) { n.nodeValue = salida; n.__puesto = salida; }
     }
 
     const ATRIBUTOS = ['placeholder', 'title', 'aria-label'];
@@ -114,26 +125,34 @@ CUERPO = r'''
             if (el[clave] == null && idioma !== 'en') el[clave] = en;
             const idx = IDX[idioma];
             const nuevo = (idx == null) ? en : (traducir(en, idx) || en);
-            if (el.getAttribute(a) !== nuevo) el.setAttribute(a, nuevo);
+            if (el.getAttribute(a) !== nuevo) { el.setAttribute(a, nuevo); el['__puesto_' + a] = nuevo; }
         }
     }
 
-    const SALTAR = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, NOSCRIPT: 1 };
+    // Ni texto ni atributos.
+    const SALTAR = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1 };
+    // Su texto es lo que escribe quien usa la calculadora: no se toca. Pero sus
+    // atributos sí (el placeholder de "Feasibility Remarks" es un TEXTAREA).
+    const SIN_TEXTO = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEXTAREA: 1 };
 
     function recorrer(raiz) {
         if (!raiz) return;
         escribiendo = true;
         try {
-            if (raiz.nodeType === 3) { nodoTexto(raiz); return; }
+            if (raiz.nodeType === 3) {
+                if (!SIN_TEXTO[raiz.parentNode && raiz.parentNode.tagName]) nodoTexto(raiz);
+                return;
+            }
             if (raiz.nodeType !== 1 && raiz.nodeType !== 9 && raiz.nodeType !== 11) return;
             if (raiz.nodeType === 1) {
                 if (SALTAR[raiz.tagName]) return;
                 elemento(raiz);
+                if (SIN_TEXTO[raiz.tagName]) return;
             }
             const w = document.createTreeWalker(raiz, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
                 acceptNode(n) {
                     if (n.nodeType === 1) return SALTAR[n.tagName] ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
-                    return SALTAR[n.parentNode && n.parentNode.tagName] ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+                    return SIN_TEXTO[n.parentNode && n.parentNode.tagName] ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
                 }
             });
             let n;
@@ -159,6 +178,13 @@ CUERPO = r'''
         const obs = new MutationObserver((cambios) => {
             if (escribiendo) return;
             for (const c of cambios) {
+                // El observador avisa DESPUÉS (en una microtarea), cuando
+                // `escribiendo` ya volvió a false: lo que escribió este script
+                // se reconoce por el valor que dejó puesto. Sin esto, el texto
+                // ya traducido se tomaba por el original nuevo y volver al
+                // inglés (o pasar al francés) dejaba esos trozos en español.
+                if (c.type === 'characterData' && c.target.__puesto === c.target.nodeValue) continue;
+                if (c.type === 'attributes' && c.target['__puesto_' + c.attributeName] === c.target.getAttribute(c.attributeName)) continue;
                 if (c.type === 'childList') {
                     c.addedNodes.forEach((n) => recorrer(n));
                 } else if (c.type === 'characterData') {

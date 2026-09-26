@@ -114,7 +114,7 @@ const Notificaciones = (() => {
         if (!iso) return '';
         const d = new Date(iso);
         if (isNaN(d)) return '';
-        return d.toLocaleDateString(I18N.locale ? I18N.locale() : undefined,
+        return d.toLocaleDateString(I18N.locale || undefined,
                                     { day: 'numeric', month: 'short' });
     }
 

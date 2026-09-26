@@ -111,7 +111,7 @@ const ResumenPage = (() => {
         const mayor = Math.max(...filas.map(f => f.total)) || 1;
         return `<ul class="resumen-barras">${filas.map(f => `
             <li>
-                <span class="resumen-barra-nombre">${esc(f[clave] || '—')}</span>
+                <span class="resumen-barra-nombre">${esc((clave === 'estado' ? I18N.estado(f[clave]) : f[clave]) || '—')}</span>
                 <span class="resumen-barra-pista">
                     <span class="resumen-barra-valor"
                           style="width:${Math.max(3, Math.round(f.total / mayor * 100))}%"></span>
@@ -228,7 +228,7 @@ const ResumenPage = (() => {
                 <td class="resumen-decidida-dato">${esc(cliente || '—')}</td>
                 <td class="resumen-decidida-dato">${esc(r.part_number || '—')}</td>
                 <td class="resumen-decidida-dato">${esc(cuando || '—')}</td>
-                <td class="resumen-decidida-estado"><span class="badge ${clase}"><span class="badge-dot"></span>${esc(r.estado)}</span></td>
+                <td class="resumen-decidida-estado"><span class="badge ${clase}"><span class="badge-dot"></span>${esc(I18N.estado(r.estado))}</span></td>
                 <td class="resumen-decidida-accion">
                     <button type="button" class="btn btn-secondary btn-sm"
                             data-decidida="${esc(r.rfq_id)}">${esc(I18N.t('resumen.verHoja'))}</button>

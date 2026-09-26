@@ -99,6 +99,7 @@ else:
 ICONO = RAIZ / "frontend" / "assets" / "icon-512.png"
 
 import app.core.config as config                                 # noqa: E402
+from desktop_app.textos_registro import traducir as traducir_registro  # noqa: E402
 from app.core.logging import configure_logging                   # noqa: E402
 
 configure_logging()
@@ -616,19 +617,11 @@ class Ventana(QMainWindow):
         de su Monitor cuando la versión desplegada lo trae. Las dos vistas
         son el mismo lector: lo que se escribe en una se ve en la otra.
         """
-        self.pestanas = QTabWidget()
-        self.pestanas.setDocumentMode(True)
-        if HAY_WEB:
-            self.pestanas.addTab(self._pagina_web(), "Pohua")
-        self.pestanas.addTab(self._pagina_lector(), self._t("pestana.lector"))
-        self._traducibles["pestana.lector"] = self.pestanas
-        # En la esquina: el estado del lector, siempre a la vista, esté en la
-        # pestaña que esté, y los dos modos de Pohua —idioma y tema— con los
-        # mismos botones que la web lleva en su esquina.
-        esquina = QWidget()
-        fila = QHBoxLayout(esquina)
-        fila.setContentsMargins(0, 0, 8, 0)
-        fila.setSpacing(8)
+        # El estado del lector y los dos modos de Pohua —idioma y tema— van en
+        # la cabecera del Lector local, a la derecha del título (2026-09-26, a
+        # petición de ventas: antes colgaban de la barra de pestañas y se
+        # perdían en la esquina). En la pestaña Pohua la web ya trae los suyos,
+        # sincronizados con éstos.
         self.estado_pestanas = QLabel(self._t("esquina", estado=self._t("estado.parado").lower()))
         self.estado_pestanas.setObjectName("estadoLector")
         self.btn_idioma = QPushButton()
@@ -639,9 +632,13 @@ class Ventana(QMainWindow):
         self.btn_tema.setObjectName("esquina")
         self.btn_tema.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_tema.clicked.connect(self._alternar_tema)
-        for widget in (self.estado_pestanas, self.btn_idioma, self.btn_tema):
-            fila.addWidget(widget)
-        self.pestanas.setCornerWidget(esquina)
+
+        self.pestanas = QTabWidget()
+        self.pestanas.setDocumentMode(True)
+        if HAY_WEB:
+            self.pestanas.addTab(self._pagina_web(), "Pohua")
+        self.pestanas.addTab(self._pagina_lector(), self._t("pestana.lector"))
+        self._traducibles["pestana.lector"] = self.pestanas
         self.setCentralWidget(self.pestanas)
         self._pintar_modos()
 
@@ -674,6 +671,7 @@ class Ventana(QMainWindow):
         self.idioma = codigo
         self.ajustes.setValue("idioma", codigo)
         self._retraducir()
+        self._repintar_registro()           # el registro también cambia de idioma
         if not desde_web:
             self._decir_a_la_web(
                 f"(function(){{ if (window.I18N && I18N.fijar) I18N.fijar('{codigo}'); }})()")
@@ -722,8 +720,12 @@ class Ventana(QMainWindow):
             elif clave.startswith("btn.") or clave.startswith("cifra.") or clave in (
                     "titulo", "sinweb"):
                 widget.setText(self._t(clave))
-            elif clave == "pie.inicial" and not getattr(self, "_pie_dinamico", False):
-                widget.setText(self._t(clave))
+            elif clave == "pie.inicial":
+                if getattr(self, "_pie_dinamico", False):
+                    widget.setText(traducir_registro(getattr(self, "_ultimo_pie", ""),
+                                                     self.idioma or "es"))
+                else:
+                    widget.setText(self._t(clave))
         self.pintar_estado(self.estado_actual)
         self._pintar_modos()
 
@@ -744,9 +746,10 @@ class Ventana(QMainWindow):
         self.registro.clear()
         for linea in self.historial:
             color = colores.get(linea["nivel"], colores["info"])
+            visible = traducir_registro(str(linea["texto"]), self.idioma or "es")
             self.registro.append(
                 f'<span style="color:{hora_color}">{linea["hora"]}</span> '
-                f'<span style="color:{color}">{_html.escape(str(linea["texto"]))}</span>')
+                f'<span style="color:{color}">{_html.escape(visible)}</span>')
         barra = self.registro.verticalScrollBar()
         barra.setValue(barra.maximum())
 
@@ -870,7 +873,14 @@ class Ventana(QMainWindow):
         self._traducibles["donde"] = self.donde
         cabecera.addWidget(titulo)
         cabecera.addWidget(self.donde)
-        capa.addLayout(cabecera)
+        arriba = QHBoxLayout()
+        arriba.setSpacing(10)
+        arriba.addLayout(cabecera)
+        arriba.addStretch(1)
+        # Estado, idioma y tema: a la derecha del título, centrados con él.
+        for widget in (self.estado_pestanas, self.btn_idioma, self.btn_tema):
+            arriba.addWidget(widget, 0, Qt.AlignmentFlag.AlignVCenter)
+        capa.addLayout(arriba)
 
         # --- estado y botones ---
         barra = QFrame()
@@ -945,9 +955,11 @@ class Ventana(QMainWindow):
         hora_color = PALETAS.get(self.tema or "dark", PALETAS["dark"])["hora"]
         hora = time.strftime("%H:%M:%S")
         if self.registro is not None:
+            # Se pinta en el idioma elegido; el historial guarda el original.
+            visible = traducir_registro(str(texto), self.idioma or "es")
             self.registro.append(
                 f'<span style="color:{hora_color}">{hora}</span> '
-                f'<span style="color:{color}">{_html.escape(str(texto))}</span>')
+                f'<span style="color:{color}">{_html.escape(visible)}</span>')
             barra = self.registro.verticalScrollBar()
             barra.setValue(barra.maximum())
         linea = {"hora": hora, "nivel": nivel, "texto": str(texto)}
@@ -1143,8 +1155,9 @@ class Ventana(QMainWindow):
     def _pie(self, texto):
         """El renglón del latido, en el panel de respaldo y en el registro."""
         self._pie_dinamico = True
+        self._ultimo_pie = texto
         if self.pie is not None:
-            self.pie.setText(texto)
+            self.pie.setText(traducir_registro(texto, self.idioma or "es"))
         else:
             self._ultimo_pie = texto
 

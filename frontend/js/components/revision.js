@@ -90,10 +90,12 @@ const Revision = (() => {
     }
 
     function tipoResorte(codigo) {
-        const clave = 'rev.tipo.' + (codigo || '');
-        const texto = I18N.t(clave);
-        return texto === clave ? (codigo || '') : texto;
+        // 'Compresion', 'compression', 'torsión'…: I18N sabe normalizarlos.
+        return I18N.tipoResorte ? I18N.tipoResorte(codigo) : (codigo || '');
     }
+
+    /** Mayúsculas en el idioma puesto (para los rótulos en versalitas). */
+    function MAY(clave, vars) { return t(clave, vars).toLocaleUpperCase(I18N.locale); }
 
     // ------------------------------------------------------------- avisos
 
@@ -176,7 +178,7 @@ const Revision = (() => {
     function cabecera(d) {
         const r = d.rfq || {};
         const pn = r.part_number || '—';
-        const tipo = tipoResorte(r.tipo_resorte) || 'Compression spring';
+        const tipo = tipoResorte(r.tipo_resorte) || t('rev.tipo.compresion');
         const quoteNum = r.quote_number || r.rfq_id || '—';
         const cliente = r.customer || '—';
         return `
@@ -186,7 +188,7 @@ const Revision = (() => {
                     <span class="revision-cab-sep">·</span>
                     <span class="revision-cab-tipo">${esc(tipo)}</span>
                 </div>
-                <div class="revision-cab-meta">Quote ${esc(quoteNum)} · ${esc(cliente)}</div>
+                <div class="revision-cab-meta">${esc(t('rev.cotizacion', { n: quoteNum }))} · ${esc(cliente)}</div>
                 <button type="button" class="revision-cerrar" data-accion="cerrar" aria-label="${esc(t('rev.cerrar'))}">&times;</button>
             </div>`;
     }
@@ -224,9 +226,99 @@ const Revision = (() => {
         } catch (_) { cuando = pm.en || ''; }
         const quien = pm.por ? esc(String(pm.por).split('@')[0]) : '';
         const numero = pm.numero ? ` · ${esc(pm.numero)}` : '';
+        const ver = pm.version ? ` · v${esc(pm.version)}` : '';
         return `<span class="revision-pill revision-pill--pm" title="${esc(t('rev.pm.ayuda'))}">
-                    ${esc(t('rev.pm.cotizado'))}${quien ? ` · ${quien}` : ''}${cuando ? ` · ${esc(cuando)}` : ''}${numero}
+                    ${esc(t('rev.pm.cotizado'))}${ver}${quien ? ` · ${quien}` : ''}${cuando ? ` · ${esc(cuando)}` : ''}${numero}
                 </span>`;
+    }
+
+    // ------------------------------------------------------------ versiones
+
+    /*
+     * Las versiones que el PM trajo de la calculadora, para escoger.
+     *
+     * Cada vez que el PM vuelve de la calculadora queda una versión fijada
+     * (app/rfq/versiones_pm.py). Aquí se ven todas —cuándo, quién, el precio
+     * de cada tramo— y se escoge cuál vale: la ventana, la oferta y la
+     * calculadora pasan a usar ésa. También se puede volver al cálculo del
+     * sistema sin perder ninguna.
+     */
+    let versionesAbiertas = false;
+
+    function botonVersiones(d) {
+        const v = (d.versiones_pm && d.versiones_pm.versiones) || [];
+        if (!v.length) return '';
+        return `<button type="button" class="revision-pill revision-pill--versiones"
+                        data-accion="versiones" aria-expanded="${versionesAbiertas}">
+                    ${esc(t('rev.ver.boton', { n: v.length }))} ${versionesAbiertas ? '▴' : '▾'}
+                </button>`;
+    }
+
+    function cuandoCorto(iso) {
+        if (!iso) return '';
+        try {
+            return new Date(iso).toLocaleString((typeof I18N.idioma === 'string' ? I18N.idioma : undefined),
+                { dateStyle: 'short', timeStyle: 'short' });
+        } catch (_) { return iso; }
+    }
+
+    function panelVersiones(d) {
+        const info = d.versiones_pm || {};
+        const lista = info.versiones || [];
+        if (!versionesAbiertas || !lista.length) return '';
+        const puede = API.puede('rfq:dictaminar') && !(d.rfq && ['Approved', 'Declined'].includes(d.rfq.estado));
+        const fila = (v) => {
+            const precios = (v.precios || []).map((p, i) => {
+                const q = (v.cantidades || [])[i];
+                return `<span class="revision-ver-precio">${q ? esc(entero(q)) + ' · ' : ''}${esNum(p) ? dinero(p, 4) : '—'}</span>`;
+            }).join('');
+            const quien = v.por ? esc(String(v.por).split('@')[0]) : '';
+            return `<li class="revision-ver-fila ${v.en_uso ? 'en-uso' : ''}">
+                <div class="revision-ver-cab">
+                    <b>v${esc(v.n)}</b>
+                    <span>${esc(cuandoCorto(v.en))}${quien ? ' · ' + quien : ''}${v.numero ? ' · ' + esc(v.numero) : ''}</span>
+                    ${v.fijada ? '' : `<span class="revision-ver-marca">${esc(t('rev.ver.enCurso'))}</span>`}
+                </div>
+                <div class="revision-ver-precios">${precios}</div>
+                <div class="revision-ver-accion">
+                    ${v.en_uso ? `<span class="revision-ver-marca revision-ver-marca--uso">${esc(t('rev.ver.enUso'))}</span>`
+                        : (puede ? `<button type="button" class="btn btn-secondary btn-sm revision-btn" data-accion="usarVersion" data-version="${esc(v.n)}">${esc(t('rev.ver.usar'))}</button>` : '')}
+                </div>
+            </li>`;
+        };
+        const sistema = `<li class="revision-ver-fila ${info.sistema_en_uso ? 'en-uso' : ''}">
+                <div class="revision-ver-cab"><b>${esc(t('rev.ver.sistema'))}</b>
+                    <span>${esc(t('rev.ver.sistemaAyuda'))}</span></div>
+                <div class="revision-ver-precios"></div>
+                <div class="revision-ver-accion">
+                    ${info.sistema_en_uso ? `<span class="revision-ver-marca revision-ver-marca--uso">${esc(t('rev.ver.enUso'))}</span>`
+                        : (puede ? `<button type="button" class="btn btn-secondary btn-sm revision-btn" data-accion="usarVersion" data-version="">${esc(t('rev.ver.usar'))}</button>` : '')}
+                </div>
+            </li>`;
+        return `<section class="revision-bloque revision-versiones" aria-label="${esc(t('rev.ver.titulo'))}">
+                <h4>${esc(t('rev.ver.titulo'))}</h4>
+                <p class="revision-ver-nota">${esc(t('rev.ver.nota'))}</p>
+                <ul class="revision-ver-lista">${lista.map(fila).join('')}${sistema}</ul>
+            </section>`;
+    }
+
+    async function usarVersion(valor) {
+        if (!API.puede('rfq:dictaminar')) { Toast.error(I18N.t('aviso.sinPermisoRfq')); return; }
+        const version = valor === '' || valor === undefined || valor === null ? null : Number(valor);
+        bloquear(true);
+        try {
+            const nuevo = await API.rfqUsarVersionPM(rfqAbierto, version);
+            if (!capa) return;
+            datos = nuevo;
+            ultimoCosteo = huellaDelCosteo(datos);
+            if (tramoActivo >= (datos.tramos || []).length) tramoActivo = 0;
+            pintar();
+            Toast.success(version === null ? t('rev.ver.usandoSistema') : t('rev.ver.usando', { n: version }));
+        } catch (err) {
+            if (!(err && err.sesionExpirada)) Toast.error(err.message);
+        } finally {
+            bloquear(false);
+        }
     }
 
     function comunes(d) {
@@ -238,15 +330,16 @@ const Revision = (() => {
                 <div class="revision-rotulo">${esc(t('rev.todosTramos'))}</div>
                 <div class="revision-pills">
                     ${origenDelCosteo(d)}
+                    ${botonVersiones(d)}
                     <span class="revision-pill revision-pill--maquina ${maq ? '' : 'revision-pill--falta'}"
                           title="${esc(t('rev.maquinaAyuda'))}">
                         ${esc(t('rev.maquina'))}: <b>${maq ? esc(maq) : esc(t('rev.sinMaquina'))}</b>
                     </span>
                     <span class="revision-pill">${mat}</span>
                     <span class="revision-pill">Ø ${esNum(c.dia_in) ? num(c.dia_in, 3) + ' in' : '—'}</span>
-                    <span class="revision-pill">${esNum(c.peso_lb_pc) ? num(c.peso_lb_pc, 3) + ' lb/pc' : '—'}</span>
-                    <span class="revision-pill">Base ${esNum(c.base_lb) ? dinero(c.base_lb, 2) + '/lb' : '—'}</span>
-                    ${esNum(c.surcharge_lb) && c.surcharge_lb > 0 ? `<span class="revision-pill">Surcharge ${dinero(c.surcharge_lb, 2)}/lb</span>` : `<span class="revision-pill">Surcharge $0.00/lb</span>`}
+                    <span class="revision-pill">${esNum(c.peso_lb_pc) ? num(c.peso_lb_pc, 3) + ' lb/' + esc(t('rev.pza')) : '—'}</span>
+                    <span class="revision-pill">${esc(t('rev.base'))} ${esNum(c.base_lb) ? dinero(c.base_lb, 2) + '/lb' : '—'}</span>
+                    ${esNum(c.surcharge_lb) && c.surcharge_lb > 0 ? `<span class="revision-pill">${esc(t('rev.surcharge'))} ${dinero(c.surcharge_lb, 2)}/lb</span>` : `<span class="revision-pill">${esc(t('rev.surcharge'))} $0.00/lb</span>`}
                 </div>
             </section>`;
     }
@@ -263,13 +356,13 @@ const Revision = (() => {
                     <button type="button" role="tab" class="revision-tramo-card ${i === tramoActivo ? 'activo' : ''}"
                             data-tramo="${i}" aria-selected="${i === tramoActivo}">
                         <div class="revision-tramo-cab">
-                            <span class="revision-tramo-tit">Tier ${i + 1}${i === 0 ? ' ★' : ''} · </span>
-                            <span class="qty-larga">${entero(tr.cantidad)} pcs</span>
+                            <span class="revision-tramo-tit">${esc(t('rev.tramo', { n: i + 1 }))}${i === 0 ? ' ★' : ''} · </span>
+                            <span class="qty-larga">${entero(tr.cantidad)} ${esc(t('rev.pzas'))}</span>
                             <span class="qty-corta">${qtyCorta(tr.cantidad)}</span>
                         </div>
                         <div class="revision-tramo-cuerpo">
                             <span class="revision-tramo-precio">
-                                <span class="precio-largo">${dinero(tr.precio_pc)}/pc</span>
+                                <span class="precio-largo">${dinero(tr.precio_pc)}/${esc(t('rev.pza'))}</span>
                                 <span class="precio-corto">${dinero(tr.precio_pc)}</span>
                             </span>
                             <span class="revision-tramo-margen">${pct(tr.resultado_pct)}</span>
@@ -299,12 +392,12 @@ const Revision = (() => {
         return `
             <div class="revision-cascada-wrap">
                 <div class="revision-cascada-tit-movil">
-                    MARGIN WATERFALL · PER PIECE · ${entero(tr ? tr.cantidad : 0)} PCS
+                    ${esc(MAY('rev.cascada'))} · ${esc(MAY('rev.porPieza'))} · ${entero(tr ? tr.cantidad : 0)} ${esc(MAY('rev.pzas'))}
                 </div>
                 <!-- Desktop 5 columns -->
                 <div class="revision-cascada-grid">
                     <div class="revision-cascada-col">
-                        <span class="revision-cascada-lbl">SELLING PRICE</span>
+                        <span class="revision-cascada-lbl">${esc(MAY('rev.sell'))}</span>
                         <span class="revision-cascada-val">${dinero(c.sell)}</span>
                         <span class="revision-cascada-sub">100%</span>
                     </div>
@@ -324,7 +417,7 @@ const Revision = (() => {
                         <span class="revision-cascada-sub">${pct(c.ccd_pct)}</span>
                     </div>
                     <div class="revision-cascada-col revision-cascada-col--resultado ${resClase}">
-                        <span class="revision-cascada-lbl">RESULT · TARGET ${targetPct}</span>
+                        <span class="revision-cascada-lbl">${esc(MAY('rev.resultado'))} · ${esc(MAY('rev.objetivo'))} ${targetPct}</span>
                         <span class="revision-cascada-val">${dinero(c.resultado)}</span>
                         <span class="revision-cascada-sub">${pct(c.resultado_pct)}</span>
                     </div>
@@ -332,7 +425,7 @@ const Revision = (() => {
                 <!-- Mobile 5 rows -->
                 <div class="revision-cascada-lista">
                     <div class="revision-cascada-fila">
-                        <span class="revision-cascada-fila-lbl">Selling price</span>
+                        <span class="revision-cascada-fila-lbl">${esc(t('rev.sell'))}</span>
                         <span class="revision-cascada-fila-val">${dinero(c.sell)}</span>
                         <span class="revision-cascada-fila-sub">100%</span>
                     </div>
@@ -352,7 +445,7 @@ const Revision = (() => {
                         <span class="revision-cascada-fila-sub">${pct(c.ccd_pct)}</span>
                     </div>
                     <div class="revision-cascada-fila revision-cascada-fila--resultado ${resClase}">
-                        <span class="revision-cascada-fila-lbl">Result - target ${targetPct}</span>
+                        <span class="revision-cascada-fila-lbl">${esc(t('rev.resultado'))} - ${esc(t('rev.objetivo'))} ${targetPct}</span>
                         <span class="revision-cascada-fila-val">${dinero(c.resultado)}</span>
                         <span class="revision-cascada-fila-sub">${pct(c.resultado_pct)}</span>
                     </div>
@@ -368,18 +461,18 @@ const Revision = (() => {
         return `
             <div class="revision-columnas-grid">
                 <section class="revision-bloque">
-                    <h4 class="revision-bloque-tit">MATERIAL THIS TIER</h4>
+                    <h4 class="revision-bloque-tit">${esc(MAY('rev.materialTramo'))}</h4>
                     <div class="revision-fila-dato">
                         <span class="revision-fila-lbl">
-                            <span class="lbl-desktop">$/pc</span>
-                            <span class="lbl-movil">Material $/pc</span>
+                            <span class="lbl-desktop">$/${esc(t('rev.pza'))}</span>
+                            <span class="lbl-movil">${esc(t('rev.materialPc'))}</span>
                         </span>
                         <span class="revision-fila-val">
                             ${esNum(m.pc) ? `<b>${dinero(m.pc)}</b> <small>· ${pct(m.pct)}</small>` : '—'}
                         </span>
                     </div>
                     <div class="revision-fila-dato">
-                        <span class="revision-fila-lbl">Wire to buy</span>
+                        <span class="revision-fila-lbl">${esc(t('rev.alambre'))}</span>
                         <span class="revision-fila-val">
                             <b>${esNum(m.lb_comprar) ? num(m.lb_comprar, 0) + ' lb' : '—'}</b>
                         </span>
@@ -389,8 +482,8 @@ const Revision = (() => {
 
                 <section class="revision-bloque">
                     <h4 class="revision-bloque-tit">
-                        <span class="lbl-desktop">ROUTE${horasTot ? ` · ${horasTot} MACHINE H` : ''}</span>
-                        <span class="lbl-movil">ROUTE${horasTot ? ` · ${horasTot} MACHINE HOURS` : ''}</span>
+                        <span class="lbl-desktop">${esc(MAY('rev.ruta'))}${horasTot ? ` · ${horasTot} ${esc(MAY('rev.maquinaH'))}` : ''}</span>
+                        <span class="lbl-movil">${esc(MAY('rev.ruta'))}${horasTot ? ` · ${horasTot} ${esc(MAY('rev.horas'))}` : ''}</span>
                     </h4>
                     ${ruta.length ? ruta.map((op, i) => `
                         <div class="revision-op">
@@ -400,25 +493,25 @@ const Revision = (() => {
                                 ${familia(op) ? `<span class="revision-op-fam revision-op-fam--${esc(String(op.familia || '').toLowerCase())}">${esc(familia(op))}</span>` : ''}
                             </div>
                             <div class="revision-op-datos">
-                                <span>${esNum(op.pph) ? num(op.pph, 0) + ' pc/h' : '—'}</span>
-                                <span>setup ${esNum(op.setup_h) ? num(op.setup_h, 1) + ' h' : '—'}</span>
+                                <span>${esNum(op.pph) ? num(op.pph, 0) + ' ' + esc(t('rev.pza')) + '/h' : '—'}</span>
+                                <span>${esc(t('rev.setup'))} ${esNum(op.setup_h) ? num(op.setup_h, 1) + ' h' : '—'}</span>
                                 ${esNum(op.costo_h) ? `<span>${dinero(op.costo_h, 2)}/h</span>` : ''}
                             </div>
                         </div>`).join('') : `<div class="revision-nota">${esc(t('rev.sinRuta'))}</div>`}
                 </section>
 
                 <section class="revision-bloque">
-                    <h4 class="revision-bloque-tit">TIER TOTALS</h4>
+                    <h4 class="revision-bloque-tit">${esc(MAY('rev.totalesTramo'))}</h4>
                     <div class="revision-fila-dato">
-                        <span class="revision-fila-lbl">Revenue</span>
+                        <span class="revision-fila-lbl">${esc(t('rev.ingreso'))}</span>
                         <span class="revision-fila-val">
                             <b>${dinero(tot.ingreso, 0)}</b>
                         </span>
                     </div>
                     <div class="revision-fila-dato">
                         <span class="revision-fila-lbl">
-                            <span class="lbl-desktop">C/CV per h</span>
-                            <span class="lbl-movil">C/CV per machine hour</span>
+                            <span class="lbl-desktop">${esc(t('rev.ccvHora'))}</span>
+                            <span class="lbl-movil">${esc(t('rev.ccvHoraLargo'))}</span>
                         </span>
                         <span class="revision-fila-val">
                             <b>${esNum(tot.ccv_hora) ? dinero(tot.ccv_hora, 2) : '—'}</b>
@@ -457,7 +550,8 @@ const Revision = (() => {
 
         return `
             <div class="revision-pie">
-                <div class="revision-pie-nota">${esc(puede && abierto ? t('rev.pieNota') : (puede ? t('rev.pieCerrado') : t('rev.pieSoloLectura')))}</div>
+                ${puede && abierto ? '<div class="revision-pie-nota"></div>'
+                    : `<div class="revision-pie-nota">${esc(puede ? t('rev.pieCerrado') : t('rev.pieSoloLectura'))}</div>`}
                 <div class="revision-acciones">
                     <div class="revision-grupo revision-grupo--ver">${ver.join('')}</div>
                     ${decidir.length ? `<div class="revision-grupo revision-grupo--decidir">${decidir.join('')}</div>` : ''}
@@ -478,6 +572,9 @@ const Revision = (() => {
      * aquí entra lo que alguien escribe en un formulario, y la lista de lo que
      * puede tocar la cierra el servidor (app/rfq/recalculo.py).
      */
+    // Ya no se pinta (2026-09-26, a petición de ventas): las cotas se corrigen
+    // en la calculadora completa, que es de donde salen los números. Se deja
+    // la función por si el apartado vuelve.
     function geometria(d) {
         const g = d.resorte || {};
         const puede = d.puede_dictaminar && API.puede('rfq:dictaminar');
@@ -558,10 +655,10 @@ const Revision = (() => {
                 ${cabecera(d)}
                 <div class="revision-cuerpo">
                     ${comunes(d)}
+                    ${panelVersiones(d)}
                     ${pestanas(d)}
                     ${franja(avisos(d))}
                     ${tr ? cascada(tr) + columnas(tr) : ''}
-                    ${geometria(d)}
                     ${r.notas ? `<section class="revision-bloque revision-notas"><h4>${esc(t('rev.notas'))}</h4><pre>${esc(r.notas)}</pre></section>` : ''}
                 </div>
                 ${pie(d)}
@@ -850,7 +947,7 @@ const Revision = (() => {
             setTimeout(() => URL.revokeObjectURL(url), 60000);
         } catch (err) {
             if (w) w.close();
-            if (!err.sesionExpirada) Toast.error(err.message || 'Error al generar el PDF');
+            if (!err.sesionExpirada) Toast.error(err.message || t('rev.pdfError'));
         }
     }
 
@@ -961,7 +1058,9 @@ const Revision = (() => {
     function huellaDelCosteo(d) {
         try {
             const c = (d && d.costeo && d.costeo.pm) || {};
-            return JSON.stringify([c.en, c.por, (d && d.tramos || []).map(x => x.precio_pc)]);
+            const v = (d && d.versiones_pm) || {};
+            return JSON.stringify([c.en, c.por, c.version, v.en_uso, (v.versiones || []).length,
+                                   (d && d.tramos || []).map(x => x.precio_pc)]);
         } catch (_) { return ''; }
     }
 
@@ -1054,6 +1153,7 @@ const Revision = (() => {
 
     function cerrar(silencio) {
         dejarDeVigilar();
+        versionesAbiertas = false;
         if (capa) capa.remove();
         capa = null; datos = null; rfqAbierto = null; ocupado = false;
         document.body.classList.remove('revision-abierta');
@@ -1081,6 +1181,8 @@ const Revision = (() => {
             else if (accion === 'devolver') devolver();
             else if (accion === 'declinar') declinar();
             else if (accion === 'cotizar') cotizar();
+            else if (accion === 'versiones') { versionesAbiertas = !versionesAbiertas; pintar(); }
+            else if (accion === 'usarVersion') usarVersion(boton.dataset.version);
             else if (accion === 'recalcular') recalcular(false);
             else if (accion === 'leerPlano') recalcular(true);
             return;

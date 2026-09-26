@@ -360,6 +360,14 @@ class CotizacionPMRequest(BaseModel):
     contribution: Optional[float] = None
     cabecera: Dict[str, Any] = Field(default_factory=dict)
     material_nombre: Optional[str] = None
+    # "guardado": el guardado automático mientras se escribe (actualiza la
+    # versión en curso). "volver": el PM volvió a la revisión (la fija).
+    motivo: str = "guardado"
+
+
+class VersionPMRequest(BaseModel):
+    """Qué versión de la cotización del PM usar; ``None`` = el cálculo del sistema."""
+    version: Optional[int] = None
 
 
 class OfertaRequest(BaseModel):

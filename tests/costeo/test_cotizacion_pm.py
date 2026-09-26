@@ -84,7 +84,8 @@ class TestCostearConElPM:
         assert r["costeo"]["origen"] == "calculadora"
         assert r["costeo"]["pm"] == {"por": "pm@cgr-international.com",
                                      "en": "2026-09-25T15:40:00+00:00",
-                                     "numero": "2026-CGRINTERNA-020"}
+                                     "numero": "2026-CGRINTERNA-020",
+                                     "version": None}
         assert r["costeo"]["banderas_motor"] == ["Scrap above 5 %"]
 
     def test_sin_cotizacion_del_pm_se_costea_como_siempre(self):
@@ -136,10 +137,11 @@ class TestElEndpoint:
         body = CotizacionPMRequest(pn=PN, resultado=RESULTADO, contribution=25.0,
                                    cabecera={"numero": "2026-CGRINTERNA-020"})
         with mock.patch.object(rutas, "get_rfq", return_value=self._detalle(rutas)), \
-             mock.patch("app.rfq.repository.anotar_cotizacion_pm") as anotar:
+             mock.patch("app.rfq.repository.anotar_datos") as anotar:
             ventana = rutas.guardar_cotizacion_pm("INT-1", body, usuario)
 
-        guardado = anotar.call_args[0][1]
+        guardado = anotar.call_args[0][1]["cotizacion_pm"]
+        assert guardado["n"] == 1 and guardado["fijada"] is False
         assert guardado["por"] == "pm@cgr-international.com"
         assert guardado["pn"] == PN and guardado["contribution"] == 25.0
         assert guardado["en"]
@@ -153,7 +155,7 @@ class TestElEndpoint:
 
         body = CotizacionPMRequest(pn=PN, resultado={"tiers": [None, None]})
         with mock.patch.object(rutas, "get_rfq", return_value=self._detalle(rutas)), \
-             mock.patch("app.rfq.repository.anotar_cotizacion_pm") as anotar, \
+             mock.patch("app.rfq.repository.anotar_datos") as anotar, \
              pytest.raises(HTTPException):
             rutas.guardar_cotizacion_pm("INT-1", body, mock.Mock(correo="pm@x"))
         anotar.assert_not_called()
@@ -169,12 +171,154 @@ class TestElEndpoint:
                      "resorte": {"diametro_alambre_mm": 4.5}, "factibilidad": {}}
         with mock.patch.object(rutas, "get_rfq", return_value=detalle), \
              mock.patch("app.rfq.recalculo.recalcular", return_value=recalculo), \
-             mock.patch("app.rfq.repository.anotar_cotizacion_pm") as anotar, \
+             mock.patch("app.rfq.repository.anotar_datos") as anotar, \
              mock.patch.object(rutas.costeo_rfq, "costear",
                                return_value={"cantidades": [], "tramos": [], "costeo": {},
                                              "comunes": {}, "error_costeo": None}) as costear:
             rutas.recalcular_rfq("INT-1", RecalculoRequest(ajustes={"diametro_alambre_mm": "4.5"}),
                                  mock.Mock(correo="pm@x"))
-        anotar.assert_called_once_with("INT-1", None)
+        cambios = anotar.call_args[0][1]
+        assert cambios["cotizacion_pm"] is None
+        # La calculadora se reabrirá con el PN del sistema (cotas nuevas).
+        assert cambios["pm_restauracion"]["version"] is None
         # Y la ventana se costea ya sin la del PM.
         assert "cotizacion_pm" not in costear.call_args[0][1]
+
+
+# --------------------------------------------------------------------------- #
+# Versiones: el PM prueba, vuelve, y puede escoger una anterior
+# --------------------------------------------------------------------------- #
+
+import app.rfq.versiones_pm as versiones  # noqa: E402
+
+
+def cot(precio, por="pm@x", en="2026-09-26T16:00:00+00:00"):
+    return {"pn": dict(PN, remarks=f"p{precio}"),
+            "resultado": {"tiers": [tier(111000, precio)], "flags": []},
+            "contribution": 20.0, "cabecera": {"numero": "Q-1"}, "por": por, "en": en}
+
+
+def aplicar(datos, cambios):
+    fuera = dict(datos)
+    for k, v in (cambios or {}).items():
+        if v is None:
+            fuera.pop(k, None)
+        else:
+            fuera[k] = v
+    return fuera
+
+
+class TestVersiones:
+
+    def test_mientras_escribe_es_la_misma_version(self):
+        d = aplicar({}, versiones.registrar({}, cot(3.6)))
+        assert d["cotizacion_pm"]["n"] == 1 and not d["cotizacion_pm"]["fijada"]
+        d = aplicar(d, versiones.registrar(d, cot(3.7)))
+        assert d["cotizacion_pm"]["n"] == 1
+        assert versiones.precios(d["cotizacion_pm"]) == [3.7]
+        assert "cotizacion_pm_versiones" not in d       # todavía nada fijado
+
+    def test_al_volver_se_fija_y_el_siguiente_cambio_abre_otra(self):
+        d = aplicar({}, versiones.registrar({}, cot(3.6), motivo="volver"))
+        assert d["cotizacion_pm"]["fijada"] is True
+        assert [v["n"] for v in d["cotizacion_pm_versiones"]] == [1]
+        d = aplicar(d, versiones.registrar(d, cot(10.0)))
+        assert d["cotizacion_pm"]["n"] == 2 and not d["cotizacion_pm"]["fijada"]
+        d = aplicar(d, versiones.registrar(d, cot(10.0), motivo="volver"))
+        assert [v["n"] for v in d["cotizacion_pm_versiones"]] == [1, 2]
+
+    def test_lo_que_no_cambia_no_escribe_nada(self):
+        d = aplicar({}, versiones.registrar({}, cot(3.6), motivo="volver"))
+        # Reabrir la hoja la hace guardar aunque nadie toque nada.
+        assert versiones.registrar(d, cot(3.6, en="otra hora")) is None
+        assert versiones.registrar(d, cot(3.6), motivo="volver") is None
+
+    def test_volver_sin_cambios_fija_la_en_curso(self):
+        d = aplicar({}, versiones.registrar({}, cot(3.6)))
+        d = aplicar(d, versiones.registrar(d, cot(3.6), motivo="volver"))
+        assert d["cotizacion_pm"]["fijada"] and d["cotizacion_pm"]["n"] == 1
+        assert [v["n"] for v in d["cotizacion_pm_versiones"]] == [1]
+
+    def _dos_versiones(self):
+        d = aplicar({}, versiones.registrar({}, cot(3.6), motivo="volver"))
+        return aplicar(d, versiones.registrar(d, cot(10.0), motivo="volver"))
+
+    def test_escoger_una_anterior_la_vuelve_la_actual(self):
+        d = self._dos_versiones()
+        d = aplicar(d, versiones.restaurar(d, 1, "pm@x", "2026-09-26T17:00:00+00:00"))
+        assert d["cotizacion_pm"]["n"] == 1
+        assert versiones.precios(d["cotizacion_pm"]) == [3.6]
+        assert d["pm_restauracion"] == {"en": "2026-09-26T17:00:00+00:00", "por": "pm@x",
+                                        "version": 1}
+        # La ventana y la oferta costean con ésa.
+        r = costeo.costear("INT-1", d, {})
+        assert [t["precio_pc"] for t in r["tramos"]] == [3.6]
+        assert r["costeo"]["pm"]["version"] == 1
+        # Las dos siguen en el historial.
+        assert [v["n"] for v in d["cotizacion_pm_versiones"]] == [1, 2]
+
+    def test_volver_al_sistema_no_borra_las_versiones(self):
+        d = self._dos_versiones()
+        d = aplicar(d, versiones.restaurar(d, None, "pm@x", "t"))
+        assert "cotizacion_pm" not in d
+        assert [v["n"] for v in d["cotizacion_pm_versiones"]] == [1, 2]
+        assert versiones.resumen(d)["sistema_en_uso"] is True
+
+    def test_la_en_curso_no_se_pierde_al_escoger_otra(self):
+        d = aplicar({}, versiones.registrar({}, cot(3.6), motivo="volver"))
+        d = aplicar(d, versiones.registrar(d, cot(4.0)))            # v2 en curso
+        d = aplicar(d, versiones.restaurar(d, 1, "pm@x", "t"))
+        assert [v["n"] for v in d["cotizacion_pm_versiones"]] == [1, 2]
+
+    def test_una_version_que_no_existe(self):
+        with pytest.raises(KeyError):
+            versiones.restaurar(self._dos_versiones(), 9, "pm@x", "t")
+
+    def test_el_resumen_para_la_ventana(self):
+        d = self._dos_versiones()
+        r = versiones.resumen(d)
+        assert r["en_uso"] == 2 and r["sistema_en_uso"] is False
+        assert [(v["n"], v["precios"], v["en_uso"]) for v in r["versiones"]] == [
+            (2, [10.0], True), (1, [3.6], False)]
+        assert "pn" not in r["versiones"][0]           # sin el PN entero
+
+    def test_tras_escoger_la_calculadora_sabe_que_cargar(self):
+        d = self._dos_versiones()
+        assert versiones.pn_restaurado(d) is None
+        d = aplicar(d, versiones.restaurar(d, 1, "pm@x", "t1"))
+        r = versiones.pn_restaurado(d)
+        assert r["en"] == "t1" and r["version"] == 1 and r["pn"]["remarks"] == "p3.6"
+        d = aplicar(d, versiones.restaurar(d, None, "pm@x", "t2"))
+        assert versiones.pn_restaurado(d) == {"en": "t2", "version": None, "pn": None}
+
+    def test_el_historial_tiene_tope(self):
+        d = {}
+        for i in range(versiones.MAX_VERSIONES + 5):
+            d = aplicar(d, versiones.registrar(d, cot(1.0 + i), motivo="volver"))
+        ns = [v["n"] for v in d["cotizacion_pm_versiones"]]
+        assert len(ns) == versiones.MAX_VERSIONES and ns[-1] == versiones.MAX_VERSIONES + 5
+
+
+class TestElegirVersionEndpoint(TestElEndpoint):
+
+    def test_escoger_version_y_volver_al_sistema(self, rutas):
+        from fastapi import HTTPException
+
+        from api.models.schemas import VersionPMRequest
+
+        d = aplicar({}, versiones.registrar({}, cot(3.6), motivo="volver"))
+        d = aplicar(d, versiones.registrar(d, cot(10.0), motivo="volver"))
+        detalle = self._detalle(rutas)
+        detalle.datos_json = d
+        with mock.patch.object(rutas, "get_rfq", return_value=detalle), \
+             mock.patch("app.rfq.repository.anotar_datos") as anotar:
+            ventana = rutas.usar_version_pm("INT-1", VersionPMRequest(version=1),
+                                            mock.Mock(correo="pm@x"))
+        assert anotar.call_args[0][1]["cotizacion_pm"]["n"] == 1
+        assert [t["precio_pc"] for t in ventana["tramos"]] == [3.6]
+        assert ventana["versiones_pm"]["en_uso"] == 1
+
+        with mock.patch.object(rutas, "get_rfq", return_value=detalle), \
+             mock.patch("app.rfq.repository.anotar_datos"), \
+             pytest.raises(HTTPException):
+            rutas.usar_version_pm("INT-1", VersionPMRequest(version=9), mock.Mock(correo="pm@x"))

@@ -66,17 +66,17 @@ const RFQDetailPage = {
             container.innerHTML = `
                 <div class="rfqd-cab">
                     <button class="btn btn-secondary rfqd-volver"
-                            onclick="APP.navigate('quoting')">&larr; Back</button>
+                            onclick="APP.navigate('quoting')">&larr; ${esc(I18N.t('oferta.volver'))}</button>
                     <div class="rfqd-ident">
                         <h2 class="rfqd-id">${esc(rfq.rfq_id)}
                             <span class="rfqd-version">v${esc(rfq.version)}</span></h2>
-                        <span class="badge ${RFQTable.badgeClass(rfq.estado)}"><span class="badge-dot"></span>${esc(rfq.estado)}</span>
+                        <span class="badge ${RFQTable.badgeClass(rfq.estado)}"><span class="badge-dot"></span>${esc(I18N.estado(rfq.estado))}</span>
                     </div>
                     <div class="rfqd-acciones">
                         <button class="btn btn-secondary" onclick="Revision.abrir('${esc(rfq.rfq_id)}')">${esc(I18N.t('rev.abrir'))}</button>
-                        ${puedeDictaminar && rfq.estado !== 'Declined' ? `<button class="btn btn-danger" onclick="RFQDetailPage.decline()">Decline</button>` : ''}
-                        ${puedeDictaminar && (rfq.estado === 'RequiresReview' || rfq.estado === 'New') ? `<button class="btn btn-success" onclick="RFQDetailPage.approve()">Approve Feasibility</button>` : ''}
-                        ${rfq.estado === 'Approved' ? `<button class="btn btn-primary" onclick="APP.navigate('quote-review', {id: '${esc(rfq.rfq_id)}'})">Quote &rarr;</button>` : ''}
+                        <!-- Aprobar y rechazar se deciden en la ventana de revisión,
+                             con los números delante; aquí sólo se entra a ella. -->
+                        ${rfq.estado === 'Approved' ? `<button class="btn btn-primary" onclick="APP.navigate('quote-review', {id: '${esc(rfq.rfq_id)}'})">${esc(I18N.t('ficha.cotizar'))}</button>` : ''}
                     </div>
                 </div>
 
@@ -101,7 +101,7 @@ const RFQDetailPage = {
                         <div class="detail-panel-title">${esc(I18N.t('ficha.fisica'))}</div>
                         ${this.porQueVacio(r, d.lectura_plano)}
                         ${this.botonReleer(r, puedeDictaminar)}
-                        ${fila(I18N.t('ficha.tipo'), r.tipo_resorte, ' detail-value--tipo')}
+                        ${fila(I18N.t('ficha.tipo'), I18N.tipoResorte(r.tipo_resorte), ' detail-value--tipo')}
                         ${fila(I18N.t('ficha.alambre'), mm(r.diametro_alambre_mm))}
                         ${fila(I18N.t('ficha.exterior'), mm(r.diametro_exterior_mm))}
                         ${fila(I18N.t('ficha.libre'), mm(r.longitud_libre_mm))}
@@ -116,7 +116,7 @@ const RFQDetailPage = {
                 </div>` : ''}
             `;
         } catch (err) {
-            container.innerHTML = `<div class="detail-panel rfqd-error">Error: ${esc(err.message)}</div>`;
+            container.innerHTML = `<div class="detail-panel rfqd-error">${esc(err.message)}</div>`;
         }
     },
 
