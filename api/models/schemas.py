@@ -346,6 +346,22 @@ class RecalculoRequest(BaseModel):
     leer_plano: bool = False
 
 
+class CotizacionPMRequest(BaseModel):
+    """La cotización que el PM dejó en la calculadora completa.
+
+    ``pn`` es el PN tal como quedó en la hoja (la forma de ``blankPn()``),
+    ``resultado`` lo que devolvió ``ENGINE.computePN`` para ese PN (tramos y
+    banderas) y ``contribution`` el objetivo con el que se calculó. La
+    ``cabecera`` lleva número de cotización, representante, plazo y
+    condiciones de pago, sólo para enseñarlos.
+    """
+    pn: Dict[str, Any]
+    resultado: Dict[str, Any]
+    contribution: Optional[float] = None
+    cabecera: Dict[str, Any] = Field(default_factory=dict)
+    material_nombre: Optional[str] = None
+
+
 class OfertaRequest(BaseModel):
     """Lo que el PM puede ajustar antes de mandar la oferta al cliente."""
     destinatario: Optional[str] = None      # por defecto, el remitente del RFQ

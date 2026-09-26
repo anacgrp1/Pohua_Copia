@@ -248,7 +248,7 @@ comprueba que te llega el PDF. Después, `MAIL_FOLDER=INBOX`.
 |---|---|
 | El ciclo no encuentra nada | El correo está leído, o está en otra carpeta. La insignia del Monitor dice cuál se lee. |
 | "Duplicado omitido" | Ya se procesó: borra su fila en `correos_procesados`. |
-| El RFQ acaba en *Incomplete* sin motivo claro | Falta `ANTHROPIC_API_KEY`, o el plano no se pudo leer. El registro lo dice. |
+| El RFQ acaba en *Incomplete* sin motivo claro | Falta la clave de IA (`ANTHROPIC_API_KEY`), o el plano no se pudo leer. El registro lo dice. |
 | No llega nada al teléfono | Faltan las VAPID, o ese aparato no está suscrito. `comprobar_flujo` distingue las dos. |
 | El recuadro del plano sale roto | La nota dice por qué (sección 9): sin recorte, no guardado, sesión caducada o de otra máquina. |
 | El ciclo automático no corre | Fuera de horario (sección 10). El botón de Correo se lo salta. |

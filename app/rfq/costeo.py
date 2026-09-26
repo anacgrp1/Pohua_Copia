@@ -160,11 +160,66 @@ def pn_inicial(rfq_id: str, datos: dict, resorte: dict, material_rfq=None) -> di
         return {"pn": None, "faltantes": [], "error": str(err)}
 
 
+def cotizacion_del_pm(datos: dict) -> Optional[dict]:
+    """La cotización que el PM dejó en la calculadora, si sirve para costear."""
+    pm = (datos or {}).get("cotizacion_pm")
+    if not isinstance(pm, dict):
+        return None
+    pn = pm.get("pn")
+    resultado = pm.get("resultado") or {}
+    if not isinstance(pn, dict) or not isinstance(resultado, dict):
+        return None
+    if not any(t for t in (resultado.get("tiers") or [])):
+        return None
+    return pm
+
+
+def costear_con_el_pm(pm: dict) -> dict:
+    """El costeo tal como el PM lo vio en la calculadora.
+
+    No se vuelve a correr el motor: se usan los tramos que la calculadora
+    calculó con SUS parámetros y SUS bases en el momento en que el PM guardó.
+    Es el único modo de que la ventana de revisión y la oferta enseñen
+    exactamente el número que el PM aprobó, y no otro parecido.
+    """
+    pn = pm.get("pn") or {}
+    resultado = pm.get("resultado") or {}
+    objetivo = num(pm.get("contribution")) or 20.0
+    enviados = pn.get("tiers") or []
+    tramos = [tramo_para_ventana(t, objetivo, enviados[i] if i < len(enviados) else None)
+              for i, t in enumerate(resultado.get("tiers") or []) if t]
+    cantidades = [num(t.get("qty")) for t in enviados if t and num(t.get("qty"))]
+    mat = pn.get("material") or {}
+    comunes = {
+        "material": mat.get("code"),
+        "material_nombre": pm.get("material_nombre"),
+        "dia_in": num(mat.get("diaIn")),
+        "peso_lb_pc": num(mat.get("weightLb")),
+        "base_lb": num(mat.get("basePerLb")),
+        "surcharge_lb": num(mat.get("surchPerLb")),
+    }
+    costeo = {"completo": True, "faltantes": [], "faltantes_i18n": [],
+              "origen": "calculadora",
+              "banderas_motor": [f.get("m") for f in (resultado.get("flags") or [])
+                                 if isinstance(f, dict)],
+              "pm": {"por": pm.get("por"), "en": pm.get("en"),
+                     "numero": (pm.get("cabecera") or {}).get("numero")}}
+    return {"cantidades": cantidades, "tramos": tramos, "costeo": costeo,
+            "comunes": comunes, "error_costeo": None}
+
+
 def costear(rfq_id: str, datos: dict, resorte: dict, material_rfq=None) -> dict:
     """Costea el RFQ por tramos. Nunca lanza: el costeo no puede tumbar a quien lo pide.
 
     Devuelve ``{cantidades, tramos, costeo, comunes, error_costeo}``.
+
+    Si el PM ya dejó su cotización en la calculadora (``datos_json.
+    cotizacion_pm``), ésa manda: es lo que corrigió y lo que va a aprobar.
     """
+    pm = cotizacion_del_pm(datos)
+    if pm:
+        return costear_con_el_pm(pm)
+
     datos_resorte = datos_para_motor(datos, resorte, material_rfq)
     cantidades = datos_resorte.get("cantidades") or []
 

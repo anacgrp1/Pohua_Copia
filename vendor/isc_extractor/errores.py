@@ -1,6 +1,6 @@
 """Traduccion de fallos de la API a mensajes que entienda quien cotiza.
 
-El SDK de anthropic lanza excepciones correctas pero ilegibles para alguien que
+El SDK de la API de IA lanza excepciones correctas pero ilegibles para alguien que
 no programa: `AuthenticationError(...)` no le dice a nadie que tiene que abrir
 `api_key.txt`. El Drawing Parser de V6 tenia esto resuelto a mano sobre urllib
 (401 -> "revisa api_key.txt", 429 -> "sin credito"); aqui se recupera esa idea,
@@ -34,8 +34,8 @@ def _codigo(e):
 PISTAS_SALDO = ("credit balance", "credit balance is too low", "purchase credits",
                 "plans & billing", "insufficient credit")
 
-SIN_SALDO = ("The Anthropic account has run out of credit. Nothing is wrong with "
-             "the drawing or with this program: go to console.anthropic.com -> "
+SIN_SALDO = ("The AI account has run out of credit. Nothing is wrong with "
+             "the drawing or with this program: go to the AI provider's console -> "
              "Plans & Billing and top up, then try again.")
 
 
@@ -48,13 +48,13 @@ MENSAJES = {
     401: "The API key was rejected (401). Check api_key.txt: it must be ONE "
          "line starting with sk-ant-, with no quotes and no spaces.",
     403: "This API key is not allowed to use this model (403). Check in "
-         "console.anthropic.com that your organisation has access.",
+         "the AI provider's console that your organisation has access.",
     404: "The configured model does not exist (404). Check model_extractor "
          "and model_router in config.json.",
     413: "The drawing is too large to send (413). Lower dpi or max_pages in "
          "config.json, or upload fewer sheets.",
     429: "Too many requests too quickly (429). Wait a minute and try again. "
-         "If it keeps happening, check the rate limits in console.anthropic.com.",
+         "If it keeps happening, check the rate limits in the AI provider's console.",
     500: "Internal API error (500). Nothing to do with your drawing: retry in "
          "a few seconds.",
     529: "The API is overloaded (529). Retry in a minute.",
@@ -66,7 +66,7 @@ def mensaje(e):
     nombre = type(e).__name__
 
     if nombre == "APIConnectionError" or "Connection" in nombre:
-        return ("Could not reach the Anthropic API. Check the internet "
+        return ("Could not reach the AI API. Check the internet "
                 "connection and the company proxy or firewall. (%s)"
                 % _detalle(e))
 

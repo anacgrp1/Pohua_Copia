@@ -1,0 +1,92 @@
+--- a/app/core/config.py
++++ b/app/core/config.py
+@@ -223,6 +223,10 @@
+     # los remitentes automáticos (no-reply, mailer-daemon, respuestas de
+     # ausencia). Apagado, vuelve el filtro por palabras clave.
+     CARPETA_SOLO_RFQ: bool = True
++    # Cuarentena de adjuntos (app/email/cuarentena.py). APAGADA por defecto
++    # (2026-09-25): el análisis con Defender daba «amenaza» en todo en la
++    # computadora del lector y los correos se quedaban sin leer.
++    CUARENTENA_ADJUNTOS: bool = False
+ 
+     # Logo de la firma de los correos al cliente. Vacío = el que trae el
+     # proyecto (app/email/assets/firma.png, el logo de la casa a 320 px).
+@@ -233,7 +237,12 @@
+         """Inicializa las configuraciones cargando el archivo .env si existe."""
+         # Ruta del archivo .env (por defecto el directorio actual de ejecución o raíz del proyecto)
+         if env_file_path is None:
+-            env_file_path = os.path.join(os.getcwd(), ".env")
++            # Las pruebas no leen el .env de quien las corre (tests/conftest.py):
++            # con el de la máquina de desarrollo heredaban el buzón, la carpeta
++            # y el modo de correo reales, y fallaban unas u otras según lo que
++            # tuviera cada uno. Un fichero pedido a propósito sí se lee.
++            env_file_path = ("" if os.environ.get("POHUA_SIN_DOTENV")
++                             else os.path.join(os.getcwd(), ".env"))
+ 
+         # 1. Cargar archivo .env en os.environ si no está definido en el sistema
+         self._load_dotenv(env_file_path)
+@@ -249,6 +258,8 @@
+ 
+     def _load_dotenv(self, file_path: str) -> None:
+         """Lee un archivo .env y carga las variables a os.environ si no existen en el sistema."""
++        if not file_path:          # las pruebas: no se lee ninguno
++            return
+         path = Path(file_path)
+         if not path.is_file():
+             logger.warning(
+--- a/tests/conftest.py
++++ b/tests/conftest.py
+@@ -1,3 +1,50 @@
+-"""Fixtures compartidos de pytest."""
+-
+-# Aquí se pueden agregar fixtures comunes si es necesario
++"""Fixtures compartidos de pytest.
++
++LA BASE DE DATOS DE VERDAD NO SE TOCA DESDE LAS PRUEBAS. La configuración
++lee `.env`, y en la máquina de quien desarrolla ese `.env` apunta a Neon: la
++batería completa dejó allí un RFQ ficticio («RFQ-1», neogen.com, un plano que
++no era un PDF) que apareció en la ventana de revisión como si fuera real.
++
++Así que antes de que se cargue nada, la conexión se fija a un servidor que
++no existe. Una prueba que llegue a la base falla al conectar en vez de
++escribir en producción, que es lo que se quiere: esa prueba le falta un
++mock. Para las pruebas que SÍ necesitan una base (make db-smoke), se pasa
++`POHUA_TEST_DATABASE_URL` a propósito.
++"""
++
++import os
++import re
++from pathlib import Path
++
++# TAMPOCO SE LEE EL `.env` DE QUIEN CORRE LAS PRUEBAS. Con el de una máquina de
++# desarrollo (MAIL_MODE=outlook, MAIL_FOLDER=INBOX,TEST, el buzón de ventas,
++# APP_ENV=prod…) las pruebas heredaban esa configuración y fallaban unas u
++# otras según lo que tuviera cada `.env`: en una máquina limpia pasaban todas y
++# en la de desarrollo quedaban 4 o 15 rojas sin que el código tuviera nada.
++# Se quita del entorno todo lo que el proyecto configura —las claves de
++# `.env.example` y las de un `.env` presente— y se le dice a la configuración
++# que no cargue el fichero. Cada prueba pone lo que necesita.
++_RAIZ = Path(__file__).resolve().parent.parent
++
++
++def _claves(fichero: Path) -> set:
++    try:
++        lineas = fichero.read_text(encoding="utf-8").splitlines()
++    except OSError:
++        return set()
++    # También las comentadas («# IMAP_SERVER=»): existen, sólo que apagadas.
++    return {m.group(1) for m in (re.match(r"\s*#?\s*([A-Z][A-Z0-9_]*)\s*=", linea)
++                                 for linea in lineas) if m}
++
++
++for _clave in (_claves(_RAIZ / ".env.example") | _claves(_RAIZ / ".env")
++               | _claves(Path.cwd() / ".env")):
++    if _clave and _clave != "POHUA_TEST_DATABASE_URL":
++        os.environ.pop(_clave, None)
++os.environ["POHUA_SIN_DOTENV"] = "1"
++
++_PRUEBAS = os.environ.get("POHUA_TEST_DATABASE_URL")
++os.environ["DATABASE_URL"] = (
++    _PRUEBAS or "postgresql://pruebas:pruebas@pohua-pruebas.invalid:5432/pohua_pruebas")
++for _clave in ("PG_HOST", "PG_PORT", "PG_DATABASE", "PG_USER", "PG_PASSWORD"):
++    os.environ.pop(_clave, None)

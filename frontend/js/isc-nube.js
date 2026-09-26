@@ -226,6 +226,100 @@
         return ids;
     }
 
+    // ------------------------------------- lo cotizado, de vuelta al RFQ
+
+    /*
+     * El camino de vuelta de «Open full quote».
+     *
+     * El PM corrige aquí lo que el sistema costeó al entrar el correo —el
+     * material, el precio del alambre, la máquina, las cantidades, el
+     * margen— y al volver a la ventana de revisión tiene que ver ESOS
+     * números, y son esos los que salen en la oferta cuando aprueba. Hasta
+     * ahora lo escrito aquí se quedaba en la hoja: la ventana volvía a
+     * costear con lo que el sistema tenía.
+     *
+     * Se manda el PN entero tal como quedó (la forma de `blankPn()`) y el
+     * resultado del motor tal como lo calculó ESTA calculadora, con sus
+     * parámetros y sus bases: así la ventana enseña exactamente lo que el
+     * PM vio, no un cálculo parecido hecho en otro sitio. Sale cada vez que
+     * la hoja guarda el borrador de un RFQ (con un respiro, para no mandar
+     * una copia por cada tecla) y cuando Pohua lo pide al pulsar «Volver a
+     * revisión».
+     */
+    var publicarTimer = null;
+
+    function cotizacionParaPohua(q) {
+        if (!esDeRfq(q) || !q.pns || !q.pns.length) return null;
+        var pn = q.pns[q.activePn || 0] || q.pns[0];
+        if (!pn) return null;
+        var r = null;
+        try {
+            r = (typeof computeFor === 'function') ? computeFor(pn, q) : null;
+        } catch (e) {
+            console.warn('[nube] No se pudo costear el PN para Pohua: ' + e.message);
+            return null;
+        }
+        if (!r || !r.tiers || !r.tiers.some(function (x) { return !!x; })) return null;
+        var contribution = (q.contribution === null || q.contribution === undefined)
+            ? ((typeof shared !== 'undefined' && shared && shared.params)
+               ? shared.params.contribution : null)
+            : q.contribution;
+        var cab = q.header || {};
+        var mat = null;
+        try {
+            var leyenda = (shared && shared.dbs && shared.dbs.materialLegend) || {};
+            var code = pn.material && pn.material.code;
+            mat = (code && leyenda[code]) ? String(leyenda[code]) : null;
+        } catch (e) { mat = null; }
+        return {
+            rfq_id: q.pohuaRfq,
+            pn: JSON.parse(JSON.stringify(pn)),
+            resultado: { tiers: r.tiers, flags: r.flags || [] },
+            contribution: (contribution === null || contribution === undefined) ? null : Number(contribution),
+            cabecera: {
+                numero: q.number || null,
+                representante: cab.rep || null,
+                plazo_dias: (cab.leadDays !== undefined) ? cab.leadDays : null,
+                condiciones_pago: cab.terms || null,
+                cliente: cab.customerCode || null,
+                fecha: cab.rfqDate || null
+            },
+            material_nombre: mat
+        };
+    }
+
+    function publicarCotizacion(motivo) {
+        var q = (typeof Q === 'function') ? Q() : null;
+        var carga = cotizacionParaPohua(q);
+        if (!carga) return false;
+        carga.source = 'isc-nube';
+        carga.tipo = 'rfq-cotizado';
+        carga.motivo = motivo || 'guardado';
+        aPohuaDirecto(carga);
+        return true;
+    }
+
+    function publicarPronto() {
+        if (publicarTimer) clearTimeout(publicarTimer);
+        publicarTimer = setTimeout(function () {
+            publicarTimer = null;
+            publicarCotizacion('guardado');
+        }, 1500);
+    }
+
+    /** Cada guardado del borrador de un RFQ avisa a Pohua de lo cotizado. */
+    function vigilarGuardado() {
+        if (typeof window.saveLocal !== 'function' || window.saveLocal.nubeVigilado) return;
+        var original = window.saveLocal;
+        var envuelto = function () {
+            var r = original.apply(this, arguments);
+            try { publicarPronto(); } catch (e) {}
+            return r;
+        };
+        envuelto.nubeVigilado = true;
+        window.saveLocal = envuelto;
+    }
+
     function repintar() {
         intentar(function () { if (typeof renderQuote === 'function') renderQuote(); }, 'pintar la hoja');
         intentar(function () { if (typeof updateSummaryTab === 'function') updateSummaryTab(); }, 'refrescar el resumen');
@@ -1177,6 +1271,14 @@
                 cuandoDoc(limpiar);
             } else if (d.tipo === 'olvidar-rfqs') {
                 cuandoDoc(function () { olvidar(d.ids || []); });
+            } else if (d.tipo === 'pedir-cotizacion') {
+                // «Volver a revisión»: lo cotizado, ahora mismo. Si no hay
+                // nada que mandar se dice igual, para que Pohua no espere.
+                if (publicarTimer) { clearTimeout(publicarTimer); publicarTimer = null; }
+                if (!publicarCotizacion('volver')) {
+                    aPohuaDirecto({ source: 'isc-nube', tipo: 'rfq-cotizado',
+                                    rfq_id: d.rfq_id || null, vacio: true, motivo: 'volver' });
+                }
             }
         });
     }
@@ -2015,6 +2117,7 @@
             aviso(t('sinRegenerar'));
         }
         enchufar();
+        vigilarGuardado();
         if (typeof renderShareBar === 'function') {
             try { renderShareBar = pintarBarra; } catch (e) {}
         }

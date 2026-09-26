@@ -7,10 +7,10 @@ Cuatro endpoints, y la diferencia entre ellos importa:
     GET  /api/assistant/attention   → SQL puro
     GET  /api/assistant/top-clientes → SQL puro
     GET  /api/assistant/export      → SQL puro, devuelto como Excel
-    POST /api/assistant/ask         → ÚNICO que llama al modelo de Anthropic
+    POST /api/assistant/ask         → ÚNICO que llama al modelo de IA
 
 Los tres primeros son agregados de la base de datos: no cuestan API, no
-inventan nada y responden igual sin clave de Anthropic configurada. Sólo el
+inventan nada y responden igual sin clave de IA configurada. Sólo el
 chat gasta tokens, y sólo cuando alguien escribe una pregunta.
 
 Todo va detrás de ``rfq:leer``: quien no puede ver las RFQs tampoco puede

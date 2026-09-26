@@ -470,6 +470,40 @@ def agregar_nota(rfq_id: str, nota: str, estado: Optional[str] = None,
             conn.close()
 
 
+def anotar_cotizacion_pm(rfq_id: str, cotizacion: Optional[dict],
+                         conexion=None) -> dict:
+    """Guarda (o borra, con ``None``) la cotización que el PM dejó en la calculadora.
+
+    ``datos_json.cotizacion_pm`` lleva el PN tal como quedó en la hoja, el
+    resultado del motor con el que el PM lo vio (tramos y banderas), su
+    contribución objetivo, la cabecera de la cotización y quién y cuándo. La
+    ventana de revisión y la oferta costean CON ESTO cuando existe: lo que el
+    PM corrigió en la calculadora es lo que se aprueba y lo que sale al
+    cliente, no el costeo que el sistema hizo al entrar el correo.
+    """
+    if not rfq_id:
+        raise ValueError("anotar_cotizacion_pm requiere rfq_id.")
+    propia = conexion is None
+    conn = conexion or duplicates.conectar_bd()
+    try:
+        fila = _ultima_version_id(rfq_id, conexion=conn)
+        if not fila:
+            raise ValueError(f"No existe el RFQ {rfq_id}.")
+        datos = _a_dict(fila.get("datos_json"))
+        if cotizacion is None:
+            datos.pop("cotizacion_pm", None)
+        else:
+            datos["cotizacion_pm"] = cotizacion
+        with conn.cursor() as cur:
+            cur.execute("UPDATE rfqs SET datos_json = %s WHERE id = %s;",
+                        (json.dumps(datos, ensure_ascii=False, default=str), fila["id"]))
+        return {"id": fila["id"], "rfq_id": rfq_id, "version": fila["version"],
+                "datos": datos}
+    finally:
+        if propia:
+            conn.close()
+
+
 def anotar_oferta(rfq_id: str, oferta: dict, nota: Optional[str] = None,
                   conexion=None) -> dict:
     """Deja constancia de la oferta al cliente en la última versión del RFQ.

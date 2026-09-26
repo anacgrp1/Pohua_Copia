@@ -8,7 +8,7 @@
  * Dos mitades que conviene no confundir, porque cuestan cosas distintas:
  *
  *   - Los tres botones son consultas a la base de datos. Cero API, funcionan
- *     aunque no haya clave de Anthropic configurada.
+ *     aunque no haya clave de IA configurada.
  *   - El campo de texto es lo ÚNICO que llama al modelo, y sólo al enviar.
  *
  * Por eso el envío bloquea el botón mientras dura: cada pulsación es una

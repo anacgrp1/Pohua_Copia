@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.dependencies import get_db
 from api.models.schemas import (
+    CotizacionPMRequest,
     OfertaRequest,
     PMDecisionRequest,
     PMDecisionResponse,
@@ -491,6 +492,48 @@ def _ventana(detalle, usuario, resorte=None, lectura=None, recalculo=None):
     }
 
 
+@router.post("/{rfq_id}/cotizacion-pm")
+def guardar_cotizacion_pm(
+    rfq_id: str,
+    body: CotizacionPMRequest,
+    usuario: UsuarioSesion = Depends(exige("rfq:dictaminar")),
+):
+    """Guarda en el RFQ la cotización que el PM dejó en la calculadora completa.
+
+    Es el camino de vuelta de «Open full quote»: el PM corrige ahí lo que
+    haga falta —material, precio del alambre, máquina, cantidades, margen— y
+    al volver a la ventana de revisión tiene que ver ESOS números, y son esos
+    los que salen en la oferta cuando aprueba. Sin esto, la ventana volvía a
+    costear con lo que el sistema tenía y lo corregido se quedaba en la hoja.
+
+    La calculadora lo manda sola cada vez que guarda el borrador de un RFQ y
+    al pulsar «Volver a revisión». Devuelve la ventana ya costeada con ello.
+    """
+    from datetime import datetime, timezone
+
+    import app.rfq.repository as repository
+
+    detalle = get_rfq(rfq_id, None, usuario)          # 404 si no existe
+    if not any(t for t in (body.resultado.get("tiers") or [])):
+        raise HTTPException(status_code=422,
+                            detail="La cotización no trae ningún tramo calculado.")
+    cotizacion = {
+        "pn": body.pn,
+        "resultado": {"tiers": body.resultado.get("tiers") or [],
+                      "flags": body.resultado.get("flags") or []},
+        "contribution": body.contribution,
+        "cabecera": body.cabecera or {},
+        "material_nombre": body.material_nombre,
+        "por": usuario.correo,
+        "en": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+    repository.anotar_cotizacion_pm(rfq_id, cotizacion)
+    detalle.datos_json = dict(detalle.datos_json or {}, cotizacion_pm=cotizacion)
+    log.info("RFQ %s: cotización del PM guardada por %s (%s tramo/s).",
+             rfq_id, usuario.correo, len([t for t in cotizacion["resultado"]["tiers"] if t]))
+    return _ventana(detalle, usuario)
+
+
 @router.post("/{rfq_id}/recalcular")
 def recalcular_rfq(
     rfq_id: str,
@@ -532,6 +575,18 @@ def recalcular_rfq(
     log.info("RFQ %s recalculado por %s (plano=%s, tocados=%s).",
              rfq_id, usuario.correo, body.leer_plano,
              ", ".join(recalculo["tocados"]) or "nada")
+
+    # Con cotas nuevas, la cotización que el PM dejó en la calculadora ya no
+    # describe este resorte: se suelta y el sistema vuelve a costear con lo
+    # de ahora. La calculadora se abre otra vez con las cotas corregidas.
+    if recalculo["tocados"] and (detalle.datos_json or {}).get("cotizacion_pm"):
+        import app.rfq.repository as repository
+        try:
+            repository.anotar_cotizacion_pm(rfq_id, None)
+            detalle.datos_json = {k: v for k, v in (detalle.datos_json or {}).items()
+                                  if k != "cotizacion_pm"}
+        except Exception as error:
+            log.warning("RFQ %s: no se pudo soltar la cotización del PM: %s", rfq_id, error)
 
     ventana = _ventana(detalle, usuario,
                        resorte=recalculo["resorte"], lectura=lectura,

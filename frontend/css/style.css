@@ -5743,6 +5743,15 @@ body.revision-abierta { overflow: hidden; }
     display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 2px 0 0 26px;
     font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums;
 }
+/* La píldora que dice que los números son los del PM (calculadora completa). */
+.revision-pill--pm {
+    border-color: var(--cgr-accent);
+    color: var(--cgr-accent-light);
+    background: var(--cgr-accent-glow);
+    font-weight: 600;
+}
+:root[data-tema="light"] .revision-pill--pm { color: var(--cgr-accent); }
+
 .revision-franja--error { border-color: var(--color-error); background: var(--color-error-bg); }
 .revision-franja--error .revision-franja-icono { color: var(--color-error); }
 .revision-franja--info  { border-color: var(--color-info);  background: var(--color-info-bg); }

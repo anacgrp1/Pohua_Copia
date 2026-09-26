@@ -18,7 +18,7 @@ const SettingsPage = {
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Anthropic API Key (VISION_MODEL)</label>
+                        <label class="form-label">AI API Key (VISION_MODEL)</label>
                         <input type="password" class="form-input" id="setApiKey" placeholder="sk-ant-...">
                     </div>
 

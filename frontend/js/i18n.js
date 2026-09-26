@@ -366,6 +366,7 @@ const I18N = (() => {
 
         'rev.sinPdf':        { en: 'There is no quote to preview yet.', es: 'Todavía no hay cotización que previsualizar.', fr: 'Aucune cotation à prévisualiser pour l’instant.' },
         'quoting.volverRevision': { en: '\u2190 Back to review \u00b7 {rfq}', es: '\u2190 Volver a la revisi\u00f3n \u00b7 {rfq}', fr: '\u2190 Retour \u00e0 la revue \u00b7 {rfq}' },
+        'quoting.cotizacionNoGuardada': { en: 'The quote could not be saved to the RFQ; the review shows the last saved numbers.', es: 'No se pudo guardar la cotización en el RFQ; la revisión enseña lo último guardado.', fr: 'Le devis n’a pas pu être enregistré dans le RFQ ; la revue montre les derniers chiffres enregistrés.' },
         'quoting.rfqFallo':  { en: 'Could not open the RFQ in the calculator: {motivo}', es: 'No se pudo abrir el RFQ en la calculadora: {motivo}', fr: 'Impossible d’ouvrir la RFQ dans le calculateur : {motivo}' },
         'quoting.rfqParcial':{ en: 'The RFQ opens with what could be read: {motivo}', es: 'El RFQ abre con lo que se pudo leer: {motivo}', fr: 'La RFQ s’ouvre avec ce qui a pu être lu : {motivo}' },
 
@@ -538,6 +539,8 @@ const I18N = (() => {
         'rev.todosTramos':   { en: 'All tiers', es: 'Todos los tramos', fr: 'Tous les paliers' },
         'rev.tramos':        { en: 'Quantity tiers', es: 'Tramos de cantidad', fr: 'Paliers de quantité' },
         'rev.material':      { en: 'Material', es: 'Material', fr: 'Matière' },
+        'rev.pm.cotizado':   { en: 'Quoted by the PM', es: 'Cotizado por el PM', fr: 'Chiffré par le PM' },
+        'rev.pm.ayuda':      { en: 'These numbers are the ones the PM left in the full calculator; they are what the offer will carry. Recalculating with new dimensions returns to the system costing.', es: 'Estos números son los que el PM dejó en la calculadora completa; son los que llevará la oferta. Recalcular con cotas nuevas vuelve al costeo del sistema.', fr: 'Ces chiffres sont ceux que le PM a laissés dans la calculatrice complète ; ce sont ceux de l’offre. Recalculer avec de nouvelles cotes revient au chiffrage du système.' },
         'rev.peso':          { en: 'Weight', es: 'Peso', fr: 'Poids' },
         'rev.base':          { en: 'Base', es: 'Base', fr: 'Base' },
         'rev.surcharge':     { en: 'Surcharge', es: 'Recargo', fr: 'Surcharge' },

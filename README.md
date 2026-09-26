@@ -177,7 +177,7 @@ Cotizador/
 |---|---|---|
 | **Web App** | Render | Servidor FastAPI + Frontend PWA + Background Worker |
 | **Base de datos** | Neon | PostgreSQL serverless (`Cotizador`) |
-| **IA Multimodal** | Anthropic API | Análisis de planos técnicos (visión) y extracción de correo |
+| **IA Multimodal** | AI API | Análisis de planos técnicos (visión) y extracción de correo |
 | **Correo** | IMAP / Microsoft Graph | Ingesta de solicitudes y despacho de respuestas (configurable) |
 | **Planos** | Local / Azure Blob | Repositorio de almacenamiento para archivos técnicos y planos |
 ```

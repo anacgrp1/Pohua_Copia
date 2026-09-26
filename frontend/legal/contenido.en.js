@@ -83,7 +83,7 @@ window.POHUA_LEGAL_TEXTOS.en = {
                 '<b>European Union (GDPR):</b> performance of a contract or of pre-contractual measures taken at the data subject\'s request (art. 6(1)(b)); legitimate interest in managing business relationships with companies, security and auditing (art. 6(1)(f)); compliance with legal obligations (art. 6(1)(c)). For personnel, the employment relationship.',
             ]]},
             { t: '6. Use of artificial intelligence', b: [
-                'To read emails and technical drawings and extract part data (material, dimensions, quantities), Pohua sends their content to an artificial intelligence model operated by a third-party provider (Anthropic, PBC, United States), which acts as a processor and processes the data solely to provide that service to us, in accordance with our contract with it.',
+                'To read emails and technical drawings and extract part data (material, dimensions, quantities), Pohua sends their content to an artificial intelligence model operated by a third-party provider, which acts as a processor and processes the data solely to provide that service to us, in accordance with our contract with it.',
                 '<b>No decision is made solely by automated means.</b> The feasibility, price and sending of each quotation are reviewed and decided by a person. You may request that your inquiry be handled without this processing by writing to {{correo}}.',
             ]},
             { t: '7. Who we share your data with', b: [
@@ -92,7 +92,7 @@ window.POHUA_LEGAL_TEXTOS.en = {
                     'Application hosting (Render) and database (Neon).',
                     'Email (the corporate mailbox provider, e.g., Microsoft 365).',
                     'Cloud storage of drawings (Microsoft Azure), when enabled.',
-                    'Reading of emails and drawings using artificial intelligence (Anthropic).',
+                    'Reading of emails and drawings using artificial intelligence.',
                     'Delivery of notifications to the phone or browser (the browser\'s own push service: Google, Apple, Mozilla or Microsoft), only if the user enables them.',
                 ],
                 'Among the <b>companies of the same group</b> in Mexico, the United States and France, which operate under the same processes and policies (art. 36, sec. III, LFPDPPP).',

@@ -210,6 +210,25 @@ const Revision = (() => {
         return f ? f.charAt(0) + f.slice(1).toLowerCase() : '';
     }
 
+    /** «Cotizado por el PM en la calculadora · hora»: de dónde salen los números. */
+    function origenDelCosteo(d) {
+        const c = d.costeo || {};
+        if (c.origen !== 'calculadora' || !c.pm) return '';
+        const pm = c.pm;
+        let cuando = '';
+        try {
+            if (pm.en) {
+                cuando = new Date(pm.en).toLocaleString((typeof I18N.idioma === 'string' ? I18N.idioma : undefined),
+                    { dateStyle: 'short', timeStyle: 'short' });
+            }
+        } catch (_) { cuando = pm.en || ''; }
+        const quien = pm.por ? esc(String(pm.por).split('@')[0]) : '';
+        const numero = pm.numero ? ` · ${esc(pm.numero)}` : '';
+        return `<span class="revision-pill revision-pill--pm" title="${esc(t('rev.pm.ayuda'))}">
+                    ${esc(t('rev.pm.cotizado'))}${quien ? ` · ${quien}` : ''}${cuando ? ` · ${esc(cuando)}` : ''}${numero}
+                </span>`;
+    }
+
     function comunes(d) {
         const c = d.comunes || {};
         const mat = c.material ? (esc(c.material) + (c.material_nombre ? ` — ${esc(c.material_nombre)}` : '')) : '—';
@@ -218,6 +237,7 @@ const Revision = (() => {
             <section class="revision-comunes" aria-label="${esc(t('rev.todosTramos'))}">
                 <div class="revision-rotulo">${esc(t('rev.todosTramos'))}</div>
                 <div class="revision-pills">
+                    ${origenDelCosteo(d)}
                     <span class="revision-pill revision-pill--maquina ${maq ? '' : 'revision-pill--falta'}"
                           title="${esc(t('rev.maquinaAyuda'))}">
                         ${esc(t('rev.maquina'))}: <b>${maq ? esc(maq) : esc(t('rev.sinMaquina'))}</b>
@@ -921,6 +941,67 @@ const Revision = (() => {
         if (typeof Notificaciones !== 'undefined' && Notificaciones.refrescar) Notificaciones.refrescar();
     }
 
+    // ------------------------------------------------ al momento
+
+    /*
+     * La ventana se refresca sola mientras está abierta.
+     *
+     * El PM corrige en la calculadora (otra pestaña, o «Open full quote» y
+     * vuelta) y lo cotizado llega al RFQ por detrás (`quoting.js` →
+     * `/cotizacion-pm`). Sin esto, la ventana enseñaba el costeo de cuando
+     * se abrió hasta que alguien la cerraba y la abría. Tres señales: el
+     * aviso de que se guardó una cotización de ESTE RFQ, volver a la pestaña
+     * (visibilitychange) y un sondeo suave cada 15 s por si el cambio vino
+     * de otra computadora. Nunca mientras se está guardando algo (ocupado).
+     */
+    const SONDEO_MS = 15000;
+    let sondeo = null;
+    let ultimoCosteo = '';
+
+    function huellaDelCosteo(d) {
+        try {
+            const c = (d && d.costeo && d.costeo.pm) || {};
+            return JSON.stringify([c.en, c.por, (d && d.tramos || []).map(x => x.precio_pc)]);
+        } catch (_) { return ''; }
+    }
+
+    async function refrescarSiCambio() {
+        if (!capa || !rfqAbierto || ocupado || (datos && datos.esCotizacion)) return;
+        if (document.hidden) return;
+        const id = rfqAbierto;
+        try {
+            const nuevo = await API.rfqRevision(id);
+            if (!capa || rfqAbierto !== id || ocupado) return;
+            const huella = huellaDelCosteo(nuevo);
+            if (huella === ultimoCosteo) return;
+            ultimoCosteo = huella;
+            datos = nuevo;
+            if (tramoActivo >= (datos.tramos || []).length) tramoActivo = 0;
+            pintar();
+        } catch (err) {
+            if (err && err.sesionExpirada) cerrar();
+        }
+    }
+
+    function alVolverAVerse() { if (!document.hidden) refrescarSiCambio(); }
+    function alCotizar(ev) {
+        if (ev && ev.detail && ev.detail.rfq === rfqAbierto) refrescarSiCambio();
+    }
+
+    function vigilar() {
+        if (sondeo) return;
+        sondeo = setInterval(refrescarSiCambio, SONDEO_MS);
+        document.addEventListener('visibilitychange', alVolverAVerse);
+        window.addEventListener('pohua:rfq-cotizado', alCotizar);
+    }
+
+    function dejarDeVigilar() {
+        if (sondeo) { clearInterval(sondeo); sondeo = null; }
+        document.removeEventListener('visibilitychange', alVolverAVerse);
+        window.removeEventListener('pohua:rfq-cotizado', alCotizar);
+        ultimoCosteo = '';
+    }
+
     async function abrir(origen, calcData) {
         if (!origen) return;
         if (capa && rfqAbierto === origen) return;
@@ -956,7 +1037,9 @@ const Revision = (() => {
         try {
             datos = await API.rfqRevision(origen);
             if (!capa || rfqAbierto !== origen) return;
+            ultimoCosteo = huellaDelCosteo(datos);
             pintar();
+            vigilar();
         } catch (err) {
             if (err.sesionExpirada) { cerrar(); return; }
             if (!capa) return;
@@ -970,6 +1053,7 @@ const Revision = (() => {
 
 
     function cerrar(silencio) {
+        dejarDeVigilar();
         if (capa) capa.remove();
         capa = null; datos = null; rfqAbierto = null; ocupado = false;
         document.body.classList.remove('revision-abierta');

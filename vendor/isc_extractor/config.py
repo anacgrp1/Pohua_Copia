@@ -121,7 +121,7 @@ def _leer_texto(p):
 
 
 def _limpiar_clave(linea):
-    """Tolera BOM, comillas, espacios y un prefijo tipo ANTHROPIC_API_KEY=.
+    """Tolera BOM, comillas, espacios y un prefijo tipo API_KEY=.
 
     En Windows es facil acabar con un BOM (PowerShell lo anade con Out-File y
     con >) o con comillas al pegar. Sin esto, la clave se ignoraba en silencio
@@ -138,7 +138,7 @@ def _limpiar_clave(linea):
 
 
 def get_api_key(base=None):
-    """ANTHROPIC_API_KEY del entorno, o la primera linea sk- de api_key.txt."""
+    """Clave de IA del entorno, o la primera linea sk- de api_key.txt."""
     k = _limpiar_clave(os.environ.get("ANTHROPIC_API_KEY", ""))
     if k.startswith("sk-"):
         return k

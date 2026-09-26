@@ -228,6 +228,10 @@ const API = {
     },
     // La ventana de revisión del PM: el RFQ ya costeado por tramos.
     rfqRevision(rfqId) { return this.request('GET', `/api/rfqs/${rfqId}/revision`); },
+    /** La cotización que el PM dejó en la calculadora, de vuelta al RFQ. */
+    rfqCotizacionPM(rfqId, cotizacion) {
+        return this.request('POST', `/api/rfqs/${rfqId}/cotizacion-pm`, cotizacion);
+    },
     // Con lo que la calculadora abre este RFQ: el PN ya armado.
     rfqCotizacionInicial(rfqId) {
         return this.request('GET', `/api/rfqs/${rfqId}/cotizacion-inicial`);
@@ -419,7 +423,7 @@ const API = {
         return this.request('POST', '/api/notificaciones/leer-todo');
     },
 
-    // El chat es el único que gasta API de Anthropic.
+    // El chat es el único que gasta API de IA.
     assistantAsk(pregunta) {
         return this.request('POST', '/api/assistant/ask', { pregunta });
     },

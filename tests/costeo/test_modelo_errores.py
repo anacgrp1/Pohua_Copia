@@ -35,7 +35,7 @@ def _como(nombre, mensaje="", estado=None):
 # --------------------------------------------------------------------------- #
 
 def test_sin_saldo_se_reconoce_aunque_llegue_como_peticion_mala():
-    """Es el caso que más engaña: Anthropic lo manda como 400
+    """Es el caso que más engaña: la API lo manda como 400
     invalid_request_error, así que sin mirar el texto mandaría a revisar el
     contexto cuando lo que hay que hacer es recargar."""
     err = _como("BadRequestError",

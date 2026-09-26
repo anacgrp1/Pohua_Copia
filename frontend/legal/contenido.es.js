@@ -83,7 +83,7 @@ window.POHUA_LEGAL_TEXTOS.es = {
                 '<b>Unión Europea (RGPD):</b> ejecución de un contrato o de medidas precontractuales a petición del interesado (art. 6.1.b); interés legítimo en gestionar la relación comercial con empresas, la seguridad y la auditoría (art. 6.1.f); cumplimiento de obligaciones legales (art. 6.1.c). Para el personal, la relación laboral.',
             ]]},
             { t: '6. Uso de inteligencia artificial', b: [
-                'Para leer los correos y los planos técnicos y extraer los datos de la pieza (material, medidas, cantidades), Pohua envía su contenido a un modelo de inteligencia artificial de un proveedor externo (Anthropic, PBC, Estados Unidos), que actúa como encargado y sólo trata los datos para prestarnos ese servicio, conforme al contrato con él.',
+                'Para leer los correos y los planos técnicos y extraer los datos de la pieza (material, medidas, cantidades), Pohua envía su contenido a un modelo de inteligencia artificial de un proveedor externo, que actúa como encargado y sólo trata los datos para prestarnos ese servicio, conforme al contrato con él.',
                 '<b>Ninguna decisión se toma sólo de forma automatizada.</b> La factibilidad, el precio y el envío de cada oferta los revisa y decide una persona. Usted puede pedir que su solicitud se atienda sin este procesamiento escribiendo a {{correo}}.',
             ]},
             { t: '7. Con quién compartimos sus datos', b: [
@@ -92,7 +92,7 @@ window.POHUA_LEGAL_TEXTOS.es = {
                     'Alojamiento de la aplicación (Render) y base de datos (Neon).',
                     'Correo electrónico (el proveedor del buzón corporativo, p. ej. Microsoft 365).',
                     'Almacenamiento de planos en la nube (Microsoft Azure), cuando está activado.',
-                    'Lectura de correos y planos con inteligencia artificial (Anthropic).',
+                    'Lectura de correos y planos con inteligencia artificial.',
                     'Entrega de notificaciones al teléfono o al navegador (el servicio de avisos del propio navegador: Google, Apple, Mozilla o Microsoft), sólo si el usuario las activa.',
                 ],
                 'Entre las <b>empresas del mismo grupo</b> en México, Estados Unidos y Francia, que operan con los mismos procesos y políticas (art. 36 fr. III LFPDPPP).',

@@ -50,7 +50,7 @@ class _Mensajes:
 
 
 class _ClienteFalso:
-    """Cliente de Anthropic de mentira. `llamadas` cuenta lo que se gastó."""
+    """Cliente de IA de mentira. `llamadas` cuenta lo que se gastó."""
 
     def __init__(self, texto=_JSON_BUENO):
         self.llamadas = []

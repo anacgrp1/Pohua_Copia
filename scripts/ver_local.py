@@ -279,7 +279,7 @@ def esperar_y_abrir(url: str, puerto: int, segundos: int = 60) -> None:
     """Abre el navegador cuando el servidor RESPONDE, no antes.
 
     Antes se abría a los 2.5 segundos fijos. En Windows, uvicorn con recarga
-    automática tarda bastante más en levantar (importa anthropic, azure,
+    automática tarda bastante más en levantar (importa el SDK de IA, azure,
     psycopg2...), así que el navegador llegaba primero y mostraba
     ERR_CONNECTION_REFUSED aunque todo estuviera bien.
     """

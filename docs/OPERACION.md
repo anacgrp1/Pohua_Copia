@@ -138,7 +138,7 @@ publicada en internet, hay que rotarlas todas:
 
 1. **Neon** — Dashboard → Roles → *Reset password*. Actualiza `DATABASE_URL` en
    Render y en tu `.env` local. Usa el endpoint con `-pooler` en el host.
-2. **Anthropic** — [console.anthropic.com](https://console.anthropic.com) →
+2. **Proveedor de IA** — la consola del proveedor →
    API Keys → revoca la actual y crea otra.
 3. **Correo** — cambia la contraseña de la cuenta IMAP, o rota el
    `AZURE_CLIENT_SECRET` en el portal de Azure si usas Graph.
@@ -372,7 +372,7 @@ usuario aceptar la versión vigente al entrar; la aceptación queda en la tabla
 2. Que un abogado de cada país (México, EE. UU. y Francia) revise los textos
    de `frontend/legal/contenido.*.js`. Son un borrador técnico fiel a lo que hace
    Pohua, no una opinión legal.
-3. Verificar con cada proveedor (Render, Neon, Anthropic, Microsoft) que hay
+3. Verificar con cada proveedor (Render, Neon, proveedor de IA, Microsoft) que hay
    contrato de encargado / DPA y la garantía de transferencia internacional que
    dice el aviso (cláusulas contractuales tipo o Data Privacy Framework).
 4. En Francia: informar y, si corresponde, consultar al CSE antes de usar una
@@ -492,6 +492,24 @@ para que una persona lo revise en Outlook. Los `.png` y `.pdf` se aceptan
 siempre aunque su cabecera sea rara (Outlook guarda las imágenes pegadas en
 el cuerpo como objetos OLE): sólo un ejecutable disfrazado se para. No
 sustituye al antivirus del equipo.
+
+**Lo que el PM corrige en la calculadora es lo que se aprueba.** El flujo
+del RFQ: la ficha (`/api/rfqs/{id}`) → la ventana de revisión
+(`/revision`, que costea al abrirse) → «Open full quote», que abre la
+calculadora completa con el PN armado (`/cotizacion-inicial`). Desde
+2026-09-25 hay camino de vuelta: cada vez que la calculadora guarda el
+borrador de un RFQ (y al pulsar «Volver a la revisión») manda a Pohua el
+PN tal como quedó y el resultado de SU motor (`rfq-cotizado` →
+`POST /api/rfqs/{id}/cotizacion-pm`), que se guarda en
+`rfqs.datos_json.cotizacion_pm` con quién y cuándo. Desde entonces la
+ventana de revisión y la oferta (`oferta.preparar`) usan esos tramos —sin
+volver a correr el motor— y la ventana lo dice con la píldora «Cotizado por
+el PM · quién · hora · nº». La ventana se refresca sola mientras está
+abierta (al guardarse una cotización de ese RFQ, al volver a la pestaña y
+cada 15 s). «Recalcular» con cotas nuevas suelta la cotización del PM y
+vuelve al costeo del sistema; la calculadora conserva su borrador, así que
+si se cambian cotas en la ventana conviene reabrir la calculadora y
+guardar de nuevo.
 
 **La portada como pantalla de espera.** Dentro de la aplicación, el logo de la
 barra lateral lleva a la portada (los logos, «Pohua · RFQ Quoter» y el

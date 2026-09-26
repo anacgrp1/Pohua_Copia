@@ -644,7 +644,7 @@ const BRAIN = {
   'V6 filing: every customer folder under QUOTES now has two subfolders \u2014 "RFQ Info" (drawings, Excel tables, emails; parsed drawings are filed there automatically when the customer is set) and "Quotes sent" (offer PDFs filed at approval). Old PDFs in the customer root are still found by View PDF.',
   'V6 defaults: lead time 45 working days, payment terms Net 30, on every new quote.',
   'V6 suggestions (Ops bar): "Suggest routing" proposes the coiler by wire \u00d8 lane + the standard secondary chain of the family, with ESTIMATED cycle times (historical medians) that MUST be validated; "Suggest packing" fills packing + pcs/box per tier by the target-box-weight rule (\u224811\u201315 lb boxes, barrels \u2248130 lb for heavy tiers).',
-  'V6 parsing: select SEVERAL PDFs at once \u2014 one PN is created per drawing, then the blue REVIEW bar walks PN by PN (Prev/Next/Done). PN, Description and Revision are mandatory: missing ones turn yellow after parsing. The AI model is selectable in Settings (claude-fable-5 available) with a token counter.',
+  'V6 parsing: select SEVERAL PDFs at once \u2014 one PN is created per drawing, then the blue REVIEW bar walks PN by PN (Prev/Next/Done). PN, Description and Revision are mandatory: missing ones turn yellow after parsing. The AI model is selectable in Settings with a token counter.',
   'V6 folder: the App remembers the shared folder \u2014 it reconnects silently at start, or with ONE click (no browsing) if the browser asks for permission.',
   'DELTA WON (V15): setting PO RECEIVED requires the previous price $/pc for every PN (or NEW PN if never sold). Delta = (new - previous) x selected-tier qty, accumulated in the cockpit by PO reception month, with detail per customer, family and PN. NEW PNs count in the NEW SALES report instead (price x qty). Won quotes from before V15 show in the cockpit with an Add button to complete the data.',
   'Per-tier P&L (V15): the CBD has a Contribution % and an Overheads % input per tier - blank keeps the quote contribution and the automatic OH ladder / PN override. Drawing Revision is per PN (V15) - each PN keeps its own rev; the PDF filename lists every rev.',
@@ -4394,14 +4394,14 @@ function importPriceList(){
 /* ---------- settings ---------- */
 $('btn-settings').onclick=()=>{
  modal('Settings','<div class="grid g2">'+
-  '<div><label>Anthropic API key (fallback when the parser server is off; stored in THIS browser only)</label><input id="set-key" type="password" value="'+esc(local.apiKey)+'"></div>'+
+  '<div><label>AI API key (fallback when the parser server is off; stored in THIS browser only)</label><input id="set-key" type="password" value="'+esc(local.apiKey)+'"></div>'+
   '<div><label>AI model (drawing parsing)</label><select id="set-model">'+(function(){
     const opts=['claude-fable-5','claude-sonnet-4-6','claude-haiku-4-5'];
     if(local.model&&!opts.includes(local.model)) opts.unshift(local.model);
     return opts.map(m=>'<option'+(m===local.model?' selected':'')+'>'+esc(m)+'</option>').join('');
    })()+'</select><input id="set-model-custom" placeholder="custom model id (overrides the dropdown)" style="margin-top:4px">'+
    '<p class="small" id="set-aiuse">'+(function(){ const u=local.aiUse||{calls:0,inTok:0,outTok:0};
-    return 'AI usage on this PC: '+f0(u.calls)+' calls · '+f0(u.inTok)+' tokens in · '+f0(u.outTok)+' tokens out (direct-API parses only; exact $ in console.anthropic.com).'; })()+'</p></div></div>'+
+    return 'AI usage on this PC: '+f0(u.calls)+' calls · '+f0(u.inTok)+' tokens in · '+f0(u.outTok)+' tokens out (direct-API parses only; exact $ in the AI provider\'s console).'; })()+'</p></div></div>'+
   '<div class="grid g2" style="margin-top:12px">'+
   '<div><button class="mbtn pri" id="set-folder">'+(SFS.mode==='shared'?'Reconnect shared folder':'Connect shared folder')+'</button><p class="small">Pick the OneDrive folder: GROUPE CGR &rarr; Price Calculator - Price Calculator (same folder on both PCs).</p></div>'+
   '<div><button class="mbtn" id="set-export">Export data (JSON)</button> <button class="mbtn" id="set-import">Import data</button><p class="small">Backup / move the shared data by hand.</p></div></div>',

@@ -186,7 +186,11 @@ def preparar(rfq_id: str, opciones: Optional[dict] = None, conexion=None) -> Dic
 
     hoy = _dt.date.today()
     validez_dias = int(opciones.get("validez_dias") or VALIDEZ_DIAS_POR_DEFECTO)
-    lead_time = opciones.get("lead_time") or LEAD_TIME_POR_DEFECTO
+    # El plazo que el PM puso en la calculadora, si lo puso; si no, el de siempre.
+    plazo_pm = ((costeo_rfq.cotizacion_del_pm(datos) or {}).get("cabecera") or {}).get("plazo_dias")
+    lead_time = (opciones.get("lead_time")
+                 or (f"{int(plazo_pm)} working days" if plazo_pm else None)
+                 or LEAD_TIME_POR_DEFECTO)
     terminos = opciones.get("terminos") or TERMINOS_POR_DEFECTO
     incoterm = opciones.get("incoterm") or INCOTERM_POR_DEFECTO
 
@@ -213,7 +217,12 @@ def preparar(rfq_id: str, opciones: Optional[dict] = None, conexion=None) -> Dic
             "partNo": rfq["part_number"] or datos.get("part_number") or "-",
             "description": tipo,
             "material": material,
-            "wireDia": _pulgadas(resorte.get("diametro_alambre_mm")),
+            # Con la cotización del PM manda el alambre de la calculadora:
+            # es el que corrigió, y el precio ya sale de él.
+            "wireDia": (("%.4f in" % costeado["comunes"]["dia_in"])
+                        if costeado["costeo"].get("origen") == "calculadora"
+                        and costeado["comunes"].get("dia_in")
+                        else _pulgadas(resorte.get("diametro_alambre_mm"))),
             "finish": opciones.get("acabado") or "",
             "quotedQty": tramos[0]["cantidad"] if tramos else None,
             "price": tramos[0]["precio_pc"] if tramos else None,

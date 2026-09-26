@@ -2,7 +2,7 @@
 
 Por que es un contador y no una consulta
 ----------------------------------------
-La API de Anthropic **no expone el saldo**. La Usage & Cost API existe, pero
+La API de IA **no expone el saldo**. La Usage & Cost API existe, pero
 exige una Admin API key (`sk-ant-admin...`) y no esta disponible para cuentas
 individuales; la clave que usa el lector es una normal. Asi que no hay forma de
 preguntar cuanto queda: lo unico que se puede hacer es apuntar lo que se gasta.
@@ -10,7 +10,7 @@ preguntar cuanto queda: lo unico que se puede hacer es apuntar lo que se gasta.
 Esto es importante y hay que decirlo en cada mensaje: **es una estimacion, no el
 saldo real**. Se desvia si la clave se usa desde otro sitio -- y se usa: la
 calculadora tiene un modo de respaldo que llama a la API desde el navegador.
-La cifra buena esta siempre en console.anthropic.com.
+La cifra buena esta siempre en la consola del proveedor de IA.
 
 Aun asi vale la pena, porque el sintoma de quedarse sin saldo en un puesto de
 cotizacion es "la herramienta ha dejado de funcionar", y nadie lo relaciona con
@@ -27,7 +27,7 @@ import json
 import os
 import time
 
-# USD por millon de tokens. Tarifa Anthropic de primera parte, 2026-08.
+# USD por millon de tokens. Tarifa de primera parte, 2026-08.
 # Este es el UNICO sitio donde viven los precios: probar_lote.py los importa.
 PRECIOS = {
     "claude-opus-5":    {"in": 5.00, "out": 25.00},
@@ -169,7 +169,7 @@ def aviso(est):
     if est.get("agotado"):
         return ("ESTIMATED CREDIT EXHAUSTED: this parser has spent about $%.2f of "
                 "the $%.2f topped up. The next drawing will probably fail. Top up "
-                "at console.anthropic.com, then record it so this warning clears. "
+                "at the AI provider's console, then record it so this warning clears. "
                 "(Estimate based on this parser's own usage - the real balance is "
                 "in the console.)" % (est["gastado_usd"], est["cargado_usd"]))
     cola = ""
@@ -178,6 +178,6 @@ def aviso(est):
         cola = " - roughly %d more drawing%s at $%.3f each" % (
             n, "" if n == 1 else "s", est["media_usd"])
     return ("LOW CREDIT: about $%.2f left of the $%.2f topped up%s. Top up at "
-            "console.anthropic.com before it runs out. (Estimate based on this "
+            "the AI provider's console before it runs out. (Estimate based on this "
             "parser's own usage - the real balance is in the console.)"
             % (est["restante_usd"], est["cargado_usd"], cola))

@@ -124,7 +124,7 @@ const QuotingPage = {
         });
 
         contenedor.querySelector('#quotingVolver').addEventListener('click', () => {
-            if (this.rfqAbierto) Revision.abrir(this.rfqAbierto);
+            if (this.rfqAbierto) this.volverARevision();
         });
 
         this.centralita();
@@ -271,6 +271,62 @@ const QuotingPage = {
      * escribiendo: su borrador se olvida y, si es el que está abierto, la hoja
      * queda limpia.
      */
+    // ------------------------------------ lo cotizado, de vuelta al RFQ
+
+    /**
+     * «Volver a revisión»: primero lo cotizado, luego la ventana.
+     *
+     * Se le pide a la calculadora la cotización tal como está ahora mismo, se
+     * guarda en el RFQ y SÓLO entonces se abre la ventana de revisión, que la
+     * lee. Si se abriera antes, el PM vería el costeo viejo un instante y
+     * luego el suyo, o el viejo a secas si la calculadora tardaba. Si la
+     * calculadora no contesta en un par de segundos, se abre igual con lo que
+     * haya guardado: lo último que mandó al escribir.
+     */
+    async volverARevision() {
+        const id = this.rfqAbierto;
+        if (!id) return;
+        const boton = this.contenedor && this.contenedor.querySelector('#quotingVolver');
+        if (boton) boton.disabled = true;
+        try {
+            await this.pedirCotizacion(id);
+        } finally {
+            if (boton) boton.disabled = false;
+        }
+        Revision.abrir(id);
+    },
+
+    pedirCotizacion(id) {
+        return new Promise((resolver) => {
+            const fin = () => { clearTimeout(reloj); this.esperaCotizacion = null; resolver(); };
+            const reloj = setTimeout(fin, 2500);
+            this.esperaCotizacion = { id, fin };
+            this.postAlMarco({ source: 'pohua', tipo: 'pedir-cotizacion', rfq_id: id });
+        });
+    },
+
+    /** Lo que la calculadora manda cada vez que guarda un RFQ: al servidor. */
+    async guardarCotizacion(d) {
+        const espera = this.esperaCotizacion;
+        try {
+            if (d.vacio || !d.rfq_id || !d.pn || !d.resultado) return;
+            // Un guardado de otro RFQ que quedó abierto en la hoja también
+            // vale: es de ESE RFQ, y allí es donde se apunta.
+            await API.rfqCotizacionPM(d.rfq_id, {
+                pn: d.pn, resultado: d.resultado, contribution: d.contribution,
+                cabecera: d.cabecera || {}, material_nombre: d.material_nombre || null,
+            });
+            this.ultimaCotizacion = { rfq: d.rfq_id, en: Date.now() };
+            window.dispatchEvent(new CustomEvent('pohua:rfq-cotizado', { detail: { rfq: d.rfq_id } }));
+        } catch (err) {
+            if (err && err.sesionExpirada) return;
+            console.warn('No se pudo guardar la cotización del PM:', err);
+            if (d.motivo === 'volver') Toast.warning(I18N.t('quoting.cotizacionNoGuardada'));
+        } finally {
+            if (espera && espera.id === d.rfq_id) espera.fin();
+        }
+    },
+
     olvidarRfq(ids) {
         const lista = (Array.isArray(ids) ? ids : [ids]).filter(Boolean);
         if (!lista.length) return;
@@ -499,6 +555,12 @@ const QuotingPage = {
 
             if (dePrecio && d.source === 'isc-nube' && d.tipo === 'rfqs-guardados') {
                 this.revisarGuardados(d.ids);
+                return;
+            }
+
+            // Lo cotizado en la hoja, de vuelta al RFQ (ver `guardarCotizacion`).
+            if (dePrecio && d.source === 'isc-nube' && d.tipo === 'rfq-cotizado') {
+                this.guardarCotizacion(d);
                 return;
             }
 

@@ -83,7 +83,7 @@ window.POHUA_LEGAL_TEXTOS.fr = {
                 '<b>Union européenne (RGPD) :</b> exécution d’un contrat ou de mesures précontractuelles prises à la demande de la personne concernée (art. 6.1.b) ; intérêt légitime à gérer la relation commerciale avec les entreprises, à assurer la sécurité et à permettre l’audit (art. 6.1.f) ; respect d’une obligation légale (art. 6.1.c). Pour le personnel, la relation de travail.',
             ]]},
             { t: '6. Recours à l’intelligence artificielle', b: [
-                'Pour lire les courriels et les plans techniques et en extraire les caractéristiques de la pièce (matériau, dimensions, quantités), Pohua transmet leur contenu à un modèle d’intelligence artificielle d’un prestataire externe (Anthropic, PBC, États-Unis), qui agit en qualité de sous-traitant et ne traite les données que pour nous fournir ce service, conformément au contrat conclu avec lui.',
+                'Pour lire les courriels et les plans techniques et en extraire les caractéristiques de la pièce (matériau, dimensions, quantités), Pohua transmet leur contenu à un modèle d’intelligence artificielle d’un prestataire externe, qui agit en qualité de sous-traitant et ne traite les données que pour nous fournir ce service, conformément au contrat conclu avec lui.',
                 '<b>Aucune décision n’est fondée exclusivement sur un traitement automatisé.</b> La faisabilité, le prix et l’envoi de chaque offre sont examinés et décidés par une personne. Vous pouvez demander que votre demande soit traitée sans recours à ce traitement en écrivant à {{correo}}.',
             ]},
             { t: '7. Destinataires des données', b: [
@@ -92,7 +92,7 @@ window.POHUA_LEGAL_TEXTOS.fr = {
                     'Hébergement de l’application (Render) et base de données (Neon).',
                     'Messagerie électronique (le fournisseur de la messagerie professionnelle, par ex. Microsoft 365).',
                     'Stockage des plans dans le cloud (Microsoft Azure), lorsqu’il est activé.',
-                    'Lecture des courriels et des plans par intelligence artificielle (Anthropic).',
+                    'Lecture des courriels et des plans par intelligence artificielle.',
                     'Acheminement des notifications vers le téléphone ou le navigateur (le service de notifications du navigateur lui-même : Google, Apple, Mozilla ou Microsoft), uniquement si l’utilisateur les active.',
                 ],
                 'Les <b>sociétés du même groupe</b> au Mexique, aux États-Unis et en France, qui appliquent les mêmes procédures et politiques (art. 36, fraction III, de la LFPDPPP).',
