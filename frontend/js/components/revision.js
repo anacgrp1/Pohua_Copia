@@ -16,10 +16,9 @@
  *
  * Quién la abre:
  *
- *   - La campana de avisos y las filas de la cola del Resumen dejan
- *     `#/rfq/<id>` en la dirección; aquí se escucha `hashchange` y se abre.
- *     Así un enlace pegado en un chat también llega a la ventana.
- *   - El botón "Review" del detalle del RFQ llama a `Revision.abrir(id)`.
+ *   - El botón «Revisar» del detalle del RFQ llama a `Revision.abrir(id)`.
+ *     Un RFQ se abre siempre por su ficha (la campana, la cola del Resumen,
+ *     «Requiere atención» y los enlaces `#/rfq/<id>` llevan ahí).
  *
  * Qué hace cada botón:
  *
@@ -248,10 +247,15 @@ const Revision = (() => {
     function botonVersiones(d) {
         const v = (d.versiones_pm && d.versiones_pm.versiones) || [];
         if (!v.length) return '';
-        return `<button type="button" class="revision-pill revision-pill--versiones"
-                        data-accion="versiones" aria-expanded="${versionesAbiertas}">
+        // El menú cuelga del botón y flota encima de la ventana: abrirlo no
+        // empuja los tramos ni la cascada hacia abajo.
+        return `<span class="revision-ver-ancla">
+                <button type="button" class="revision-pill revision-pill--versiones"
+                        data-accion="versiones" aria-haspopup="true" aria-expanded="${versionesAbiertas}">
                     ${esc(t('rev.ver.boton', { n: v.length }))} ${versionesAbiertas ? '▴' : '▾'}
-                </button>`;
+                </button>
+                ${menuVersiones(d)}
+            </span>`;
     }
 
     function cuandoCorto(iso) {
@@ -262,44 +266,57 @@ const Revision = (() => {
         } catch (_) { return iso; }
     }
 
-    function panelVersiones(d) {
+    function menuVersiones(d) {
         const info = d.versiones_pm || {};
         const lista = info.versiones || [];
         if (!versionesAbiertas || !lista.length) return '';
         const puede = API.puede('rfq:dictaminar') && !(d.rfq && ['Approved', 'Declined'].includes(d.rfq.estado));
-        const fila = (v) => {
+        // Toda la fila es el botón: un toque y queda escogida. La que está en
+        // uso se marca y no se puede volver a tocar.
+        const opcion = (valor, enUso, cabeza, detalle, precios) => {
+            const marca = enUso
+                ? `<span class="revision-ver-marca revision-ver-marca--uso">${esc(t('rev.ver.enUso'))}</span>`
+                : (puede ? `<span class="revision-ver-usar">${esc(t('rev.ver.usar'))}</span>` : '');
+            const dentro = `
+                <span class="revision-ver-cab"><b>${cabeza}</b><span>${detalle}</span></span>
+                <span class="revision-ver-accion">${marca}</span>
+                ${precios ? `<span class="revision-ver-precios">${precios}</span>` : ''}`;
+            return enUso || !puede
+                ? `<li class="revision-ver-fila ${enUso ? 'en-uso' : ''}" role="menuitemradio" aria-checked="${enUso}">${dentro}</li>`
+                : `<li><button type="button" class="revision-ver-fila" role="menuitemradio" aria-checked="false"
+                        data-accion="usarVersion" data-version="${esc(valor)}">${dentro}</button></li>`;
+        };
+        const filas = lista.map((v) => {   // la más nueva arriba (así llegan)
             const precios = (v.precios || []).map((p, i) => {
                 const q = (v.cantidades || [])[i];
                 return `<span class="revision-ver-precio">${q ? esc(entero(q)) + ' · ' : ''}${esNum(p) ? dinero(p, 4) : '—'}</span>`;
             }).join('');
             const quien = v.por ? esc(String(v.por).split('@')[0]) : '';
-            return `<li class="revision-ver-fila ${v.en_uso ? 'en-uso' : ''}">
-                <div class="revision-ver-cab">
-                    <b>v${esc(v.n)}</b>
-                    <span>${esc(cuandoCorto(v.en))}${quien ? ' · ' + quien : ''}${v.numero ? ' · ' + esc(v.numero) : ''}</span>
-                    ${v.fijada ? '' : `<span class="revision-ver-marca">${esc(t('rev.ver.enCurso'))}</span>`}
-                </div>
-                <div class="revision-ver-precios">${precios}</div>
-                <div class="revision-ver-accion">
-                    ${v.en_uso ? `<span class="revision-ver-marca revision-ver-marca--uso">${esc(t('rev.ver.enUso'))}</span>`
-                        : (puede ? `<button type="button" class="btn btn-secondary btn-sm revision-btn" data-accion="usarVersion" data-version="${esc(v.n)}">${esc(t('rev.ver.usar'))}</button>` : '')}
-                </div>
-            </li>`;
-        };
-        const sistema = `<li class="revision-ver-fila ${info.sistema_en_uso ? 'en-uso' : ''}">
-                <div class="revision-ver-cab"><b>${esc(t('rev.ver.sistema'))}</b>
-                    <span>${esc(t('rev.ver.sistemaAyuda'))}</span></div>
-                <div class="revision-ver-precios"></div>
-                <div class="revision-ver-accion">
-                    ${info.sistema_en_uso ? `<span class="revision-ver-marca revision-ver-marca--uso">${esc(t('rev.ver.enUso'))}</span>`
-                        : (puede ? `<button type="button" class="btn btn-secondary btn-sm revision-btn" data-accion="usarVersion" data-version="">${esc(t('rev.ver.usar'))}</button>` : '')}
-                </div>
-            </li>`;
-        return `<section class="revision-bloque revision-versiones" aria-label="${esc(t('rev.ver.titulo'))}">
-                <h4>${esc(t('rev.ver.titulo'))}</h4>
-                <p class="revision-ver-nota">${esc(t('rev.ver.nota'))}</p>
-                <ul class="revision-ver-lista">${lista.map(fila).join('')}${sistema}</ul>
-            </section>`;
+            const detalle = `${esc(cuandoCorto(v.en))}${quien ? ' · ' + quien : ''}`
+                + (v.fijada ? '' : ` · <i>${esc(t('rev.ver.enCurso'))}</i>`);
+            return opcion(v.n, v.en_uso, 'v' + esc(v.n), detalle, precios);
+        }).join('');
+        const sistema = opcion('', info.sistema_en_uso, esc(t('rev.ver.sistema')), esc(t('rev.ver.sistemaAyuda')), '');
+        return `<div class="revision-ver-menu" role="menu" aria-label="${esc(t('rev.ver.titulo'))}">
+                <div class="revision-ver-titulo">${esc(t('rev.ver.titulo'))}</div>
+                <ul class="revision-ver-lista">${filas}${sistema}</ul>
+            </div>`;
+    }
+
+    // El menú nace pegado a la izquierda del botón; si el botón quedó a la
+    // derecha, el menú se saldría de la ventana (que recorta): se corre a la
+    // izquierda lo justo para caber.
+    function encajarMenu() {
+        const menu = capa && capa.querySelector('.revision-ver-menu');
+        const cuerpo = capa && capa.querySelector('.revision-cuerpo');
+        if (!menu || !cuerpo) return;
+        const caja = cuerpo.getBoundingClientRect();
+        const r = menu.getBoundingClientRect();
+        const margen = 12;
+        const sobra = r.right - (caja.right - margen);
+        if (sobra > 0) {
+            menu.style.left = -Math.min(sobra, r.left - caja.left - margen) + 'px';
+        }
     }
 
     async function usarVersion(valor) {
@@ -310,10 +327,14 @@ const Revision = (() => {
             const nuevo = await API.rfqUsarVersionPM(rfqAbierto, version);
             if (!capa) return;
             datos = nuevo;
+            versionesAbiertas = false;
             ultimoCosteo = huellaDelCosteo(datos);
             if (tramoActivo >= (datos.tramos || []).length) tramoActivo = 0;
             pintar();
             Toast.success(version === null ? t('rev.ver.usandoSistema') : t('rev.ver.usando', { n: version }));
+            // La calculadora que tenga este RFQ abierto (aquí o en otra
+            // pestaña) carga la versión escogida ahora mismo.
+            API.avisarRfq('version', rfqAbierto, { version });
         } catch (err) {
             if (!(err && err.sesionExpirada)) Toast.error(err.message);
         } finally {
@@ -655,7 +676,6 @@ const Revision = (() => {
                 ${cabecera(d)}
                 <div class="revision-cuerpo">
                     ${comunes(d)}
-                    ${panelVersiones(d)}
                     ${pestanas(d)}
                     ${franja(avisos(d))}
                     ${tr ? cascada(tr) + columnas(tr) : ''}
@@ -811,15 +831,20 @@ const Revision = (() => {
         // escribir.
         if (datos && datos.esCotizacion) { Toast.warning(I18N.t('rev.sinDictamen')); return; }
 
-        const motivo = await Confirmar.pedir({
+        // `pedirTexto`, no `pedir`: `pedir` es un sí/no que tira el cuadro de
+        // texto y resuelve true/false. Con él, cancelar resolvía `false`, que
+        // pasaba el filtro de null y se mandaba como motivo: el RFQ quedaba
+        // rechazado (o devuelto) con la nota «false».
+        const motivo = await Confirmar.pedirTexto({
             titulo: I18N.t('dlg.rechazar.titulo'),
             mensaje: I18N.t('dlg.rechazar.mensaje'),
             aceptar: I18N.t('dlg.rechazar.si'),
             peligro: true,
-            campo: { etiqueta: I18N.t('dlg.rechazar.motivo'),
-                     marcador: I18N.t('dlg.rechazar.ejemplo') },
+            etiqueta: I18N.t('dlg.rechazar.motivo'),
+            marcador: I18N.t('dlg.rechazar.ejemplo'),
+            obligatorio: true,
         });
-        if (motivo === null) return;                 // canceló
+        if (typeof motivo !== 'string') return;      // canceló
         if (!String(motivo).trim()) {
             // Declinar sin decir por qué deja el rastro vacío justo donde más
             // falta hace. Se pide otra vez en vez de dejarlo pasar.
@@ -861,14 +886,15 @@ const Revision = (() => {
         if (!API.puede('rfq:dictaminar')) { Toast.error(I18N.t('aviso.sinPermisoRfq')); return; }
         if (datos && datos.esCotizacion) { Toast.warning(I18N.t('rev.sinDictamen')); return; }
 
-        const nota = await Confirmar.pedir({
+        const nota = await Confirmar.pedirTexto({
             titulo: I18N.t('dlg.devolver.titulo'),
             mensaje: I18N.t('dlg.devolver.mensaje'),
             aceptar: I18N.t('dlg.devolver.si'),
-            campo: { etiqueta: I18N.t('dlg.devolver.motivo'),
-                     marcador: I18N.t('dlg.devolver.ejemplo') },
+            etiqueta: I18N.t('dlg.devolver.motivo'),
+            marcador: I18N.t('dlg.devolver.ejemplo'),
+            obligatorio: true,
         });
-        if (nota === null) return;
+        if (typeof nota !== 'string') return;        // canceló
         if (!String(nota).trim()) { Toast.warning(I18N.t('aviso.motivoHace')); return; }
 
         bloquear(true);
@@ -1023,7 +1049,19 @@ const Revision = (() => {
 
     function pintar() {
         if (!capa || !datos) return;
+        // Repintar (cambiar de tramo, abrir el menú de versiones, el refresco
+        // solo) no es abrir: la ventana no vuelve a entrar con su animación ni
+        // salta arriba si se había bajado.
+        const antes = capa.querySelector('.revision-cuerpo');
+        const bajado = antes ? antes.scrollTop : 0;
         capa.innerHTML = plantilla(datos);
+        if (antes) {
+            const caja = capa.querySelector('.revision');
+            if (caja) caja.classList.add('revision--quieta');
+            const cuerpo = capa.querySelector('.revision-cuerpo');
+            if (cuerpo) cuerpo.scrollTop = bajado;
+        }
+        encajarMenu();
         const activo = capa.querySelector('.revision-tramo-card.activo');
         if (activo && window.matchMedia('(max-width: 768px)').matches) {
             activo.scrollIntoView({ block: 'nearest', inline: 'center' });
@@ -1046,29 +1084,44 @@ const Revision = (() => {
      * El PM corrige en la calculadora (otra pestaña, o «Open full quote» y
      * vuelta) y lo cotizado llega al RFQ por detrás (`quoting.js` →
      * `/cotizacion-pm`). Sin esto, la ventana enseñaba el costeo de cuando
-     * se abrió hasta que alguien la cerraba y la abría. Tres señales: el
-     * aviso de que se guardó una cotización de ESTE RFQ, volver a la pestaña
-     * (visibilitychange) y un sondeo suave cada 15 s por si el cambio vino
-     * de otra computadora. Nunca mientras se está guardando algo (ocupado).
+     * se abrió hasta que alguien la cerraba y la abría. Señales: el aviso de
+     * que se guardó una cotización o se escogió una versión de ESTE RFQ (en
+     * esta pestaña o en otra del navegador, ver `API.avisarRfq`), volver a
+     * la pestaña (visibilitychange) y un sondeo cada 3 s de `/pulso` —una
+     * fila, sin costear— por si el cambio vino de otra computadora; sólo si
+     * el pulso cambió se pide la ventana entera. Nunca mientras se está
+     * guardando algo (ocupado).
      */
-    const SONDEO_MS = 15000;
+    const SONDEO_MS = 3000;
     let sondeo = null;
     let ultimoCosteo = '';
+    let ultimoPulso = '';
 
     function huellaDelCosteo(d) {
         try {
             const c = (d && d.costeo && d.costeo.pm) || {};
             const v = (d && d.versiones_pm) || {};
-            return JSON.stringify([c.en, c.por, c.version, v.en_uso, (v.versiones || []).length,
-                                   (d && d.tramos || []).map(x => x.precio_pc)]);
+            return JSON.stringify([c.en, c.por, c.version, v.en_uso,
+                                   (v.versiones || []).map(x => [x.n, x.fijada, x.precios]),
+                                   (d && d.tramos || []).map(x => x.precio_pc),
+                                   d && d.rfq && d.rfq.estado]);
         } catch (_) { return ''; }
     }
 
-    async function refrescarSiCambio() {
+    let mirando = false;
+
+    async function refrescarSiCambio(forzar) {
         if (!capa || !rfqAbierto || ocupado || (datos && datos.esCotizacion)) return;
-        if (document.hidden) return;
+        if (document.hidden || mirando) return;
         const id = rfqAbierto;
+        mirando = true;
         try {
+            if (forzar !== true) {
+                const pulso = await API.rfqPulso(id);
+                const h = (pulso && pulso.huella) || '';
+                if (h && h === ultimoPulso) return;
+                ultimoPulso = h;
+            }
             const nuevo = await API.rfqRevision(id);
             if (!capa || rfqAbierto !== id || ocupado) return;
             const huella = huellaDelCosteo(nuevo);
@@ -1079,26 +1132,43 @@ const Revision = (() => {
             pintar();
         } catch (err) {
             if (err && err.sesionExpirada) cerrar();
+        } finally {
+            mirando = false;
         }
     }
 
     function alVolverAVerse() { if (!document.hidden) refrescarSiCambio(); }
     function alCotizar(ev) {
-        if (ev && ev.detail && ev.detail.rfq === rfqAbierto) refrescarSiCambio();
+        if (ev && ev.detail && ev.detail.rfq === rfqAbierto) refrescarSiCambio(true);
+    }
+    // Una versión escogida en ESTA ventana ya está pintada; sólo cuenta si
+    // vino de otra pestaña.
+    function alVersion(ev) {
+        if (ev && ev.detail && ev.detail.deOtraPestana && ev.detail.rfq === rfqAbierto) refrescarSiCambio(true);
     }
 
     function vigilar() {
         if (sondeo) return;
+        const id = rfqAbierto;
+        // El pulso de partida: el primer sondeo no tiene que pedir la ventana
+        // entera si nada cambió desde que se abrió.
+        API.rfqPulso(id).then((r) => { if (rfqAbierto === id && !ultimoPulso) ultimoPulso = (r && r.huella) || ''; })
+            .catch(() => {});
         sondeo = setInterval(refrescarSiCambio, SONDEO_MS);
         document.addEventListener('visibilitychange', alVolverAVerse);
         window.addEventListener('pohua:rfq-cotizado', alCotizar);
+        window.addEventListener('pohua:rfq-dictaminado', alCotizar);
+        window.addEventListener('pohua:rfq-version', alVersion);
     }
 
     function dejarDeVigilar() {
         if (sondeo) { clearInterval(sondeo); sondeo = null; }
         document.removeEventListener('visibilitychange', alVolverAVerse);
         window.removeEventListener('pohua:rfq-cotizado', alCotizar);
+        window.removeEventListener('pohua:rfq-dictaminado', alCotizar);
+        window.removeEventListener('pohua:rfq-version', alVersion);
         ultimoCosteo = '';
+        ultimoPulso = '';
     }
 
     async function abrir(origen, calcData) {
@@ -1136,6 +1206,14 @@ const Revision = (() => {
         try {
             datos = await API.rfqRevision(origen);
             if (!capa || rfqAbierto !== origen) return;
+            // «Esperando al cliente»: le faltan datos y se le pidieron. No hay
+            // nada completo que revisar; se lleva a su ficha, que dice qué falta.
+            if (datos && datos.rfq && datos.rfq.estado === 'Incomplete') {
+                cerrar(true);
+                Toast.info(I18N.t('ficha.esperaTitulo'));
+                if (typeof APP !== 'undefined') APP.navigate('rfq-detail', { id: origen });
+                return;
+            }
             ultimoCosteo = huellaDelCosteo(datos);
             pintar();
             vigilar();
@@ -1166,6 +1244,13 @@ const Revision = (() => {
 
     function alClic(ev) {
         if (ocupado) return;
+        // Menú de versiones abierto y el clic cae fuera de él: se cierra, y el
+        // clic sigue su camino (una pestaña, un botón…).
+        if (versionesAbiertas && !ev.target.closest('.revision-ver-ancla')) {
+            versionesAbiertas = false;
+            if (!ev.target.closest('[data-tramo], [data-accion]') && ev.target !== capa) { pintar(); return; }
+            pintar();
+        }
         const pestana = ev.target.closest('[data-tramo]');
         if (pestana) {
             tramoActivo = Number(pestana.dataset.tramo) || 0;
@@ -1197,16 +1282,32 @@ const Revision = (() => {
         if (ev.key !== 'Escape' || ocupado) return;
         // Si hay un diálogo de confirmación encima, la tecla es para él.
         if (document.querySelector('.dialogo-fondo')) return;
+        // Con el menú de versiones abierto, Esc cierra el menú, no la ventana.
+        if (versionesAbiertas) { versionesAbiertas = false; pintar(); return; }
         cerrar();
     }
 
-    /** `#/rfq/<id>` en la dirección abre la ventana; quitarlo la cierra. */
-    function porDireccion() {
+    /*
+     * `#/rfq/<id>` en la dirección (el enlace del correo de aviso, la
+     * notificación del teléfono) lleva al DETALLE del RFQ, como cualquier
+     * otra forma de abrir uno: un RFQ se abre siempre por su ficha, y desde
+     * ahí «Revisar» abre esta ventana. Quitar el `#` la cierra.
+     */
+    function porDireccion(ev) {
         const m = /^#\/rfq\/(.+)$/.exec(location.hash || '');
         if (m) {
             let id = m[1];
             try { id = decodeURIComponent(id); } catch (_) { /* tal cual */ }
-            abrir(id);
+            if (capa) cerrar(true);
+            if (!ev) {
+                // Al arrancar: se deja la dirección en la ficha y la ruta
+                // inicial de la aplicación la pinta.
+                history.replaceState({ page: 'rfq-detail', params: { id } }, '',
+                                     '/rfq-detail?' + new URLSearchParams({ id }).toString());
+                return;
+            }
+            history.replaceState(history.state, '', location.pathname + location.search);
+            APP.navigate('rfq-detail', { id });
         } else if (capa) {
             cerrar(true);
         }
@@ -1216,7 +1317,7 @@ const Revision = (() => {
         window.addEventListener('hashchange', porDireccion);
         // Al cambiar de idioma se vuelve a pintar con los textos nuevos.
         if (I18N.alCambiar) I18N.alCambiar(() => { if (capa && datos) pintar(); });
-        porDireccion();
+        porDireccion(null);
     }
 
     return { init, abrir, cerrar, recargar };

@@ -162,7 +162,8 @@ def _motivo(estado: str, criticas: int, avisos: int) -> str:
 def _atencion(limite: int = 20) -> dict:
     """RFQs que esperan a una persona, con los días que llevan esperando.
 
-    Es TODO lo que todavía no tiene dictamen, no sólo lo que tiene banderas.
+    Es TODO lo que todavía no tiene dictamen, no sólo lo que tiene banderas,
+    salvo lo que espera al cliente (le faltan datos y se le pidieron).
     Un RFQ factible con score 100 también espera: le falta que el PM valide
     la cotización, y es justo el que la campana anuncia como «Quote
     validation required». Hasta 2026-09 aquí sólo salían los parados en
@@ -189,7 +190,10 @@ def _atencion(limite: int = 20) -> dict:
                        NULLIF(r.datos_json->>'customer', '')
                 FROM rfqs r
                 LEFT JOIN rfq_banderas b ON b.rfq_version_id = r.id
-                WHERE r.estado NOT IN ('Approved', 'Declined')
+                -- «Esperando al cliente» (Incomplete) tampoco espera a una
+                -- persona de aquí: espera la respuesta del comprador, y no se
+                -- revisa hasta que llegue completo.
+                WHERE r.estado NOT IN ('Approved', 'Declined', 'Incomplete')
                   AND r.version = (SELECT MAX(x.version) FROM rfqs x
                                     WHERE x.rfq_id = r.rfq_id)
                 GROUP BY r.id, r.rfq_id, r.version, r.cliente_id, r.part_number,

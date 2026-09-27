@@ -47,6 +47,8 @@ const QuotingPage = {
     consulta: false,          // se abre sólo para mirarlo: no toca el borrador
     rfqAbierto: null,         // el que ya se abrió, para no repetirlo
     hojaLista: false,
+    restauracionCargada: null, // la versión escogida en la revisión que tiene la hoja
+    sondeoVersion: null,
 
     // ---------------------------------------------------------------- pintar
 
@@ -159,19 +161,23 @@ const QuotingPage = {
      * calculadora ya sabe no pisar lo que se esté escribiendo de ESE RFQ
      * (`isc-nube.js`, `cargarRfqYa`) y rellenar la hoja si está vacía.
      */
-    async abrirRfq(id, consulta) {
+    async abrirRfq(id, consulta, soloVersion) {
         if (!id) return;
         if (consulta !== undefined) this.consulta = !!consulta;
         try {
             const datos = await API.rfqCotizacionInicial(id);
-            if (datos && datos.error) {
+            if (datos && datos.error && !soloVersion) {
                 Toast.warning(I18N.t('quoting.rfqParcial', { motivo: datos.error }));
             }
             this.rfqAbierto = id;
+            this.restauracionCargada = (datos && datos.restauracion && datos.restauracion.en) || null;
             this.pintarVolver();
-            datos.ficheros = await this.bajarPlanos(id, datos.planos);
+            // Volver a mandarlo sólo por la versión escogida no necesita los
+            // planos: la hoja ya tiene este RFQ y lo único que cambia es el PN.
+            datos.ficheros = soloVersion ? [] : await this.bajarPlanos(id, datos.planos);
             this.rfqPendiente = datos;
             this.entregarRfq();
+            this.vigilarVersion();
         } catch (err) {
             if (err && err.sesionExpirada) return;
             Toast.error(I18N.t('quoting.rfqFallo', { motivo: err.message }));
@@ -264,6 +270,7 @@ const QuotingPage = {
         this.postAlMarco({ source: 'pohua', tipo: 'limpiar' });
         this.consulta = false;
         this.rfqAbierto = null;
+        this.restauracionCargada = null;
         this.rfqPendiente = null;
         this.pintarVolver();
         this.pintarConsulta();
@@ -328,11 +335,19 @@ const QuotingPage = {
                 // "volver" fija la versión en el historial; "guardado" sólo
                 // actualiza la que está en curso.
                 motivo: d.motivo === 'volver' ? 'volver' : 'guardado',
+                restauracion: d.restauracion || null,
             });
             this.ultimaCotizacion = { rfq: d.rfq_id, en: Date.now() };
-            window.dispatchEvent(new CustomEvent('pohua:rfq-cotizado', { detail: { rfq: d.rfq_id } }));
+            API.avisarRfq('cotizado', d.rfq_id);
         } catch (err) {
             if (err && err.sesionExpirada) return;
+            // En la ventana de revisión se escogió otra versión después de
+            // cargar esta hoja: lo de la hoja no se guardó (pisaría la
+            // elección) y la hoja carga ahora la versión escogida.
+            if (err && err.status === 409) {
+                if (d.rfq_id === this.rfqAbierto && !this.consulta) this.abrirRfq(d.rfq_id, undefined, true);
+                return;
+            }
             console.warn('No se pudo guardar la cotización del PM:', err);
             if (d.motivo === 'volver') Toast.warning(I18N.t('quoting.cotizacionNoGuardada'));
         } finally {
@@ -539,9 +554,55 @@ const QuotingPage = {
      * dos tipos de mensaje del traspaso. Lo que llegue de cualquier otro sitio
      * se ignora sin mirarlo.
      */
+    /*
+     * La versión escogida en la ventana de revisión, en la hoja al momento.
+     *
+     * Escoger una versión (o volver al cálculo del sistema) cambia lo que
+     * vale en el RFQ. Si la calculadora tiene ese RFQ abierto —en esta
+     * pestaña, en otra, o en otra computadora— tiene que pasar a enseñar
+     * ESA versión sin esperar a que alguien pulse «Abrir cotización
+     * completa». En esta pestaña y en las demás del navegador llega el aviso
+     * `pohua:rfq-version` (ver `API.avisarRfq`); desde otra computadora, el
+     * sondeo de `/pulso` cada pocos segundos, que sólo lee una fila.
+     */
+    SONDEO_VERSION_MS: 3000,
+
+    vigilarVersion() {
+        if (this.sondeoVersion) return;
+        this.sondeoVersion = setInterval(() => this.mirarVersion(), this.SONDEO_VERSION_MS);
+    },
+
+    async mirarVersion() {
+        const id = this.rfqAbierto;
+        if (!id || this.consulta) {
+            if (!id && this.sondeoVersion) { clearInterval(this.sondeoVersion); this.sondeoVersion = null; }
+            return;
+        }
+        if (document.hidden || this.mirandoVersion) return;
+        this.mirandoVersion = true;
+        try {
+            const r = await API.rfqPulso(id);
+            if (id !== this.rfqAbierto || this.consulta) return;
+            if ((r && r.restauracion || null) !== this.restauracionCargada) {
+                await this.abrirRfq(id, undefined, true);
+            }
+        } catch (err) {
+            if (err && err.status === 404) this.limpiarHoja();
+        } finally {
+            this.mirandoVersion = false;
+        }
+    },
+
     centralita() {
         if (this.centralitaPuesta) return;
         this.centralitaPuesta = true;
+
+        // Se escogió una versión en la ventana de revisión (aquí o en otra
+        // pestaña): si es el RFQ de la hoja, la hoja la carga ya.
+        window.addEventListener('pohua:rfq-version', (ev) => {
+            const id = ev.detail && ev.detail.rfq;
+            if (id && id === this.rfqAbierto && !this.consulta) this.abrirRfq(id, undefined, true);
+        });
 
         // Aprobado o declinado desde cualquier pantalla (ver `api.js`).
         window.addEventListener('pohua:rfq-dictaminado', (ev) => {

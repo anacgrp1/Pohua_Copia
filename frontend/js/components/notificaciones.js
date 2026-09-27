@@ -389,7 +389,7 @@ const Notificaciones = (() => {
 
     function irA(rfq) {
         cerrar();
-        location.hash = '#/rfq/' + encodeURIComponent(rfq);
+        APP.navigate('rfq-detail', { id: rfq });
     }
 
     // ------------------------------------------------------------- ciclo

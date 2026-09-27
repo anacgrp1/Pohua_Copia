@@ -126,6 +126,8 @@ class RFQSummary(BaseModel):
     # se reconoció, lo que dijo el correo). Sin él, un RFQ cuyo cliente no
     # está en la cartera salía en las listas como "—".
     cliente_nombre: Optional[str] = None
+    # Lo que se le pidió al comprador, en los que esperan al cliente.
+    campos_faltantes: Optional[List[str]] = None
 
 
 class RFQDetail(RFQSummary):
@@ -363,6 +365,10 @@ class CotizacionPMRequest(BaseModel):
     # "guardado": el guardado automático mientras se escribe (actualiza la
     # versión en curso). "volver": el PM volvió a la revisión (la fija).
     motivo: str = "guardado"
+    # La marca de la versión escogida en la ventana con la que se cargó la
+    # hoja (``pm_restauracion.en``). Si alguien escogió otra después, lo que
+    # manda la hoja es viejo y no se guarda: la calculadora recarga la elegida.
+    restauracion: Optional[str] = None
 
 
 class VersionPMRequest(BaseModel):

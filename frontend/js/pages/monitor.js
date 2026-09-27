@@ -114,7 +114,7 @@ const MonitorPage = (() => {
         aviso:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
     };
 
-    async function cargarTarjetas() {
+    async function cargarTarjetas(silencio) {
         try {
             const estado = await API.getStatus();
             // La primera tarjeta lleva DOS cosas: si el servicio está
@@ -169,7 +169,12 @@ const MonitorPage = (() => {
             }
         } catch (err) {
             if (err && err.sesionExpirada) return;
-            Toast.error(I18N.t('aviso.estadoFallo', { motivo: err.message }));
+            // El repaso de cada pocos segundos no avisa: un fallo pasajero
+            // (el teléfono sin red o recién despierto, el servidor
+            // arrancando) se arregla solo en el siguiente, y avisarlo cada
+            // vez apilaba la pantalla de «No se pudo cargar el estado». Las
+            // cifras se quedan con lo último que se supo.
+            if (!silencio) Toast.error(I18N.t('aviso.estadoFallo', { motivo: err.message }));
         }
     }
 
@@ -355,7 +360,8 @@ const MonitorPage = (() => {
 
         detener();
         temporizador = setInterval(() => {
-            cargarTarjetas();
+            if (document.hidden) return;        // nadie mira: no se pregunta
+            cargarTarjetas(true);
             refrescar();
         }, REFRESCO_MS);
     }

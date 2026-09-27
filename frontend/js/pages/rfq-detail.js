@@ -40,11 +40,25 @@ const RFQDetailPage = {
         const esc = this.esc;
         try {
             const rfq = await API.getRFQ(this.currentRfqId);
+            // Lo usan los accesos rápidos de la barra de abajo (assistant.js).
+            this.rfqActual = rfq;
             const r = rfq.resorte || {};
             const d = rfq.datos_json || {};
 
             // Los botones de dictamen sólo existen si el usuario puede dictaminar.
             const puedeDictaminar = API.puede('rfq:dictaminar');
+
+            // «Esperando al cliente»: le faltan datos y se le pidieron. No hay
+            // nada completo que revisar, así que no se ofrece la ventana de
+            // revisión; se dice qué falta y que se le pidió al comprador.
+            const esperando = rfq.estado === 'Incomplete';
+            const faltan = (d.campos_faltantes || [])
+                .map((c) => { const k = 'campo.' + c; const t = I18N.t(k); return t === k ? c : t; });
+            const avisoEspera = esperando ? `<div class="detail-panel rfqd-panel--espera">
+                    <div class="detail-panel-title">${esc(I18N.t('ficha.esperaTitulo'))}</div>
+                    <p class="rfqd-espera-texto">${esc(I18N.t('ficha.esperaTexto'))}</p>
+                    ${faltan.length ? `<p class="rfqd-espera-falta">${esc(I18N.t('ficha.esperaFalta', { campos: faltan.join(', ') }))}</p>` : ''}
+                </div>` : '';
 
             // Los motivos, uno por línea y alineados a la izquierda. Eran
             // "badges" —pastillas pensadas para una palabra— con frases
@@ -73,12 +87,14 @@ const RFQDetailPage = {
                         <span class="badge ${RFQTable.badgeClass(rfq.estado)}"><span class="badge-dot"></span>${esc(I18N.estado(rfq.estado))}</span>
                     </div>
                     <div class="rfqd-acciones">
-                        <button class="btn btn-secondary" onclick="Revision.abrir('${esc(rfq.rfq_id)}')">${esc(I18N.t('rev.abrir'))}</button>
+                        ${esperando ? '' : `<button class="btn btn-secondary" onclick="Revision.abrir('${esc(rfq.rfq_id)}')">${esc(I18N.t('rev.abrir'))}</button>`}
                         <!-- Aprobar y rechazar se deciden en la ventana de revisión,
                              con los números delante; aquí sólo se entra a ella. -->
                         ${rfq.estado === 'Approved' ? `<button class="btn btn-primary" onclick="APP.navigate('quote-review', {id: '${esc(rfq.rfq_id)}'})">${esc(I18N.t('ficha.cotizar'))}</button>` : ''}
                     </div>
                 </div>
+
+                ${avisoEspera}
 
                 ${banderas ? `<div class="detail-panel rfqd-panel--aviso">
                     <div class="detail-panel-title">${esc(I18N.t('ficha.banderas'))}</div>

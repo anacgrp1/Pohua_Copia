@@ -322,3 +322,50 @@ class TestElegirVersionEndpoint(TestElEndpoint):
              mock.patch("app.rfq.repository.anotar_datos"), \
              pytest.raises(HTTPException):
             rutas.usar_version_pm("INT-1", VersionPMRequest(version=9), mock.Mock(correo="pm@x"))
+
+
+class TestSincroniaConLaHoja(TestElEndpoint):
+    """Lo escogido en la ventana manda sobre lo que la hoja traía de antes."""
+
+    def _con_restauracion(self, rutas, en="2026-09-26T17:00:00+00:00"):
+        d = aplicar({}, versiones.registrar({}, cot(3.6), motivo="volver"))
+        d = aplicar(d, versiones.restaurar(d, None, "pm@x", en))
+        detalle = self._detalle(rutas)
+        detalle.datos_json = d
+        return detalle
+
+    def test_la_hoja_vieja_no_pisa_la_version_escogida(self, rutas):
+        from fastapi import HTTPException
+
+        from api.models.schemas import CotizacionPMRequest
+
+        body = CotizacionPMRequest(pn=PN, resultado=RESULTADO, restauracion=None)
+        with mock.patch.object(rutas, "get_rfq", return_value=self._con_restauracion(rutas)), \
+             mock.patch("app.rfq.repository.anotar_datos") as anotar, \
+             pytest.raises(HTTPException) as err:
+            rutas.guardar_cotizacion_pm("INT-1", body, mock.Mock(correo="pm@x"))
+        assert err.value.status_code == 409
+        assert err.value.detail["restauracion"] == "2026-09-26T17:00:00+00:00"
+        anotar.assert_not_called()
+
+    def test_la_hoja_al_dia_si_guarda(self, rutas):
+        from api.models.schemas import CotizacionPMRequest
+
+        body = CotizacionPMRequest(pn=PN, resultado=RESULTADO,
+                                   restauracion="2026-09-26T17:00:00+00:00")
+        with mock.patch.object(rutas, "get_rfq", return_value=self._con_restauracion(rutas)), \
+             mock.patch("app.rfq.repository.anotar_datos") as anotar:
+            rutas.guardar_cotizacion_pm("INT-1", body, mock.Mock(correo="pm@x"))
+        assert anotar.call_args[0][1]["cotizacion_pm"]["n"] == 2
+
+    def test_pulso(self):
+        d = aplicar({}, versiones.registrar({}, cot(3.6)))
+        p1 = versiones.pulso(d, "RequiresReview", 1)
+        assert p1["restauracion"] is None
+        assert versiones.pulso(d, "RequiresReview", 1) == p1          # estable
+        d2 = aplicar(d, versiones.registrar(d, cot(3.6), motivo="volver"))
+        assert versiones.pulso(d2, "RequiresReview", 1)["huella"] != p1["huella"]   # se fijó
+        d3 = aplicar(d2, versiones.restaurar(d2, None, "pm@x", "T1"))
+        p3 = versiones.pulso(d3, "RequiresReview", 1)
+        assert p3["restauracion"] == "T1" and p3["huella"] != p1["huella"]
+        assert versiones.pulso(d3, "Approved", 1)["huella"] != p3["huella"]  # dictamen

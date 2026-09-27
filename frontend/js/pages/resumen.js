@@ -56,7 +56,7 @@ const ResumenPage = (() => {
 
     // ---------------------------------------------------------------- datos
 
-    async function cargar() {
+    async function cargar(silencio) {
         if (cargando) return;
         cargando = true;
         try {
@@ -74,7 +74,9 @@ const ResumenPage = (() => {
             ]);
         } catch (err) {
             if (err && err.sesionExpirada) return;
-            Toast.error(I18N.t('aviso.resumenFallo', { motivo: err.message }));
+            // El repaso de fondo no avisa de un fallo pasajero: la pantalla
+            // se queda con lo último que tenía y lo reintenta en 15 s.
+            if (!silencio) Toast.error(I18N.t('aviso.resumenFallo', { motivo: err.message }));
         } finally {
             cargando = false;
         }
@@ -239,7 +241,7 @@ const ResumenPage = (() => {
     function panelDecididas() {
         const filas = decididas || [];
         return `
-            <section class="panel">
+            <section class="panel" id="resumenDecididas">
                 <div class="panel-cabecera">
                     <h3 class="panel-titulo">${esc(I18N.t('resumen.decididas'))}</h3>
                     <span class="resumen-estrellas-nota">${esc(I18N.t('resumen.decididasNota'))}</span>
@@ -263,27 +265,12 @@ const ResumenPage = (() => {
             </section>`;
     }
 
-    function plantilla() {
-        const r = resumen || {};
+    /** La cola de lo que espera dictamen. Se repinta sola (ver `vigilar`). */
+    function panelEspera() {
         const a = atencion || {};
         const pendientes = a.pendientes || [];
-
         return `
-        <div class="resumen">
-
-            <!-- Las cuatro cifras, en UNA fila y a todo el ancho: exactamente
-                 la misma tira que el Monitor. Lo pidió ISC así: una sola
-                 pieza de cifras en toda la aplicación, no dos maneras de
-                 enseñar lo mismo según la pantalla. -->
-            <div class="kpi-fila resumen-kpis" id="resumenKpis"></div>
-
-            <!-- Debajo, en dos columnas: la cola de revisión —lo único
-                 accionable de la pantalla, y por eso la ancha— y el resorte
-                 de estrellas a la derecha, en el sitio que en la referencia
-                 ocupaba el globo terráqueo.
-                 En el teléfono se apilan y el resorte pasa el último. -->
-            <div class="resumen-medio">
-                <section class="panel">
+                <section class="panel" id="resumenEspera">
                     <div class="panel-cabecera">
                         <h3 class="panel-titulo">${esc(I18N.t('resumen.espera'))}</h3>
                         ${a.criticas
@@ -304,7 +291,44 @@ const ResumenPage = (() => {
                             <tbody>${pendientes.map(filaEspera).join('')}</tbody>
                         </table>
                     </div>` : `<p class="resumen-vacio">${esc(I18N.t('resumen.nadaEspera'))}</p>`}
+                </section>`;
+    }
+
+    /** Los dos repartos (por estado y por material). */
+    function panelRepartos() {
+        const r = resumen || {};
+        return `
+            <div class="resumen-dos" id="resumenRepartos">
+                <section class="panel">
+                    <h3 class="panel-titulo">${esc(I18N.t('resumen.porEstado'))}</h3>
+                    ${barras(r.por_estado, 'estado', I18N.t('resumen.sinDatos'))}
                 </section>
+                <section class="panel">
+                    <h3 class="panel-titulo">${esc(I18N.t('resumen.materiales'))}</h3>
+                    ${barras(r.materiales, 'material', I18N.t('resumen.sinDatos'))}
+                </section>
+            </div>`;
+    }
+
+    function plantilla() {
+        const r = resumen || {};
+
+        return `
+        <div class="resumen">
+
+            <!-- Las cuatro cifras, en UNA fila y a todo el ancho: exactamente
+                 la misma tira que el Monitor. Lo pidió ISC así: una sola
+                 pieza de cifras en toda la aplicación, no dos maneras de
+                 enseñar lo mismo según la pantalla. -->
+            <div class="kpi-fila resumen-kpis" id="resumenKpis"></div>
+
+            <!-- Debajo, en dos columnas: la cola de revisión —lo único
+                 accionable de la pantalla, y por eso la ancha— y el resorte
+                 de estrellas a la derecha, en el sitio que en la referencia
+                 ocupaba el globo terráqueo.
+                 En el teléfono se apilan y el resorte pasa el último. -->
+            <div class="resumen-medio">
+                ${panelEspera()}
 
                 <section class="panel resumen-marca">
                     <div class="resumen-lienzo">
@@ -318,16 +342,7 @@ const ResumenPage = (() => {
             </div>
 
             <!-- Los dos repartos, uno al lado del otro. -->
-            <div class="resumen-dos">
-                <section class="panel">
-                    <h3 class="panel-titulo">${esc(I18N.t('resumen.porEstado'))}</h3>
-                    ${barras(r.por_estado, 'estado', I18N.t('resumen.sinDatos'))}
-                </section>
-                <section class="panel">
-                    <h3 class="panel-titulo">${esc(I18N.t('resumen.materiales'))}</h3>
-                    ${barras(r.materiales, 'material', I18N.t('resumen.sinDatos'))}
-                </section>
-            </div>
+            ${panelRepartos()}
 
             ${panelDecididas()}
 
@@ -371,22 +386,24 @@ const ResumenPage = (() => {
             if (lienzo && typeof Hero !== 'undefined') Hero.init(lienzo);
         });
 
-        // Cada fila abre su RFQ. Con teclado también: la tabla es la lista de
-        // cosas que hay que atender y no puede depender del ratón.
-        const cuerpo = contenedor.querySelector('.resumen-tabla tbody');
-        if (cuerpo) {
-            const abrir = (fila) => {
-                if (fila && fila.dataset.rfq) {
-                    location.hash = '#/rfq/' + encodeURIComponent(fila.dataset.rfq);
-                }
-            };
-            cuerpo.addEventListener('click', (ev) => abrir(ev.target.closest('.resumen-fila')));
-            cuerpo.addEventListener('keydown', (ev) => {
-                if (ev.key !== 'Enter' && ev.key !== ' ') return;
-                ev.preventDefault();
-                abrir(ev.target.closest('.resumen-fila'));
-            });
-        }
+        // Cada fila abre su RFQ —en su ficha, como en toda la aplicación—.
+        // Con teclado también: la tabla es la lista de cosas que hay que
+        // atender y no puede depender del ratón. Por delegación en el
+        // contenedor: la cola se repinta sola y sus filas cambian.
+        const abrir = (fila) => {
+            if (fila && fila.dataset.rfq) {
+                APP.navigate('rfq-detail', { id: fila.dataset.rfq });
+            }
+        };
+        contenedor.addEventListener('click', (ev) => abrir(ev.target.closest('.resumen-fila')));
+        contenedor.addEventListener('keydown', (ev) => {
+            if (ev.key !== 'Enter' && ev.key !== ' ') return;
+            const fila = ev.target.closest('.resumen-fila');
+            if (!fila) return;
+            ev.preventDefault();
+            abrir(fila);
+        });
+        vigilar(contenedor);
 
         // Los ya dictaminados se abren en la hoja, en CONSULTA: el borrador
         // de trabajo se aparta y se devuelve al salir, así que mirar un caso
@@ -399,9 +416,67 @@ const ResumenPage = (() => {
         });
     }
 
+    // ------------------------------------------------------------ al día
+
+    /*
+     * La pantalla se mantiene al día sola.
+     *
+     * Un RFQ dictaminado (aquí, en otra pestaña o en otra computadora) sale
+     * de «Esperan dictamen» y entra en «RFQ ya dictaminadas» sin recargar:
+     * al momento con el aviso `pohua:rfq-dictaminado` (ver `API.avisarRfq`)
+     * y, para lo que pase en otra computadora, con un repaso cada 15 s
+     * mientras la pantalla está a la vista. Sólo se repintan las piezas con
+     * datos —cifras, cola, repartos, dictaminadas—; el resorte sigue girando.
+     */
+    const REPASO_MS = 15000;
+    let repaso = null;
+    let contenedorVivo = null;
+    let huellaDatos = '';
+
+    const huella = () => {
+        try { return JSON.stringify([resumen, atencion, decididas]); } catch (_) { return ''; }
+    };
+
+    async function refrescar() {
+        const c = contenedorVivo;
+        if (!c || !c.isConnected || document.hidden || cargando) return;
+        await cargar(true);
+        if (contenedorVivo !== c || !c.isConnected) return;
+        const h = huella();
+        if (h === huellaDatos) return;
+        huellaDatos = h;
+        const cambiar = (id, html) => {
+            const viejo = c.querySelector('#' + id);
+            if (!viejo) return;
+            const caja = document.createElement('div');
+            caja.innerHTML = html.trim();
+            if (caja.firstElementChild) viejo.replaceWith(caja.firstElementChild);
+        };
+        cambiar('resumenEspera', panelEspera());
+        cambiar('resumenDecididas', panelDecididas());
+        cambiar('resumenRepartos', panelRepartos());
+        const rejilla = c.querySelector('#resumenKpis');
+        if (rejilla) StatusCard.render(rejilla, tarjetas());
+    }
+
+    const alCambiarUnRfq = () => setTimeout(refrescar, 300);
+    const alVolverAVerse = () => { if (!document.hidden) refrescar(); };
+
+    function vigilar(contenedor) {
+        contenedorVivo = contenedor;
+        huellaDatos = huella();
+        repaso = setInterval(refrescar, REPASO_MS);
+        window.addEventListener('pohua:rfq-dictaminado', alCambiarUnRfq);
+        document.addEventListener('visibilitychange', alVolverAVerse);
+    }
+
     /** La llama el router al salir. Sin esto el resorte sigue pintando. */
     function detener() {
         if (typeof Hero !== 'undefined') Hero.parar();
+        if (repaso) { clearInterval(repaso); repaso = null; }
+        window.removeEventListener('pohua:rfq-dictaminado', alCambiarUnRfq);
+        document.removeEventListener('visibilitychange', alVolverAVerse);
+        contenedorVivo = null;
     }
 
     return { render, detener };

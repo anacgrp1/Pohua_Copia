@@ -285,7 +285,10 @@
                 cliente: cab.customerCode || null,
                 fecha: cab.rfqDate || null
             },
-            material_nombre: mat
+            material_nombre: mat,
+            // La versión escogida en la ventana con la que se cargó esta hoja:
+            // si allí se escogió otra después, el servidor no guarda esto.
+            restauracion: q.pohuaRestauracion || null
         };
     }
 
@@ -305,6 +308,7 @@
     function marcarBase(q) {
         if (!q) return;
         q.pohuaBase = 'pendiente';
+        q.pohuaPublicado = null;
         setTimeout(function () {
             var actual = (typeof Q === 'function') ? Q() : null;
             if (actual && actual === q && q.pohuaBase === 'pendiente') {
@@ -324,8 +328,15 @@
     function publicarCotizacion(motivo) {
         var q = (typeof Q === 'function') ? Q() : null;
         if (sinCambios(q)) return false;
+        // Un guardado automático igual al último que se mandó no se repite:
+        // la hoja guarda sola por muchos motivos (subir el borrador, repintar)
+        // y cada copia repetida era una escritura más. «Volver» sí sale
+        // siempre: es el que fija la versión.
+        var firma = firmaDeLaHoja(q);
+        if (motivo !== 'volver' && q.pohuaPublicado === firma) return false;
         var carga = cotizacionParaPohua(q);
         if (!carga) return false;
+        q.pohuaPublicado = firma;
         carga.source = 'isc-nube';
         carga.tipo = 'rfq-cotizado';
         carga.motivo = motivo || 'guardado';
@@ -338,7 +349,7 @@
         publicarTimer = setTimeout(function () {
             publicarTimer = null;
             publicarCotizacion('guardado');
-        }, 1500);
+        }, 700);
     }
 
     /** Cada guardado del borrador de un RFQ avisa a Pohua de lo cotizado. */

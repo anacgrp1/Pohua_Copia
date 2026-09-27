@@ -34,7 +34,7 @@
 // para lo que está el service worker.
 // ============================================================================
 
-const VERSION = 'v116';
+const VERSION = 'v120';
 const CACHE = `cgr-quoter-${VERSION}`;
 
 // Lo mínimo para que la aplicación abra sin conexión. No hace falta listarlo
@@ -178,7 +178,7 @@ self.addEventListener('fetch', (evento) => {
 // ============================================================================
 // El servidor (app/notifications/push.py) manda cada aviso de la campana a
 // los dispositivos suscritos. Aquí se recibe, se pinta, y al tocarlo se abre
-// Pohua directo en la ventana de revisión del RFQ (#/rfq/<id>). Si la app ya
+// Pohua directo en la ficha del RFQ (#/rfq/<id>). Si la app ya
 // estaba abierta, se trae al frente y se le cambia la dirección en vez de
 // abrir otra pestaña.
 // ============================================================================

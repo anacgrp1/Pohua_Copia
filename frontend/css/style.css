@@ -5781,30 +5781,56 @@ body.revision-abierta { overflow: hidden; }
     display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 2px 0 0 26px;
     font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums;
 }
-/* Versiones de la cotización del PM (js/components/revision.js). */
+/* Versiones de la cotización del PM (js/components/revision.js).
+   Un menú que cuelga del botón y flota encima: abrirlo no mueve los tramos
+   ni la cascada. */
+.revision--quieta { animation: none; }
+.revision-ver-ancla { position: relative; display: inline-flex; }
 .revision-pill--versiones { cursor: pointer; font: inherit; font-weight: 600; }
-.revision-pill--versiones:hover { border-color: var(--cgr-accent-light); }
-.revision-versiones .revision-ver-nota { margin: 0 0 10px; font-size: 13px; color: var(--text-secondary); }
-.revision-ver-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.revision-ver-fila {
-    display: grid; grid-template-columns: minmax(180px, 1.2fr) 2fr auto; gap: 6px 16px;
-    align-items: center; padding: 10px 14px;
+.revision-pill--versiones:hover,
+.revision-pill--versiones[aria-expanded="true"] { border-color: var(--cgr-accent-light); }
+.revision-ver-menu {
+    position: absolute; top: calc(100% + 6px); left: 0; z-index: 40;
+    width: min(520px, calc(100vw - 48px));
+    max-height: min(360px, 55vh); overflow-y: auto;
+    padding: 8px;
+    background: var(--bg-elevated);
     border: 1px solid var(--border-default); border-radius: var(--radius-md, 10px);
-    background: var(--bg-card);
+    box-shadow: var(--shadow-lg);
+    animation: dialogoEntra var(--duration-fast) var(--ease-out);
+    white-space: normal;
 }
+.revision-ver-titulo {
+    padding: 4px 8px 8px; font-size: 11px; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted);
+}
+.revision-ver-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.revision-ver-fila {
+    display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center;
+    width: 100%; padding: 8px 10px; text-align: left;
+    border: 1px solid transparent; border-radius: var(--radius-sm, 8px);
+    background: transparent; color: var(--text-primary); font: inherit;
+}
+button.revision-ver-fila { cursor: pointer; }
+button.revision-ver-fila:hover,
+button.revision-ver-fila:focus-visible { background: var(--bg-card); border-color: var(--border-default); outline: none; }
 .revision-ver-fila.en-uso { border-color: var(--cgr-accent); background: var(--cgr-accent-glow); }
-.revision-ver-cab { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; font-size: 13px; color: var(--text-secondary); }
-.revision-ver-cab b { color: var(--text-primary); font-size: 14px; }
-.revision-ver-precios { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.revision-ver-cab { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; font-size: 12.5px; color: var(--text-secondary); min-width: 0; }
+.revision-ver-cab b { color: var(--text-primary); font-size: 13.5px; }
+.revision-ver-precios {
+    grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 2px 14px;
+    font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--text-primary);
+}
 .revision-ver-precio { white-space: nowrap; }
 .revision-ver-accion { justify-self: end; }
 .revision-ver-marca { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
 .revision-ver-marca--uso { color: var(--cgr-accent-light); }
 :root[data-tema="light"] .revision-ver-marca--uso { color: var(--cgr-accent); }
+.revision-ver-usar { font-size: 12px; font-weight: 600; color: var(--cgr-accent-light); opacity: .75; }
+button.revision-ver-fila:hover .revision-ver-usar { opacity: 1; }
+:root[data-tema="light"] .revision-ver-usar { color: var(--cgr-accent); }
 @media (max-width: 768px) {
-    .revision-ver-fila { grid-template-columns: 1fr auto; }
-    .revision-ver-precios { grid-column: 1 / -1; grid-row: 2; }
-    .revision-ver-accion { grid-row: 1; grid-column: 2; }
+    .revision-ver-menu { width: calc(100vw - 40px); }
 }
 
 /* La píldora que dice que los números son los del PM (calculadora completa). */
@@ -6183,6 +6209,16 @@ body.revision-abierta { overflow: hidden; }
     background: var(--color-warning-bg);
 }
 .rfqd-panel--aviso .detail-panel-title { color: var(--color-warning); }
+
+/* «Esperando al cliente»: le faltan datos y se le pidieron al comprador. */
+.rfqd-panel--espera {
+    border-color: var(--cgr-accent-light, var(--border-default));
+    background: var(--cgr-accent-glow, var(--bg-card));
+}
+.rfqd-panel--espera .detail-panel-title { color: var(--cgr-accent-light, var(--text-primary)); }
+:root[data-tema="light"] .rfqd-panel--espera .detail-panel-title { color: var(--cgr-accent, var(--text-primary)); }
+.rfqd-espera-texto { margin: 0 0 6px; color: var(--text-secondary); }
+.rfqd-espera-falta { margin: 0; font-weight: 600; color: var(--text-primary); }
 
 .rfqd-banderas { list-style: none; margin: 0; padding: 0; }
 

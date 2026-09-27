@@ -204,7 +204,12 @@ const API = {
     // acuerda del cliente y de cuándo fue, no de en cuál de los dos acabó.
     rfqsDecididos(limit = 25) {
         return this.request(
-            'GET', `/api/rfqs?estado=Approved,Declined&limit=${limit}`);
+            'GET', `/api/rfqs?estado=Approved,Declined&limit=${limit}&ultima=true`);
+    },
+    /** Los que esperan al cliente: les faltan datos y se le pidieron. */
+    rfqsEsperando(limit = 50) {
+        return this.request(
+            'GET', `/api/rfqs?estado=Incomplete&limit=${limit}&ultima=true`);
     },
     approveRFQ(rfqId, body = {}) {
         return this.request('POST', `/api/rfqs/${rfqId}/approve`, body)
@@ -220,12 +225,44 @@ const API = {
     aceptarLegal(version) {
         return this.request('POST', '/api/legal/aceptar', { version });
     },
-    avisarDictamen(rfqId) {
-        try {
-            window.dispatchEvent(new CustomEvent('pohua:rfq-dictaminado',
-                                                 { detail: { rfq: rfqId } }));
-        } catch (_) { /* un navegador sin CustomEvent: se olvida al reabrir */ }
+    avisarDictamen(rfqId) { this.avisarRfq('dictaminado', rfqId); },
+
+    /*
+     * Algo cambió en un RFQ: se avisa a esta pestaña y a las demás.
+     *
+     * `tipo` = 'cotizado' (la calculadora guardó lo del PM), 'version' (se
+     * escogió una versión en la ventana de revisión) o 'dictaminado'. En esta
+     * pestaña sale como el evento `pohua:rfq-<tipo>`; a las otras pestañas del
+     * mismo navegador les llega por un BroadcastChannel y allí sale el mismo
+     * evento, así que quien escucha no distingue de dónde vino. Lo que pase en
+     * otra computadora lo recogen los sondeos de `/pulso`.
+     */
+    avisarRfq(tipo, rfqId, extra) {
+        const detail = Object.assign({ rfq: rfqId }, extra || {});
+        try { window.dispatchEvent(new CustomEvent('pohua:rfq-' + tipo, { detail })); }
+        catch (_) { /* un navegador sin CustomEvent: se ve al reabrir */ }
+        try { const c = this._canal(); if (c) c.postMessage({ tipo, detail }); } catch (_) {}
     },
+    _canal() {
+        if (this._canalRfq !== undefined) return this._canalRfq;
+        this._canalRfq = null;
+        try {
+            if (typeof BroadcastChannel !== 'function') return null;
+            const c = new BroadcastChannel('pohua-rfq');
+            c.onmessage = (ev) => {
+                const m = ev.data || {};
+                if (!m.tipo) return;
+                try {
+                    window.dispatchEvent(new CustomEvent('pohua:rfq-' + m.tipo,
+                        { detail: Object.assign({}, m.detail || {}, { deOtraPestana: true }) }));
+                } catch (_) {}
+            };
+            this._canalRfq = c;
+        } catch (_) { this._canalRfq = null; }
+        return this._canalRfq;
+    },
+    /** Si algo cambió en el RFQ, sin costear nada: {huella, restauracion}. */
+    rfqPulso(rfqId) { return this.request('GET', `/api/rfqs/${rfqId}/pulso`); },
     // La ventana de revisión del PM: el RFQ ya costeado por tramos.
     rfqRevision(rfqId) { return this.request('GET', `/api/rfqs/${rfqId}/revision`); },
     /** La cotización que el PM dejó en la calculadora, de vuelta al RFQ. */

@@ -45,11 +45,20 @@ def list_rfqs(
         None, description="Filter by estado; several separated by comma"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
+    ultima: bool = Query(
+        False, description="Sólo la última versión de cada RFQ"),
     usuario: UsuarioSesion = Depends(exige("rfq:leer")),
 ):
     """Lists RFQs ordered by most recent first."""
     conditions: list[str] = []
     params: list[Any] = []
+
+    # Con `ultima` cada RFQ sale una vez, con su estado de ahora. Sin esto, un
+    # RFQ que esperó al cliente (v1, Incomplete) y ya contestó (v2, en
+    # revisión) seguía saliendo en «Esperando al cliente» por su v1.
+    if ultima:
+        conditions.append("r.version = (SELECT MAX(x.version) FROM rfqs x "
+                          "WHERE x.rfq_id = r.rfq_id)")
 
     if estado:
         # Varios estados separados por coma: "Approved,Declined" es UNA
@@ -72,7 +81,8 @@ def list_rfqs(
                r.part_number, r.volumen, r.material, r.estado, r.message_id,
                r.veredicto_sistema, r.veredicto_final, r.score,
                r.fecha_registro::text,
-               NULLIF(r.datos_json->>'customer', '') AS cliente_nombre
+               NULLIF(r.datos_json->>'customer', '') AS cliente_nombre,
+               r.datos_json->'campos_faltantes' AS campos_faltantes
         FROM rfqs r
         {where}
         ORDER BY r.fecha_registro DESC
@@ -91,10 +101,20 @@ def list_rfqs(
         "id", "rfq_id", "version", "cliente_id", "nombre_proyecto",
         "part_number", "volumen", "material", "estado", "message_id",
         "veredicto_sistema", "veredicto_final", "score", "fecha_registro",
-        "cliente_nombre",
+        "cliente_nombre", "campos_faltantes",
     ]
 
-    rfqs = [RFQSummary(**dict(zip(columns, row))) for row in rows]
+    rfqs = []
+    for row in rows:
+        fila = dict(zip(columns, row))
+        falta = fila.get("campos_faltantes")
+        if isinstance(falta, str):
+            try:
+                falta = json.loads(falta)
+            except ValueError:
+                falta = None
+        fila["campos_faltantes"] = [str(x) for x in falta] if isinstance(falta, list) else None
+        rfqs.append(RFQSummary(**fila))
     return RFQListResponse(rfqs=rfqs, total=total)
 
 
@@ -528,6 +548,17 @@ def guardar_cotizacion_pm(
     import app.rfq.versiones_pm as versiones_pm
 
     detalle = get_rfq(rfq_id, None, usuario)          # 404 si no existe
+    # Se escogió otra versión en la ventana después de que esta hoja se
+    # cargara: lo que llega es de antes de esa elección y la pisaría. No se
+    # guarda; la calculadora, al recibir el 409, carga la versión escogida.
+    vigente = versiones_pm.restauracion_vigente(detalle.datos_json or {})
+    if vigente and body.restauracion != vigente:
+        log.info("RFQ %s: guardado de la hoja ignorado (se escogió otra versión en la revisión).",
+                 rfq_id)
+        raise HTTPException(status_code=409, detail={
+            "codigo": "version_escogida",
+            "mensaje": "Se escogió otra versión en la ventana de revisión; la hoja la carga ahora.",
+            "restauracion": vigente})
     if not any(t for t in (body.resultado.get("tiers") or [])):
         raise HTTPException(status_code=422,
                             detail="La cotización no trae ningún tramo calculado.")
@@ -563,6 +594,36 @@ def _con_cambios(datos, cambios):
         else:
             fuera[clave] = valor
     return fuera
+
+
+@router.get("/{rfq_id}/pulso")
+def pulso_rfq(
+    rfq_id: str,
+    usuario: UsuarioSesion = Depends(exige("rfq:leer")),
+):
+    """Si algo cambió en el RFQ, sin costear: una lectura de una fila.
+
+    La ventana de revisión y la calculadora lo preguntan cada pocos segundos
+    mientras tienen el RFQ abierto, para que lo que se haga en una se vea en
+    la otra al momento (también en otra pestaña o en otra computadora).
+    """
+    import app.rfq.versiones_pm as versiones_pm
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT version, estado, datos_json FROM rfqs WHERE rfq_id = %s "
+                        "ORDER BY version DESC LIMIT 1;", (rfq_id,))
+            fila = cur.fetchone()
+    if not fila:
+        raise HTTPException(status_code=404, detail=f"RFQ {rfq_id} not found")
+    datos = fila[2]
+    if isinstance(datos, str):
+        try:
+            datos = json.loads(datos)
+        except ValueError:
+            datos = {}
+    return versiones_pm.pulso(datos if isinstance(datos, dict) else {},
+                              estado=fila[1], version=fila[0])
 
 
 @router.post("/{rfq_id}/cotizacion-pm/version")

@@ -14,8 +14,8 @@ Cómo funciona, en tres pasos:
    suscripción y lo entrega a esa URL (``pywebpush``). El envío va en un hilo
    aparte: el ciclo de correo no espera a Google.
 3. El service worker de la app (``frontend/sw.js``) recibe el push, pinta la
-   notificación, y al tocarla abre Pohua en ``#/rfq/<id>``: la ventana de
-   revisión.
+   notificación, y al tocarla abre Pohua en ``#/rfq/<id>``: la ficha del RFQ,
+   desde donde «Revisar» abre la ventana de revisión.
 
 El servidor se identifica ante el servicio de push con un par de claves VAPID
 (``VAPID_PUBLIC_KEY`` / ``VAPID_PRIVATE_KEY``, ``scripts/generar_vapid.py``).

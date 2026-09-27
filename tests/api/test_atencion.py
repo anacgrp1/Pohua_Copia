@@ -39,7 +39,8 @@ class TestLaConsulta:
 
     def test_lista_todo_lo_que_no_tiene_dictamen(self, asistente):
         fuente = inspect.getsource(asistente._atencion)
-        assert "NOT IN ('Approved', 'Declined')" in fuente
+        # Menos lo que espera al cliente: eso no espera a nadie de aquí.
+        assert "NOT IN ('Approved', 'Declined', 'Incomplete')" in fuente
         # Ya no se recorta a los parados en revisión o con banderas.
         assert "HAVING" not in fuente
 

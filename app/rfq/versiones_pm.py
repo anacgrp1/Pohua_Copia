@@ -9,7 +9,7 @@ de memoria.
 Aquí se guardan las versiones y se elige entre ellas. Tres ideas:
 
 * **Una versión es lo que el PM trae de vuelta**, no cada tecla. La
-  calculadora guarda sola cada segundo y medio mientras se escribe; eso
+  calculadora guarda sola, al momento, mientras se escribe; eso
   actualiza la versión EN CURSO (``fijada = False``). Al pulsar «Volver a la
   revisión» la versión se fija y pasa al historial. El siguiente cambio abre
   una nueva. Así el historial tiene las versiones que el PM llegó a mirar,
@@ -199,3 +199,32 @@ def pn_restaurado(datos: dict) -> Optional[Dict[str, Any]]:
     actual = (datos or {}).get(CLAVE_ACTUAL) or {}
     pn = actual.get("pn") if marca.get("version") is not None else None
     return {"en": marca["en"], "version": marca.get("version"), "pn": pn}
+
+
+def pulso(datos: dict, estado: Optional[str] = None, version: Any = None) -> Dict[str, Any]:
+    """Lo mínimo para saber, sin costear nada, si algo cambió en este RFQ.
+
+    Lo preguntan cada pocos segundos la ventana de revisión y la calculadora
+    mientras tienen el RFQ abierto. ``huella`` cambia cuando cambia lo que la
+    ventana enseña (la versión en uso, su contenido, el historial, el estado);
+    ``restauracion`` es la marca de la última versión escogida en la ventana,
+    que la calculadora compara con la que tiene cargada.
+    """
+    datos = datos or {}
+    actual = datos.get(CLAVE_ACTUAL) if isinstance(datos.get(CLAVE_ACTUAL), dict) else None
+    marca = datos.get(CLAVE_RESTAURACION) if isinstance(datos.get(CLAVE_RESTAURACION), dict) else {}
+    carga = [
+        (actual or {}).get("n"), bool((actual or {}).get("fijada")),
+        huella(actual) if actual else None,
+        [(x.get("n"), bool(x.get("fijada"))) for x in _versiones(datos)],
+        marca.get("en"), estado, version,
+    ]
+    texto = json.dumps(carga, sort_keys=True, ensure_ascii=False, default=str)
+    return {"huella": hashlib.sha1(texto.encode("utf-8")).hexdigest()[:20],
+            "restauracion": marca.get("en")}
+
+
+def restauracion_vigente(datos: dict) -> Optional[str]:
+    """La marca de la última versión escogida en la ventana, o None."""
+    marca = (datos or {}).get(CLAVE_RESTAURACION)
+    return marca.get("en") if isinstance(marca, dict) and marca.get("en") else None

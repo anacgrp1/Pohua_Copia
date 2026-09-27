@@ -328,8 +328,10 @@ class TestOrquestacion(unittest.TestCase):
         notificar.assert_called_once()                  # lo ve el PM
         self.assertEqual(persistir.call_args.kwargs["estado"], "RequiresReview")
 
-    def test_revision_gana_sobre_datos_faltantes(self):
-        # Aunque falte part_number, primero se resuelve la duda de confianza.
+    def test_datos_faltantes_ganan_sobre_la_revision(self):
+        # Regla de ISC (2026-09-26): si falta algo, sólo sale el correo al
+        # comprador y el RFQ espera al cliente; no se abre la revisión del PM
+        # hasta que esté completo. La duda de confianza se queda apuntada.
         extraccion = {
             "campos": {"volumen": 5000, "material": "Inox 302"},
             "en_revision": {"customer": {"valor": "Neo?", "confianza": 0.3}},
@@ -338,15 +340,20 @@ class TestOrquestacion(unittest.TestCase):
         with mock.patch("app.clients.mapper.mapear_cliente", return_value=None), \
              mock.patch.object(flow, "extraer_datos_correo", return_value=extraccion), \
              mock.patch.object(flow, "procesar_dibujos", return_value=[]), \
-             mock.patch.object(flow, "persistir", return_value={}), \
+             mock.patch.object(flow, "persistir", return_value={}) as persistir, \
              mock.patch.object(flow, "responder_datos_faltantes") as responder, \
-             mock.patch.object(flow, "notificar_revision_pm"):
+             mock.patch.object(flow, "notificar_revision_pm") as notificar:
             resultado = flow.avanzar_a_parsing(
                 correo_base(), flow.RFQ_NUEVO, "RFQ-1")
 
-        self.assertEqual(resultado["etapa"], "requiere_revision")
+        self.assertEqual(resultado["etapa"], "datos_faltantes")
         self.assertIn("part_number", resultado["campos_faltantes"])
-        responder.assert_not_called()
+        self.assertEqual(persistir.call_args.kwargs["estado"], "Incomplete")
+        responder.assert_called_once()                  # se le piden al comprador
+        pedidos = responder.call_args[0][1]
+        self.assertNotIn("customer", pedidos)           # lo dudoso no se pide
+        notificar.assert_not_called()                   # el PM no lo ve todavía
+        self.assertIn("customer", persistir.call_args[0][0]["en_revision"])
 
     def test_incompleto_tras_el_dibujo_pide_los_datos_y_lo_da_de_alta_incompleto(self):
         # COT-76: un RFQ al que le faltan datos tras el plano ya no se pierde:

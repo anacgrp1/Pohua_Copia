@@ -836,9 +836,12 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
       que es quien dictamina si se declina.
     * ``"alta"``             — el RFQ quedó registrado en estado New.
 
-    La revisión gana sobre los datos faltantes: si el modelo leyó un campo con
-    poca confianza, pedirle al comprador un dato que quizá ya mandó es peor
-    que hacer que una persona lo confirme.
+    Los datos faltantes ganan sobre la revisión: si falta algo, se le pide al
+    comprador y el RFQ espera («Esperando al cliente») sin pasar por la ventana
+    de revisión, porque no hay nada completo que dictaminar. Lo que se le pide
+    son sólo los campos que no vinieron: uno leído con poca confianza no se
+    declara faltante (no se le pide lo que quizá ya mandó); se queda apuntado
+    y, con el RFQ completo, va al PM para que lo confirme.
 
     Por lo mismo, la factibilidad **no se dictamina** en la rama de confianza
     baja: dictaminar sobre medidas que el propio modelo marcó como dudosas
@@ -952,17 +955,14 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
     resultado["es_valido"] = completa["es_valido"]
     resultado["campos_faltantes"] = completa["campos_faltantes"]
 
-    # 5b. Confianza baja: el dato existe pero no es de fiar. Va al PM antes de
-    #     pedirle nada al comprador (podría estar pidiéndole lo que ya mandó).
-    if en_revision:
-        resultado["etapa"] = "requiere_revision"
-        resultado["registro"] = persistir(
-            datos, correo, rfq_id,
-            es_seguimiento=(clasificacion == RESPUESTA_RFQ),
-            estado=_estado_revision())
-        notificar_revision_pm(datos, en_revision, rfq_id)
-        return resultado
-
+    # 5b. Faltan datos: se le piden al comprador y el RFQ queda «Esperando al
+    #     cliente». NO entra a la revisión del PM hasta que esté completo
+    #     (regla de ISC, 2026-09-26): antes, un campo leído con poca confianza
+    #     lo mandaba a revisión aunque faltara el volumen, y el PM se encontraba
+    #     una ventana sin cantidades que dictaminar. Lo pedido son sólo los
+    #     campos que NO vinieron; los dudosos no se declaran faltantes, así que
+    #     no se le pide al comprador lo que quizá ya mandó. La duda se queda
+    #     apuntada (`en_revision`) y se resuelve cuando conteste.
     if not completa["es_valido"]:
         log.info("RFQ=%s incompleto tras el dibujo; faltan: %s",
                  rfq_id, ", ".join(completa["campos_faltantes"]))
@@ -976,7 +976,18 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
         responder_datos_faltantes(datos, completa["campos_faltantes"], rfq_id)
         return resultado
 
-    # 5c. Factibilidad: el resorte se puede fabricar con las directrices de la
+    # 5c. Confianza baja con todo lo demás completo: el dato existe pero no es
+    #     de fiar. Va al PM, que lo confirma o lo corrige.
+    if en_revision:
+        resultado["etapa"] = "requiere_revision"
+        resultado["registro"] = persistir(
+            datos, correo, rfq_id,
+            es_seguimiento=(clasificacion == RESPUESTA_RFQ),
+            estado=_estado_revision())
+        notificar_revision_pm(datos, en_revision, rfq_id)
+        return resultado
+
+    # 5d. Factibilidad: el resorte se puede fabricar con las directrices de la
     #     planta (COT-74/75). Si no pasa, el RFQ igual se da de alta, pero
     #     marcado para que lo dictamine el plant manager. El sistema no declina.
     factibilidad = dictaminar_factibilidad(datos, rfq_id)

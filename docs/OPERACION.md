@@ -518,8 +518,49 @@ Mientras escribe sólo se actualiza la versión en curso, y abrir la
 calculadora sin cambiar nada no cuenta como corrección. En la ventana de
 revisión, «Versiones (n)» lista cada una (hora, quién, precio por tramo) con
 «Usar esta», más «Cálculo del sistema». La elegida es la que costea la
-ventana y la oferta, y la calculadora la carga la próxima vez que se abra ese
-RFQ (`POST /api/rfqs/{id}/cotizacion-pm/version`, marca `pm_restauracion`).
+ventana y la oferta (`POST /api/rfqs/{id}/cotizacion-pm/version`, marca
+`pm_restauracion`). Se escoge en el menú desplegable de «Versiones (n)», que
+flota sobre la ventana sin mover los tramos.
+
+**Revisión y calculadora, al momento.** Lo que se escoge en la ventana llega a
+la calculadora que tenga ese RFQ abierto —en la misma pestaña, en otra, o en
+otra computadora— y lo que el PM escribe en la calculadora llega a la ventana
+abierta, en uno o dos segundos. Dentro del mismo navegador va por un
+`BroadcastChannel` (`API.avisarRfq`); entre computadoras, las dos pantallas
+preguntan cada 3 s `GET /api/rfqs/{id}/pulso`, que lee una fila y no costea
+nada. Y la calculadora no puede pisar una elección: cada guardado lleva la
+marca de la versión con la que se cargó la hoja, y si en la ventana se
+escogió otra después el servidor contesta 409 y la hoja carga la escogida.
+
+**«Requiere atención», «RFQ dictaminados» y el Resumen se mantienen al día.**
+Un RFQ dictaminado sale solo de «Requiere atención» / «Esperan dictamen» y
+entra en «RFQ dictaminados» (botón nuevo en Resumen y Cotización), sin
+recargar: al momento en el navegador y con un repaso cada 10–15 s para lo que
+pase en otra computadora.
+
+**Accesos rápidos en la barra de abajo, por pantalla.** Monitor: Leer correo
+ahora, Errores, Estado del servicio, Descargar registro, Requiere atención.
+Correo: Recorrido, Requiere atención, Esperando al cliente, Siguiente
+pendiente. Cotización: Siguiente pendiente, Requiere atención, Esperando al
+cliente, RFQ dictaminados. Resumen: Resumen, Clientes de la semana, Requiere
+atención, Esperando al cliente, RFQ dictaminados, Exportar a Excel. Ficha de
+un RFQ: Revisar, Abrir en la hoja, Siguiente pendiente, Requiere atención.
+«Siguiente pendiente» abre la ficha del RFQ que más lleva esperando dictamen.
+Los botones se esconden a quien no tiene el permiso (p. ej. «Leer correo
+ahora» exige `worker:operar`).
+
+**Un RFQ se abre siempre por su ficha.** Desde la campana, la cola del
+Resumen, «Requiere atención» o un enlace `#/rfq/<id>` (correo, teléfono) se
+llega al «Detalle de RFQ»; desde ahí «Revisar» abre la ventana de revisión.
+
+**Correo incompleto → «Esperando al cliente».** Si a la petición le falta
+algo (volumen, número de parte, material…), sólo sale el correo pidiéndolo y
+el RFQ queda en *Esperando al cliente*: no aparece en «Requiere atención» ni
+se puede abrir la ventana de revisión hasta que el comprador conteste con
+todo. Antes, un dato leído con poca confianza lo mandaba a revisión aunque
+faltara el volumen. Para pasar los que entraron así antes del cambio:
+`python scripts/pasar_a_esperando.py` (enseña cuáles), `--si` (los pasa) y
+`--enviar` (además le pide los datos al comprador).
 
 **El RFQ siempre llega a la calculadora.** «Abrir cotización completa» manda
 el RFQ aunque Pohua crea que ya está abierto, y si el marco se recarga se le

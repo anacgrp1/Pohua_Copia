@@ -89,6 +89,8 @@ const APP = {
 
         // Init componentes
         Toast.init();
+        // Oír lo que otras pestañas avisan de los RFQ (ver `API.avisarRfq`).
+        API._canal();
         Assistant.init();
         PerfilMenu.init();
         this.seguirHorario();
@@ -564,8 +566,8 @@ const APP = {
         // necesita sesión y permisos: en la portada no hay nada que avisar.
         Notificaciones.init();
 
-        // La ventana de revisión del PM. Se abre desde la campana, desde la
-        // cola del Resumen y desde cualquier enlace con #/rfq/<id>.
+        // La ventana de revisión del PM. Se abre con «Revisar» en la ficha del
+        // RFQ; los enlaces con #/rfq/<id> llevan a esa ficha.
         Revision.init();
         // Los avisos en el teléfono: registra este dispositivo si ya lo estaba.
         if (typeof Push !== 'undefined') Push.init();
