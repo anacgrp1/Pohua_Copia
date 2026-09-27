@@ -23,7 +23,8 @@
  * Qué hace cada botón:
  *
  *   - Approve      → POST /approve    (el flujo de aprobación sigue después)
- *   - Send back    → POST /send-back  (con nota obligatoria; no sale correo)
+ *   (Sin «Send back»: el PM también cotiza —con la calculadora completa—,
+ *   así que corrige él mismo en vez de devolver. El endpoint sigue existiendo.)
  *   - Decline      → POST /decline    (con motivo; avisa al cliente)
  *   - Open full quote → la pantalla de cotización completa.
  *
@@ -556,10 +557,10 @@ const Revision = (() => {
             `<button type="button" class="btn revision-btn revision-btn--fantasma" data-accion="pdf">${icono}${esc(t('rev.previewPdf'))}</button>`,
             `<button type="button" class="btn revision-btn revision-btn--fantasma" data-accion="cotizar">${esc(t(r.estado === 'Approved' ? 'rev.abrirOferta' : 'rev.abrirCompleta'))}</button>`,
         ];
+        // Sin «Devolver» (ISC, 2026-09-27): el PM también cotiza, así que no
+        // hay a quién devolverle el RFQ. Si algo no cuadra, lo corrige él en
+        // la cotización completa y vuelve a esta ventana.
         const decidir = [];
-        if (puede && abierto) {
-            decidir.push(`<button type="button" class="btn btn-secondary revision-btn" data-accion="devolver">${esc(t('rev.devolver'))}</button>`);
-        }
         if (puede && r.estado !== 'Declined') {
             decidir.push(`<button type="button" class="btn revision-btn revision-btn--suave" data-accion="declinar">${esc(t('rev.declinar'))}</button>`);
         }
@@ -863,45 +864,6 @@ const Revision = (() => {
                 // No es un error: el dictamen quedó. Pero hay que decirlo.
                 Toast.warning(I18N.t('aviso.rfqRechazadaSinCorreo'));
             }
-            // Repinta la pantalla de debajo para que el RFQ salga ya con
-            // su nuevo estado, sin que haya que recargar a mano.
-            if (typeof APP !== 'undefined' && APP.handleRoute) APP.handleRoute();
-        } catch (err) {
-            if (!err.sesionExpirada) Toast.error(err.message);
-        } finally { bloquear(false); }
-    }
-
-    /**
-     * Devolver: ni aprueba ni declina, y NO sale nada al cliente.
-     *
-     * Es la salida para el caso más común de todos —falta un dato, hay que
-     * preguntarle algo al comprador, el plano no cuadra— y también estaba sin
-     * escribir.
-     *
-     * El motivo es obligatorio por lo mismo que en declinar, pero aquí pesa
-     * todavía más: un RFQ devuelto sin decir qué le falta es un RFQ que vuelve
-     * igual de incompleto y le hace perder el viaje a dos personas.
-     */
-    async function devolver() {
-        if (!API.puede('rfq:dictaminar')) { Toast.error(I18N.t('aviso.sinPermisoRfq')); return; }
-        if (datos && datos.esCotizacion) { Toast.warning(I18N.t('rev.sinDictamen')); return; }
-
-        const nota = await Confirmar.pedirTexto({
-            titulo: I18N.t('dlg.devolver.titulo'),
-            mensaje: I18N.t('dlg.devolver.mensaje'),
-            aceptar: I18N.t('dlg.devolver.si'),
-            etiqueta: I18N.t('dlg.devolver.motivo'),
-            marcador: I18N.t('dlg.devolver.ejemplo'),
-            obligatorio: true,
-        });
-        if (typeof nota !== 'string') return;        // canceló
-        if (!String(nota).trim()) { Toast.warning(I18N.t('aviso.motivoHace')); return; }
-
-        bloquear(true);
-        try {
-            await API.rfqSendBack(rfqAbierto, String(nota).trim());
-            cerrar();
-            Toast.success(I18N.t('aviso.rfqDevuelta'));
             // Repinta la pantalla de debajo para que el RFQ salga ya con
             // su nuevo estado, sin que haya que recargar a mano.
             if (typeof APP !== 'undefined' && APP.handleRoute) APP.handleRoute();
@@ -1263,7 +1225,6 @@ const Revision = (() => {
             if (accion === 'cerrar') cerrar();
             else if (accion === 'pdf') verPdf();
             else if (accion === 'aprobar') aprobar();
-            else if (accion === 'devolver') devolver();
             else if (accion === 'declinar') declinar();
             else if (accion === 'cotizar') cotizar();
             else if (accion === 'versiones') { versionesAbiertas = !versionesAbiertas; pintar(); }

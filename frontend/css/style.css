@@ -6011,8 +6011,7 @@ button.revision-ver-fila:hover .revision-ver-usar { opacity: 1; }
     filter: none;
 }
 
-/* Devolver y Aprobar usan las clases de la casa (.btn-secondary y
-   .btn-success): el verde de "Aprobar" aquí tiene que ser el mismo verde que
+/* Aprobar usa la clase de la casa (.btn-success): el verde de "Aprobar" aquí tiene que ser el mismo verde que
    el de "Aprobar factibilidad" en la ficha del RFQ, no uno parecido. */
 
 /* Rechazar es la salida rara: está, pero no compite con Aprobar. */

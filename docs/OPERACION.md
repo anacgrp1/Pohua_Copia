@@ -538,6 +538,11 @@ entra en «RFQ dictaminados» (botón nuevo en Resumen y Cotización), sin
 recargar: al momento en el navegador y con un repaso cada 10–15 s para lo que
 pase en otra computadora.
 
+**Sin «Devolver» en la ventana de revisión.** El PM también cotiza con la
+calculadora completa, así que no hay a quién devolverle un RFQ: si algo no
+cuadra, lo corrige en «Abrir cotización completa» y vuelve a la ventana. Quedan
+«Rechazar» y «Aprobar». (`POST /api/rfqs/{id}/send-back` sigue en la API.)
+
 **Accesos rápidos en la barra de abajo, por pantalla, por orden de
 importancia** (lo que pide actuar primero, lo ocasional al final). Monitor:
 Errores, Leer correo ahora, Estado del servicio, Requiere atención, Descargar
