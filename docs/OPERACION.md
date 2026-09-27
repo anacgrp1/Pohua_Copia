@@ -538,16 +538,17 @@ entra en «RFQ dictaminados» (botón nuevo en Resumen y Cotización), sin
 recargar: al momento en el navegador y con un repaso cada 10–15 s para lo que
 pase en otra computadora.
 
-**Accesos rápidos en la barra de abajo, por pantalla.** Monitor: Leer correo
-ahora, Errores, Estado del servicio, Descargar registro, Requiere atención.
-Correo: Recorrido, Requiere atención, Esperando al cliente, Siguiente
-pendiente. Cotización: Siguiente pendiente, Requiere atención, Esperando al
-cliente, RFQ dictaminados. Resumen: Resumen, Clientes de la semana, Requiere
-atención, Esperando al cliente, RFQ dictaminados, Exportar a Excel. Ficha de
-un RFQ: Revisar, Abrir en la hoja, Siguiente pendiente, Requiere atención.
-«Siguiente pendiente» abre la ficha del RFQ que más lleva esperando dictamen.
-Los botones se esconden a quien no tiene el permiso (p. ej. «Leer correo
-ahora» exige `worker:operar`).
+**Accesos rápidos en la barra de abajo, por pantalla, por orden de
+importancia** (lo que pide actuar primero, lo ocasional al final). Monitor:
+Errores, Leer correo ahora, Estado del servicio, Requiere atención, Descargar
+registro. Correo: Requiere atención, Siguiente pendiente, Esperando al
+cliente, Recorrido. Cotización: Requiere atención, Siguiente pendiente,
+Esperando al cliente, RFQ dictaminados. Resumen: Requiere atención, Esperando
+al cliente, RFQ dictaminados, Resumen, Clientes de la semana, Exportar a
+Excel. Ficha de un RFQ: Revisar, Siguiente pendiente, Abrir en la hoja,
+Requiere atención. «Siguiente pendiente» abre la ficha del RFQ que más lleva
+esperando dictamen. Los botones se esconden a quien no tiene el permiso (p.
+ej. «Leer correo ahora» exige `worker:operar`).
 
 **Un RFQ se abre siempre por su ficha.** Desde la campana, la cola del
 Resumen, «Requiere atención» o un enlace `#/rfq/<id>` (correo, teléfono) se

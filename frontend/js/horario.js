@@ -1,17 +1,17 @@
 /**
  * El horario de atención, dicho en el reloj que cada quien tenga puesto.
  *
- * La ventana es UNA: de lunes a viernes, de 6:00 a 18:00 de la planta (Kansas
+ * La ventana es UNA: de lunes a viernes, de 7:00 a 17:00 de la planta (Kansas
  * City). Fuera de ella el sistema no abre el buzón —el correo se queda sin
  * leer y entra en el primer ciclo de la apertura siguiente—, así que la
  * pantalla tiene que poder decir dos cosas sin que nadie tenga que
  * preguntarlas: si ahora mismo se está contestando, y a qué hora vuelve.
  *
- * Y "a qué hora" depende de quién mire. Las 6:00 de Kansas son las 7:00 de
- * Querétaro y las 13:00 de Sevran: el mismo instante, tres lecturas. Por eso
- * el servidor manda instantes con su huso (…T06:00:00-05:00) y aquí se pintan
- * en la casa del reloj de arriba —la que sigue al idioma mientras nadie la
- * toque—, con el formato de ESE sitio: 12 horas en América, 24 en Francia.
+ * Las horas del horario se dicen SIEMPRE en la hora de la planta, con su
+ * ciudad: «abre lun 7:00 a. m. (Kansas City)». Antes se convertían a la casa
+ * del reloj de arriba, y en Querétaro el horario de 7:00 salía como «abre
+ * 6:00», que parecía un horario mal puesto (ISC, 2026-09-27). Del reloj se
+ * toma sólo la forma de escribir la hora: 12 horas en América, 24 en Francia.
  *
  * No hay estado propio: se le pasa lo que vino en `GET /api/status`.
  */
@@ -23,6 +23,12 @@ const Horario = (() => {
     // el idioma de la interfaz.
     const LOCALES = { kc: 'en-US', qro: 'es-MX', sev: 'fr-FR' };
 
+    // La planta: la zona del horario, tal como la manda el servidor.
+    let planta = { zona: 'America/Chicago', ciudad: 'Kansas City' };
+    function recordarPlanta(h) {
+        if (h && h.zona) planta = { zona: h.zona, ciudad: h.ciudad || h.zona };
+    }
+
     function casa() {
         try {
             if (typeof Reloj !== 'undefined' && Reloj.actual) return Reloj.actual();
@@ -30,14 +36,14 @@ const Horario = (() => {
         return { id: 'kc', zona: 'America/Chicago', ciudad: 'Kansas City' };
     }
 
-    /** Una hora suelta ("6:00 a. m.", "13h00") en la casa del reloj. */
+    /** Una hora suelta ("7:00 a. m.", "7h00") en la hora de la planta. */
     function hora(iso, { conDia = false } = {}) {
         if (!iso) return '';
         const c = casa();
         const fecha = new Date(iso);
         if (isNaN(fecha.getTime())) return '';
         const opciones = {
-            timeZone: c.zona, hour: 'numeric', minute: '2-digit',
+            timeZone: planta.zona, hour: 'numeric', minute: '2-digit',
             hour12: c.id !== 'sev',      // Francia lo dice en 24 horas
         };
         if (conDia) opciones.weekday = 'short';
@@ -48,21 +54,21 @@ const Horario = (() => {
         }
     }
 
-    /** ¿Cae ese instante en el mismo día que hoy, mirándolo desde el reloj? */
+    /** ¿Cae ese instante en el mismo día que hoy, en la planta? */
     function esHoy(iso) {
-        const c = casa();
         const dia = (f) => {
             try {
-                return new Intl.DateTimeFormat('en-CA', { timeZone: c.zona }).format(f);
+                return new Intl.DateTimeFormat('en-CA', { timeZone: planta.zona }).format(f);
             } catch (err) { return f.toISOString().slice(0, 10); }
         };
         const fecha = new Date(iso);
         return !isNaN(fecha.getTime()) && dia(fecha) === dia(new Date());
     }
 
-    /** "abre el lun, 6:00 a. m." — con el día sólo si no es hoy. */
+    /** "lun 7:00 a. m. (Kansas City)" — con el día sólo si no es hoy. */
     function cuando(iso) {
-        return hora(iso, { conDia: !esHoy(iso) });
+        const texto = hora(iso, { conDia: !esHoy(iso) });
+        return texto ? `${texto} (${planta.ciudad})` : '';
     }
 
     /**
@@ -91,11 +97,12 @@ const Horario = (() => {
     /** "Horario de atención: 7:00 a. m. – 7:00 p. m., lunes a viernes (hora de Querétaro)". */
     function ventana(h) {
         if (!h) return '';
+        recordarPlanta(h);
         const e = extremos(h);
         const franja = e ? `${hora(e.desde.toISOString())} – ${hora(e.hasta.toISOString())}`
                          : `${h.desde}:00 – ${h.hasta}:00`;
         return I18N.t('horario.ventana', {
-            franja, dias: dias(h.dias), ciudad: casa().ciudad,
+            franja, dias: dias(h.dias), ciudad: planta.ciudad,
         });
     }
 
@@ -123,6 +130,7 @@ const Horario = (() => {
      * contar y hacía pensar que el sistema se había quedado colgado.
      */
     function resumen(h) {
+        recordarPlanta(h);
         if (!h || !h.activo) return { enEspera: false, titulo: '', valor: '', detalle: '' };
         if (h.abierto) {
             const e = extremos(h);

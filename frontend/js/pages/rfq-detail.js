@@ -20,6 +20,15 @@
 const RFQDetailPage = {
     currentRfqId: null,
 
+    /*
+     * «Volver» lleva al Resumen, que es donde están las listas de RFQ
+     * («Esperan dictamen», «RFQ ya dictaminadas»). Quien no puede ver el
+     * Resumen vuelve a Cotización, que era el destino de antes.
+     */
+    volver() {
+        APP.navigate(API.puede('resumen:ver') ? 'resumen' : 'quoting');
+    },
+
     /** Texto de un correo dentro de HTML: nunca tal cual. */
     esc(valor) {
         const nodo = document.createElement('span');
@@ -80,7 +89,7 @@ const RFQDetailPage = {
             container.innerHTML = `
                 <div class="rfqd-cab">
                     <button class="btn btn-secondary rfqd-volver"
-                            onclick="APP.navigate('quoting')">&larr; ${esc(I18N.t('oferta.volver'))}</button>
+                            onclick="RFQDetailPage.volver()">&larr; ${esc(I18N.t('oferta.volver'))}</button>
                     <div class="rfqd-ident">
                         <h2 class="rfqd-id">${esc(rfq.rfq_id)}
                             <span class="rfqd-version">v${esc(rfq.version)}</span></h2>

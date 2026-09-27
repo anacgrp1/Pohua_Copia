@@ -573,15 +573,24 @@ const Assistant = (() => {
         exportar:  ['exportar',  'asis.exportar',  false],
     };
 
+    /*
+     * El orden es el de importancia, de izquierda a derecha (ISC, 2026-09-27):
+     * primero lo que pide actuar —lo que espera dictamen y el siguiente que
+     * atender—, luego lo que se consulta a diario y al final lo ocasional
+     * (el reparto de clientes, exportar, descargar el registro). En el
+     * teléfono la fila se desliza, así que lo primero es lo que se ve sin
+     * deslizar. Es fijo a propósito: un orden que cambiara según el uso
+     * movería los botones de sitio y habría que buscarlos cada vez.
+     */
     const POR_SECCION = {
-        'monitor':    ['ciclo', 'errores', 'estado', 'registro', 'atencion'],
-        'mail':       ['recorrido', 'atencion', 'espera', 'siguiente'],
-        'quoting':    ['siguiente', 'atencion', 'espera', 'dictaminados'],
-        'resumen':    ['resumen', 'clientes', 'atencion', 'espera', 'dictaminados', 'exportar'],
-        // En la ficha de un RFQ, lo que se hace con ESE RFQ y el siguiente.
-        'rfq-detail': ['revisar', 'hoja', 'siguiente', 'atencion'],
+        'monitor':    ['errores', 'ciclo', 'estado', 'atencion', 'registro'],
+        'mail':       ['atencion', 'siguiente', 'espera', 'recorrido'],
+        'quoting':    ['atencion', 'siguiente', 'espera', 'dictaminados'],
+        'resumen':    ['atencion', 'espera', 'dictaminados', 'resumen', 'clientes', 'exportar'],
+        // En la ficha de un RFQ, lo que se hace con ESE RFQ y después el siguiente.
+        'rfq-detail': ['revisar', 'siguiente', 'hoja', 'atencion'],
     };
-    const POR_DEFECTO = ['siguiente', 'resumen', 'atencion', 'exportar'];
+    const POR_DEFECTO = ['atencion', 'siguiente', 'resumen', 'exportar'];
 
     function seccion() {
         return document.body.dataset.pagina || '';
