@@ -422,6 +422,7 @@
     function reabrir(data, d) {
         var q = JSON.parse(JSON.stringify(data));
         delete q.pohuaConsulta;
+        ponerGeometria(q, d);
         local.draft = (typeof migrateQuote === 'function') ? migrateQuote(q) : q;
         if (typeof saveLocal === 'function') saveLocal();
         repintar();
@@ -1366,6 +1367,41 @@
     }
 
     /*
+     * La geometría del RFQ en el PN de la hoja, si le falta.
+     *
+     * La hoja de resortes («Calc. de resortes») se llena con `pn.drawing`, que
+     * `prepararResorte` arma al abrir el RFQ por primera vez. Pero un PN que
+     * llega por otro camino —la versión escogida en la revisión, el cálculo
+     * del sistema, un borrador de antes— podía venir sin él, y la hoja de
+     * resortes se abría con el número de parte y todo lo demás en blanco, sin
+     * el 3D. Aquí se le pone con lo que el RFQ trae (`d.resorte`) sin tocar
+     * un plano que ya se hubiera leído en la calculadora.
+     *
+     * Poner la geometría no es una corrección del PM: si la hoja estaba tal
+     * como se cargó, su base se mueve con ella para que no cuente como
+     * cambio (ver `sinCambios`).
+     */
+    function ponerGeometria(q, d) {
+        var pn = q && q.pns && (q.pns[q.activePn || 0] || q.pns[0]);
+        if (!pn || !d || !d.resorte) return false;
+        if (pn.drawing && pn.drawing.fields && pn.drawing.fields.length) return false;
+        var intacta = typeof q.pohuaBase === 'string' && q.pohuaBase !== 'pendiente' &&
+                      q.pohuaBase === firmaDeLaHoja(q);
+        try { prepararResorte({ pn: pn, resorte: d.resorte, header: d.header }); }
+        catch (e) { return false; }
+        if (!pn.drawing) return false;
+        if (intacta) q.pohuaBase = firmaDeLaHoja(q);
+        return true;
+    }
+
+    /** La hoja de resortes, al día con el PN de la hoja de precios. */
+    function mandarAResortes() {
+        intentar(function () {
+            if (typeof openSpringCalc === 'function') openSpringCalc(false);
+        }, 'pasar la geometría a la hoja de resortes');
+    }
+
+    /*
      * La versión que el PM escogió en la ventana de revisión.
      *
      * Si escogió una versión anterior (o volvió al cálculo del sistema), la
@@ -1387,9 +1423,11 @@
             q.pns = [pn];
             q.activePn = 0;
             q.pohuaRestauracion = r.en;
+            ponerGeometria(q, d);
             marcarBase(q);
             if (typeof saveLocal === 'function') saveLocal();
             repintar();
+            mandarAResortes();
             aviso(r.version === null || r.version === undefined
                   ? t('restauradaSistema')
                   : t('restaurada', { v: r.version }));
@@ -1420,7 +1458,11 @@
                 abrirRfq(d);
                 return;
             }
-            if (!aplicarRestauracion(d)) avisarCargado(d.rfq_id, false);
+            if (!aplicarRestauracion(d)) {
+                if (ponerGeometria(q, d) && typeof saveLocal === 'function') saveLocal();
+                mandarAResortes();
+                avisarCargado(d.rfq_id, false);
+            }
             return;
         }
 
