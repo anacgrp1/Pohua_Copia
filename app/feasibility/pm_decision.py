@@ -135,6 +135,24 @@ def resolver(rfq_id, veredicto, version=None, nota=None, usuario=None,
     }
 
 
+def deshacer_aprobacion(rfq_id, nota, usuario=None, conexion=None) -> dict:
+    """Una aprobación hecha sin querer, deshecha antes de que salga la oferta.
+
+    El RFQ vuelve a revisión con la nota de por qué. No se escribe al cliente:
+    aprobar no le mandó nada.
+    """
+    if not nota or not str(nota).strip():
+        raise ValueError("Para deshacer una aprobación hace falta decir por qué.")
+    import app.rfq.repository as repository
+    registro = repository.deshacer_aprobacion(
+        rfq_id, _nota_con_autor(f"APROBACIÓN DESHECHA — {str(nota).strip()}", usuario),
+        conexion=conexion)
+    log.info("RFQ %s: aprobación deshecha por %s.", rfq_id, usuario or "-")
+    return {"id": registro["id"], "rfq_id": rfq_id, "version": registro["version"],
+            "veredicto_final": None, "estado": registro["estado"],
+            "correo_enviado": False}
+
+
 def notificar_declinacion(rfq_id, datos, destinatario=None) -> bool:
     """
     Construye (COT-59) y despacha (COT-57/58) el correo de declinación.

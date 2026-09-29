@@ -424,6 +424,17 @@ const I18N = (() => {
         // Por qué espera un RFQ, cuando el sistema no le puso ninguna bandera.
         'motivo.validacion': { en: 'Quote validation required', es: 'Falta validar la cotización', fr: 'Validation du devis requise' },
         'motivo.revision':   { en: 'Feasibility review required', es: 'Falta revisar la factibilidad', fr: 'Revue de faisabilité requise' },
+        'motivo.oferta':     { en: 'Approved: send the offer', es: 'Aprobado: falta enviar la oferta', fr: 'Approuvée : envoyer l’offre' },
+        'oferta.enviarAhora': { en: 'Send offer', es: 'Enviar oferta', fr: 'Envoyer l’offre' },
+        'oferta.enCola':     { en: 'Offer queued: it goes out through Outlook on the next cycle', es: 'Oferta en cola: sale por Outlook en el siguiente ciclo', fr: 'Offre en file : elle part par Outlook au prochain cycle' },
+        'ficha.deshacerAprobacion': { en: 'Undo approval', es: 'Deshacer aprobación', fr: 'Annuler l’approbation' },
+        'dlg.deshacer.titulo':  { en: 'Undo the approval', es: 'Deshacer la aprobación', fr: 'Annuler l’approbation' },
+        'dlg.deshacer.mensaje': { en: 'The RFQ goes back to review. The customer received nothing: the offer had not been sent.', es: 'El RFQ vuelve a revisión. El cliente no recibió nada: la oferta no había salido.', fr: 'La RFQ revient en revue. Le client n’a rien reçu : l’offre n’était pas partie.' },
+        'dlg.deshacer.motivo':  { en: 'Why', es: 'Por qué', fr: 'Pourquoi' },
+        'dlg.deshacer.ejemplo': { en: 'e.g. approved by mistake when switching tabs', es: 'p. ej. se aprobó sin querer al cambiar de pestaña', fr: 'p. ex. approuvée par erreur en changeant d’onglet' },
+        'dlg.deshacer.si':      { en: 'Undo approval', es: 'Deshacer aprobación', fr: 'Annuler l’approbation' },
+        'aviso.aprobacionDeshecha': { en: 'Approval undone: the RFQ is back in review.', es: 'Aprobación deshecha: el RFQ vuelve a revisión.', fr: 'Approbation annulée : la RFQ revient en revue.' },
+        'ficha.enviarOferta': { en: 'Send offer →', es: 'Enviar oferta →', fr: 'Envoyer l’offre →' },
         'asis.esperando': { en: '{n} waiting · {c} with critical flags', es: '{n} pendientes · {c} con banderas críticas', fr: '{n} en attente · {c} avec alertes critiques' },
         'asis.tokens':    { en: '{entrada} in / {salida} out tokens', es: '{entrada} tokens de entrada / {salida} de salida', fr: '{entrada} jetons entrants / {salida} sortants' },
         'asis.col.rfq':      { en: 'RFQ', es: 'RFQ', fr: 'RFQ' },
@@ -925,6 +936,17 @@ const I18N = (() => {
     }
 
     /** El tipo de resorte ('Compresion', 'compression', 'torsión'…) traducido. */
+    /**
+     * Por qué espera un RFQ de «Requiere atención» (campana, Resumen, panel).
+     * Un aprobado sin oferta dice eso aunque traiga banderas: lo que falta ya
+     * no es revisar, es mandar la oferta.
+     */
+    function motivoPendiente(p) {
+        if (!p) return '';
+        if (p.motivo === 'oferta') return t('motivo.oferta');
+        return p.bandera || t('motivo.' + (p.motivo === 'validacion' ? 'validacion' : 'revision'));
+    }
+
     function tipoResorte(valor) {
         if (!valor) return '';
         const base = String(valor).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -1065,7 +1087,7 @@ const I18N = (() => {
         return texto === clave ? respaldo : texto;
     }
 
-    return { t, motivo, aplicar, fijar, alCambiar, init, IDIOMAS, estado, tipoResorte,
+    return { t, motivo, aplicar, fijar, alCambiar, init, IDIOMAS, estado, tipoResorte, motivoPendiente,
              get locale() { return locale(); },
              get idioma() { return actual; } };
 })();

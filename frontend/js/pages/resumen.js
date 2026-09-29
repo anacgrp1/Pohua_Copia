@@ -128,8 +128,7 @@ const ResumenPage = (() => {
      * aquí salía el estado a secas —"New"— que no dice qué hay que hacer.
      */
     function motivoDe(p) {
-        if (p.bandera) return p.bandera;
-        return I18N.t('motivo.' + (p.motivo === 'validacion' ? 'validacion' : 'revision'));
+        return I18N.motivoPendiente(p);
     }
 
     function filaEspera(p) {
@@ -232,6 +231,8 @@ const ResumenPage = (() => {
                 <td class="resumen-decidida-dato">${esc(cuando || '—')}</td>
                 <td class="resumen-decidida-estado"><span class="badge ${clase}"><span class="badge-dot"></span>${esc(I18N.estado(r.estado))}</span></td>
                 <td class="resumen-decidida-accion">
+                    ${r.oferta === 'pendiente' ? `<button type="button" class="btn btn-primary btn-sm"
+                            data-enviar-oferta="${esc(r.rfq_id)}">${esc(I18N.t('oferta.enviarAhora'))}</button>` : ''}
                     <button type="button" class="btn btn-secondary btn-sm"
                             data-decidida="${esc(r.rfq_id)}">${esc(I18N.t('resumen.verHoja'))}</button>
                 </td>
@@ -409,6 +410,13 @@ const ResumenPage = (() => {
         // de trabajo se aparta y se devuelve al salir, así que mirar un caso
         // cerrado no se mezcla con lo que alguien esté calculando.
         contenedor.addEventListener('click', (ev) => {
+            // Aprobado sin oferta: al envío directo (ver quote-review.js).
+            const enviar = ev.target.closest('[data-enviar-oferta]');
+            if (enviar) {
+                ev.preventDefault();
+                APP.navigate('quote-review', { id: enviar.dataset.enviarOferta, enviar: '1' });
+                return;
+            }
             const boton = ev.target.closest('[data-decidida]');
             if (!boton) return;
             ev.preventDefault();

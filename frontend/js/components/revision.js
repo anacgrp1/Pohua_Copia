@@ -764,6 +764,7 @@ const Revision = (() => {
             titulo: I18N.t('dlg.aprobar.titulo'),
             mensaje: I18N.t('dlg.aprobar.mensaje'),
             aceptar: I18N.t('dlg.aprobar.si'),
+            firme: true,        // sólo con un clic de verdad (ver confirmar.js)
         });
         if (!si) return;
         bloquear(true);
@@ -793,7 +794,10 @@ const Revision = (() => {
             Toast.success(I18N.t('aviso.rfqAprobada'));
             const id = rfqAbierto;
             cerrar();
-            APP.navigate('quote-review', { id });
+            // Aprobar no manda nada al cliente: la oferta sale con «Enviar
+            // oferta». Se abre ya el envío, con el destinatario puesto, para
+            // que no se quede en «Listo para Sales» sin que nadie lo mande.
+            APP.navigate('quote-review', { id, enviar: '1' });
         } catch (err) {
             if (!err.sesionExpirada) Toast.error(err.message);
         } finally { bloquear(false); }

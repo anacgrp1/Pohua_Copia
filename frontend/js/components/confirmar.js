@@ -20,6 +20,18 @@ const Confirmar = (() => {
 
     let abierto = null;   // { cerrar(valor) } del diálogo en pantalla
 
+    /*
+     * Cuándo volvió la ventana a primer plano. Un diálogo «firme» (aprobar)
+     * no acepta nada en el primer instante después de volver: al cambiar de
+     * pestaña o de programa (Alt+Tab, clic en la barra de tareas) llegaban
+     * pulsaciones y clics sueltos al botón que tenía el foco, y un RFQ quedó
+     * aprobado sin que nadie pulsara «Aprobar» (INT-59C34202, 2026-09-29).
+     */
+    let vueltaEn = 0;
+    const marcarVuelta = () => { vueltaEn = Date.now(); };
+    window.addEventListener('focus', marcarVuelta);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) marcarVuelta(); });
+
     /** El texto llega de mensajes de error y de la base de datos: nunca a innerHTML. */
     function texto(valor) {
         const nodo = document.createElement('span');
@@ -38,7 +50,7 @@ const Confirmar = (() => {
      * `campo` distingue los dos usos: sin él es un sí/no; con él, el diálogo
      * lleva un cuadro de texto y resuelve con lo escrito (o null si se cancela).
      */
-    function montar({ titulo, mensaje, aceptar, cancelar, peligro, campo }) {
+    function montar({ titulo, mensaje, aceptar, cancelar, peligro, campo, firme }) {
         // Dos diálogos a la vez no tienen sentido: el anterior se cancela.
         if (abierto) abierto.cerrar(campo ? null : false);
 
@@ -77,6 +89,7 @@ const Confirmar = (() => {
         const btnAceptar = fondo.querySelector('[data-accion="aceptar"]');
         const btnCancelar = fondo.querySelector('[data-accion="cancelar"]');
         const focoPrevio = document.activeElement;
+        const abiertoEn = Date.now();
 
         return new Promise((resolver) => {
             let resuelto = false;
@@ -94,7 +107,17 @@ const Confirmar = (() => {
                 resolver(valor);
             }
 
-            function aceptar() {
+            function aceptar(ev) {
+                // «Firme»: sólo un clic de verdad, con la ventana a la vista
+                // desde hace un momento y el diálogo abierto hace un momento.
+                if (firme) {
+                    const ahora = Date.now();
+                    if (document.hidden || !document.hasFocus() ||
+                        ahora - abiertoEn < 500 || ahora - vueltaEn < 900 ||
+                        (ev && ev.isTrusted === false)) {
+                        return;
+                    }
+                }
                 if (!entrada) return cerrar(true);
                 const valor = entrada.value.trim();
                 if (campo.obligatorio && !valor) {
@@ -112,6 +135,9 @@ const Confirmar = (() => {
                 }
                 // En un cuadro de texto Enter sirve para escribir; se acepta con Ctrl/Cmd+Enter.
                 if (ev.key === 'Enter' && (!entrada || ev.ctrlKey || ev.metaKey)) {
+                    // Un diálogo firme no se acepta con el teclado: un Enter
+                    // perdido (al volver de otra ventana) no puede aprobar.
+                    if (firme) { ev.preventDefault(); return; }
                     if (document.activeElement === btnCancelar) return;
                     ev.preventDefault();
                     return aceptar();
@@ -144,7 +170,9 @@ const Confirmar = (() => {
             document.addEventListener('keydown', alPulsar, true);
 
             abierto = { cerrar };
-            requestAnimationFrame(() => (entrada || btnAceptar).focus({ preventScroll: true }));
+            // En uno firme el foco empieza en «Cancelar»: una tecla suelta no
+            // puede caer en el botón que decide.
+            requestAnimationFrame(() => (entrada || (firme ? btnCancelar : btnAceptar)).focus({ preventScroll: true }));
         });
     }
 
@@ -271,7 +299,8 @@ const Confirmar = (() => {
     return {
         montarFormulario,
 
-        /** Sí/no. Resuelve true si se acepta. */
+        /** Sí/no. Resuelve true si se acepta. `firme: true` para decisiones
+         *  que no deben poder tomarse sin querer (sólo con un clic). */
         pedir(opciones) {
             return montar({ titulo: I18N.t('dlg.confirmar'), ...opciones, campo: null });
         },

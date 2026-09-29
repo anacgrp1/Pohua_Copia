@@ -51,3 +51,16 @@ class TestLaConsulta:
     def test_cada_fila_lleva_motivo_y_nombre_del_cliente(self, asistente):
         fuente = inspect.getsource(asistente._atencion)
         assert '"motivo"' in fuente and '"cliente_nombre"' in fuente
+
+
+class TestAprobadosSinOferta:
+    """Aprobar no manda nada: el aprobado sin oferta sigue pidiendo atención."""
+
+    def test_el_motivo_es_la_oferta(self, asistente):
+        assert asistente._motivo("Approved", 0, 0) == "oferta"
+        assert asistente._motivo("Approved", 2, 1) == "oferta"   # aunque traiga banderas
+
+    def test_entran_los_aprobados_cuya_oferta_no_salio(self, asistente):
+        fuente = inspect.getsource(asistente._atencion)
+        assert "r.estado = 'Approved'" in fuente
+        assert "'oferta'->>'enviada'" in fuente and "'oferta'->>'encolada'" in fuente

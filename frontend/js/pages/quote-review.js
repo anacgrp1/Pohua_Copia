@@ -64,6 +64,15 @@ const QuoteReviewPage = {
         this.currentRfqId = params.id;
         container.innerHTML = `<div class="loading-overlay"><div class="spinner"></div> ${I18N.t('oferta.cargando')}</div>`;
         await this.loadData(container);
+        // Venir de «Aprobar» o de «Enviar oferta →» abre el envío solo, si la
+        // oferta todavía no ha salido: es el paso que se quedaba olvidado.
+        const o = this.oferta;
+        const anterior = o && o.oferta_anterior;
+        if (params && params.enviar === '1' && o && o.estado === 'Approved' && o.puede_enviar
+            && API.puede('rfq:dictaminar') && !(anterior && (anterior.enviada || anterior.encolada))
+            && ((o.pdf && o.pdf.lines && o.pdf.lines[0] && o.pdf.lines[0].tiers) || []).length) {
+            this.enviar();
+        }
     },
 
     async loadData(container) {
@@ -107,7 +116,10 @@ const QuoteReviewPage = {
 
                 ${!o.envio_habilitado ? `<div class="detail-panel oferta-aviso oferta-aviso--info">${I18N.t('oferta.envioApagado')}</div>` : ''}
                 ${motivos ? `<div class="detail-panel oferta-aviso oferta-aviso--warn"><div class="detail-panel-title">${I18N.t('oferta.pendiente')}</div><ul>${motivos}</ul></div>` : ''}
-                ${anterior ? `<div class="detail-panel oferta-aviso ${anterior.enviada ? 'oferta-aviso--ok' : 'oferta-aviso--info'}">
+                ${anterior && anterior.encolada && !anterior.enviada ? `<div class="detail-panel oferta-aviso oferta-aviso--info">
+                    ${I18N.t('oferta.enCola')} · <b>${e(anterior.destinatario || '')}</b>
+                </div>` : ''}
+                ${anterior && !(anterior.encolada && !anterior.enviada) ? `<div class="detail-panel oferta-aviso ${anterior.enviada ? 'oferta-aviso--ok' : 'oferta-aviso--info'}">
                     ${I18N.t(anterior.enviada ? 'oferta.yaEnviada' : 'oferta.yaGenerada')}
                     <b>${e(anterior.destinatario || '')}</b> · ${e((anterior.fecha || '').replace('T', ' ').slice(0, 16))}${anterior.por ? ' · ' + e(anterior.por) : ''}
                 </div>` : ''}
@@ -212,7 +224,8 @@ const QuoteReviewPage = {
 
         try {
             const r = await API.rfqEnviarOferta(this.currentRfqId, cuerpo);
-            Toast.success(I18N.t(r.enviado ? 'oferta.aviso.enviada' : 'oferta.aviso.generada'));
+            Toast.success(I18N.t(r.enviado ? 'oferta.aviso.enviada'
+                                 : (r.encolada ? 'oferta.enCola' : 'oferta.aviso.generada')));
             this.loadData(document.getElementById('page-quote-review'));
         } catch (err) {
             if (err.sesionExpirada) return;

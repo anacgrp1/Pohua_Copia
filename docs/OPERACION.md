@@ -548,6 +548,22 @@ requirements-desktop.txt`). Mientras falte, la bandeja de salida NO gasta
 intentos. Las ofertas que ya se dieron por perdidas (estado `fallo`) se
 devuelven a la cola con `python scripts/reintentar_salida.py --si`.
 
+**Aprobar no manda la oferta: falta «Enviar oferta».** Al aprobar en la
+ventana de revisión se abre ya el envío de la oferta (destinatario, plazo,
+incoterm). Si se cierra sin mandarla, el RFQ sigue pidiéndolo: sale en
+«Requiere atención» y en la campana como «Aprobado: falta enviar la oferta», la
+ficha enseña «Enviar oferta →» y «RFQ dictaminados» tiene el botón «Enviar
+oferta». Una oferta en la bandeja de salida («en cola») ya no se pide: sale por
+Outlook en el siguiente ciclo del lector de escritorio.
+
+**«Aprobar» sólo con un clic de verdad, y se puede deshacer.** El diálogo de
+aprobar empieza con el foco en «Cancelar», no acepta con Enter y no cuenta un
+clic que llegue en el primer instante después de volver a la ventana (Alt+Tab,
+cambiar de pestaña): así se aprobó sin querer INT-59C34202. Si aun así un RFQ
+queda aprobado por error y su oferta no ha salido, su ficha tiene «Deshacer
+aprobación» (`POST /api/rfqs/{id}/deshacer-aprobacion`, con motivo): vuelve a
+revisión sin veredicto y el cliente no recibe nada.
+
 **Sin «Devolver» en la ventana de revisión.** El PM también cotiza con la
 calculadora completa, así que no hay a quién devolverle un RFQ: si algo no
 cuadra, lo corrige en «Abrir cotización completa» y vuelve a la ventana. Quedan

@@ -128,6 +128,9 @@ class RFQSummary(BaseModel):
     cliente_nombre: Optional[str] = None
     # Lo que se le pidió al comprador, en los que esperan al cliente.
     campos_faltantes: Optional[List[str]] = None
+    # En los aprobados: 'enviada', 'en_cola' (en la bandeja de salida) o
+    # 'pendiente' (nadie ha pulsado «Enviar oferta»). None en los demás.
+    oferta: Optional[str] = None
 
 
 class RFQDetail(RFQSummary):

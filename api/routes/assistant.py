@@ -151,9 +151,12 @@ def _resumen() -> dict:
 # Por qué espera cada RFQ, de lo que la base sabe con certeza.
 MOTIVO_REVISION = "revision"          # en revisión, o con banderas del sistema
 MOTIVO_VALIDACION = "validacion"      # factible y cotizado: falta el visto bueno
+MOTIVO_OFERTA = "oferta"              # aprobado, pero la oferta no ha salido
 
 
 def _motivo(estado: str, criticas: int, avisos: int) -> str:
+    if estado == "Approved":
+        return MOTIVO_OFERTA
     if estado == "RequiresReview" or criticas or avisos:
         return MOTIVO_REVISION
     return MOTIVO_VALIDACION
@@ -163,7 +166,11 @@ def _atencion(limite: int = 20) -> dict:
     """RFQs que esperan a una persona, con los días que llevan esperando.
 
     Es TODO lo que todavía no tiene dictamen, no sólo lo que tiene banderas,
-    salvo lo que espera al cliente (le faltan datos y se le pidieron).
+    salvo lo que espera al cliente (le faltan datos y se le pidieron). Y los
+    APROBADOS cuya oferta no ha salido (ni enviada ni en la bandeja de
+    salida): aprobar no manda nada al cliente, falta «Enviar oferta», y un
+    aprobado se quedaba en «Listo para Sales» sin que ninguna lista lo pidiera
+    (INT-59C34202, 2026-09-29).
     Un RFQ factible con score 100 también espera: le falta que el PM valide
     la cotización, y es justo el que la campana anuncia como «Quote
     validation required». Hasta 2026-09 aquí sólo salían los parados en
@@ -193,7 +200,10 @@ def _atencion(limite: int = 20) -> dict:
                 -- «Esperando al cliente» (Incomplete) tampoco espera a una
                 -- persona de aquí: espera la respuesta del comprador, y no se
                 -- revisa hasta que llegue completo.
-                WHERE r.estado NOT IN ('Approved', 'Declined', 'Incomplete')
+                WHERE (r.estado NOT IN ('Approved', 'Declined', 'Incomplete')
+                       OR (r.estado = 'Approved'
+                           AND COALESCE(r.datos_json->'oferta'->>'enviada', 'false') <> 'true'
+                           AND COALESCE(r.datos_json->'oferta'->>'encolada', 'false') <> 'true'))
                   AND r.version = (SELECT MAX(x.version) FROM rfqs x
                                     WHERE x.rfq_id = r.rfq_id)
                 GROUP BY r.id, r.rfq_id, r.version, r.cliente_id, r.part_number,

@@ -399,6 +399,44 @@ def guardar_veredicto_final(
     }
 
 
+def deshacer_aprobacion(rfq_id: str, nota: str, conexion=None) -> dict:
+    """Devuelve a revisión un RFQ aprobado sin querer, si su oferta no salió.
+
+    Aprobar no manda nada al cliente; la oferta sale después, con «Enviar
+    oferta». Mientras no haya salido (ni esté en la bandeja de salida) una
+    aprobación se puede deshacer sin que el cliente note nada: el RFQ vuelve
+    a ``RequiresReview``, sin veredicto final, y la nota deja constancia.
+
+    Lanza ``ValueError`` si no existe, si no está aprobado o si la oferta ya
+    salió (o está en cola): eso ya no se deshace desde aquí.
+    """
+    if not rfq_id or not nota:
+        raise ValueError("deshacer_aprobacion requiere rfq_id y nota.")
+    propia = conexion is None
+    conn = conexion or duplicates.conectar_bd()
+    try:
+        fila = _ultima_version_id(rfq_id, conexion=conn)
+        if not fila:
+            raise ValueError(f"No existe el RFQ {rfq_id}.")
+        if fila.get("estado") != ESTADO_APROBADO:
+            raise ValueError(f"El RFQ {rfq_id} no está aprobado.")
+        oferta = _a_dict(fila.get("datos_json")).get("oferta") or {}
+        if oferta.get("enviada") or oferta.get("encolada"):
+            raise ValueError(f"La oferta de {rfq_id} ya salió (o está en la bandeja "
+                             "de salida): la aprobación ya no se puede deshacer.")
+        notas = fila.get("notas")
+        notas = f"{notas}\n{nota}" if notas else nota
+        with conn.cursor() as cur:
+            cur.execute("UPDATE rfqs SET estado = %s, veredicto_final = NULL, notas = %s "
+                        "WHERE id = %s;", (ESTADO_REVISION, notas, fila["id"]))
+        log.info("RFQ %s v%s: aprobación deshecha; vuelve a revisión.", rfq_id, fila["version"])
+        return {"id": fila["id"], "rfq_id": rfq_id, "version": fila["version"],
+                "estado": ESTADO_REVISION, "notas": notas}
+    finally:
+        if propia:
+            conn.close()
+
+
 def _a_dict(datos_json) -> dict:
     if not datos_json:
         return {}

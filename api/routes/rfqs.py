@@ -82,7 +82,11 @@ def list_rfqs(
                r.veredicto_sistema, r.veredicto_final, r.score,
                r.fecha_registro::text,
                NULLIF(r.datos_json->>'customer', '') AS cliente_nombre,
-               r.datos_json->'campos_faltantes' AS campos_faltantes
+               r.datos_json->'campos_faltantes' AS campos_faltantes,
+               CASE WHEN r.estado <> 'Approved' THEN NULL
+                    WHEN r.datos_json->'oferta'->>'enviada' = 'true' THEN 'enviada'
+                    WHEN r.datos_json->'oferta'->>'encolada' = 'true' THEN 'en_cola'
+                    ELSE 'pendiente' END AS oferta
         FROM rfqs r
         {where}
         ORDER BY r.fecha_registro DESC
@@ -101,7 +105,7 @@ def list_rfqs(
         "id", "rfq_id", "version", "cliente_id", "nombre_proyecto",
         "part_number", "volumen", "material", "estado", "message_id",
         "veredicto_sistema", "veredicto_final", "score", "fecha_registro",
-        "cliente_nombre", "campos_faltantes",
+        "cliente_nombre", "campos_faltantes", "oferta",
     ]
 
     rfqs = []
@@ -292,6 +296,29 @@ def decline_rfq(
         log.exception("Failed to decline RFQ %s", rfq_id)
         raise HTTPException(status_code=500, detail=str(e))
 
+    return PMDecisionResponse(**result)
+
+
+@router.post("/{rfq_id}/deshacer-aprobacion", response_model=PMDecisionResponse)
+def deshacer_aprobacion_rfq(
+    rfq_id: str,
+    body: PMDecisionRequest,
+    usuario: UsuarioSesion = Depends(exige("rfq:dictaminar")),
+):
+    """Devuelve a revisión un RFQ aprobado sin querer, si su oferta no salió.
+
+    Aprobar no manda nada al cliente; mientras la oferta no haya salido ni
+    esté en la bandeja de salida, deshacerlo no tiene consecuencias fuera.
+    """
+    try:
+        import app.feasibility.pm_decision as pm_decision
+        result = pm_decision.deshacer_aprobacion(rfq_id, nota=body.nota, usuario=usuario.correo)
+    except ValueError as e:
+        codigo = 404 if "No existe" in str(e) else 409
+        raise HTTPException(status_code=codigo, detail=str(e))
+    except Exception as e:
+        log.exception("Failed to undo approval of RFQ %s", rfq_id)
+        raise HTTPException(status_code=500, detail=str(e))
     return PMDecisionResponse(**result)
 
 

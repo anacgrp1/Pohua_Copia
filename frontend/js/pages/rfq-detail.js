@@ -99,7 +99,19 @@ const RFQDetailPage = {
                         ${esperando ? '' : `<button class="btn btn-secondary" onclick="Revision.abrir('${esc(rfq.rfq_id)}')">${esc(I18N.t('rev.abrir'))}</button>`}
                         <!-- Aprobar y rechazar se deciden en la ventana de revisión,
                              con los números delante; aquí sólo se entra a ella. -->
-                        ${rfq.estado === 'Approved' ? `<button class="btn btn-primary" onclick="APP.navigate('quote-review', {id: '${esc(rfq.rfq_id)}'})">${esc(I18N.t('ficha.cotizar'))}</button>` : ''}
+                        ${rfq.estado === 'Approved' ? (() => {
+                            // Aprobado y sin oferta: el botón lo dice y abre directo el
+                            // envío. Si ya salió (o está en la bandeja de salida), sólo
+                            // se entra a ver la oferta.
+                            const of = d.oferta || {};
+                            const falta = !of.enviada && !of.encolada;
+                            // Mientras la oferta no haya salido, una aprobación hecha
+                            // sin querer se puede deshacer: el cliente no ha recibido nada.
+                            const deshacer = falta && puedeDictaminar
+                                ? `<button class="btn btn-secondary" onclick="RFQDetailPage.deshacerAprobacion()">${esc(I18N.t('ficha.deshacerAprobacion'))}</button>` : '';
+                            return `${deshacer}<button class="btn btn-primary" onclick="APP.navigate('quote-review', ${falta
+                                ? `{id: '${esc(rfq.rfq_id)}', enviar: '1'}` : `{id: '${esc(rfq.rfq_id)}'}`})">${esc(I18N.t(falta ? 'ficha.enviarOferta' : 'ficha.cotizar'))}</button>`;
+                        })() : ''}
                     </div>
                 </div>
 
@@ -263,6 +275,7 @@ const RFQDetailPage = {
             titulo: I18N.t('dlg.aprobar.titulo'),
             mensaje: I18N.t('dlg.aprobar.mensaje'),
             aceptar: I18N.t('dlg.aprobar.si'),
+            firme: true,        // sólo con un clic de verdad (ver confirmar.js)
         });
         if (!aprobar) return;
 
@@ -270,6 +283,28 @@ const RFQDetailPage = {
             await API.approveRFQ(this.currentRfqId, {});
             Toast.success(I18N.t('aviso.rfqAprobada'));
             APP.navigate('quote-review', { id: this.currentRfqId });
+        } catch (err) {
+            if (err.sesionExpirada) return;
+            Toast.error(err.message);
+        }
+    },
+
+    /** Una aprobación hecha sin querer: vuelve a revisión (sin tocar al cliente). */
+    async deshacerAprobacion() {
+        if (!API.puede('rfq:dictaminar')) { Toast.error(I18N.t('aviso.sinPermisoRfq')); return; }
+        const nota = await Confirmar.pedirTexto({
+            titulo: I18N.t('dlg.deshacer.titulo'),
+            mensaje: I18N.t('dlg.deshacer.mensaje'),
+            etiqueta: I18N.t('dlg.deshacer.motivo'),
+            marcador: I18N.t('dlg.deshacer.ejemplo'),
+            obligatorio: true,
+            aceptar: I18N.t('dlg.deshacer.si'),
+        });
+        if (typeof nota !== 'string') return;
+        try {
+            await API.rfqDeshacerAprobacion(this.currentRfqId, nota);
+            Toast.success(I18N.t('aviso.aprobacionDeshecha'));
+            APP.navigate('rfq-detail', { id: this.currentRfqId });
         } catch (err) {
             if (err.sesionExpirada) return;
             Toast.error(err.message);

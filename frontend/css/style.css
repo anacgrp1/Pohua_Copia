@@ -6315,6 +6315,8 @@ button.revision-ver-fila:hover .revision-ver-usar { opacity: 1; }
 }
 
 .resumen-decidida-accion { text-align: right; white-space: nowrap; }
+.resumen-decidida-accion .btn + .btn { margin-left: 6px; }
+.assistant-acciones-fila { white-space: nowrap; }
 
 /* La línea "cliente · parte · fecha" es sólo del teléfono: en la tabla cada
    dato ya tiene su columna. */
@@ -6378,6 +6380,7 @@ button.revision-ver-fila:hover .revision-ver-usar { opacity: 1; }
         width: 100%;
         justify-content: center;
     }
+    .resumen-decididas .resumen-decidida-accion .btn + .btn { margin: 6px 0 0; }
 }
 
 .revision-geo-deducido {

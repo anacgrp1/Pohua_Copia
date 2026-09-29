@@ -261,6 +261,11 @@ const API = {
         } catch (_) { this._canalRfq = null; }
         return this._canalRfq;
     },
+    /** Devuelve a revisión un RFQ aprobado sin querer (si su oferta no salió). */
+    rfqDeshacerAprobacion(rfqId, nota) {
+        return this.request('POST', `/api/rfqs/${rfqId}/deshacer-aprobacion`, { nota })
+            .then((r) => { this.avisarRfq('dictaminado', rfqId); return r; });
+    },
     /** Si algo cambió en el RFQ, sin costear nada: {huella, restauracion}. */
     rfqPulso(rfqId) { return this.request('GET', `/api/rfqs/${rfqId}/pulso`); },
     // La ventana de revisión del PM: el RFQ ya costeado por tramos.

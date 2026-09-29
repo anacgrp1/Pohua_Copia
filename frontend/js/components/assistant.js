@@ -170,8 +170,7 @@ const Assistant = (() => {
                     <td>${esc(p.part_number || '—')}</td>
                     <td><span class="badge">${esc(I18N.estado(p.estado))}</span></td>
                     <td>${esc(p.dias_esperando)} d</td>
-                    <td class="${p.criticas > 0 ? 'assistant-critico' : ''}">${esc(p.bandera
-                        || I18N.t('motivo.' + (p.motivo === 'validacion' ? 'validacion' : 'revision')))}</td>
+                    <td class="${p.criticas > 0 && p.motivo !== 'oferta' ? 'assistant-critico' : ''}">${esc(I18N.motivoPendiente(p))}</td>
                 </tr>`).join('');
 
             mostrarVivo('atencion',
@@ -307,7 +306,8 @@ const Assistant = (() => {
                     <td>${esc(r.part_number || '—')}</td>
                     <td>${esc((r.fecha_registro || '').slice(0, 10) || '—')}</td>
                     <td><span class="badge ${aprobado ? 'badge-approved' : 'badge-declined'}"><span class="badge-dot"></span>${esc(I18N.estado(r.estado))}</span></td>
-                    <td><button type="button" class="btn btn-secondary btn-sm" data-hoja="${esc(r.rfq_id)}">${esc(I18N.t('resumen.verHoja'))}</button></td>
+                    <td class="assistant-acciones-fila">${r.oferta === 'pendiente'
+                        ? `<button type="button" class="btn btn-primary btn-sm" data-enviar-oferta="${esc(r.rfq_id)}">${esc(I18N.t('oferta.enviarAhora'))}</button> ` : ''}<button type="button" class="btn btn-secondary btn-sm" data-hoja="${esc(r.rfq_id)}">${esc(I18N.t('resumen.verHoja'))}</button></td>
                 </tr>`;
             }).join('');
             mostrarVivo('dictaminados',
@@ -761,6 +761,15 @@ const Assistant = (() => {
             if (chip) return ACCIONES[chip.dataset.accion]?.();
 
             if (ev.target.closest('#assistantEnviar')) return preguntar();
+
+            // «Enviar oferta» de un aprobado que no la tiene: al envío directo.
+            const envio = ev.target.closest('[data-enviar-oferta]');
+            if (envio) {
+                ev.preventDefault();
+                cerrar();
+                APP.navigate('quote-review', { id: envio.dataset.enviarOferta, enviar: '1' });
+                return;
+            }
 
             // «Ver en la hoja» de un dictaminado: la hoja en consulta.
             const hoja = ev.target.closest('[data-hoja]');

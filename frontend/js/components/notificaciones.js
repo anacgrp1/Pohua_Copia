@@ -88,8 +88,7 @@ const Notificaciones = (() => {
                 </span>
                 <span class="notif-item-cliente">${esc(p.cliente_nombre || p.cliente_id || '—')}${
                     p.part_number ? ' · ' + esc(p.part_number) : ''}</span>
-                <span class="notif-item-motivo">${esc(p.bandera
-                    || I18N.t('motivo.' + (p.motivo === 'validacion' ? 'validacion' : 'revision')))}</span>
+                <span class="notif-item-motivo">${esc(I18N.motivoPendiente(p))}</span>
             </button>`;
     }
 
