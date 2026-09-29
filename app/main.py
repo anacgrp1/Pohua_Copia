@@ -175,12 +175,23 @@ def ciclo_deteccion(*, forzar: bool = False) -> ResultadoCiclo:
     if not diagnostico["puede"]:
         frase = entrada.avisar_una_vez(diagnostico)
         resultado.detalles.append(frase)
+        # Si lo que falta es algo de ESTA máquina (pywin32 en la computadora
+        # del Outlook), el ciclo no leyó nada y eso es un error, no «0 sin
+        # leer»: que la pantalla lo pinte en rojo.
+        if "pywin32" in (diagnostico.get("faltan") or []):
+            resultado.errores = 1
+            resultado.detalles.append(diagnostico.get("nota") or "")
         return resultado
 
     log.info("Buscando correos no leídos (modo=%s)...", config.settings.MAIL_MODE)
     try:
         provider = EmailProviderFactory.get_provider()
-        provider.connect()
+        # Un buzón que no se pudo abrir NO es un buzón vacío. Antes se seguía
+        # como si nada y el ciclo decía «0 sin leer» mientras no se había leído
+        # nada: parecía que no llegaban correos.
+        if provider.connect() is False:
+            raise RuntimeError(getattr(provider, "ultimo_error", "") or
+                               "no se pudo abrir el buzón")
         mensajes = provider.fetch_unread_messages()
     except Exception as error:
         log.error("Error al consultar el buzón: %s", error)

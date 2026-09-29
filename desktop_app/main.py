@@ -397,6 +397,12 @@ class Lector(QThread):
         if resumen["fallidos"]:
             self.dice.emit("error", f"Bandeja de salida: {resumen['fallidos']} "
                                     f"no salieron; se reintentan el próximo ciclo.")
+        if resumen.get("omitidos") and not rapido:
+            # No es que fallen: este Python no puede hablar con Outlook (falta
+            # pywin32, por ejemplo). Se quedan esperando sin gastar intentos.
+            self.dice.emit("error", f"Bandeja de salida: {resumen['omitidos']} "
+                                    f"esperando; esta computadora no puede mandar "
+                                    f"todavía (mira «Falta» arriba).")
         if rapido and resumen["fallidos"]:
             self._salida_espera_hasta = time.monotonic() + 300
         if rapido:
@@ -1055,6 +1061,8 @@ class Ventana(QMainWindow):
                     self.escribir("info", f"   {punto['detalle']}")
             elif punto["estado"] == "ojo":
                 self.escribir("aviso", punto["titulo"])
+                if punto["detalle"]:
+                    self.escribir("info", f"   {punto['detalle']}")
 
         self._comprobar_confianza_de_outlook()
 

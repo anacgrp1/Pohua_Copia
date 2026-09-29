@@ -538,6 +538,16 @@ entra en «RFQ dictaminados» (botón nuevo en Resumen y Cotización), sin
 recargar: al momento en el navegador y con un repaso cada 10–15 s para lo que
 pase en otra computadora.
 
+**La computadora del Outlook tiene que tener TODO instalado en el Python con
+el que se abre Pohua.** Si hay dos Python (p. ej. uno recién instalado), la app
+puede arrancar con el que no tiene pywin32 ni tzdata: no lee Outlook, las
+ofertas de la bandeja de salida no salen y el horario cae a UTC. Al abrir, la
+app lo dice en «Falta: Faltan paquetes en este Python: …» con la orden exacta
+(`"<ruta de ese python.exe>" -m pip install -r requirements.txt -r
+requirements-desktop.txt`). Mientras falte, la bandeja de salida NO gasta
+intentos. Las ofertas que ya se dieron por perdidas (estado `fallo`) se
+devuelven a la cola con `python scripts/reintentar_salida.py --si`.
+
 **Sin «Devolver» en la ventana de revisión.** El PM también cotiza con la
 calculadora completa, así que no hay a quién devolverle un RFQ: si algo no
 cuadra, lo corrige en «Abrir cotización completa» y vuelve a la ventana. Quedan

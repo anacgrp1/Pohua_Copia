@@ -123,6 +123,18 @@ def diagnostico_envio() -> dict:
         # servidor Linux no hay tal Outlook, por muy bien puesto que esté.
         import sys
         en_windows = sys.platform == "win32"
+        if en_windows:
+            # En Windows, además, tiene que poder usarse pywin32: sin él no hay
+            # forma de hablar con Outlook, y cada intento fallaba en silencio.
+            from app.email.outlook_provider import comando_de_instalacion, falta_pywin32
+            motivo = falta_pywin32()
+            if motivo:
+                return {
+                    "modo": modo, "canal": "outlook", "apagado": False,
+                    "puede": False, "faltan": ["pywin32"],
+                    "nota": (f"pywin32 no se puede usar en este Python ({motivo}). "
+                             f"Instálalo con: {comando_de_instalacion()}"),
+                }
         return {
             "modo": modo, "canal": "outlook",
             "puede": en_windows, "faltan": [] if en_windows else ["Outlook"],

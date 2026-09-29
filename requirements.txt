@@ -5,6 +5,12 @@
 # --- Base de datos ---
 psycopg2-binary>=2.9        # PostgreSQL (duplicados, RFQs, catálogo de costeo)
 
+# --- Zonas horarias ---
+# Windows no trae la base de zonas horarias: sin este paquete, zoneinfo no
+# conoce «America/Chicago» y el horario de atención cae a UTC (abría y cerraba
+# cinco horas antes). En Linux no estorba.
+tzdata>=2024.1
+
 # --- Correo ---
 schedule>=1.2               # Ejecución periódica del ciclo de detección
 requests>=2.31              # Microsoft Graph API

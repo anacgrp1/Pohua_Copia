@@ -97,6 +97,32 @@ _denegado_en: Optional[float] = None   # del módulo: vale para todas las instan
 _YA_VISTOS: set = set()
 
 
+def comando_de_instalacion() -> str:
+    """El pip de ESTE Python, con las dos listas de dependencias.
+
+    Con varios Python en la máquina (el de siempre y uno recién instalado),
+    «pip install» a secas instala en otro y el error sigue igual. Se da la
+    ruta del intérprete que está corriendo Pohua, entre comillas.
+    """
+    import sys
+    return (f'"{sys.executable}" -m pip install -r requirements.txt '
+            f'-r requirements-desktop.txt')
+
+
+def falta_pywin32() -> str:
+    """'' si pywin32 se puede usar; si no, POR QUÉ (el error real).
+
+    Antes sólo se decía «Falta pywin32», y un pywin32 instalado pero roto
+    (las DLL de pywintypes sin registrar, o instalado para otro Python) daba
+    el mismo mensaje que uno que no estaba: no había forma de saber qué hacer.
+    """
+    try:
+        import win32com.client  # noqa: F401
+        return ""
+    except Exception as error:          # ImportError, o un DLL que no carga
+        return f"{type(error).__name__}: {error}"
+
+
 class EnvioDenegado(RuntimeError):
     """Outlook no dejó mandar: alguien pulsó «Deny», o se pulsó hace poco."""
 
@@ -194,24 +220,29 @@ class OutlookEmailProvider(BaseEmailProvider):
         carpeta = (getattr(settings, "MAIL_FOLDER", "") or "INBOX").strip()
 
         self._iniciar_com()
-        try:
-            import win32com.client
-        except ImportError:
-            logger.error("Falta pywin32: pip install -r requirements-desktop.txt")
+        self.ultimo_error = ""
+        motivo = falta_pywin32()
+        if motivo:
+            self.ultimo_error = (f"pywin32 no se puede usar en este Python ({motivo}). "
+                                 f"Instálalo con: {comando_de_instalacion()}")
+            logger.error(self.ultimo_error)
             return False
+        import win32com.client
 
         try:
             self._outlook = win32com.client.Dispatch("Outlook.Application")
             self._mapi = self._outlook.GetNamespace("MAPI")
         except Exception as error:
-            logger.error("No se pudo hablar con Outlook (¿está abierto, y es el "
-                         "Outlook clásico?): %s", error)
+            self.ultimo_error = ("No se pudo hablar con Outlook (¿está abierto, y "
+                                 f"es el Outlook clásico?): {error}")
+            logger.error(self.ultimo_error)
             return False
 
         raiz = self._raiz_del_buzon(buzon)
         if raiz is None:
-            logger.error("No encuentro el buzón '%s' en este Outlook. Buzones "
-                         "abiertos: %s", buzon, ", ".join(self._buzones()))
+            self.ultimo_error = (f"No encuentro el buzón '{buzon}' en este Outlook. "
+                                 f"Buzones abiertos: {', '.join(self._buzones())}")
+            logger.error(self.ultimo_error)
             return False
 
         # Sólo las carpetas de MAIL_FOLDER (varias, separadas por coma). No se

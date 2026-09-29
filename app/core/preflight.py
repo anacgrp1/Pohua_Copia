@@ -56,6 +56,49 @@ class _Informe:
 # Las comprobaciones
 # --------------------------------------------------------------------------- #
 
+def _entorno(inf, c, desde_escritorio=False):
+    """Lo que tiene que estar instalado en ESTE Python.
+
+    Con dos Python en la computadora —el de siempre y uno recién instalado—
+    la aplicación puede arrancar con el que no tiene las dependencias. Pasó
+    (2026-09-29): la ventana abría, el lector «leía» y cada ciclo decía «0 sin
+    leer» mientras no había podido hablar con Outlook, las ofertas de la
+    bandeja de salida fallaban una tras otra y el horario caía a UTC. Aquí se
+    dice qué falta y con qué orden se instala, con la ruta de este Python.
+    """
+    import sys
+
+    from app.email.outlook_provider import comando_de_instalacion, falta_pywin32
+    inf.en("Instalación")
+    faltan = []
+    # PySide6 y pywin32 sólo en la aplicación de escritorio: el servidor
+    # (Render) no los usa y no puede darlos por faltantes.
+    modulos = [("psycopg2", "psycopg2-binary")]
+    if desde_escritorio:
+        modulos.append(("PySide6", "PySide6"))
+    for modulo, paquete in modulos:
+        try:
+            __import__(modulo)
+        except Exception:
+            faltan.append(paquete)
+    zona = getattr(c, "HORARIO_ZONA", "America/Chicago") or "America/Chicago"
+    try:
+        from zoneinfo import ZoneInfo
+        ZoneInfo(zona)
+    except Exception:
+        faltan.append("tzdata")
+    modo = str(getattr(c, "MAIL_MODE", "") or "").lower()
+    if desde_escritorio and sys.platform == "win32" and modo == "outlook" and falta_pywin32():
+        faltan.append("pywin32")
+    if faltan:
+        orden = (comando_de_instalacion() if desde_escritorio else
+                 "pip install -r requirements.txt")
+        inf.falta(f"Faltan paquetes en este Python: {', '.join(faltan)}",
+                  f"Instálalos con: {orden}")
+    else:
+        inf.ok(f"Python {sys.version.split()[0]} con todo lo necesario")
+
+
 def _configuracion(inf, c):
     inf.en("Configuración")
     inf.ok(f"Entorno: {getattr(c, 'APP_ENV', '') or '(sin definir)'}")
@@ -503,6 +546,7 @@ def revisar(con_buzon: bool = True, desde_escritorio: bool = False) -> Dict[str,
     latido = _latido_escritorio(c)
 
     for comprobacion in (
+        lambda: _entorno(inf, c, desde_escritorio),
         lambda: _configuracion(inf, c),
         lambda: _esquema(inf),
         lambda: _quien_lee(inf, c, latido, desde_escritorio),
