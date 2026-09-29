@@ -171,6 +171,15 @@ def preparar_datos_correo(correo, rfq_id):
     """
     cliente, dominio = resolver_cliente(correo.get("remitente"))
     adjuntos = correo.get("adjuntos") or []
+    # «Trae plano» es trae un PLANO, no cualquier adjunto: la firma del correo
+    # (logo incrustado) llega como adjunto y contaba como dibujo. Así un correo
+    # sin plano pasaba ese filtro y al comprador se le pedían los datos en dos
+    # vueltas (INT-13B96627, 2026-09-29).
+    try:
+        import app.persistence.blueprint_store as almacen
+        con_plano = bool(almacen.solo_planos(adjuntos))
+    except Exception:            # sin el almacén, el criterio de antes
+        con_plano = bool(adjuntos)
 
     datos = {
         "rfq_id": rfq_id,
@@ -181,7 +190,7 @@ def preparar_datos_correo(correo, rfq_id):
         # RFQ. Es el dato con el que se ordena un histórico, así que va aquí.
         "fecha_correo": correo.get("fecha", ""),
         "cuerpo": limpiar_cuerpo(correo),
-        "tiene_adjunto": bool(adjuntos),
+        "tiene_adjunto": con_plano,
         "customer": (cliente or {}).get("razon_social") or dominio,
         "cliente_id": (cliente or {}).get("cliente_id"),
         "dominio": dominio,
@@ -266,6 +275,14 @@ _SE_HEREDA_DEL_HILO = (
 )
 
 
+# Lo que sale del plano y no se le pide al comprador por correo: si el plano no
+# lo dio, lo completa el PM (regla de ISC, 2026-09-29).
+CAMPOS_DEL_PLANO = ("part_number", "material")
+
+# Lo que además se hereda cuando el RFQ estaba «Esperando al cliente».
+_SE_HEREDA_SI_ESPERABA = ("volumen", "escalones_cantidad")
+
+
 def heredar_del_hilo(datos: dict, rfq_id: str) -> list:
     """Rellena lo que la respuesta no trae con lo que el RFQ ya sabía.
 
@@ -284,8 +301,16 @@ def heredar_del_hilo(datos: dict, rfq_id: str) -> list:
     import app.rfq.repository as repository
 
     previos = repository.datos_anteriores(rfq_id) or {}
+    claves = _SE_HEREDA_DEL_HILO
+    # Salvo cuando lo anterior fue NUESTRA petición de datos: si el RFQ estaba
+    # esperando al cliente, el comprador contesta sólo lo que le faltaba y las
+    # cantidades que ya dio siguen valiendo. Sin esto, quien mandaba el volumen
+    # y luego el número de parte recibía un tercer correo pidiéndole otra vez
+    # el volumen (INT-13B96627, 2026-09-29).
+    if previos.get("motivo_incompleto"):
+        claves = claves + _SE_HEREDA_SI_ESPERABA
     heredados = []
-    for clave in _SE_HEREDA_DEL_HILO:
+    for clave in claves:
         if datos.get(clave) not in (None, "", [], False):
             continue
         valor = previos.get(clave)
@@ -909,7 +934,10 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
     campos = campos_gate_temprano(extraccion)
     temprano = validar(datos, campos)
     if not temprano["es_valido"]:
-        faltantes = temprano["campos_faltantes"]
+        # Sólo lo que se le pide al comprador: el volumen (de ley) y, si no
+        # vino, el plano. Número de parte y material salen del plano; no se
+        # piden por separado (regla de ISC, 2026-09-29).
+        faltantes = [c for c in temprano["campos_faltantes"] if c not in CAMPOS_DEL_PLANO]
         log.info("RFQ=%s rechazado en el gate temprano; faltan: %s",
                  rfq_id, ", ".join(faltantes))
         resultado["etapa"] = "gate_temprano"
@@ -963,17 +991,39 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
     #     campos que NO vinieron; los dudosos no se declaran faltantes, así que
     #     no se le pide al comprador lo que quizá ya mandó. La duda se queda
     #     apuntada (`en_revision`) y se resuelve cuando conteste.
-    if not completa["es_valido"]:
-        log.info("RFQ=%s incompleto tras el dibujo; faltan: %s",
-                 rfq_id, ", ".join(completa["campos_faltantes"]))
+    #
+    #     Al comprador sólo se le pide lo que es suyo dar: el volumen (de ley)
+    #     y el plano si no vino. Número de parte y material SALEN DEL PLANO:
+    #     si hay plano y no se pudieron leer, no se le escribe al cliente
+    #     pidiéndolos —ya los mandó, en el dibujo—; va al PM, que los toma del
+    #     plano (INT-13B96627, 2026-09-29: se le pidieron por correo).
+    faltan = list(completa["campos_faltantes"])
+    al_cliente = [c for c in faltan if c not in CAMPOS_DEL_PLANO]
+    if al_cliente:
+        log.info("RFQ=%s incompleto tras el dibujo; se piden: %s",
+                 rfq_id, ", ".join(al_cliente))
         resultado["etapa"] = "datos_faltantes"
-        datos["campos_faltantes"] = completa["campos_faltantes"]
+        datos["campos_faltantes"] = al_cliente
         datos["motivo_incompleto"] = "datos_faltantes"
         resultado["registro"] = persistir(
             datos, correo, rfq_id,
             es_seguimiento=(clasificacion == RESPUESTA_RFQ),
             estado=_estado_incompleto())
-        responder_datos_faltantes(datos, completa["campos_faltantes"], rfq_id)
+        responder_datos_faltantes(datos, al_cliente, rfq_id)
+        return resultado
+
+    if faltan:
+        # Hay plano y volumen, pero del plano no salió el número de parte o el
+        # material: lo completa el PM mirando el dibujo, no el cliente.
+        log.info("RFQ=%s: del plano no salió %s; va al PM.", rfq_id, ", ".join(faltan))
+        resultado["etapa"] = "requiere_revision"
+        datos["campos_faltantes"] = faltan
+        resultado["registro"] = persistir(
+            datos, correo, rfq_id,
+            es_seguimiento=(clasificacion == RESPUESTA_RFQ),
+            estado=_estado_revision())
+        notificar_revision_pm(
+            datos, {c: {"valor": None, "confianza": 0.0} for c in faltan}, rfq_id)
         return resultado
 
     # 5c. Confianza baja con todo lo demás completo: el dato existe pero no es

@@ -357,11 +357,15 @@ const Revision = (() => {
                           title="${esc(t('rev.maquinaAyuda'))}">
                         ${esc(t('rev.maquina'))}: <b>${maq ? esc(maq) : esc(t('rev.sinMaquina'))}</b>
                     </span>
+                    <!-- Los datos del alambre: en la compu, en la misma fila; en
+                         el teléfono, una tira que se desliza (ver style.css). -->
+                    <span class="revision-pills-datos">
                     <span class="revision-pill">${mat}</span>
                     <span class="revision-pill">Ø ${esNum(c.dia_in) ? num(c.dia_in, 3) + ' in' : '—'}</span>
                     <span class="revision-pill">${esNum(c.peso_lb_pc) ? num(c.peso_lb_pc, 3) + ' lb/' + esc(t('rev.pza')) : '—'}</span>
                     <span class="revision-pill">${esc(t('rev.base'))} ${esNum(c.base_lb) ? dinero(c.base_lb, 2) + '/lb' : '—'}</span>
                     ${esNum(c.surcharge_lb) && c.surcharge_lb > 0 ? `<span class="revision-pill">${esc(t('rev.surcharge'))} ${dinero(c.surcharge_lb, 2)}/lb</span>` : `<span class="revision-pill">${esc(t('rev.surcharge'))} $0.00/lb</span>`}
+                    </span>
                 </div>
             </section>`;
     }

@@ -292,15 +292,20 @@ class TestOrquestacion(unittest.TestCase):
                                return_value={"campos": {"volumen": 5000,
                                                         "material": "Inox 302"}}), \
              mock.patch.object(flow, "procesar_dibujos", return_value=[]), \
+             mock.patch.object(flow, "persistir", return_value={}) as persistir, \
+             mock.patch.object(flow, "notificar_revision_pm") as notificar, \
              mock.patch.object(flow, "responder_datos_faltantes") as responder:
             resultado = flow.avanzar_a_parsing(
                 correo_base(), flow.RFQ_NUEVO, "RFQ-1")
 
-        # Pasó el gate completo y sólo quedó faltando lo que nadie extrae aún.
-        self.assertEqual(resultado["etapa"], "datos_faltantes")
+        # Con plano y volumen, sólo quedó faltando el número de parte, que sale
+        # del plano: no se le pide al comprador, lo completa el PM.
+        self.assertEqual(resultado["etapa"], "requiere_revision")
         self.assertEqual(resultado["campos_faltantes"], ["part_number"])
+        responder.assert_not_called()
+        notificar.assert_called_once()
 
-        datos_finales = responder.call_args[0][0]
+        datos_finales = persistir.call_args[0][0]
         self.assertEqual(datos_finales["volumen"], 5000)
         self.assertEqual(datos_finales["material"], "Inox 302")
 
@@ -329,11 +334,11 @@ class TestOrquestacion(unittest.TestCase):
         self.assertEqual(persistir.call_args.kwargs["estado"], "RequiresReview")
 
     def test_datos_faltantes_ganan_sobre_la_revision(self):
-        # Regla de ISC (2026-09-26): si falta algo, sólo sale el correo al
-        # comprador y el RFQ espera al cliente; no se abre la revisión del PM
-        # hasta que esté completo. La duda de confianza se queda apuntada.
+        # Regla de ISC (2026-09-26): si falta algo que da el comprador, sólo
+        # sale el correo y el RFQ espera al cliente; no se abre la revisión del
+        # PM hasta que esté completo. La duda de confianza se queda apuntada.
         extraccion = {
-            "campos": {"volumen": 5000, "material": "Inox 302"},
+            "campos": {"material": "Inox 302"},          # sin volumen
             "en_revision": {"customer": {"valor": "Neo?", "confianza": 0.3}},
             "requiere_revision": True,
         }
@@ -346,14 +351,12 @@ class TestOrquestacion(unittest.TestCase):
             resultado = flow.avanzar_a_parsing(
                 correo_base(), flow.RFQ_NUEVO, "RFQ-1")
 
-        self.assertEqual(resultado["etapa"], "datos_faltantes")
-        self.assertIn("part_number", resultado["campos_faltantes"])
+        self.assertIn("volumen", resultado["campos_faltantes"])
         self.assertEqual(persistir.call_args.kwargs["estado"], "Incomplete")
-        responder.assert_called_once()                  # se le piden al comprador
+        responder.assert_called_once()                  # se le pide al comprador
         pedidos = responder.call_args[0][1]
-        self.assertNotIn("customer", pedidos)           # lo dudoso no se pide
+        self.assertEqual(pedidos, ["volumen"])          # ni lo dudoso ni lo del plano
         notificar.assert_not_called()                   # el PM no lo ve todavía
-        self.assertIn("customer", persistir.call_args[0][0]["en_revision"])
 
     def test_incompleto_tras_el_dibujo_pide_los_datos_y_lo_da_de_alta_incompleto(self):
         # COT-76: un RFQ al que le faltan datos tras el plano ya no se pierde:
@@ -656,6 +659,23 @@ class TestLaRespuestaHeredaElHilo(unittest.TestCase):
             flow.heredar_del_hilo(datos, "COT-75")
         self.assertIn("volumen", flow.validar(datos)["campos_faltantes"])
 
+    def test_si_esperaba_al_cliente_las_cantidades_ya_dadas_siguen(self):
+        """INT-13B96627: dio el volumen, luego el número de parte y el material.
+
+        Contestaba a NUESTRA petición de datos, así que no vuelve a escribir
+        las cantidades: pedírselas una tercera vez no tenía sentido.
+        """
+        previos = dict(self.PREVIOS, motivo_incompleto="datos_faltantes",
+                       campos_faltantes=["part_number", "material"])
+        datos = {"part_number": "2594", "material": "music wire"}
+        with mock.patch("app.rfq.repository.datos_anteriores", return_value=previos):
+            heredados = flow.heredar_del_hilo(datos, "INT-13B96627")
+        self.assertEqual(datos["volumen"], 50000)
+        self.assertEqual(datos["escalones_cantidad"], [10000, 22000, 50000])
+        self.assertIn("volumen", heredados)
+        self.assertEqual(datos["part_number"], "2594")          # lo nuevo manda
+        self.assertTrue(flow.validar(datos)["es_valido"], flow.validar(datos)["campos_faltantes"])
+
     def test_sin_rfq_previo_no_se_inventa_nada(self):
         datos = {"material": "SAE 1070"}
         with mock.patch("app.rfq.repository.datos_anteriores", return_value={}):
@@ -810,10 +830,44 @@ class TestTodoCorreoDeLaCarpetaEsUnaPeticion(unittest.TestCase):
              mock.patch.object(flow, "responder_datos_faltantes") as responder:
             resultado = flow.avanzar_a_parsing(self._correo(), flow.RFQ_NUEVO, "INT-1")
         self.assertEqual(resultado["etapa"], "gate_temprano")
-        self.assertEqual(set(resultado["campos_faltantes"]), {"tiene_adjunto", "volumen"})
+        # Al comprador sólo se le pide lo suyo: el plano y el volumen. Número
+        # de parte y material salen del plano (regla de ISC, 2026-09-29).
+        todo = {"tiene_adjunto", "volumen"}
+        self.assertEqual(set(resultado["campos_faltantes"]), todo)
         vision.assert_not_called()
         self.assertEqual(persistir.call_args.kwargs["estado"], flow._estado_incompleto())
+        self.assertEqual(set(responder.call_args[0][1]), todo)
+
+    def test_la_firma_no_cuenta_como_plano(self):
+        """INT-13B96627: firma.png e image.png del correo pasaban por «trae plano»."""
+        firma = {"nombre": "image.png", "contenido": b"x" * 200, "en_linea": True}
+        with mock.patch("app.rfq.thread_validator.validar_respuesta", return_value=None), \
+             mock.patch("app.rfq.thread_validator.registrar_en_historial"), \
+             mock.patch.object(flow, "_envio_habilitado", return_value=False), \
+             mock.patch.object(flow, "_avisar", return_value=True), \
+             mock.patch("app.clients.mapper.mapear_cliente", return_value=None), \
+             mock.patch.object(flow, "extraer_datos_correo", return_value={"campos": {}}), \
+             mock.patch.object(flow, "procesar_dibujos") as vision, \
+             mock.patch.object(flow, "persistir", return_value=None), \
+             mock.patch.object(flow, "responder_datos_faltantes") as responder:
+            flow.avanzar_a_parsing(self._correo(adjuntos=[firma]), flow.RFQ_NUEVO, "INT-1")
+        vision.assert_not_called()
         self.assertEqual(set(responder.call_args[0][1]), {"tiene_adjunto", "volumen"})
+
+    def test_con_plano_no_se_piden_lo_que_da_el_plano(self):
+        """Con un plano de verdad, número de parte y material se esperan de él."""
+        plano = {"nombre": "2594.pdf", "contenido": b"%PDF-1.4" + b"x" * 5000}
+        with mock.patch("app.rfq.thread_validator.validar_respuesta", return_value=None), \
+             mock.patch("app.rfq.thread_validator.registrar_en_historial"), \
+             mock.patch.object(flow, "_envio_habilitado", return_value=False), \
+             mock.patch.object(flow, "_avisar", return_value=True), \
+             mock.patch("app.clients.mapper.mapear_cliente", return_value=None), \
+             mock.patch.object(flow, "extraer_datos_correo", return_value={"campos": {}}), \
+             mock.patch.object(flow, "procesar_dibujos"), \
+             mock.patch.object(flow, "persistir", return_value=None), \
+             mock.patch.object(flow, "responder_datos_faltantes") as responder:
+            flow.avanzar_a_parsing(self._correo(adjuntos=[plano]), flow.RFQ_NUEVO, "INT-1")
+        self.assertEqual(set(responder.call_args[0][1]), {"volumen"})
 
     def test_lo_automatico_va_a_la_basura(self):
         with mock.patch("app.rfq.thread_validator.validar_respuesta", return_value=None):

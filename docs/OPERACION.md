@@ -585,8 +585,17 @@ ej. «Leer correo ahora» exige `worker:operar`).
 Resumen, «Requiere atención» o un enlace `#/rfq/<id>` (correo, teléfono) se
 llega al «Detalle de RFQ»; desde ahí «Revisar» abre la ventana de revisión.
 
+**Qué se le pide al comprador y qué no.** Por correo sólo se pide lo que es
+suyo dar: el **volumen** (de ley) y el **plano** si no vino (la firma y los
+logos incrustados ya no cuentan como plano). **Número de parte y material salen
+del plano**: nunca se le piden por correo. Si hay plano y volumen pero del plano
+no salió el número de parte o el material, el RFQ va a revisión y el PM lo
+completa mirando el dibujo (INT-13B96627 recibió un correo pidiéndolos). Cuando
+el comprador contesta a nuestra petición, las cantidades que ya había dado se
+conservan: no se le vuelven a pedir.
+
 **Correo incompleto → «Esperando al cliente».** Si a la petición le falta
-algo (volumen, número de parte, material…), sólo sale el correo pidiéndolo y
+el volumen (o el plano), sólo sale el correo pidiéndolo y
 el RFQ queda en *Esperando al cliente*: no aparece en «Requiere atención» ni
 se puede abrir la ventana de revisión hasta que el comprador conteste con
 todo. Antes, un dato leído con poca confianza lo mandaba a revisión aunque

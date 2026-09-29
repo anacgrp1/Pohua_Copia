@@ -13,11 +13,19 @@ def _script():
     return modulo
 
 
-def test_sin_volumen_ni_numero_de_parte_se_pasa():
+def test_sin_volumen_se_pasa_y_sólo_se_pide_el_volumen():
     s = _script()
     fila = {"part_number": None, "volumen": "", "material": None, "cliente_id": "CGRMX",
             "datos": {"remitente": "daniela.diaz@cgr-international.com"}}
-    assert s.faltantes(fila) == ["part_number", "volumen", "material"]
+    # Número de parte y material salen del plano: no se le piden al comprador.
+    assert s.faltantes(fila) == ["volumen"]
+
+
+def test_con_volumen_pero_sin_numero_de_parte_se_queda_en_revision():
+    s = _script()
+    fila = {"part_number": None, "volumen": "200000", "material": None, "cliente_id": "CGRMX",
+            "datos": {}}
+    assert s.faltantes(fila) == []
 
 
 def test_completo_se_queda_en_revision():

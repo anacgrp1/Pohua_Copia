@@ -15,7 +15,8 @@ una ventana sin cantidades que dictaminar y al comprador no se le pedía nada.
 La regla ahora es la contraria (``app/rfq/flow.py``): si falta algo, sólo sale
 el correo pidiéndolo y el RFQ queda «Esperando al cliente» hasta que conteste.
 Esto arregla los que entraron antes del cambio: busca los RFQ en revisión (o
-nuevos) a los que les falta número de parte, volumen, material o cliente, y
+nuevos) a los que les falta el volumen (o el cliente) —número de parte y material
+salen del plano y los completa el PM, no se piden—, y
 los pasa a ``Incomplete`` con lo que falta apuntado. Con ``--enviar`` les
 manda además el correo de datos faltantes, el mismo que el lector manda solo
 (y sólo si ``ENVIO_AUTOMATICO`` está encendido).
@@ -58,12 +59,12 @@ def faltantes(fila: dict) -> list:
     falta = []
     if _vacio(datos.get("customer")) and _vacio(fila.get("cliente_id")):
         falta.append("customer")
-    if _vacio(fila.get("part_number")) and _vacio(datos.get("part_number")):
-        falta.append("part_number")
-    if _vacio(fila.get("volumen")) and _vacio(datos.get("volumen")):
+    # Número de parte y material salen del plano: si faltan, los completa el
+    # PM y no se le piden al comprador (regla de ISC, 2026-09-29). Lo que sí
+    # es suyo dar es el volumen.
+    if (_vacio(fila.get("volumen")) and _vacio(datos.get("volumen"))
+            and _vacio(datos.get("escalones_cantidad"))):
         falta.append("volumen")
-    if _vacio(fila.get("material")) and _vacio(datos.get("material")):
-        falta.append("material")
     return falta
 
 

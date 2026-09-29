@@ -5646,6 +5646,8 @@ body.revision-abierta { overflow: hidden; }
    va en pastillas y no en fichas: son datos de una línea que no cambian al
    cambiar de tramo, y no deben competir con los números que sí cambian. */
 .revision-pills { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+/* En la compu el grupo no existe: sus pastillas van en la misma fila. */
+.revision-pills-datos { display: contents; }
 
 .revision-pill {
     padding: 5px 12px;
@@ -6154,6 +6156,49 @@ button.revision-ver-fila:hover .revision-ver-usar { opacity: 1; }
         border-top: 1px solid var(--border-default);
     }
     .revision-acciones .btn { min-height: 46px; justify-content: center; white-space: normal; }
+
+    /* --- Teléfono, más compacto (ISC, 2026-09-29) ---------------------------
+       El pie ocupaba casi la mitad de la pantalla (cuatro botones altos en
+       tres filas) y las pastillas otras cuatro filas: los números quedaban en
+       una franja. Ahora el pie son dos filas de botones a lo ancho, y los
+       datos del alambre una sola tira que se desliza. */
+    .revision-pie { gap: var(--sp-2); padding: var(--sp-2) var(--sp-3);
+                    padding-bottom: calc(var(--sp-2) + env(safe-area-inset-bottom)); }
+    .revision-pie-nota:empty { display: none; }
+    .revision-acciones { gap: var(--sp-2); }
+    .revision-grupo--ver { grid-template-columns: 1fr 1fr; }
+    .revision-grupo--decidir {
+        grid-template-columns: 1fr 1.4fr;          /* Rechazar | Aprobar, lado a lado */
+        padding-top: var(--sp-2);
+    }
+    .revision-grupo--decidir .btn:only-child { grid-column: 1 / -1; }
+    .revision-acciones .btn { min-height: 42px; padding: 8px 10px; font-size: 14px; }
+    .revision-grupo--ver .btn { min-height: 36px; font-size: 13px; }
+
+    .revision-rotulo { margin-bottom: 6px; }
+    .revision-pills { gap: 6px; }
+    .revision-pill { padding: 4px 10px; font-size: 12px; }
+    /* Quién cotizó: en una línea propia y partiéndose, no cortado a la derecha. */
+    .revision-pill--pm { flex: 1 1 100%; white-space: normal; line-height: 1.35; }
+    .revision-pills-datos {
+        display: flex;
+        flex: 1 1 100%;
+        gap: 6px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        margin: 0 calc(-1 * var(--sp-4));
+        padding: 0 var(--sp-4) 2px;
+    }
+    .revision-pills-datos::-webkit-scrollbar { display: none; }
+    .revision-pills-datos .revision-pill { flex: 0 0 auto; }
+
+    /* Los avisos, un poco más apretados: son frases largas. */
+    .revision-franja { padding: 10px 12px; font-size: 13px; }
+    .revision-tramo-card { flex-basis: min(62vw, 210px); }
+    .revision-bloque { padding: 10px 12px; }
+    .revision-cascada-fila { padding: 8px 12px; }
+    .revision-columnas-grid { gap: var(--sp-2); }
 }
 
 
