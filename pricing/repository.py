@@ -132,8 +132,16 @@ _SQL_MAQUINA = """
     ) t ON true
     WHERE m.activo
       AND fm.codigo = 'COILER'
-      AND (%(diam)s IS NULL OR c.alambre_min_mm IS NULL OR c.alambre_min_mm <= %(diam)s)
-      AND (%(diam)s IS NULL OR c.alambre_max_mm IS NULL OR c.alambre_max_mm >= %(diam)s)
+      -- Con calibre conocido, sólo cuenta una máquina cuyo rango de alambre
+      -- está capturado y lo admite. Antes un rango vacío (NULL) pasaba como
+      -- "no se sabe, puede ser": cuando ninguna bobinadora real podía con la
+      -- pieza, ganaba una fila sin capacidades y la ventana enseñaba una
+      -- coiler para un resorte que la planta no puede hacer (INT-9084602A,
+      -- 15.875 mm). Sin máquina, no se produce: se dice, no se inventa.
+      AND (%(diam)s IS NULL OR (c.alambre_min_mm IS NOT NULL
+                                AND c.alambre_max_mm IS NOT NULL
+                                AND c.alambre_min_mm <= %(diam)s
+                                AND c.alambre_max_mm >= %(diam)s))
       AND (%(od)s   IS NULL OR c.od_max_mm     IS NULL OR c.od_max_mm     >= %(od)s)
       AND ({capacidad} IS NOT false)
     ORDER BY

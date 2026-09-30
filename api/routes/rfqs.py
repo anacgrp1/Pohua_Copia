@@ -509,7 +509,19 @@ def _ventana(detalle, usuario, resorte=None, lectura=None, recalculo=None):
     lectura = ({k: v for k, v in lectura.items() if k != "resorte"}
                if lectura else None)
 
-    costeado = costeo_rfq.costear(rfq_id, datos, resorte, detalle.material)
+    # Si el Spring Calc dice que ninguna máquina del taller puede hacerlo (o
+    # que el alambre pasa del límite), no se produce, así que no se costea:
+    # un precio con una bobinadora al lado sugeriría lo contrario.
+    spring = _spring_calc(resorte, detalle.material)
+    from pricing import spring_calc as spring_calc_mod
+    if spring_calc_mod.bloquea(spring):
+        costeado = {"cantidades": costeo_rfq.cantidades_del_rfq(datos),
+                    "tramos": [], "comunes": {}, "error_costeo": None,
+                    "costeo": {"completo": False, "faltantes": [],
+                               "faltantes_i18n": [], "origen": None,
+                               "no_producible": True, "banderas_motor": []}}
+    else:
+        costeado = costeo_rfq.costear(rfq_id, datos, resorte, detalle.material)
 
     return {
         "rfq": {
@@ -542,7 +554,7 @@ def _ventana(detalle, usuario, resorte=None, lectura=None, recalculo=None):
         # El dictamen del Spring Engineering Calculator con las cotas que
         # tiene delante el PM (las recién leídas o corregidas, si las hay).
         # `factible: false` deshabilita «Aprobar» en la ventana.
-        "spring_calc": _spring_calc(resorte, detalle.material),
+        "spring_calc": spring,
         # La geometría con la que se está dictaminando, para que se vea en la
         # ventana y no haya que abrir la ficha para saber si hay cotas.
         "resorte": {
