@@ -5975,6 +5975,9 @@ button.revision-ver-fila:hover .revision-ver-usar { opacity: 1; }
 .revision-pie-nota { flex: 1; min-width: 0; font-size: 12px; line-height: 1.45; color: var(--text-muted); }
 .revision-pie-nota--bloqueo { color: var(--color-error); font-weight: 600; }
 .revision-sin-tramos--bloqueo { color: var(--color-error); font-weight: 600; }
+.revision-pie-nota--pm { color: var(--color-warning); font-weight: 600; }
+.rfqd-nofactible--pm { border-color: var(--color-warning); color: var(--color-warning); }
+.rfqd-panel--aviso:not(.rfqd-panel--nofactible) .rfqd-nofactible--pm { color: var(--color-warning); }
 .revision-btn--bloqueado,
 .revision-btn--bloqueado:hover { opacity: .45; cursor: not-allowed; filter: grayscale(.4); }
 

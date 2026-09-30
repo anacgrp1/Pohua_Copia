@@ -233,17 +233,29 @@ def get_rfq(
         log.debug("RFQ %s: no se pudo lanzar la lectura del plano.", rfq_id)
 
     return RFQDetail(**data, banderas=banderas, resorte=resorte,
-                     spring_calc=_spring_calc(resorte, data.get("material")))
+                     spring_calc=_spring_calc(resorte, data.get("material"), datos))
 
 
-def _spring_calc(resorte, material):
-    """El dictamen del Spring Calc; nunca tumba la ficha si falla."""
+def _spring_calc(resorte, material, datos=None):
+    """El dictamen del Spring Calc; nunca tumba la ficha si falla.
+
+    Si el PM ya cotizó el RFQ a mano en la calculadora completa («Open full
+    quote»: eligió máquina y ruta él), el dictamen se sigue enseñando, pero
+    lleva `intervencion_pm` y deja de bloquear: la factibilidad pasa a ser
+    decisión del PM, sobre sus cálculos.
+    """
     try:
         from pricing import spring_calc
-        return spring_calc.evaluar(resorte, material)
+        resultado = spring_calc.evaluar(resorte, material)
     except Exception:
         log.exception("Spring Calc: no se pudo evaluar el resorte.")
         return None
+    if resultado and resultado.get("factible") is False:
+        pm = costeo_rfq.cotizacion_del_pm(datos or {})
+        if pm:
+            resultado["intervencion_pm"] = {
+                "por": pm.get("por"), "en": pm.get("en"), "version": pm.get("n")}
+    return resultado
 
 
 # ---------------------------------------------------------------------------
@@ -262,9 +274,10 @@ def approve_rfq(
     navegador mandaba el nombre y la bitácora registraba lo que quisiera poner
     quien llamara al endpoint.
     """
-    # Lo que la planta no puede enrollar no se aprueba. La pantalla ya
-    # deshabilita el botón; esto es para que tampoco pase por otro camino
-    # (una pestaña vieja, una llamada directa a la API).
+    # Lo que la planta no puede enrollar no se aprueba mientras el PM no lo
+    # haya cotizado él mismo en la calculadora completa (entonces la
+    # factibilidad es suya). La pantalla ya deshabilita el botón; esto es para
+    # que tampoco pase por otro camino (una pestaña vieja, la API directa).
     detalle = get_rfq(rfq_id, None, usuario)
     from pricing import spring_calc
     if spring_calc.bloquea(detalle.spring_calc):
@@ -274,7 +287,8 @@ def approve_rfq(
         raise HTTPException(
             status_code=409,
             detail="Spring Calc: this spring cannot be made at ISC ("
-                   + ", ".join(filter(None, codigos)) + "). It can only be declined.")
+                   + ", ".join(filter(None, codigos)) + "). Quote it manually in "
+                   "the full quote first, or decline it.")
 
     log.info("RFQ %s aprobado por %s.", rfq_id, usuario.correo)
     try:
@@ -512,7 +526,7 @@ def _ventana(detalle, usuario, resorte=None, lectura=None, recalculo=None):
     # Si el Spring Calc dice que ninguna máquina del taller puede hacerlo (o
     # que el alambre pasa del límite), no se produce, así que no se costea:
     # un precio con una bobinadora al lado sugeriría lo contrario.
-    spring = _spring_calc(resorte, detalle.material)
+    spring = _spring_calc(resorte, detalle.material, datos)
     from pricing import spring_calc as spring_calc_mod
     if spring_calc_mod.bloquea(spring):
         costeado = {"cantidades": costeo_rfq.cantidades_del_rfq(datos),

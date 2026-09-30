@@ -27,9 +27,28 @@ const SpringCalc = (() => {
         return respaldo || '';
     }
 
-    /** True si el Spring Calc dice que la planta no puede hacer este resorte. */
+    /** True si la planta no puede hacerlo Y el PM aún no lo cotizó a mano. */
     function bloquea(sc) {
+        return noFactible(sc) && !sc.intervencion_pm;
+    }
+
+    /** Lo que dijo el Spring Calc, haya intervenido el PM o no. */
+    function noFactible(sc) {
         return !!sc && sc.factible === false;
+    }
+
+    /**
+     * El PM ya cotizó a mano en la cotización completa («Open full quote»):
+     * eligió máquina y ruta él, así que la factibilidad es su decisión.
+     */
+    function intervencion(sc) {
+        return noFactible(sc) && sc.intervencion_pm ? sc.intervencion_pm : null;
+    }
+
+    function textoIntervencion(sc) {
+        const pm = intervencion(sc);
+        if (!pm) return '';
+        return I18N.t(pm.por ? 'spring.intervencionPor' : 'spring.intervencion', { por: pm.por || '' });
     }
 
     function textoBloqueo(b) {
@@ -49,7 +68,7 @@ const SpringCalc = (() => {
     function resumen(sc) {
         if (!sc || !sc.evaluado) return '';
         const partes = [];
-        if (bloquea(sc)) {
+        if (noFactible(sc)) {
             partes.push(I18N.t('spring.noFactible'));
         } else if (typeof sc.score === 'number') {
             partes.push(I18N.t('spring.puntaje', {
@@ -69,11 +88,15 @@ const SpringCalc = (() => {
     function items(sc) {
         if (!sc || !sc.evaluado) return [];
         const lista = [];
+        // Con el PM ya encima, lo que dijo la calculadora sigue a la vista
+        // —es la razón de que se cotizara a mano— pero deja de ser un bloqueo.
+        const pm = intervencion(sc);
+        if (pm) lista.push({ nivel: 'warn', texto: textoIntervencion(sc) });
         for (const b of (sc.bloqueos || [])) {
-            lista.push({ nivel: 'error', texto: I18N.t('spring.titulo') + ': ' + textoBloqueo(b) });
+            lista.push({ nivel: pm ? 'warn' : 'error', texto: I18N.t('spring.titulo') + ': ' + textoBloqueo(b) });
         }
         const linea = resumen(sc);
-        if (linea && !bloquea(sc)) lista.push({ nivel: 'info', texto: linea });
+        if (linea && !noFactible(sc)) lista.push({ nivel: 'info', texto: linea });
         const orden = { crit: 0, warn: 1, info: 2 };
         const banderas = (sc.banderas || []).slice()
             .sort((a, b) => (orden[a.nivel] ?? 3) - (orden[b.nivel] ?? 3));
@@ -86,5 +109,5 @@ const SpringCalc = (() => {
         return lista;
     }
 
-    return { bloquea, items, resumen, textoBloqueo };
+    return { bloquea, noFactible, intervencion, textoIntervencion, items, resumen, textoBloqueo };
 })();
