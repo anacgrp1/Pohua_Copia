@@ -732,7 +732,7 @@ const QuotingPage = {
         // ventana de aprobación se dibuja dentro de un marco de 320 px y se ve
         // recortada, que es peor que no verla.
         const CAPAS = ['isc-tema.js', 'isc-nube.js', 'isc-idioma.js', 'isc-contrato.js',
-                       'isc-visor3d.js', 'isc-aprobacion.js', 'isc-selects.js'];
+                       'isc-visor3d.js', 'isc-aprobacion.js', 'isc-selects.js', 'isc-plano.js'];
         try {
             const doc = marco.contentDocument;
             if (!doc || !doc.head || !doc.getElementById) return;

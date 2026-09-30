@@ -807,6 +807,16 @@ class Ventana(QMainWindow):
         canal.registerObject("lector", self.puente)
         pagina.setWebChannel(canal)
         self.web.setPage(pagina)
+        # El plano del cliente (js/isc-plano.js) se ve con el visor de PDF del
+        # propio navegador. En QtWebEngine ese visor es un «plugin» y viene
+        # apagado: sin esto, la pestaña «Plano del cliente» salía en blanco.
+        try:
+            from PySide6.QtWebEngineCore import QWebEngineSettings
+            ajustes = pagina.settings()
+            ajustes.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
+            ajustes.setAttribute(QWebEngineSettings.WebAttribute.PdfViewerEnabled, True)
+        except Exception as error:           # una versión de Qt sin el ajuste
+            print("Visor de PDF no disponible en esta versión de Qt:", error)
         # Al terminar de cargar, se comprueba que la página vio el puente: si
         # no lo vio, el Monitor no puede enseñar el lector, y el motivo (la web
         # desplegada aún sin el apartado, o el cliente no inyectado) se deja en

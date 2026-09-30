@@ -97,6 +97,9 @@ _CONTRATO = "/js/isc-contrato.js"
 _VISOR = "/js/isc-visor3d.js"
 _APROBACION = "/js/isc-aprobacion.js"
 _SELECTS = "/js/isc-selects.js"
+# El plano del cliente a la vista: «Ver» en la casilla de planos y la pestaña
+# «Plano del cliente» (sólo hace algo en la de precios, que tiene #q-drawing).
+_PLANO = "/js/isc-plano.js"
 
 
 def carpeta() -> Optional[Path]:
@@ -206,8 +209,9 @@ class _InyectarParserURL:
                 "<script defer src=\"%s\"></script>"
                 "<script defer src=\"%s\"></script>"
                 "<script defer src=\"%s\"></script>"
+                "<script defer src=\"%s\"></script>"
                 % ("".join(partes), _TEMA, _ADAPTADOR, _IDIOMA, _CONTRATO, _VISOR,
-                   _APROBACION, _SELECTS)).encode("utf-8")
+                   _APROBACION, _SELECTS, _PLANO)).encode("utf-8")
 
     def __call__(self, environ, start_response):
         captura: dict = {}

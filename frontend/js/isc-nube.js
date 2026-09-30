@@ -1829,8 +1829,10 @@
      * pasar las cotas— sin preguntar nada, porque esto no lo pidió nadie en
      * ese momento.
      */
-    function leerPlanoSolo(fichero, q) {
-        if (q && q.pohuaPlanoLeido) return;
+    function leerPlanoSolo(fichero, q, aPeticion) {
+        // Solo, una vez por RFQ; pero si lo pide una persona («Leer plano con
+        // IA» del visor del plano del cliente), se lee aunque ya se hubiera.
+        if (q && q.pohuaPlanoLeido && !aPeticion) return;
         if (typeof parseOneFile !== 'function') return;
 
         var puede = (typeof parserStatus === 'function')
@@ -1863,6 +1865,15 @@
             });
         });
     }
+
+    // El visor del plano del cliente (js/isc-plano.js) lee con esto: el mismo
+    // camino que el plano del correo, un solo fichero y sin preguntar.
+    window.ISCNubePlano = {
+        leer: function (fichero) {
+            var q = (typeof Q === 'function') ? Q() : null;
+            leerPlanoSolo(fichero, q, true);
+        }
+    };
 
     /** Las notas internas del PN, armadas con lo que trajo el correo. */
     function notasDelCorreo(d, cab) {

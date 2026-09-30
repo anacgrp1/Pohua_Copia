@@ -582,9 +582,12 @@
         var i = 'en';
         try { i = (window.parent && window.parent.I18N && window.parent.I18N.idioma) || i; } catch (e) {}
         var t = {
-            en: { pulsa: 'Choose drawings', arrastra: 'or drop them here', uno: 'file', varios: 'files', quitar: 'Remove' },
-            es: { pulsa: 'Elegir planos', arrastra: 'o arrástralos aquí', uno: 'archivo', varios: 'archivos', quitar: 'Quitar' },
-            fr: { pulsa: 'Choisir des plans', arrastra: 'ou déposez-les ici', uno: 'fichier', varios: 'fichiers', quitar: 'Retirer' }
+            en: { pulsa: 'Choose drawings', arrastra: 'or drop them here', uno: 'file', varios: 'files', quitar: 'Remove',
+                  ver: 'View', verTitulo: 'See the drawing as the customer sent it' },
+            es: { pulsa: 'Elegir planos', arrastra: 'o arrástralos aquí', uno: 'archivo', varios: 'archivos', quitar: 'Quitar',
+                  ver: 'Ver', verTitulo: 'Ver el dibujo tal cual lo mandó el cliente' },
+            fr: { pulsa: 'Choisir des plans', arrastra: 'ou déposez-les ici', uno: 'fichier', varios: 'fichiers', quitar: 'Retirer',
+                  ver: 'Voir', verTitulo: 'Voir le plan tel que le client l’a envoyé' }
         };
         return (t[i] || t.en)[clave];
     }
@@ -617,18 +620,30 @@
 
         function pintar() {
             var lista = inp.files ? [].slice.call(inp.files) : [];
-            fichas.innerHTML = lista.map(function (f) {
+            // «Ver» abre el dibujo tal cual (js/isc-plano.js), sólo en la
+            // casilla de planos de la cotización.
+            var conVer = inp.id === 'q-drawing';
+            fichas.innerHTML = lista.map(function (f, i) {
                 return '<span class="narch-ficha" title="' + esc(f.name) + '">' +
                     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
                     'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
                     '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>' +
                     '<polyline points="14 2 14 8 20 8"/></svg>' +
-                    '<span class="narch-nombre">' + esc(f.name) + '</span></span>';
+                    '<span class="narch-nombre">' + esc(f.name) + '</span>' +
+                    (conVer ? '<button type="button" class="narch-ver" data-narch-ver="' + i + '" title="' +
+                              esc(textoArchivos('verTitulo')) + '">' + esc(textoArchivos('ver')) + '</button>' : '') +
+                    '</span>';
             }).join('');
             caja.classList.toggle('con-archivos', lista.length > 0);
         }
 
         zona.addEventListener('click', function () { inp.click(); });
+        fichas.addEventListener('click', function (ev) {
+            var b = ev.target.closest('[data-narch-ver]');
+            if (!b || !window.ISCPlano) return;
+            ev.preventDefault();
+            window.ISCPlano.ver(Number(b.dataset.narchVer) || 0);
+        });
         zona.addEventListener('keydown', function (ev) {
             if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); inp.click(); }
         });
