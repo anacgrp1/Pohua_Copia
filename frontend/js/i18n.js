@@ -300,6 +300,17 @@ const I18N = (() => {
         'ficha.espiras':     { en: 'Total Coils', es: 'Espiras totales', fr: 'Spires totales' },
         'ficha.confianza':   { en: 'AI Confidence', es: 'Confianza de la IA', fr: 'Confiance de l’IA' },
         'ficha.banderas':    { en: 'Review Flags', es: 'Motivos de revisión', fr: 'Motifs de révision' },
+        // El dictamen del Spring Engineering Calculator (components/spring-calc.js).
+        'spring.titulo':     { en: 'Spring Calc', es: 'Spring Calc', fr: 'Spring Calc' },
+        'spring.noFactible': { en: 'NOT FEASIBLE — the plant cannot make this spring', es: 'NO FACTIBLE: la planta no puede fabricar este resorte', fr: 'NON FAISABLE : l’usine ne peut pas fabriquer ce ressort' },
+        'spring.noFactibleCorto': { en: 'Not feasible', es: 'No factible', fr: 'Non faisable' },
+        'spring.bloqueo.alambre_maximo': { en: 'wire Ø {valor} mm reaches the ISC limit of {pulg}" ({mm} mm). Not feasible — do not price.', es: 'el alambre de Ø {valor} mm llega al límite de ISC de {pulg}" ({mm} mm). No factible: no se cotiza.', fr: 'le fil de Ø {valor} mm atteint la limite ISC de {pulg}" ({mm} mm). Non faisable : ne pas chiffrer.' },
+        'spring.bloqueo.sin_maquina': { en: 'no coiler in the shop takes {alambre} mm wire with {od} mm OD. The thickest wire the shop coils for this spring type is {max} mm.', es: 'ninguna enrolladora del taller admite alambre de {alambre} mm con {od} mm de DE. Lo más grueso que enrolla el taller para este tipo de resorte es {max} mm.', fr: 'aucune enrouleuse de l’atelier n’accepte un fil de {alambre} mm avec {od} mm de DE. Le fil le plus épais que l’atelier enroule pour ce type de ressort est {max} mm.' },
+        'spring.bloqueo.sin_maquinaSinOd': { en: 'no coiler in the shop takes {alambre} mm wire. The thickest wire the shop coils for this spring type is {max} mm.', es: 'ninguna enrolladora del taller admite alambre de {alambre} mm. Lo más grueso que enrolla el taller para este tipo de resorte es {max} mm.', fr: 'aucune enrouleuse de l’atelier n’accepte un fil de {alambre} mm. Le fil le plus épais que l’atelier enroule pour ce type de ressort est {max} mm.' },
+        'spring.puntaje':    { en: 'score {score}/100, {banda}', es: 'puntaje {score}/100, {banda}', fr: 'score {score}/100, {banda}' },
+        'spring.soloGeometria': { en: '(geometry only — no working point on the drawing)', es: '(sólo geometría: el plano no trae punto de trabajo)', fr: '(géométrie seule : pas de point de travail sur le plan)' },
+        'spring.maquina':    { en: 'coiler {maq}', es: 'enrolladora {maq}', fr: 'enrouleuse {maq}' },
+        'rev.noAprobable':   { en: 'Approve is disabled: Spring Calc says the plant cannot make this spring. It can only be declined.', es: 'Aprobar está deshabilitado: según Spring Calc la planta no puede fabricar este resorte. Sólo se puede rechazar.', fr: 'Approuver est désactivé : selon Spring Calc, l’usine ne peut pas fabriquer ce ressort. Il ne peut qu’être refusé.' },
         'ficha.notasPm':     { en: 'PM Notes', es: 'Notas del PM', fr: 'Notes du PM' },
         'plano.leidoVacio':  { en: 'The drawing ({ficheros}) was read and gave no dimensions.', es: 'El plano ({ficheros}) se leyó y no dio ninguna cota.', fr: 'Le plan ({ficheros}) a été lu et n’a donné aucune cote.' },
 

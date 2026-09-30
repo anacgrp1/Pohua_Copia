@@ -73,7 +73,18 @@ const RFQDetailPage = {
             // "badges" —pastillas pensadas para una palabra— con frases
             // enteras dentro: en el teléfono cada motivo salía como una
             // píldora de tres renglones con el texto centrado.
-            const banderas = (rfq.banderas || []).map(f => `
+            //
+            // Primero lo que dice el Spring Engineering Calculator: es el
+            // mismo cálculo de la pestaña Spring Calc, corrido en el servidor
+            // con estas cotas. Si la planta no puede enrollar el resorte, eso
+            // va arriba y en rojo, porque es lo único que cierra la discusión.
+            const sc = rfq.spring_calc;
+            const noFactible = SpringCalc.bloquea(sc);
+            const deSpring = SpringCalc.items(sc).map(f => `
+                <li class="rfqd-bandera rfqd-bandera--${f.nivel === 'error' ? 'error' : 'aviso'}">
+                    ${esc(f.texto)}
+                </li>`).join('');
+            const banderas = deSpring + (rfq.banderas || []).map(f => `
                 <li class="rfqd-bandera rfqd-bandera--${f.nivel === 'ERROR' ? 'error' : 'aviso'}">
                     ${esc(I18N.motivo('factib.', f))}
                 </li>`).join('');
@@ -117,8 +128,9 @@ const RFQDetailPage = {
 
                 ${avisoEspera}
 
-                ${banderas ? `<div class="detail-panel rfqd-panel--aviso">
-                    <div class="detail-panel-title">${esc(I18N.t('ficha.banderas'))}</div>
+                ${banderas ? `<div class="detail-panel rfqd-panel--aviso${noFactible ? ' rfqd-panel--nofactible' : ''}">
+                    <div class="detail-panel-title">${esc(I18N.t('ficha.banderas'))}${noFactible
+                        ? ` <span class="rfqd-nofactible">${esc(I18N.t('spring.noFactibleCorto'))}</span>` : ''}</div>
                     <ul class="rfqd-banderas">${banderas}</ul>
                 </div>` : ''}
 

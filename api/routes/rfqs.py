@@ -232,7 +232,18 @@ def get_rfq(
     except Exception:
         log.debug("RFQ %s: no se pudo lanzar la lectura del plano.", rfq_id)
 
-    return RFQDetail(**data, banderas=banderas, resorte=resorte)
+    return RFQDetail(**data, banderas=banderas, resorte=resorte,
+                     spring_calc=_spring_calc(resorte, data.get("material")))
+
+
+def _spring_calc(resorte, material):
+    """El dictamen del Spring Calc; nunca tumba la ficha si falla."""
+    try:
+        from pricing import spring_calc
+        return spring_calc.evaluar(resorte, material)
+    except Exception:
+        log.exception("Spring Calc: no se pudo evaluar el resorte.")
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -251,6 +262,20 @@ def approve_rfq(
     navegador mandaba el nombre y la bitácora registraba lo que quisiera poner
     quien llamara al endpoint.
     """
+    # Lo que la planta no puede enrollar no se aprueba. La pantalla ya
+    # deshabilita el botón; esto es para que tampoco pase por otro camino
+    # (una pestaña vieja, una llamada directa a la API).
+    detalle = get_rfq(rfq_id, None, usuario)
+    from pricing import spring_calc
+    if spring_calc.bloquea(detalle.spring_calc):
+        codigos = [b.get("codigo") for b in (detalle.spring_calc.get("bloqueos") or [])]
+        log.warning("RFQ %s: aprobación rechazada, no fabricable (%s).",
+                    rfq_id, ", ".join(filter(None, codigos)))
+        raise HTTPException(
+            status_code=409,
+            detail="Spring Calc: this spring cannot be made at ISC ("
+                   + ", ".join(filter(None, codigos)) + "). It can only be declined.")
+
     log.info("RFQ %s aprobado por %s.", rfq_id, usuario.correo)
     try:
         import app.feasibility.pm_decision as pm_decision
@@ -514,6 +539,10 @@ def _ventana(detalle, usuario, resorte=None, lectura=None, recalculo=None):
             "motivos": factibilidad.get("motivos") or [],
         },
         "banderas": banderas,
+        # El dictamen del Spring Engineering Calculator con las cotas que
+        # tiene delante el PM (las recién leídas o corregidas, si las hay).
+        # `factible: false` deshabilita «Aprobar» en la ventana.
+        "spring_calc": _spring_calc(resorte, detalle.material),
         # La geometría con la que se está dictaminando, para que se vea en la
         # ventana y no haya que abrir la ficha para saber si hay cotas.
         "resorte": {
