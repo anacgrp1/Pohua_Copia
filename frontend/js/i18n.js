@@ -630,6 +630,8 @@ const I18N = (() => {
         'rev.maquina':      { en: 'Machine', es: 'Máquina', fr: 'Machine' },
         'rev.maquinaAyuda': { en: 'The coiler that makes this spring (first operation of the route).', es: 'La bobinadora que fabrica este resorte (primera operación de la ruta).', fr: 'La machine à ressorts qui fabrique cette pièce (première opération de la gamme).' },
         'rev.sinMaquina':   { en: 'none in the catalogue', es: 'ninguna en el catálogo', fr: 'aucune au catalogue' },
+        'rev.sinMaquinaNoProducible': { en: 'none — cannot be produced', es: 'ninguna: no se puede producir', fr: 'aucune : non productible' },
+        'rev.sinTramosNoProducible':  { en: 'Not priced: no machine in the shop can make this spring, so it cannot be produced.', es: 'Sin costeo: ninguna máquina del taller puede hacer este resorte, así que no se puede producir.', fr: 'Non chiffré : aucune machine de l’atelier ne peut faire ce ressort, il n’est donc pas productible.' },
         'rev.fam.coiler':   { en: 'Coiler', es: 'Bobinadora', fr: 'Enrouleuse' },
         'rev.fam.secundaria': { en: 'Secondary', es: 'Secundaria', fr: 'Secondaire' },
         'rev.sinRuta':       { en: 'No route: the catalogue has no machine for this spring yet.', es: 'Sin ruta: el catálogo aún no tiene máquina para este resorte.', fr: 'Pas de gamme : le catalogue n’a pas encore de machine pour ce ressort.' },

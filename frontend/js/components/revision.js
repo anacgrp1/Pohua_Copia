@@ -360,7 +360,7 @@ const Revision = (() => {
                     ${botonVersiones(d)}
                     <span class="revision-pill revision-pill--maquina ${maq ? '' : 'revision-pill--falta'}"
                           title="${esc(t('rev.maquinaAyuda'))}">
-                        ${esc(t('rev.maquina'))}: <b>${maq ? esc(maq) : esc(t('rev.sinMaquina'))}</b>
+                        ${esc(t('rev.maquina'))}: <b>${maq ? esc(maq) : esc(t((d.costeo || {}).no_producible ? 'rev.sinMaquinaNoProducible' : 'rev.sinMaquina'))}</b>
                     </span>
                     <!-- Los datos del alambre: en la compu, en la misma fila; en
                          el teléfono, una tira que se desliza (ver style.css). -->
@@ -377,6 +377,10 @@ const Revision = (() => {
 
     function pestanas(d) {
         const tramos = d.tramos || [];
+        if (!tramos.length && (d.costeo || {}).no_producible) {
+            // Sin máquina que lo enrolle no se produce, y no se costea.
+            return `<div class="revision-sin-tramos revision-sin-tramos--bloqueo">${esc(t('rev.sinTramosNoProducible'))}</div>`;
+        }
         if (!tramos.length) {
             const cantidades = (d.cantidades || []).map(entero).join(' · ');
             return `<div class="revision-sin-tramos">${esc(t('rev.sinTramos'))}${cantidades ? ` <b>${cantidades}</b>` : ''}</div>`;

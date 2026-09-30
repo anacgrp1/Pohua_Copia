@@ -117,3 +117,22 @@ def test_approve_sigue_si_es_fabricable_o_no_se_pudo_calcular():
              mock.patch("app.feasibility.pm_decision.aprobar", return_value=resultado):
             r = rutas.approve_rfq("INT-1", mock.Mock(nota=None), usuario)
         assert r.estado == "Approved"
+
+
+def test_la_ventana_no_costea_ni_pone_maquina_si_no_se_puede_producir():
+    import api.routes.rfqs as rutas
+    detalle = mock.Mock(rfq_id="INT-9084602A", version=1, estado="RequiresReview",
+                        part_number="SG0000142", cliente_id="CGR México",
+                        fecha_registro=None, veredicto_sistema="requires review",
+                        veredicto_final=None, score=60, notas=None,
+                        material="302 ASTM A313", banderas=[], resorte=INT_9084602A,
+                        datos_json={"cantidades": [250000]})
+    usuario = mock.Mock(puede=lambda p: True)
+    bloqueado = {"factible": False, "evaluado": True,
+                 "bloqueos": [{"codigo": "sin_maquina"}]}
+    with mock.patch.object(rutas, "_spring_calc", return_value=bloqueado), \
+         mock.patch.object(rutas.costeo_rfq, "costear") as costear:
+        v = rutas._ventana(detalle, usuario, resorte=INT_9084602A)
+    costear.assert_not_called()
+    assert v["tramos"] == [] and v["costeo"]["no_producible"] is True
+    assert v["spring_calc"] is bloqueado

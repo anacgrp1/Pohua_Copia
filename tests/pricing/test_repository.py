@@ -100,6 +100,17 @@ class TestMaquina(unittest.TestCase):
                 sql = conn.cursor_obj.ejecutados[0][0]
                 self.assertIn(f"c.{columna}", sql)
 
+    def test_un_rango_de_alambre_sin_capturar_no_hace_capaz_a_una_maquina(self):
+        # INT-9084602A: 15.875 mm. Ninguna bobinadora real lo admite, y una
+        # fila sin capacidades ganaba por "no se sabe". Ya no.
+        conn = FakeConn([None])
+        self.assertIsNone(repository.elegir_maquina("compresion", 15.875, 127.0,
+                                                    conexion=conn))
+        sql = conn.cursor_obj.ejecutados[0][0]
+        self.assertIn("c.alambre_min_mm IS NOT NULL", sql)
+        self.assertIn("c.alambre_max_mm IS NOT NULL", sql)
+        self.assertNotIn("c.alambre_max_mm IS NULL OR", sql)
+
     def test_un_tipo_desconocido_no_revienta(self):
         conn = FakeConn([_MAQUINA])
         maquina = repository.elegir_maquina("lo-que-sea", 1.6, conexion=conn)
