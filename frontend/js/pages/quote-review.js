@@ -191,7 +191,7 @@ const QuoteReviewPage = {
                 { id: 'destinatario', etiqueta: I18N.t('oferta.para'), tipo: 'email', valor: c.destinatario || '', requerido: true },
                 { id: 'lead_time', etiqueta: I18N.t('oferta.plazo'), valor: c.lead_time || '' },
                 { id: 'incoterm', etiqueta: 'Incoterm', valor: c.incoterm || '' },
-                { id: 'validez_dias', etiqueta: I18N.t('oferta.validezDias'), tipo: 'number', valor: (o.pdf && o.pdf.validDays) || 30 },
+                { id: 'validez_dias', etiqueta: I18N.t('oferta.validezDias'), tipo: 'dias', opciones: [15, 30, 45, 60, 90], valor: (o.pdf && o.pdf.validDays) || 30 },
                 { id: 'comentarios', etiqueta: I18N.t('oferta.comentarios'), marcador: I18N.t('oferta.comentariosEj') },
                 // Como al rechazar: va en el cuerpo del correo y se guarda en las notas.
                 { id: 'nota_correo', tipo: 'textarea', etiqueta: I18N.t('oferta.notaCorreo'), marcador: I18N.t('oferta.notaCorreoEj') },

@@ -567,6 +567,7 @@ const I18N = (() => {
         'dlg.aprobar.mensaje': { en: 'The RFQ will move to quoting.', es: 'La RFQ pasará a cotización.', fr: 'La RFQ passera au chiffrage.' },
         'dlg.aprobar.si':      { en: 'Approve', es: 'Aprobar', fr: 'Approuver' },
 
+        'dlg.dias':           { en: 'days', es: 'días', fr: 'jours' },
         'dlg.rechazar.titulo':  { en: 'Decline RFQ', es: 'Rechazar RFQ', fr: 'Refuser la RFQ' },
         'dlg.rechazar.mensaje': { en: 'A decline email will be sent to the customer, with your note in it. This cannot be undone.', es: 'Se enviará un correo de rechazo al cliente, con tu nota incluida. No se puede deshacer.', fr: 'Un courriel de refus sera envoyé au client, avec votre note. Action irréversible.' },
         'dlg.rechazar.motivo':  { en: 'Note for the customer (goes in the email body and is saved in the notes)', es: 'Nota para el cliente (va en el cuerpo del correo y se guarda en las notas)', fr: 'Note pour le client (dans le corps du courriel et conservée dans les notes)' },
@@ -716,7 +717,7 @@ const I18N = (() => {
         'oferta.proyecto':     { en: 'Project', es: 'Proyecto', fr: 'Projet' },
         'oferta.plazo':        { en: 'Lead time', es: 'Plazo de entrega', fr: 'Délai' },
         'oferta.validez':      { en: 'Offer validity', es: 'Validez de la oferta', fr: 'Validité de l’offre' },
-        'oferta.validezDias':  { en: 'Validity (days)', es: 'Validez (días)', fr: 'Validité (jours)' },
+        'oferta.validezDias':  { en: 'Offer validity', es: 'Validez de la oferta', fr: 'Validité de l’offre' },
         'oferta.terminos':     { en: 'Payment terms', es: 'Condiciones de pago', fr: 'Conditions de paiement' },
         'oferta.descripcion':  { en: 'Description', es: 'Descripción', fr: 'Description' },
         'oferta.material':     { en: 'Material', es: 'Material', fr: 'Matière' },

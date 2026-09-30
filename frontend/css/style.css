@@ -4370,7 +4370,23 @@ body.menu-abierto { overflow: hidden; }
 
 
 /* --- Diálogo de varios campos ------------------------------------------- */
-.dialogo--formulario { max-width: 460px; }
+/* Cabecera y botones fijos; si los campos no caben en la ventana, se
+   desplazan ellos (antes la caja crecía y se salía por arriba). */
+.dialogo--formulario {
+    max-width: 460px;
+    max-height: calc(100dvh - 32px);
+    display: flex;
+    flex-direction: column;
+}
+.dialogo--formulario .dialogo-form {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    margin-left: -4px;
+    margin-right: -4px;
+    padding: 2px 4px;
+}
+.dialogo-form .form-group { margin-bottom: 0; }
 
 .dialogo-form {
     display: flex;
@@ -6722,3 +6738,186 @@ button.revision-ver-fila:hover .revision-ver-usar { opacity: 1; }
 .portada-legal a { color: var(--text-muted); text-decoration: underline; text-underline-offset: 2px; }
 .sidebar-legal a:hover,
 .portada-legal a:hover { color: var(--cgr-accent-light); }
+
+
+/* ==========================================================================
+   Selector de días (validez de la oferta y similares)
+   --------------------------------------------------------------------------
+   Pastillas con los plazos de siempre —se eligen con un toque, sin teclado— y
+   debajo un contador − n + para cualquier otro. El número también se puede
+   escribir: en el teléfono saca el teclado numérico.
+   ========================================================================== */
+.dias { display: flex; flex-direction: column; gap: 10px; }
+
+.dias-pastillas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
+    gap: 6px;
+    padding: 4px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-default);
+    border-radius: 999px;
+}
+
+.dias-pastilla {
+    appearance: none;
+    border: 0;
+    border-radius: 999px;
+    padding: 8px 0;
+    min-height: 36px;
+    background: transparent;
+    color: var(--text-secondary);
+    font: 600 14px/1 var(--font-sans);
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: background var(--duration-fast), color var(--duration-fast), transform var(--duration-fast);
+}
+.dias-pastilla, .dias-paso { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+@media (hover: hover) {
+    .dias-pastilla:not(.activa):hover { color: var(--text-primary); background: var(--bg-surface); }
+    .dias-paso:hover { background: var(--bg-card); }
+}
+.dias-pastilla:active { transform: scale(0.96); }
+.dias-pastilla.activa {
+    background: var(--cgr-primary-light, var(--border-focus));
+    color: #fff;
+    box-shadow: 0 2px 10px var(--cgr-primary-glow);
+}
+.dias-pastilla:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
+
+.dias-contador {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+.dias-contador:focus-within {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px var(--cgr-primary-glow);
+}
+
+.dias-paso {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font: 600 18px/1 var(--font-sans);
+    cursor: pointer;
+    transition: background var(--duration-fast), transform var(--duration-fast);
+}
+.dias-paso:active { transform: scale(0.92); }
+
+.dias-valor {
+    flex: 1 1 0;
+    min-width: 0;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--text-primary);
+    text-align: right;
+    font: 700 18px/1 var(--font-sans);
+    font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+}
+.dias-valor::-webkit-outer-spin-button,
+.dias-valor::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.dias-valor:focus { outline: none; }
+.dias-unidad {
+    flex: 1 1 0;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+
+/* ==========================================================================
+   Formularios en el teléfono: pensados para el pulgar y para el teclado
+   --------------------------------------------------------------------------
+   - Todo campo a 16 px: con menos, iOS hace zoom al tocarlo y la página se
+     queda descuadrada al cerrar el teclado.
+   - Campos y botones de al menos 46 px de alto: se aciertan con el dedo.
+   - Los diálogos salen como hoja desde abajo, del alto de lo que el teclado
+     deja visible (--vv-alto, lo pone confirmar.js con visualViewport); los
+     campos se desplazan dentro y los botones quedan siempre a la vista.
+   ========================================================================== */
+@media (max-width: 768px) {
+    input:not([type=checkbox]):not([type=radio]):not([type=range]),
+    select,
+    textarea,
+    .form-input,
+    .form-select,
+    .form-textarea { font-size: 16px; }
+
+    .form-input,
+    .form-select { min-height: 46px; }
+
+    .dialogo-fondo {
+        align-items: flex-end;
+        padding: 0;
+        /* El teclado encoge lo visible: la hoja se queda encima de él. */
+        height: var(--vv-alto, 100dvh);
+        top: var(--vv-arriba, 0);
+        bottom: auto;
+    }
+
+    .dialogo {
+        max-width: none;
+        max-height: calc(var(--vv-alto, 100dvh) - 16px);
+        border-radius: 18px 18px 0 0;
+        border-bottom: 0;
+        padding: var(--sp-5) var(--sp-4) 0;
+        display: flex;
+        flex-direction: column;
+        animation-name: dialogoSube;
+    }
+    .dialogo::before {                     /* el asa de la hoja */
+        content: "";
+        align-self: center;
+        width: 38px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--border-strong, var(--border-default));
+        margin: -6px 0 12px;
+        flex: 0 0 auto;
+    }
+    .dialogo--formulario { max-width: none; max-height: calc(var(--vv-alto, 100dvh) - 16px); }
+
+    /* Sólo los campos se desplazan; cabecera y botones se quedan. */
+    .dialogo-form,
+    .dialogo--formulario .dialogo-form {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        margin: 0 calc(-1 * var(--sp-4));
+        padding: 2px var(--sp-4) var(--sp-4);
+        scroll-padding: 24px 0;
+    }
+
+    .dialogo-acciones {
+        flex: 0 0 auto;
+        position: sticky;
+        bottom: 0;
+        margin: 0 calc(-1 * var(--sp-4));
+        padding: var(--sp-3) var(--sp-4) calc(var(--sp-3) + env(safe-area-inset-bottom, 0px));
+        background: var(--bg-card);
+        border-top: 1px solid var(--border-subtle);
+    }
+    .dialogo-acciones .btn { flex: 1 1 0; min-height: 46px; justify-content: center; }
+
+    .dias-pastilla { min-height: 40px; font-size: 15px; }
+    .dias-paso { width: 42px; height: 42px; font-size: 20px; }
+    .dias-valor { font-size: 20px; }
+}
+
+@keyframes dialogoSube {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}

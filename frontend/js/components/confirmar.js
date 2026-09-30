@@ -32,6 +32,24 @@ const Confirmar = (() => {
     window.addEventListener('focus', marcarVuelta);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) marcarVuelta(); });
 
+    /** Teléfono o tableta: el dedo manda y el teclado tapa media pantalla. */
+    const tactil = () => window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+
+    /**
+     * Lo que el teclado del teléfono necesita saber de cada campo: qué teclado
+     * sacar (@ para un correo, números para una cantidad), si poner mayúscula
+     * o corregir, y qué dice la tecla Intro («Siguiente» o «Listo»).
+     */
+    function atributosTeclado(c, ultimo) {
+        const a = [];
+        const tipo = c.tipo || 'text';
+        if (tipo === 'email') a.push('inputmode="email"', 'autocapitalize="off"', 'autocorrect="off"', 'spellcheck="false"');
+        else if (tipo === 'number' || tipo === 'dias') a.push('inputmode="numeric"', 'pattern="[0-9]*"');
+        else if (tipo === 'password') a.push('autocapitalize="off"', 'autocorrect="off"', 'spellcheck="false"');
+        if (tipo !== 'textarea') a.push(`enterkeyhint="${ultimo ? 'done' : 'next'}"`);
+        return a.join(' ');
+    }
+
     /** El texto llega de mensajes de error y de la base de datos: nunca a innerHTML. */
     function texto(valor) {
         const nodo = document.createElement('span');
@@ -191,8 +209,37 @@ const Confirmar = (() => {
         fondo.className = 'dialogo-fondo';
         const idTitulo = 'dlg-f-' + Date.now();
 
+        // El último campo que se escribe: su tecla Intro dice «Listo».
+        const escribibles = campos.filter(c => c.tipo !== 'checkbox' && c.tipo !== 'select');
+        const ultimoId = escribibles.length ? escribibles[escribibles.length - 1].id : null;
+
         const html = campos.map((c) => {
             const id = 'campo-' + c.id;
+            const teclado = atributosTeclado(c, c.id === ultimoId);
+            // Días: pastillas con los plazos de siempre y un contador − n + para
+            // cualquier otro. Se elige con un toque, sin abrir el teclado.
+            if (c.tipo === 'dias') {
+                const opciones = (c.opciones && c.opciones.length ? c.opciones : [15, 30, 45, 60, 90]);
+                const valor = Number(c.valor) || opciones[1] || opciones[0];
+                const unidad = c.unidad || I18N.t('dlg.dias');
+                return `<div class="form-group">
+                            <span class="form-label" id="${id}-lbl">${texto(c.etiqueta)}</span>
+                            <div class="dias" role="group" aria-labelledby="${id}-lbl">
+                                <div class="dias-pastillas">
+                                    ${opciones.map(n => `<button type="button" class="dias-pastilla${n === valor ? ' activa' : ''}"
+                                        data-dias="${n}" aria-pressed="${n === valor}">${n}</button>`).join('')}
+                                </div>
+                                <div class="dias-contador">
+                                    <button type="button" class="dias-paso" data-paso="-1" aria-label="−1">−</button>
+                                    <input class="dias-valor" id="${id}" type="number" min="${c.min || 1}" max="${c.max || 365}"
+                                           value="${valor}" ${teclado} aria-label="${texto(c.etiqueta)}">
+                                    <span class="dias-unidad">${texto(unidad)}</span>
+                                    <button type="button" class="dias-paso" data-paso="1" aria-label="+1">+</button>
+                                </div>
+                            </div>
+                            ${c.nota ? `<p class="dialogo-nota">${texto(c.nota)}</p>` : ''}
+                        </div>`;
+            }
             // La casilla lleva su etiqueta AL LADO, no encima: una etiqueta
             // arriba y un cuadradito solo debajo se lee como si faltara algo.
             if (c.tipo === 'checkbox') {
@@ -207,13 +254,14 @@ const Confirmar = (() => {
             const control = c.tipo === 'select'
                 ? `<select class="form-select" id="${id}">${c.opciones || ''}</select>`
                 : c.tipo === 'textarea'
-                ? `<textarea class="form-textarea" id="${id}" rows="${c.filas || 3}"
+                ? `<textarea class="form-textarea" id="${id}" rows="${c.filas || 3}" ${teclado}
                              placeholder="${texto(c.marcador || '')}">${texto(c.valor == null ? '' : String(c.valor))}</textarea>`
                 : `<input class="form-input" id="${id}" type="${texto(c.tipo || 'text')}"
                           value="${texto(c.valor == null ? '' : String(c.valor)).replace(/"/g, '&quot;')}"
                           ${c.requerido ? 'required' : ''}
                           placeholder="${texto(c.marcador || '')}"
                           ${c.reglas ? 'data-reglas' : ''}
+                          ${teclado}
                           autocomplete="${c.tipo === 'password' ? 'new-password' : 'off'}">`;
             return `<div class="form-group">
                         <label class="form-label" for="${id}">${texto(c.etiqueta)}</label>
@@ -243,10 +291,12 @@ const Confirmar = (() => {
 
         return new Promise((resolver) => {
             let resuelto = false;
+            let soltarTeclado = () => {};
 
             function cerrar(valor) {
                 if (resuelto) return;
                 resuelto = true;
+                soltarTeclado();
                 abierto = null;
                 document.removeEventListener('keydown', alPulsar, true);
                 fondo.classList.add('cerrando');
@@ -277,6 +327,15 @@ const Confirmar = (() => {
                 if (ev.key === 'Enter' && ev.target.tagName !== 'BUTTON'
                         && ev.target.tagName !== 'TEXTAREA') {
                     ev.preventDefault();
+                    // En el teléfono, «Siguiente» lleva al campo de abajo en vez
+                    // de mandar el formulario a medio llenar.
+                    if (tactil()) {
+                        const orden = Array.from(caja.querySelectorAll('.dialogo-form input:not([type=checkbox]), .dialogo-form textarea, .dialogo-form select'));
+                        const i = orden.indexOf(ev.target);
+                        if (i >= 0 && i < orden.length - 1) { orden[i + 1].focus(); return; }
+                        ev.target.blur();
+                        return;
+                    }
                     return aceptar();
                 }
                 if (ev.key !== 'Tab') return;
@@ -294,10 +353,52 @@ const Confirmar = (() => {
             fondo.querySelector('[data-accion="cancelar"]').addEventListener('click', () => cerrar(null));
             fondo.addEventListener('mousedown', (ev) => { if (ev.target === fondo) cerrar(null); });
             fondo.addEventListener('input', (ev) => ev.target.classList.remove('campo-invalido'));
+
+            // Días: pastilla o paso actualizan el número, y el número marca la pastilla.
+            const marcarDias = (grupo) => {
+                const v = Number(grupo.querySelector('.dias-valor').value);
+                grupo.querySelectorAll('.dias-pastilla').forEach((b) => {
+                    const si = Number(b.dataset.dias) === v;
+                    b.classList.toggle('activa', si);
+                    b.setAttribute('aria-pressed', si);
+                });
+            };
+            fondo.querySelectorAll('.dias').forEach((grupo) => {
+                const entrada = grupo.querySelector('.dias-valor');
+                grupo.addEventListener('click', (ev) => {
+                    const pastilla = ev.target.closest('.dias-pastilla');
+                    const paso = ev.target.closest('.dias-paso');
+                    if (!pastilla && !paso) return;
+                    const min = Number(entrada.min) || 1, max = Number(entrada.max) || 365;
+                    let v = pastilla ? Number(pastilla.dataset.dias)
+                                     : (Number(entrada.value) || 0) + Number(paso.dataset.paso);
+                    entrada.value = Math.min(max, Math.max(min, v));
+                    marcarDias(grupo);
+                });
+                entrada.addEventListener('input', () => marcarDias(grupo));
+            });
+
+            // El teclado del teléfono: la hoja se ajusta a lo que queda visible
+            // y el campo con el foco se pone a la vista, no debajo del teclado.
+            const vv = window.visualViewport;
+            const ajustar = () => {
+                if (!vv) return;
+                fondo.style.setProperty('--vv-alto', vv.height + 'px');
+                fondo.style.setProperty('--vv-arriba', vv.offsetTop + 'px');
+            };
+            ajustar();
+            if (vv) { vv.addEventListener('resize', ajustar); vv.addEventListener('scroll', ajustar); }
+            fondo.addEventListener('focusin', (ev) => {
+                if (!tactil() || !ev.target.matches('input, textarea, select')) return;
+                setTimeout(() => ev.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 280);
+            });
+            soltarTeclado = () => { if (vv) { vv.removeEventListener('resize', ajustar); vv.removeEventListener('scroll', ajustar); } };
             document.addEventListener('keydown', alPulsar, true);
 
             abierto = { cerrar };
-            requestAnimationFrame(() => caja.querySelector('input, select')?.focus({ preventScroll: true }));
+            // En el teléfono no se abre el teclado solo: taparía la mitad del
+            // formulario antes de que se pueda leer. Se enfoca al tocar.
+            if (!tactil()) requestAnimationFrame(() => caja.querySelector('input, select, textarea')?.focus({ preventScroll: true }));
         });
     }
 
