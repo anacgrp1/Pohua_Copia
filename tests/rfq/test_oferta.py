@@ -134,6 +134,29 @@ class TestEnviar(unittest.TestCase):
         self.assertTrue(contenido["adjuntos"][0].endswith("RFQ-1.pdf"))
         self.assertIn("4 weeks", contenido["cuerpo_texto"])
 
+    def test_la_nota_del_pm_va_en_el_correo_y_en_las_notas(self):
+        self._con(self._parches(_rfq(), _costeado()))
+        import app.email.outbound as outbound
+        import app.rfq.repository as repository
+        oferta.enviar("RFQ-1", usuario="pm@x",
+                      opciones={"nota_correo": "Prices assume annual release.\nTooling included."})
+        texto = outbound.enviar.call_args.args[0]["cuerpo_texto"]
+        self.assertIn("Additional notes:", texto)
+        self.assertIn("Prices assume annual release.", texto)
+        self.assertIn("Tooling included.", texto)
+        self.assertLess(texto.index("Offer Validity"), texto.index("Additional notes:"))
+        self.assertLess(texto.index("Additional notes:"), texto.index("Do not hesitate"))
+        nota = repository.anotar_oferta.call_args.kwargs["nota"]
+        self.assertIn("Prices assume annual release.", nota)
+        self.assertEqual(repository.anotar_oferta.call_args.args[1]["nota_correo"],
+                         "Prices assume annual release.\nTooling included.")
+
+    def test_sin_nota_el_correo_de_oferta_es_el_de_siempre(self):
+        self._con(self._parches(_rfq(), _costeado()))
+        import app.email.outbound as outbound
+        oferta.enviar("RFQ-1", usuario="pm@x", opciones={"nota_correo": "   "})
+        self.assertNotIn("Additional notes", outbound.enviar.call_args.args[0]["cuerpo_texto"])
+
 
 if __name__ == "__main__":
     unittest.main()

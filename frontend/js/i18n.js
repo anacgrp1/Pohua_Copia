@@ -722,6 +722,8 @@ const I18N = (() => {
         'oferta.material':     { en: 'Material', es: 'Material', fr: 'Matière' },
         'oferta.observaciones':{ en: 'Remarks', es: 'Observaciones', fr: 'Remarques' },
         'oferta.comentarios':  { en: 'Remarks for the PDF (optional)', es: 'Observaciones para el PDF (opcional)', fr: 'Remarques pour le PDF (facultatif)' },
+        'oferta.notaCorreo':   { en: 'Notes for the email body (optional, saved in the notes)', es: 'Notas para el cuerpo del correo (opcional, se guardan en las notas)', fr: 'Notes pour le corps du courriel (facultatif, conservées dans les notes)' },
+        'oferta.notaCorreoEj': { en: 'e.g. prices assume annual release of 250,000 pcs', es: 'p. ej. precios sujetos a liberación anual de 250,000 pzas', fr: 'ex. prix basés sur une commande annuelle de 250 000 pcs' },
         'oferta.comentariosEj':{ en: 'e.g. tooling included; first article on request', es: 'p. ej. herramental incluido; primera muestra bajo pedido', fr: 'ex. outillage inclus ; première pièce sur demande' },
         'oferta.nota':         { en: 'Prices are the tiers the Plant Manager approved, priced with the Neon catalogue at this moment. The PDF is the ISC quotation format.', es: 'Los precios son los tramos que aprobó el Plant Manager, costeados con el catálogo de Neon en este momento. El PDF es el formato de cotización de ISC.', fr: 'Les prix sont les paliers approuvés par le Plant Manager, chiffrés avec le catalogue Neon à cet instant. Le PDF est le format de devis ISC.' },
         'oferta.dlg.titulo':   { en: 'Send the offer to the customer', es: 'Mandar la oferta al cliente', fr: 'Envoyer l’offre au client' },

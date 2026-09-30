@@ -206,6 +206,9 @@ const Confirmar = (() => {
             }
             const control = c.tipo === 'select'
                 ? `<select class="form-select" id="${id}">${c.opciones || ''}</select>`
+                : c.tipo === 'textarea'
+                ? `<textarea class="form-textarea" id="${id}" rows="${c.filas || 3}"
+                             placeholder="${texto(c.marcador || '')}">${texto(c.valor == null ? '' : String(c.valor))}</textarea>`
                 : `<input class="form-input" id="${id}" type="${texto(c.tipo || 'text')}"
                           value="${texto(c.valor == null ? '' : String(c.valor)).replace(/"/g, '&quot;')}"
                           ${c.requerido ? 'required' : ''}
@@ -270,7 +273,9 @@ const Confirmar = (() => {
 
             function alPulsar(ev) {
                 if (ev.key === 'Escape') { ev.preventDefault(); return cerrar(null); }
-                if (ev.key === 'Enter' && ev.target.tagName !== 'BUTTON') {
+                // En un área de texto, Enter es un salto de línea, no «Aceptar».
+                if (ev.key === 'Enter' && ev.target.tagName !== 'BUTTON'
+                        && ev.target.tagName !== 'TEXTAREA') {
                     ev.preventDefault();
                     return aceptar();
                 }

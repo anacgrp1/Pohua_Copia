@@ -299,6 +299,10 @@ def enviar(rfq_id: str, usuario: Optional[str] = None,
     params["rfq_id"] = rfq_id          # va en el asunto, para el hilo
     params["nombre_comprador"] = outbound.nombre_comprador({"remitente": params["destinatario"]})
     params["adjuntos"] = [str(archivo)]
+    # Lo que el PM escribió para el cuerpo del correo (como al rechazar):
+    # va en el correo tal cual y queda también en las notas del RFQ.
+    nota_correo = str((opciones or {}).get("nota_correo") or "").strip() or None
+    params["nota"] = nota_correo
     contenido = templates.construir_correo("oferta_cliente", params)
 
     # La oferta la manda una PERSONA desde la pantalla, con el destinatario y
@@ -355,10 +359,13 @@ def enviar(rfq_id: str, usuario: Optional[str] = None,
         "tramos": [{"cantidad": t["cantidad"], "precio_pc": t["precio_pc"]}
                    for t in prep["costeado"]["tramos"]],
         "costeo_completo": bool(prep["costeado"]["costeo"].get("completo")),
+        "nota_correo": nota_correo,
     }
     quien = f"[PM: {usuario}] " if usuario else ""
     nota = (f"{quien}OFERTA {'ENVIADA' if enviado else 'GENERADA (sin enviar)'} — "
             f"{archivo.name} → {params['destinatario']}")
+    if nota_correo:
+        nota += f"\nNota en el correo: {nota_correo}"
     repository.anotar_oferta(rfq_id, oferta, nota=nota, conexion=conexion)
 
     return {"rfq_id": rfq_id, "archivo": str(archivo), "nombre_archivo": archivo.name,

@@ -358,10 +358,16 @@ def _construir_oferta_cliente(params: dict) -> dict:
         f"Incoterm: {params['incoterm']}",
         f"Offer Validity: {params['validez_oferta']}",
     ]
-    cierre = [
+    cierre = []
+    # La nota del PM (opcional), después de las condiciones y antes de la
+    # despedida: un párrafo por línea, escapado en HTML como el resto.
+    lineas = [l.strip() for l in str(params.get("nota") or "").splitlines() if l.strip()]
+    if lineas:
+        cierre.append("Additional notes:")
+        cierre.extend(lineas)
+    cierre.append(
         "Do not hesitate to reach out if you have any questions or require any "
-        "adjustments. We look forward to working with you.",
-    ]
+        "adjustments. We look forward to working with you.")
 
     return _correo_cliente(
         params["destinatario"],

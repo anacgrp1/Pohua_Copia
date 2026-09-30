@@ -391,6 +391,7 @@ class OfertaRequest(BaseModel):
     terminos: Optional[str] = None          # "Net 30"
     validez_dias: Optional[int] = None
     comentarios: Optional[str] = None       # va en las observaciones de la línea
+    nota_correo: Optional[str] = None       # va en el cuerpo del correo y en las notas
     acabado: Optional[str] = None
     # Mandarla aunque el costeo sea orientativo (al catálogo le faltan datos).
     forzar: bool = False
