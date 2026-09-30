@@ -146,6 +146,49 @@ def datos_anteriores(rfq_id: str, conexion=None) -> dict:
     return _a_dict(ultima.get("datos_json")) or {}
 
 
+def correos_del_hilo(rfq_id: str, conexion=None, maximo: int = 6) -> list:
+    """Los correos que ya formaron este RFQ, del más antiguo al más reciente.
+
+    Cada versión del RFQ guarda el cuerpo del correo que la creó. Juntos son
+    la conversación: la petición del lunes (con su firma, el número de parte,
+    el plano), nuestra petición de datos, y lo que el comprador fue mandando.
+    Devuelve ``[{"version", "fecha", "remitente", "asunto", "cuerpo"}]``; vacío
+    si no se pudo leer (quedarse sin historia no tumba el correo nuevo).
+    """
+    sql = """
+    SELECT version, datos_json FROM rfqs
+    WHERE rfq_id = %s ORDER BY version ASC;
+    """
+    propia = conexion is None
+    try:
+        conn = conexion or duplicates.conectar_bd()
+    except Exception as error:
+        log.warning("RFQ=%s: no se pudo abrir la base para leer el hilo (%s).", rfq_id, error)
+        return []
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, (rfq_id,))
+            filas = cur.fetchall()
+    except Exception as error:
+        log.warning("RFQ=%s: no se pudo leer el hilo (%s).", rfq_id, error)
+        return []
+    finally:
+        if propia:
+            conn.close()
+    correos, vistos = [], set()
+    for version, crudo in filas:
+        d = _a_dict(crudo)
+        cuerpo = str(d.get("cuerpo") or "").strip()
+        clave = d.get("message_id") or cuerpo[:200]
+        if not cuerpo or clave in vistos:
+            continue
+        vistos.add(clave)
+        correos.append({"version": version, "fecha": d.get("fecha_correo"),
+                        "remitente": d.get("remitente"), "asunto": d.get("asunto"),
+                        "cuerpo": cuerpo})
+    return correos[-maximo:]
+
+
 def guardar_rfq(
     rfq_id: str,
     datos: dict,

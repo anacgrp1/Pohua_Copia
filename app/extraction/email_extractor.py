@@ -70,6 +70,22 @@ la firma.
 Tu tarea es extraer ÚNICAMENTE los datos comerciales que estén presentes en \
 el texto y devolverlos como un objeto JSON.
 
+EL CORREO PUEDE SER PARTE DE UNA CONVERSACIÓN. El comprador suele pedir la \
+cotización en un primer correo y completar lo que faltaba después, \
+contestando encima del anterior (el historial citado va debajo: "De:", \
+"From:", "-----Original Message-----", "> ..."), y además puede venir una \
+sección "CORREOS ANTERIORES DEL MISMO HILO". Todo eso es la MISMA petición:
+
+- Reúne los datos de toda la conversación: si el número de parte, el \
+cliente o el material están en un mensaje anterior y el nuevo sólo trae el \
+volumen, devuélvelos todos.
+- Si un dato aparece en varios mensajes con valores distintos, manda el \
+del mensaje MÁS RECIENTE (el de arriba, el del "CORREO NUEVO").
+- Un dato escrito literalmente en un mensaje anterior vale igual que uno \
+del mensaje nuevo: dale la misma confianza.
+- Ignora lo que escribimos nosotros (las respuestas de sales / ISC / CGR \
+pidiendo datos): sólo cuenta lo que dice el comprador.
+
 Campos a extraer:
 
 - customer: nombre de la empresa compradora (no el nombre de la persona).
@@ -131,6 +147,31 @@ def _crear_cliente():
 # COT-66 — llamada al modelo
 # --------------------------------------------------------------------------- #
 
+def texto_con_hilo(texto, hilo=None, limite=18000):
+    """El correo nuevo seguido de los anteriores del hilo que no venga citando.
+
+    Un correo anterior que el nuevo ya trae citado debajo no se repite: se
+    reconoce por su primer párrafo. El total se corta en ``limite`` caracteres
+    quitando los más antiguos, que son los que menos probabilidades tienen de
+    decir algo que el nuevo no haya corregido.
+    """
+    texto = texto or ""
+    if not hilo:
+        return texto
+    def _huella(t):
+        return " ".join(str(t or "").split())[:160].lower()
+    plano = " ".join(texto.split()).lower()
+    previos = [c for c in hilo if c.get("cuerpo") and _huella(c["cuerpo"]) not in plano]
+    if not previos:
+        return texto
+    bloques = []
+    for c in reversed(previos):                    # del más reciente al más antiguo
+        cab = " · ".join(str(x) for x in (c.get("fecha"), c.get("remitente"), c.get("asunto")) if x)
+        bloques.append(f"--- {cab} ---\n{c['cuerpo']}")
+    salida = texto + "\n\n===== CORREOS ANTERIORES DEL MISMO HILO =====\n\n" + "\n\n".join(bloques)
+    return salida[:limite]
+
+
 def analizar_cuerpo(texto, asunto=None, cliente=None):
     """Envía el cuerpo del correo al LLM y devuelve su respuesta cruda.
 
@@ -149,7 +190,7 @@ def analizar_cuerpo(texto, asunto=None, cliente=None):
         raise ExtraccionError("Cuerpo del correo vacío; nada que extraer.")
 
     encabezado = f"ASUNTO: {asunto}\n\n" if asunto else ""
-    contenido = f"{encabezado}CUERPO DEL CORREO:\n{texto}"
+    contenido = f"{encabezado}CORREO NUEVO:\n{texto}"
 
     cliente = cliente or _crear_cliente()
     modelo = _modelo()
@@ -275,9 +316,14 @@ def interpretar(respuesta_texto, umbral=None):
     }
 
 
-def extraer(texto, asunto=None, cliente=None, umbral=None):
-    """Pipeline completo: cuerpo del correo → campos comerciales."""
-    analisis = analizar_cuerpo(texto, asunto=asunto, cliente=cliente)
+def extraer(texto, asunto=None, cliente=None, umbral=None, hilo=None):
+    """Pipeline completo: cuerpo del correo (y su hilo) → campos comerciales.
+
+    ``hilo`` son los correos anteriores del mismo RFQ
+    (``repository.correos_del_hilo``): con ellos, lo que el comprador dijo el
+    primer día cuenta aunque la respuesta de hoy sólo traiga lo que faltaba.
+    """
+    analisis = analizar_cuerpo(texto_con_hilo(texto, hilo), asunto=asunto, cliente=cliente)
     resultado = interpretar(analisis["texto"], umbral=umbral)
     resultado["modelo"] = analisis["modelo"]
     resultado["uso"] = analisis.get("uso", {})

@@ -201,7 +201,7 @@ def preparar_datos_correo(correo, rfq_id):
     return datos
 
 
-def extraer_datos_correo(datos):
+def extraer_datos_correo(datos, hilo=None):
     """
     Etapa 1 del orden definido en COT-36: extraer los datos comerciales del
     cuerpo del correo con el modelo de lenguaje (COT-61 / COT-66 / COT-67).
@@ -222,7 +222,7 @@ def extraer_datos_correo(datos):
 
     try:
         import app.extraction.email_extractor as email_extractor
-        return email_extractor.extraer(cuerpo, asunto=datos.get("asunto"))
+        return email_extractor.extraer(cuerpo, asunto=datos.get("asunto"), hilo=hilo)
     except Exception as error:
         log.error("Fallo la extracción del cuerpo (%s); se continúa con el "
                   "dibujo como única fuente.", error)
@@ -310,6 +310,13 @@ def heredar_del_hilo(datos: dict, rfq_id: str) -> list:
     if previos.get("motivo_incompleto"):
         claves = claves + _SE_HEREDA_SI_ESPERABA
     heredados = []
+    # «customer» siempre trae algo: si nadie lo dijo, el dominio del remitente.
+    # Ese respaldo no puede tapar el nombre que el hilo ya conocía («CGR
+    # México» del primer correo frente a «cgr-international.com» de la
+    # respuesta).
+    if (datos.get("customer") and datos.get("customer") == datos.get("dominio")
+            and previos.get("customer") and previos.get("customer") != datos.get("dominio")):
+        datos["customer"] = None
     for clave in claves:
         if datos.get(clave) not in (None, "", [], False):
             continue
@@ -809,6 +816,41 @@ def responder_datos_faltantes(datos, faltantes, rfq_id):
 # Orquestación
 # --------------------------------------------------------------------------- #
 
+def _hay_geometria(resorte) -> bool:
+    return bool(resorte) and bool((resorte or {}).get("diametro_alambre_mm"))
+
+
+def _planos_del_hilo(rfq_id):
+    """Los planos que ya se guardaron con este RFQ, legibles por la visión."""
+    try:
+        import app.rfq.relectura as relectura
+        return relectura.legibles(relectura.planos_guardados(rfq_id))
+    except Exception as error:
+        log.warning("RFQ=%s: no se pudieron leer los planos guardados: %s", rfq_id, error)
+        return []
+
+
+def _releer_sin_hilo(datos, resultado):
+    """Los datos del correo leídos SOLO de él, sin la conversación.
+
+    Si resulta que el correo pide otro resorte, lo que se leyó con el hilo
+    delante mezcla los dos (el material del otro, sus cantidades): se vuelve a
+    leer este correo solo.
+    """
+    extraccion = extraer_datos_correo(datos)
+    for clave in ("part_number", "volumen", "material", "escalones_cantidad"):
+        datos[clave] = None
+    datos.update({k: v for k, v in (extraccion.get("campos") or {}).items()
+                  if v not in (None, "")})
+    en_revision = extraccion.get("en_revision") or {}
+    datos.pop("en_revision", None)
+    resultado["en_revision"] = {}
+    if en_revision:
+        datos["en_revision"] = en_revision
+        resultado["en_revision"] = en_revision
+    return datos
+
+
 def _abrir_otro_rfq(resultado, datos, correo, rfq_id, motivo):
     """El correo del hilo pide otro resorte: se le abre su propio RFQ.
 
@@ -897,7 +939,17 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
     datos = preparar_datos_correo(correo, rfq_id)
     resultado["cliente_id"] = datos.get("cliente_id")
 
-    extraccion = extraer_datos_correo(datos)
+    # Una respuesta se lee con su conversación: lo que el comprador dijo en
+    # los correos anteriores del hilo (el número de parte, la empresa en la
+    # firma) cuenta aunque hoy sólo conteste lo que faltaba.
+    hilo = []
+    if clasificacion == RESPUESTA_RFQ:
+        try:
+            import app.rfq.repository as repository
+            hilo = repository.correos_del_hilo(rfq_id)
+        except Exception as error:
+            log.warning("RFQ=%s: no se pudo leer el hilo: %s", rfq_id, error)
+    extraccion = extraer_datos_correo(datos, hilo=hilo)
     campos_correo = extraccion.get("campos") or {}
     en_revision = extraccion.get("en_revision") or {}
     datos.update({k: v for k, v in campos_correo.items() if v not in (None, "")})
@@ -923,6 +975,8 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
         if motivo:
             clasificacion, rfq_id, hilo_anterior = _abrir_otro_rfq(
                 resultado, datos, correo, rfq_id, motivo)
+            if hilo:
+                datos = _releer_sin_hilo(datos, resultado)
         else:
             heredados = heredar_del_hilo(datos, rfq_id)
             if heredados:
@@ -959,7 +1013,25 @@ def avanzar_a_parsing(correo, clasificacion, rfq_id):
     lectura_plano = {}
     es_respuesta = clasificacion == RESPUESTA_RFQ
     resortes = procesar_dibujos(correo, rfq_id, lectura_plano, guardar=not es_respuesta)
-    if es_respuesta and resortes:
+    del_hilo = False
+    if es_respuesta and not resortes and not _hay_geometria(datos.get("resorte")):
+        # La respuesta no trae plano, pero el primer correo sí, y se guardó
+        # sin leer: el RFQ se paró antes de la visión por falta de volumen.
+        # Ahora que el comprador completó, se lee ese plano, que es de donde
+        # salen el número de parte y las cotas.
+        guardados = _planos_del_hilo(rfq_id)
+        if guardados:
+            lectura_plano = {}
+            resortes = procesar_dibujos({"adjuntos": guardados,
+                                         "message_id": correo.get("message_id", "")},
+                                        rfq_id, lectura_plano, guardar=True)
+            del_hilo = bool(resortes)
+            if resortes:
+                log.info("RFQ=%s: se leyó el plano guardado del hilo (%s).", rfq_id,
+                         ", ".join(p.get("nombre", "?") for p in guardados))
+    # El plano guardado del hilo es de ESTE RFQ y ya quedó apuntado: no hay
+    # nada que comparar para saber si pide otro resorte.
+    if es_respuesta and resortes and not del_hilo:
         # Con el plano leído ya se sabe el número de parte aunque el correo
         # no lo dijera: si es otro, este correo abre su propio RFQ y lo que
         # se había heredado del hilo se suelta.
