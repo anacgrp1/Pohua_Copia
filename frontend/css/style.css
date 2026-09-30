@@ -5973,6 +5973,9 @@ button.revision-ver-fila:hover .revision-ver-usar { opacity: 1; }
     background: var(--bg-surface);
 }
 .revision-pie-nota { flex: 1; min-width: 0; font-size: 12px; line-height: 1.45; color: var(--text-muted); }
+.revision-pie-nota--bloqueo { color: var(--color-error); font-weight: 600; }
+.revision-btn--bloqueado,
+.revision-btn--bloqueado:hover { opacity: .45; cursor: not-allowed; filter: grayscale(.4); }
 
 /* Los botones, en dos grupos separados por una raya: MIRAR y DECIDIR.
    Estaban los cinco en una fila con estilos distintos cada uno —uno azul
@@ -6286,6 +6289,26 @@ button.revision-ver-fila:hover .revision-ver-usar { opacity: 1; }
     background: var(--color-warning);
 }
 .rfqd-bandera--error::before { background: var(--color-error); }
+
+/* El Spring Calc dice que la planta no puede hacerlo: el panel pasa a rojo y
+   lleva la etiqueta «Not feasible» junto al título. */
+.rfqd-panel--nofactible {
+    border-color: var(--color-error);
+    background: var(--color-error-bg, var(--color-warning-bg));
+}
+.rfqd-panel--nofactible .detail-panel-title { color: var(--color-error); }
+.rfqd-nofactible {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--color-error);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
 
 /* Por qué la tarjeta del resorte está vacía. Va antes de las filas, en tono
    apagado: es una explicación, no un dato más. */

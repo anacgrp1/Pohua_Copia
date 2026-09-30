@@ -106,6 +106,11 @@ const Revision = (() => {
         const c = d.costeo || {};
         const tramo = (d.tramos || [])[tramoActivo];
 
+        // Lo primero, lo del Spring Engineering Calculator: si la planta no
+        // puede enrollar el resorte, nada de lo que viene debajo importa.
+        if (typeof SpringCalc !== 'undefined') {
+            for (const a of SpringCalc.items(d.spring_calc)) lista.push(a);
+        }
         if (d.error_costeo) lista.push({ nivel: 'error', texto: t('rev.aviso.errorCosteo') + ' ' + d.error_costeo });
         if (!c.completo) {
             for (const m of motivosDelCosteo(c)) lista.push({ nivel: 'warn', texto: m });
@@ -568,15 +573,22 @@ const Revision = (() => {
         if (puede && r.estado !== 'Declined') {
             decidir.push(`<button type="button" class="btn revision-btn revision-btn--suave" data-accion="declinar">${esc(t('rev.declinar'))}</button>`);
         }
+        // Lo que el Spring Calc dice que no se puede fabricar no se aprueba:
+        // el botón sigue a la vista —para que se entienda que existe y por qué
+        // no se puede— pero deshabilitado. El servidor lo rechaza también.
+        const noFactible = !d.esCotizacion && typeof SpringCalc !== 'undefined'
+            && SpringCalc.bloquea(d.spring_calc);
         if (puede && abierto) {
             // La verde, la última: a la derecha en la compu y abajo en el
             // teléfono, donde llega el pulgar y donde termina la lectura.
-            decidir.push(`<button type="button" class="btn btn-success revision-btn" data-accion="aprobar">${esc(t('rev.aprobar'))}</button>`);
+            decidir.push(noFactible
+                ? `<button type="button" class="btn btn-success revision-btn revision-btn--bloqueado" data-accion="aprobar" disabled aria-disabled="true" title="${esc(t('rev.noAprobable'))}">${esc(t('rev.aprobar'))}</button>`
+                : `<button type="button" class="btn btn-success revision-btn" data-accion="aprobar">${esc(t('rev.aprobar'))}</button>`);
         }
 
         return `
             <div class="revision-pie">
-                ${puede && abierto ? '<div class="revision-pie-nota"></div>'
+                ${puede && abierto ? `<div class="revision-pie-nota${noFactible ? ' revision-pie-nota--bloqueo' : ''}">${noFactible ? esc(t('rev.noAprobable')) : ''}</div>`
                     : `<div class="revision-pie-nota">${esc(puede ? t('rev.pieCerrado') : t('rev.pieSoloLectura'))}</div>`}
                 <div class="revision-acciones">
                     <div class="revision-grupo revision-grupo--ver">${ver.join('')}</div>
@@ -696,7 +708,11 @@ const Revision = (() => {
     function bloquear(si) {
         ocupado = si;
         if (!capa) return;
-        capa.querySelectorAll('.revision-btn').forEach(b => { b.disabled = si; });
+        capa.querySelectorAll('.revision-btn').forEach(b => {
+            // El Aprobar de un resorte no fabricable no se vuelve a habilitar
+            // al terminar otra acción.
+            b.disabled = si || b.classList.contains('revision-btn--bloqueado');
+        });
         capa.classList.toggle('ocupado', si);
     }
 
@@ -764,6 +780,11 @@ const Revision = (() => {
 
     async function aprobar() {
         if (!API.puede('rfq:dictaminar')) { Toast.error(I18N.t('aviso.sinPermisoRfq')); return; }
+        if (datos && !datos.esCotizacion && typeof SpringCalc !== 'undefined'
+                && SpringCalc.bloquea(datos.spring_calc)) {
+            Toast.error(I18N.t('rev.noAprobable'));
+            return;
+        }
         const si = await Confirmar.pedir({
             titulo: I18N.t('dlg.aprobar.titulo'),
             mensaje: I18N.t('dlg.aprobar.mensaje'),

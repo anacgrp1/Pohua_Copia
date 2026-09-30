@@ -138,6 +138,10 @@ class RFQDetail(RFQSummary):
     notas: Optional[str] = None
     banderas: List[Dict[str, Any]] = Field(default_factory=list)
     resorte: Optional[Dict[str, Any]] = None
+    # El dictamen del Spring Engineering Calculator para este resorte
+    # (pricing/spring_calc.py). `factible: false` = la planta no puede
+    # enrollarlo, y entonces no se puede aprobar. None = no se pudo calcular.
+    spring_calc: Optional[Dict[str, Any]] = None
 
 
 class RFQListResponse(BaseModel):
