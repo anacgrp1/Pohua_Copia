@@ -80,6 +80,8 @@ const RFQDetailPage = {
             // va arriba y en rojo, porque es lo único que cierra la discusión.
             const sc = rfq.spring_calc;
             const noFactible = SpringCalc.bloquea(sc);
+            // Ya cotizado a mano por el PM: se avisa, pero no en rojo.
+            const conPm = !!SpringCalc.intervencion(sc);
             const deSpring = SpringCalc.items(sc).map(f => `
                 <li class="rfqd-bandera rfqd-bandera--${f.nivel === 'error' ? 'error' : 'aviso'}">
                     ${esc(f.texto)}
@@ -130,7 +132,8 @@ const RFQDetailPage = {
 
                 ${banderas ? `<div class="detail-panel rfqd-panel--aviso${noFactible ? ' rfqd-panel--nofactible' : ''}">
                     <div class="detail-panel-title">${esc(I18N.t('ficha.banderas'))}${noFactible
-                        ? ` <span class="rfqd-nofactible">${esc(I18N.t('spring.noFactibleCorto'))}</span>` : ''}</div>
+                        ? ` <span class="rfqd-nofactible">${esc(I18N.t('spring.noFactibleCorto'))}</span>`
+                        : conPm ? ` <span class="rfqd-nofactible rfqd-nofactible--pm">${esc(I18N.t('spring.cotizadoAMano'))}</span>` : ''}</div>
                     <ul class="rfqd-banderas">${banderas}</ul>
                 </div>` : ''}
 

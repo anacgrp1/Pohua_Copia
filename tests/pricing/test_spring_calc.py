@@ -136,3 +136,46 @@ def test_la_ventana_no_costea_ni_pone_maquina_si_no_se_puede_producir():
     costear.assert_not_called()
     assert v["tramos"] == [] and v["costeo"]["no_producible"] is True
     assert v["spring_calc"] is bloqueado
+
+
+# --------------------------------------------------------------------------
+# Con el PM ya encima: cotizado a mano en «Open full quote», deja de bloquear
+# --------------------------------------------------------------------------
+
+COTIZACION_PM = {"pn": {"tiers": [{"qty": 250000}]},
+                 "resultado": {"tiers": [{"sell": 3.1}]},
+                 "por": "miguel.rodea@cgr-international.com", "en": "2026-09-30", "n": 2}
+
+
+def test_con_cotizacion_manual_del_pm_ya_no_bloquea():
+    import api.routes.rfqs as rutas
+    crudo = {"factible": False, "evaluado": True, "bloqueos": [{"codigo": "sin_maquina"}]}
+    with mock.patch.object(spring_calc, "evaluar", side_effect=lambda *a: dict(crudo)):
+        sin_pm = rutas._spring_calc(INT_9084602A, "SS", {})
+        con_pm = rutas._spring_calc(INT_9084602A, "SS", {"cotizacion_pm": COTIZACION_PM})
+    assert spring_calc.bloquea(sin_pm) and "intervencion_pm" not in sin_pm
+    assert not spring_calc.bloquea(con_pm)
+    assert con_pm["factible"] is False          # lo que dijo la calculadora sigue
+    assert con_pm["intervencion_pm"]["por"] == "miguel.rodea@cgr-international.com"
+
+
+def test_una_cotizacion_pm_vacia_no_cuenta_como_intervencion():
+    import api.routes.rfqs as rutas
+    crudo = {"factible": False, "evaluado": True, "bloqueos": [{"codigo": "sin_maquina"}]}
+    vacia = {"pn": {"tiers": []}, "resultado": {"tiers": [None, None]}}
+    with mock.patch.object(spring_calc, "evaluar", return_value=dict(crudo)):
+        r = rutas._spring_calc(INT_9084602A, "SS", {"cotizacion_pm": vacia})
+    assert spring_calc.bloquea(r)
+
+
+def test_approve_pasa_si_el_pm_ya_cotizo_a_mano():
+    import api.routes.rfqs as rutas
+    sc = {"factible": False, "evaluado": True, "bloqueos": [{"codigo": "sin_maquina"}],
+          "intervencion_pm": {"por": "pm@x"}}
+    resultado = {"id": 1, "rfq_id": "INT-9084602A", "version": 1,
+                 "veredicto_final": "feasible", "estado": "Approved"}
+    with mock.patch.object(rutas, "get_rfq", return_value=mock.Mock(spring_calc=sc)), \
+         mock.patch("app.feasibility.pm_decision.aprobar", return_value=resultado) as aprobar:
+        r = rutas.approve_rfq("INT-9084602A", mock.Mock(nota=None), mock.Mock(correo="pm@x"))
+    aprobar.assert_called_once()
+    assert r.estado == "Approved"

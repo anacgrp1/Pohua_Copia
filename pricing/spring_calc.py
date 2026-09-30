@@ -230,5 +230,7 @@ def evaluar(resorte: Optional[dict], material_rfq: Optional[str] = None) -> Opti
 
 
 def bloquea(resultado: Optional[dict]) -> bool:
-    """True si el Spring Calc dice que la planta NO puede hacer este resorte."""
-    return bool(resultado) and resultado.get("factible") is False
+    """True si el Spring Calc dice que la planta NO puede hacer este resorte
+    y el PM todavía no lo ha cotizado a mano (``intervencion_pm``)."""
+    return (bool(resultado) and resultado.get("factible") is False
+            and not resultado.get("intervencion_pm"))

@@ -580,8 +580,11 @@ const Revision = (() => {
         // Lo que el Spring Calc dice que no se puede fabricar no se aprueba:
         // el botón sigue a la vista —para que se entienda que existe y por qué
         // no se puede— pero deshabilitado. El servidor lo rechaza también.
-        const noFactible = !d.esCotizacion && typeof SpringCalc !== 'undefined'
-            && SpringCalc.bloquea(d.spring_calc);
+        const hayCalc = !d.esCotizacion && typeof SpringCalc !== 'undefined';
+        const noFactible = hayCalc && SpringCalc.bloquea(d.spring_calc);
+        // Si ya lo cotizó a mano en la cotización completa, Aprobar vuelve:
+        // la factibilidad es suya, y se le recuerda al pie.
+        const notaPm = hayCalc && SpringCalc.intervencion(d.spring_calc) ? t('rev.aprobarConPm') : '';
         if (puede && abierto) {
             // La verde, la última: a la derecha en la compu y abajo en el
             // teléfono, donde llega el pulgar y donde termina la lectura.
@@ -592,7 +595,7 @@ const Revision = (() => {
 
         return `
             <div class="revision-pie">
-                ${puede && abierto ? `<div class="revision-pie-nota${noFactible ? ' revision-pie-nota--bloqueo' : ''}">${noFactible ? esc(t('rev.noAprobable')) : ''}</div>`
+                ${puede && abierto ? `<div class="revision-pie-nota${noFactible ? ' revision-pie-nota--bloqueo' : (notaPm ? ' revision-pie-nota--pm' : '')}">${noFactible ? esc(t('rev.noAprobable')) : esc(notaPm)}</div>`
                     : `<div class="revision-pie-nota">${esc(puede ? t('rev.pieCerrado') : t('rev.pieSoloLectura'))}</div>`}
                 <div class="revision-acciones">
                     <div class="revision-grupo revision-grupo--ver">${ver.join('')}</div>
