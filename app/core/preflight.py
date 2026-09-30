@@ -165,9 +165,9 @@ def _latido_escritorio(c):
         return {"sabido": True, "activo": False, "hace": None}
 
     hace = time.time() - ultimo
-    intervalo = int(getattr(c, "INTERVALO_MINUTOS", 5) or 5)
-    # La misma tolerancia que usa el worker para apartarse: intervalo + 1 min.
-    return {"sabido": True, "activo": hace < (intervalo * 60 + 60), "hace": hace}
+    import app.core.config as config
+    # La misma tolerancia que usa el worker para apartarse.
+    return {"sabido": True, "activo": hace < config.TOLERANCIA_LATIDO_S, "hace": hace}
 
 
 def _quien_lee(inf, c, latido, desde_escritorio=False):
@@ -197,7 +197,8 @@ def _quien_lee(inf, c, latido, desde_escritorio=False):
                               getattr(c, "WORKER_AUTOSTART", "false"))).lower()
     if auto in ("1", "true", "yes", "on"):
         inf.ok("Lo lee el servidor",
-               f"El worker arranca con él, cada {getattr(c, 'INTERVALO_MINUTOS', 5)} min.")
+               f"El worker arranca con él y lee de forma continua (cada "
+               f"{getattr(c, 'INTERVALO_SEGUNDOS', 20)} s) dentro del horario.")
     elif not latido["sabido"]:
         inf.ojo("Desde la consola no se sabe si la aplicación de escritorio está leyendo",
                 "El latido vive en el proceso web. Míralo en Perfil → Sistema.")

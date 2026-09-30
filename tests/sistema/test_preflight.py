@@ -26,7 +26,7 @@ def _todo_bien(extra=None):
                "IMAP_SERVER": "outlook.office365.com", "IMAP_USER": "a@b.com",
                "IMAP_PASSWORD": "x", "RECORDATORIO_HORAS": 4,
                "APP_URL": "https://pohua.example", "WORKER_SECRET_KEY": "s" * 20,
-               "INTERVALO_MINUTOS": 5}
+               "INTERVALO_SEGUNDOS": 20}
     ajustes.update(extra or {})
     parches = [mock.patch.object(config.settings, k, v) for k, v in ajustes.items()]
     parches += [

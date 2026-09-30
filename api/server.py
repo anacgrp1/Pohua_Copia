@@ -58,10 +58,14 @@ _last_heartbeat_time: float = 0.0
 
 def _worker_loop():
     """Corre el ciclo de detección periódicamente en un hilo demonio."""
-    interval = config.settings.INTERVALO_MINUTOS
+    interval = config.intervalo_segundos()
 
     status_router.set_running(True)
-    log.info("Worker en segundo plano arrancado (intervalo=%d min).", interval)
+    log.info("Worker en segundo plano arrancado (lectura continua, cada %d s).", interval)
+    # Lo mismo que «dormido»: el aviso de que lee el escritorio se dice al
+    # cambiar, no en cada vuelta (con un ciclo cada 20 s serían 180 líneas
+    # por hora).
+    apartado = False
 
     # ¿Ya se dijo que está cerrado? Para no repetirlo cada intervalo: una
     # noche entera son ~140 líneas idénticas y la primera de la mañana se
@@ -71,9 +75,12 @@ def _worker_loop():
 
     while not _worker_stop.is_set():
         time_since_heartbeat = time.time() - _last_heartbeat_time
-        # Tolerancia: intervalo + 1 minuto
-        if time_since_heartbeat < (interval * 60 + 60):
+        escritorio_lee = time_since_heartbeat < config.TOLERANCIA_LATIDO_S
+        if escritorio_lee and not apartado:
             log.info("Worker en espera: la aplicación de escritorio está leyendo los correos.")
+        apartado = escritorio_lee
+        if escritorio_lee:
+            pass
         elif not horario.abierto():
             # Fuera de horario el buzón ni se abre: los correos esperan ahí y
             # entran en el primer ciclo de la apertura siguiente.
@@ -85,7 +92,7 @@ def _worker_loop():
                 log.info("Horario de atención abierto: el worker vuelve a leer el buzón.")
                 dormido = False
             try:
-                log.info("Worker activo: ejecutando ciclo de lectura.")
+                log.debug("Worker activo: ejecutando ciclo de lectura.")
                 from app.main import ciclo_deteccion
                 resultado = ciclo_deteccion()
                 status_router.registrar_ciclo(resultado)
@@ -94,7 +101,7 @@ def _worker_loop():
                 status_router.registrar_error()
 
         # Espera el intervalo, o hasta que pidan parar
-        _worker_stop.wait(timeout=interval * 60)
+        _worker_stop.wait(timeout=interval)
 
     status_router.set_running(False)
     log.info("Worker en segundo plano detenido.")

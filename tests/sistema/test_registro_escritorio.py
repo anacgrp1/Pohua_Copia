@@ -58,7 +58,7 @@ def test_el_detalle_de_lo_que_falta_tiene_traduccion():
 
 
 @pytest.mark.parametrize("es,en", [
-    ("Lector en marcha. Un ciclo cada 5 min.", "Reader running. One cycle every 5 min."),
+    ("Lector en marcha. Lectura continua, cada 20 s.", "Reader running. Continuous reading, every 20 s."),
     ("Ciclo: 4 sin leer · 0 procesados · 0 RFQ · 0 con error.",
      "Cycle: 4 unread · 0 processed · 0 RFQ · 0 with errors."),
     ("Fuera del horario de atención (7:00–17:00 Kansas City, lunes a viernes). "

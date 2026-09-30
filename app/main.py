@@ -91,6 +91,9 @@ def _cuarentena_encendida() -> bool:
     return bool(getattr(config.settings, "CUARENTENA_ADJUNTOS", False))
 
 
+_ULTIMO_RECORDATORIO = float("-inf")
+
+
 def _reintento_pedido(correo, entry_id) -> bool:
     """Nunca lanza: si no se puede saber, se trata como duplicado."""
     try:
@@ -183,7 +186,10 @@ def ciclo_deteccion(*, forzar: bool = False) -> ResultadoCiclo:
             resultado.detalles.append(diagnostico.get("nota") or "")
         return resultado
 
-    log.info("Buscando correos no leídos (modo=%s)...", config.settings.MAIL_MODE)
+    # En DEBUG: con lectura continua, un ciclo cada pocos segundos llenaría
+    # el registro de líneas iguales. Lo que importa (un correo, un error) sí
+    # se dice más abajo.
+    log.debug("Buscando correos no leídos (modo=%s)...", config.settings.MAIL_MODE)
     try:
         provider = EmailProviderFactory.get_provider()
         # Un buzón que no se pudo abrir NO es un buzón vacío. Antes se seguía
@@ -348,17 +354,25 @@ def ciclo_deteccion(*, forzar: bool = False) -> ResultadoCiclo:
     # dictamen. Va aquí y no en un hilo aparte porque el ciclo ya corre sólo
     # en horario de atención: así el recordatorio de un caso que entró el
     # viernes por la tarde sale el lunes por la mañana, no de madrugada.
+    #
+    # Con la lectura continua el ciclo corre cada pocos segundos; esto no
+    # necesita tanto: una vez cada cinco minutos basta para un aviso que se
+    # manda tras horas de espera.
+    global _ULTIMO_RECORDATORIO
     try:
-        import app.rfq.recordatorios as recordatorios
-        recordado = recordatorios.revisar()
-        if recordado.get("avisados"):
-            resultado.detalles.append(
-                f"Recordatorio de dictamen enviado por {recordado['avisados']} "
-                f"caso(s) ({recordado['correos']} correo/s).")
+        if time.monotonic() - _ULTIMO_RECORDATORIO >= 300:
+            _ULTIMO_RECORDATORIO = time.monotonic()
+            import app.rfq.recordatorios as recordatorios
+            recordado = recordatorios.revisar()
+            if recordado.get("avisados"):
+                resultado.detalles.append(
+                    f"Recordatorio de dictamen enviado por {recordado['avisados']} "
+                    f"caso(s) ({recordado['correos']} correo/s).")
     except Exception as error:
         log.warning("No se pudo revisar lo pendiente de dictamen: %s", error)
 
-    log.info("Ciclo terminado: %d no leídos, %d nuevos procesados, %d RFQ, %d con error.",
+    (log.info if (resultado.encontrados or resultado.errores) else log.debug)(
+        "Ciclo terminado: %d no leídos, %d nuevos procesados, %d RFQ, %d con error.",
              resultado.encontrados, resultado.procesados, resultado.rfqs, resultado.errores)
     return resultado
 
@@ -375,13 +389,13 @@ def main():
     repository.inicializar_bd()
     mapper.inicializar_bd()
 
-    log.info("Cotizador iniciado. Intervalo: %d min.", config.settings.INTERVALO_MINUTOS)
+    log.info("Cotizador iniciado. Lectura continua: un ciclo cada %d s.", config.intervalo_segundos())
 
     # Primera ejecución inmediata
     ciclo_deteccion()
 
     # Ejecución periódica con schedule
-    schedule.every(config.settings.INTERVALO_MINUTOS).minutes.do(ciclo_deteccion)
+    schedule.every(config.intervalo_segundos()).seconds.do(ciclo_deteccion)
 
     # Bucle de control con retraso
     while True:

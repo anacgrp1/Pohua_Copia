@@ -104,8 +104,8 @@ FRASES: Dict[str, Tuple[str, str]] = {
 # (regex en español, plantilla en inglés, plantilla en francés). Se prueban en
 # orden y gana la primera; los grupos se reusan con \1, \2…
 PLANTILLAS: List[Tuple[str, str, str]] = [
-    (r"^Lector en marcha\. Un ciclo cada (\d+) min\.$",
-     r"Reader running. One cycle every \1 min.", r"Lecteur en marche. Un cycle toutes les \1 min."),
+    (r"^Lector en marcha\. Lectura continua, cada (\d+) s\.$",
+     r"Reader running. Continuous reading, every \1 s.", r"Lecteur en marche. Lecture continue, toutes les \1 s."),
     (r"^Ciclo: (\d+) sin leer · (\d+) procesados · (\d+) RFQ · (\d+) con error\.$",
      r"Cycle: \1 unread · \2 processed · \3 RFQ · \4 with errors.",
      r"Cycle : \1 non lus · \2 traités · \3 RFQ · \4 en erreur."),

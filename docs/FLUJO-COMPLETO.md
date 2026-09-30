@@ -8,7 +8,7 @@ bandeja de ventas.
 
 ```
 correo en el buzón (MAIL_FOLDER)
-   │  POST /api/pipeline/run  (o el worker cada INTERVALO_MINUTOS)
+   │  POST /api/pipeline/run  (o el worker, lectura continua cada INTERVALO_SEGUNDOS)
    ▼
 clasificar ──── trash ──▶ se ignora
    │ RFQ
@@ -104,7 +104,7 @@ ENVIO_MANUAL=false               ni siquiera la oferta que se manda a mano
 ANTHROPIC_API_KEY=...            sin ella no hay extracción ni lectura de plano
 APP_URL=https://<tu servicio>.onrender.com
 VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY      (python scripts/generar_vapid.py)
-WORKER_AUTOSTART=true            para que el buzón se lea solo, cada INTERVALO_MINUTOS
+WORKER_AUTOSTART=true            para que el buzón se lea solo, de forma continua (INTERVALO_SEGUNDOS)
 ```
 
 ### Quién lee el buzón: el servidor o la aplicación de escritorio

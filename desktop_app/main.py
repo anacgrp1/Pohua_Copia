@@ -297,8 +297,8 @@ class Lector(QThread):
         import app.rfq.horario as horario
         from app.main import ciclo_deteccion
 
-        minutos = int(ajuste("INTERVALO_MINUTOS", 5) or 5)
-        self.dice.emit("info", f"Lector en marcha. Un ciclo cada {minutos} min.")
+        segundos = config.intervalo_segundos()
+        self.dice.emit("info", f"Lector en marcha. Lectura continua, cada {segundos} s.")
         esperando_apertura = False
 
         while self._corriendo:
@@ -318,6 +318,11 @@ class Lector(QThread):
                     self.ciclo.emit(resultado)
                     if not resultado.en_horario:
                         self.dice.emit("aviso", "Ciclo omitido: fuera de horario.")
+                    elif not (forzado or resultado.encontrados or resultado.errores
+                              or resultado.detalles):
+                        # Lectura continua: un ciclo sin nada que contar no se
+                        # escribe (serían tres líneas iguales por minuto).
+                        pass
                     else:
                         self.dice.emit(
                             "ok" if not resultado.errores else "error",
@@ -333,7 +338,8 @@ class Lector(QThread):
                     # de aquí. Va DESPUÉS de leer y fuera del try de arriba
                     # para que un correo que no sale no se confunda con un
                     # ciclo de lectura fallido.
-                    self.despachar_salida()
+                    # Sólo lo que sale o falla, salvo al pulsar «Leer ahora».
+                    self.despachar_salida(rapido=not forzado)
                 except Exception as error:      # el ciclo nunca tumba la app
                     self.dice.emit("error", f"El ciclo falló: {error}")
 
@@ -346,7 +352,7 @@ class Lector(QThread):
             # hasta cinco minutos en llegar al cliente. Preguntar si hay algo
             # es una consulta de nada; sólo se abre Outlook si lo hay.
             cada = max(5, int(ajuste("SALIDA_SEGUNDOS", 15) or 15))
-            for segundo in range(1, minutos * 60 + 1):
+            for segundo in range(1, segundos + 1):
                 if not self._corriendo or self._forzar:
                     break
                 time.sleep(1)

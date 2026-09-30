@@ -832,7 +832,7 @@ const APP = {
             } else if (status.running) {
                 if (dot) dot.className = 'status-dot running';
                 if (lbl) {
-                    lbl.textContent = I18N.t('barra.servicioCorriendo', { n: status.interval_minutes });
+                    lbl.textContent = I18N.t('barra.servicioCorriendo');
                     lbl.title = espera.titulo || '';
                 }
                 if (btn) {

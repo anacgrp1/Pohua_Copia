@@ -68,8 +68,11 @@ class Settings:
     PG_PASSWORD: str = ""
     POSTGREST_URL: str = "http://localhost:3000"  # Solo para dev local con Docker
 
-    # --- Scheduler ---
-    INTERVALO_MINUTOS: int = 5
+    # --- Lectura del buzón ---
+    # Dentro del horario de atención el buzón se lee de forma continua: un
+    # ciclo cada pocos segundos, no cada cinco minutos (ventas, 2026-09-30).
+    # Un ciclo sin correos nuevos es una consulta a Outlook y nada más.
+    INTERVALO_SEGUNDOS: int = 20
 
     # --- Horario de atención ---------------------------------------------
     # Cuándo contesta Pohua. Fuera de esta ventana el ciclo no abre el buzón:
@@ -81,7 +84,7 @@ class Settings:
     # enseña en la ciudad del idioma de quien mira (js/reloj.js), que es otra
     # cosa: la misma hora dicha en su huso.
     HORARIO_ACTIVO: bool = True
-    HORARIO_ZONA: str = "America/Chicago"      # Kansas City, la planta
+    HORARIO_ZONA: str = "America/Chicago"      # Kansas City, la planta (7-17, ventas 2026-09-30)
     HORARIO_DESDE: int = 7                     # 7:00 (ventas, 2026-09-26)
     HORARIO_HASTA: int = 17                    # 17:00 (a las 17:00 en punto, cerrado)
     HORARIO_DIAS: str = "1-5"                  # lunes a viernes (1=lunes, 7=domingo)
@@ -619,3 +622,17 @@ except ConfigurationError as err:
     logger.critical(f"ERROR DE CONFIGURACIÓN CRÍTICO: {err}")
     # En entornos de script o aplicación en ejecución, lanzar el error detiene el inicio incorrecto
     raise err
+
+
+def intervalo_segundos() -> int:
+    """Cada cuánto se lee el buzón, en segundos (mínimo 5)."""
+    try:
+        return max(5, int(getattr(settings, "INTERVALO_SEGUNDOS", 20) or 20))
+    except (TypeError, ValueError):
+        return 20
+
+
+# La aplicación de escritorio manda su latido cada minuto. El servidor se
+# aparta mientras el último tenga menos de esto: dos latidos y medio, para que
+# un latido que llega tarde no ponga a los dos a leer el mismo buzón.
+TOLERANCIA_LATIDO_S = 150

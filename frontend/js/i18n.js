@@ -142,7 +142,7 @@ const I18N = (() => {
         'boton.detener':      { en: 'Stop Service', es: 'Detener servicio', fr: 'Arrêter le service' },
 
         'barra.servicioParado':    { en: 'Service stopped', es: 'Servicio detenido', fr: 'Service arrêté' },
-        'barra.servicioCorriendo': { en: 'Service running (every {n}m)', es: 'Servicio en marcha (cada {n} min)', fr: 'Service actif (toutes les {n} min)' },
+        'barra.servicioCorriendo': { en: 'Service running (continuous)', es: 'Servicio en marcha (lectura continua)', fr: 'Service actif (lecture continue)' },
         'barra.enEspera':          { en: 'Waiting — opens {cuando}', es: 'En espera — abre {cuando}', fr: 'En attente — ouvre {cuando}' },
 
         // --- Horario de atención ------------------------------------------
@@ -417,7 +417,7 @@ const I18N = (() => {
         'asis.est.espera':     { en: 'Waiting — outside business hours', es: 'En espera — fuera del horario', fr: 'En attente — hors horaires' },
         'asis.est.buzon':      { en: 'Mailbox', es: 'Buzón', fr: 'Boîte' },
         'asis.est.intervalo':  { en: 'Every', es: 'Cada', fr: 'Toutes les' },
-        'asis.est.minutos':    { en: '{n} min', es: '{n} min', fr: '{n} min' },
+        'asis.est.minutos':    { en: '{n} s (continuous)', es: '{n} s (continua)', fr: '{n} s (continue)' },
         'asis.est.ultimo':     { en: 'Last round', es: 'Última vuelta', fr: 'Dernier tour' },
         'asis.est.siguiente':  { en: 'Next round', es: 'Próxima vuelta', fr: 'Prochain tour' },
         'asis.est.procesados': { en: 'Emails read', es: 'Correos leídos', fr: 'Courriels lus' },

@@ -387,7 +387,7 @@ const Assistant = (() => {
             const filas = [
                 [I18N.t('asis.est.servicio'), marcha],
                 [I18N.t('asis.est.buzon'), `${(e.mode || '').toUpperCase()}${e.folder ? ' · ' + e.folder : ''}`],
-                [I18N.t('asis.est.intervalo'), I18N.t('asis.est.minutos', { n: e.interval_minutes })],
+                [I18N.t('asis.est.intervalo'), I18N.t('asis.est.minutos', { n: e.interval_seconds })],
                 [I18N.t('asis.est.ultimo'), reloj(e.last_cycle)],
                 [I18N.t('asis.est.siguiente'), reloj(e.next_cycle)],
                 [I18N.t('asis.est.procesados'), e.total_processed],

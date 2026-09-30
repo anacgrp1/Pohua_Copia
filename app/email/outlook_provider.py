@@ -429,7 +429,8 @@ class OutlookEmailProvider(BaseEmailProvider):
             logger.error("%d correo(s) no se pudieron leer. %s",
                          bloqueados, AVISO_GUARDIAN)
 
-        logger.info("Se encontraron %d correo(s) sin leer.", len(correos))
+        (logger.info if correos else logger.debug)(
+            "Se encontraron %d correo(s) sin leer.", len(correos))
         return correos
 
     def _propiedad(self, item, esquema: str) -> str:

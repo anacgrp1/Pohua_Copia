@@ -20,7 +20,7 @@ class TestConfigSystem(unittest.TestCase):
             "AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_CLIENT_SECRET",
             "GRAPH_CLIENT_ID", "GRAPH_TENANT_ID", "GRAPH_CLIENT_SECRET", "GRAPH_USER",
             "PG_HOST", "PG_PORT", "PG_DATABASE", "PG_USER", "PG_PASSWORD",
-            "INTERVALO_MINUTOS", "ANTHROPIC_API_KEY", "VISION_MODEL",
+            "INTERVALO_SEGUNDOS", "ANTHROPIC_API_KEY", "VISION_MODEL",
             "VISION_MAX_TOKENS", "VISION_TEMPERATURE"
         ]
         for key in self.keys_to_clear:

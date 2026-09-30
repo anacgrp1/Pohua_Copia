@@ -85,7 +85,7 @@ class ServiceStatus(BaseModel):
     folder: str = ""
     last_cycle: Optional[str] = None
     next_cycle: Optional[str] = None
-    interval_minutes: int = 5
+    interval_seconds: int = 20      # lectura continua dentro del horario
     total_processed: int = 0
     total_rfqs: int = 0
     total_errors: int = 0
