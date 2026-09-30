@@ -851,8 +851,8 @@ const Revision = (() => {
      *
      *  - Pide el motivo, y no sigue sin él. Se guarda en las notas del RFQ,
      *    que es donde lo va a buscar dentro de seis meses quien se pregunte
-     *    por qué se rechazó esta pieza. El cliente NO lo lee: el correo de
-     *    declinación es el machote de la empresa y no incluye la nota.
+     *    por qué se rechazó esta pieza. Y el cliente también lo lee: va en el
+     *    cuerpo del correo de declinación, como nota, debajo del machote.
      *  - Avisa de que el correo sale y de que no se puede deshacer, con el
      *    diálogo en rojo.
      *  - Dice si el correo SALIÓ DE VERDAD. El servidor lo devuelve en

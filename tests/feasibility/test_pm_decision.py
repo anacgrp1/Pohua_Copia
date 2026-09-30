@@ -94,6 +94,20 @@ class TestDeclinar(BaseDecision):
                          "RFQ 4500 - resorte de compresión")
         self.assertEqual(params["nombre_comprador"], "Roberto Perez")
 
+    def test_la_nota_del_pm_va_al_correo_y_a_las_notas(self):
+        pm_decision.declinar("RFQ-1", nota="Alambre de 15.875 mm: fuera de rango.",
+                             usuario="pm@cgr.com")
+        # Al correo, tal cual; a las notas, con quién la escribió.
+        self.assertEqual(self.construir.call_args[0][1]["nota"],
+                         "Alambre de 15.875 mm: fuera de rango.")
+        guardada = self.guardar.call_args.kwargs["nota"]
+        self.assertIn("Alambre de 15.875 mm: fuera de rango.", guardada)
+        self.assertIn("pm@cgr.com", guardada)
+
+    def test_sin_nota_el_correo_no_lleva_nota(self):
+        pm_decision.declinar("RFQ-1")
+        self.assertIsNone(self.construir.call_args[0][1]["nota"])
+
     def test_destinatario_explicito_manda(self):
         pm_decision.declinar("RFQ-1", destinatario="compras@neogen.com")
         self.assertEqual(self.construir.call_args[0][1]["destinatario"],

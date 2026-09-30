@@ -568,8 +568,8 @@ const I18N = (() => {
         'dlg.aprobar.si':      { en: 'Approve', es: 'Aprobar', fr: 'Approuver' },
 
         'dlg.rechazar.titulo':  { en: 'Decline RFQ', es: 'Rechazar RFQ', fr: 'Refuser la RFQ' },
-        'dlg.rechazar.mensaje': { en: 'A decline email will be sent to the customer. This cannot be undone.', es: 'Se enviará un correo de rechazo al cliente. No se puede deshacer.', fr: 'Un courriel de refus sera envoyé au client. Action irréversible.' },
-        'dlg.rechazar.motivo':  { en: 'Reason for declining (saved in the notes)', es: 'Motivo del rechazo (se guarda en las notas)', fr: 'Motif du refus (conservé dans les notes)' },
+        'dlg.rechazar.mensaje': { en: 'A decline email will be sent to the customer, with your note in it. This cannot be undone.', es: 'Se enviará un correo de rechazo al cliente, con tu nota incluida. No se puede deshacer.', fr: 'Un courriel de refus sera envoyé au client, avec votre note. Action irréversible.' },
+        'dlg.rechazar.motivo':  { en: 'Note for the customer (goes in the email body and is saved in the notes)', es: 'Nota para el cliente (va en el cuerpo del correo y se guarda en las notas)', fr: 'Note pour le client (dans le corps du courriel et conservée dans les notes)' },
         'dlg.rechazar.ejemplo': { en: 'e.g. wire diameter outside our range', es: 'p. ej. diámetro de alambre fuera de nuestro rango', fr: 'ex. diamètre de fil hors de notre plage' },
         'dlg.devolver.titulo':  { en: 'Send back for review', es: 'Devolver para revisión', fr: 'Renvoyer pour révision' },
         'dlg.devolver.mensaje': { en: 'Nothing is sent to the customer. The RFQ goes back to the review queue with your note.', es: 'No se manda nada al cliente. La RFQ vuelve a la cola de revisión con tu nota.', fr: 'Rien n’est envoyé au client. La RFQ retourne dans la file de révision avec votre note.' },

@@ -122,8 +122,11 @@ def resolver(rfq_id, veredicto, version=None, nota=None, usuario=None,
 
     correo_enviado = False
     if veredicto == NO_FACTIBLE and enviar_correo:
+        # La nota va también en el cuerpo del correo, sin el "[PM: fulano]"
+        # que lleva en las notas: eso es la constancia interna.
         correo_enviado = notificar_declinacion(
-            rfq_id, registro.get("datos") or {}, destinatario=destinatario)
+            rfq_id, registro.get("datos") or {}, destinatario=destinatario,
+            nota=nota)
 
     return {
         "id": registro["id"],
@@ -153,7 +156,7 @@ def deshacer_aprobacion(rfq_id, nota, usuario=None, conexion=None) -> dict:
             "correo_enviado": False}
 
 
-def notificar_declinacion(rfq_id, datos, destinatario=None) -> bool:
+def notificar_declinacion(rfq_id, datos, destinatario=None, nota=None) -> bool:
     """
     Construye (COT-59) y despacha (COT-57/58) el correo de declinación.
 
@@ -185,6 +188,8 @@ def notificar_declinacion(rfq_id, datos, destinatario=None) -> bool:
             "rfq_id": rfq_id,
             "nombre_comprador": outbound.nombre_comprador(
                 {"remitente": destino}),
+            # Lo que escribió el PM al rechazar: va en el cuerpo, como nota.
+            "nota": nota,
         })
     except Exception as error:
         log.error("RFQ=%s: no se pudo construir la declinación: %s", rfq_id, error)

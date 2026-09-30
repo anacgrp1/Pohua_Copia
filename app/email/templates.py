@@ -294,7 +294,13 @@ def _construir_datos_faltantes(params: dict) -> dict:
 # --------------------------------------------------------------------------- #
 
 def _construir_declinar_rfq(params: dict) -> dict:
-    """Declina la solicitud. Machote: NOT FEASIBLE - DECLINE EMAIL."""
+    """Declina la solicitud. Machote: NOT FEASIBLE - DECLINE EMAIL.
+
+    ``nota`` (opcional) es lo que el PM escribe al rechazar. Va en el cuerpo,
+    tal cual y después del párrafo del machote que dice que no se puede
+    cotizar: es el porqué concreto de esta pieza. También se guarda en las
+    notas del RFQ (``pm_decision.resolver``); aquí sólo se pone en el correo.
+    """
     _exigir_params(params, ("destinatario", "asunto_original", "nombre_comprador"))
 
     intro = [
@@ -303,9 +309,16 @@ def _construir_declinar_rfq(params: dict) -> dict:
         "After reviewing your technical specifications, we regret to inform you "
         "that we are unable to quote this project, as the required parameters "
         "fall outside our current manufacturing capabilities.",
-        "Thank you for considering us, and please let us know if we can assist "
-        "with future projects.",
     ]
+    # Un párrafo por línea que escribió el PM, sin las vacías: en HTML cada
+    # una va escapada en su <p>, así que un "<" en la nota se ve como "<".
+    lineas = [l.strip() for l in str(params.get("nota") or "").splitlines() if l.strip()]
+    if lineas:
+        intro.append("Additional notes:")
+        intro.extend(lineas)
+    intro.append(
+        "Thank you for considering us, and please let us know if we can assist "
+        "with future projects.")
 
     return _correo_cliente(
         params["destinatario"],
