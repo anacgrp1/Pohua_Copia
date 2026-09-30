@@ -239,8 +239,20 @@ def ciclo_deteccion(*, forzar: bool = False) -> ResultadoCiclo:
                         f"Reintento: {correo.get('asunto', '?')}")
                     duplicates.olvidar_correo(correo["message_id"], otras_claves=[entry_id])
                 else:
-                    log.debug("Duplicado ignorado: %s", correo["message_id"])
-                    resultado.detalles.append(f"Duplicado omitido: {correo['message_id']}")
+                    # Qué correo y por qué: con sólo el Message-ID no había
+                    # forma de saber cuál se estaba saltando ni si de verdad
+                    # tenía RFQ.
+                    try:
+                        previo = duplicates.rfq_del_correo(correo["message_id"], otras_claves=[entry_id])
+                    except Exception:
+                        previo = None
+                    motivo = (f"ya es el RFQ {previo['rfq_id']} v{previo['version']}" if previo
+                              else "ya se había atendido (sin RFQ); márcalo como no leído "
+                                   "para volver a leerlo")
+                    log.info("Duplicado omitido: %s — %s (%s)",
+                             correo.get("asunto", "?"), motivo, correo["message_id"])
+                    resultado.detalles.append(
+                        f"Duplicado omitido: {correo.get('asunto', '?')} — {motivo}")
                     # Ya se atendió: se marca como leído. Si no, se volvía a
                     # leer en cada ciclo, para siempre —y en Outlook, cada
                     # lectura es otra ventana de permiso—.

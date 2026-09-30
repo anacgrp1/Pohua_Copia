@@ -96,6 +96,13 @@ _denegado_en: Optional[float] = None   # del módulo: vale para todas las instan
 # «access email address information» cada cinco minutos.
 _YA_VISTOS: set = set()
 
+# Los que ESTE proceso llegó a dejar como leídos. Si uno de ellos vuelve a
+# aparecer sin leer es que una persona lo volvió a marcar a propósito para
+# que se lea otra vez: no se salta. Antes se saltaba en silencio hasta
+# reiniciar el lector, y el ciclo decía «0 sin leer» con el correo en negritas
+# delante («2- Test - editing», 2026-09-30).
+_MARCADOS: set = set()
+
 
 def comando_de_instalacion() -> str:
     """El pip de ESTE Python, con las dos listas de dependencias.
@@ -400,8 +407,15 @@ class OutlookEmailProvider(BaseEmailProvider):
                         continue
                     entrada = str(getattr(item, "EntryID", "") or "")
                     if entrada and entrada in _YA_VISTOS:
-                        self._dejar_leido(item)
-                        continue
+                        if entrada in _MARCADOS:
+                            # Lo dejamos leído y alguien lo volvió a marcar.
+                            _YA_VISTOS.discard(entrada)
+                            _MARCADOS.discard(entrada)
+                            logger.info("Correo vuelto a marcar como no leído: "
+                                        "se vuelve a mirar.")
+                        else:
+                            self._dejar_leido(item)
+                            continue
                     correos.append(self._a_mensaje(item))
                 except AccesoBloqueado:
                     # El permiso se pide una vez y se explica una vez: un correo
@@ -655,7 +669,10 @@ class OutlookEmailProvider(BaseEmailProvider):
             except Exception as error:
                 logger.error("No se pudo marcar como leído (%s): %s", message_id, error)
                 return False
-        return self._dejar_leido(item)
+        hecho = self._dejar_leido(item)
+        if hecho and message_id:
+            _MARCADOS.add(message_id)
+        return hecho
 
     @staticmethod
     def _dejar_leido(item) -> bool:

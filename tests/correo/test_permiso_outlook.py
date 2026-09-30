@@ -257,3 +257,51 @@ class TestElCuerpoSeLeeSinDespertarAlGuardian:
         import desktop_app.main as escritorio
         assert not hasattr(escritorio.Lector, "_pedir_permiso_a_outlook")
 
+
+
+class TestVueltoAMarcarComoNoLeido:
+    """«2- Test - editing» (2026-09-30): se saltó una vez como repetido y, al
+    volver a marcarlo como no leído, el lector lo seguía saltando en silencio
+    («0 sin leer») hasta reiniciarse."""
+
+    class _Coleccion:
+        def __init__(self, correo):
+            self.correo = correo
+            self.Count = 1
+
+        def Item(self, i):
+            return self.correo
+
+        def Sort(self, *a):
+            pass
+
+        def Restrict(self, _):
+            return self
+
+    def _proveedor(self, correo):
+        p = op.OutlookEmailProvider()
+        p._carpeta = type("Carpeta", (), {"Items": self._Coleccion(correo)})()
+        return p
+
+    def test_si_lo_dejamos_leido_y_vuelve_sin_leer_se_lee_otra_vez(self, monkeypatch):
+        correo = type("Correo", (), {"Class": 43, "EntryID": "ENTRY-2", "UnRead": True,
+                                     "Save": lambda self: None})()
+        p = self._proveedor(correo)
+        monkeypatch.setattr(op, "_YA_VISTOS", {"ENTRY-2"})
+        monkeypatch.setattr(op, "_MARCADOS", {"ENTRY-2"})
+        monkeypatch.setattr(p, "_a_mensaje", lambda item: "MENSAJE")
+        assert p.fetch_unread_messages() == ["MENSAJE"]
+        assert "ENTRY-2" not in op._YA_VISTOS
+
+    def test_marcar_como_leido_lo_apunta(self, monkeypatch):
+        class Item:
+            UnRead = True
+            def Save(self):
+                pass
+        p = op.OutlookEmailProvider()
+        p._mapi = type("Mapi", (), {"GetItemFromID": lambda self, e, t=None: Item()})()
+        p._carpeta = type("Carpeta", (), {"StoreID": "S"})()
+        monkeypatch.setattr(op, "_YA_VISTOS", set())
+        monkeypatch.setattr(op, "_MARCADOS", set())
+        assert p.mark_as_read("ENTRY-3") is True
+        assert "ENTRY-3" in op._MARCADOS

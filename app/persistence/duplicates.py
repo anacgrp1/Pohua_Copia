@@ -147,6 +147,19 @@ def se_puede_reintentar(message_id, otras_claves=(), minutos=5) -> bool:
             return (cur.fetchone()[0] or 0) > 0
 
 
+def rfq_del_correo(message_id, otras_claves=()):
+    """El RFQ (y su versión) que ya se dio de alta con este correo, o None."""
+    claves = [c for c in [message_id, *(otras_claves or ())] if c]
+    if not claves:
+        return None
+    with conexion_bd() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT rfq_id, version FROM rfqs WHERE message_id = ANY(%(c)s) "
+                        "ORDER BY id DESC LIMIT 1;", {"c": claves})
+            fila = cur.fetchone()
+            return {"rfq_id": fila[0], "version": fila[1]} if fila else None
+
+
 def hay_rfq_del_correo(message_id) -> bool:
     """¿Se llegó a dar de alta un RFQ con este correo?"""
     if not message_id:
