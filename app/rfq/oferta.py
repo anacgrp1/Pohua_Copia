@@ -170,6 +170,14 @@ def preparar(rfq_id: str, opciones: Optional[dict] = None, conexion=None) -> Dic
         motivos_i18n.append(entrada)
 
     faltantes_i18n = costeado["costeo"].get("faltantes_i18n") or []
+    # Una oferta por RFQ: si ya salió —o está en la bandeja de salida
+    # esperando a Outlook— no se manda otra. Dos correos con la misma oferta
+    # (un doble clic, o volver a la pantalla y pulsar otra vez) confunden al
+    # cliente y dejan dos constancias distintas.
+    previa = (datos or {}).get("oferta") if isinstance((datos or {}).get("oferta"), dict) else None
+    if previa and (previa.get("enviada") or previa.get("encolada")):
+        _motivo("OFERTA_YA_ENVIADA", destinatario=previa.get("destinatario") or "",
+                fecha=str(previa.get("fecha") or "")[:16].replace("T", " "))
     if rfq["estado"] != repository.ESTADO_APROBADO:
         _motivo("OFERTA_NO_APROBADA", estado=rfq["estado"])
     if not tramos:
@@ -289,7 +297,7 @@ def enviar(rfq_id: str, usuario: Optional[str] = None,
     # cambie —o se diga en otro idioma— dejarían de detectarse y la oferta
     # saldría sin tramos o sin destinatario.
     _BLOQUEAN = ("OFERTA_NO_APROBADA", "OFERTA_SIN_TRAMOS", "OFERTA_SIN_DESTINO",
-                 "OFERTA_SIN_PRECIO")
+                 "OFERTA_SIN_PRECIO", "OFERTA_YA_ENVIADA")
     bloqueos = [m.get("texto") or m.get("codigo")
                 for m in prep.get("motivos_i18n") or []
                 if m.get("codigo") in _BLOQUEAN]

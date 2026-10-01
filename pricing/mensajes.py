@@ -80,6 +80,8 @@ TEXTOS = {
         "Hay un tramo sin precio: la contribución ({contrib} %) más overheads, HQ y "
         "comisión pasan del 95 % del precio. Baja la contribución a menos de {maximo} % "
         "o pon un precio a mano en la calculadora.",
+    "OFERTA_YA_ENVIADA":
+        "La oferta ya se envió a {destinatario} ({fecha}): sólo se manda una vez.",
     "OFERTA_SIN_DESTINO":
         "No hay a quién mandarla: el RFQ no trae remitente.",
     "SIN_MATERIAL_NI_DIAMETRO":

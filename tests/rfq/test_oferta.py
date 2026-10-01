@@ -157,6 +157,30 @@ class TestEnviar(unittest.TestCase):
         oferta.enviar("RFQ-1", usuario="pm@x", opciones={"nota_correo": "   "})
         self.assertNotIn("Additional notes", outbound.enviar.call_args.args[0]["cuerpo_texto"])
 
+    def test_la_oferta_sale_una_sola_vez(self):
+        for previa in ({"enviada": True, "destinatario": "buyer@cliente.com",
+                        "fecha": "2026-09-30T21:50:00+00:00"},
+                       {"enviada": False, "encolada": True, "destinatario": "buyer@cliente.com"}):
+            with self.subTest(previa=previa):
+                rfq = _rfq()
+                rfq["datos"] = dict(rfq["datos"], oferta=previa)
+                parches = self._con(self._parches(rfq, _costeado()))
+                import app.email.outbound as outbound
+                outbound.enviar.reset_mock()
+                with self.assertRaises(ValueError) as ctx:
+                    oferta.enviar("RFQ-1", usuario="pm@x", forzar=True)
+                self.assertIn("una vez", str(ctx.exception))
+                outbound.enviar.assert_not_called()
+                for p in parches:
+                    p.stop()
+
+    def test_generada_sin_enviar_si_se_puede_mandar(self):
+        rfq = _rfq()
+        rfq["datos"] = dict(rfq["datos"], oferta={"enviada": False, "encolada": False})
+        self._con(self._parches(rfq, _costeado()) + [
+            mock.patch("app.email.outbound.diagnostico_envio", return_value={"puede": True})])
+        self.assertTrue(oferta.enviar("RFQ-1", usuario="pm@x")["enviado"])
+
 
 if __name__ == "__main__":
     unittest.main()

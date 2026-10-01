@@ -1015,7 +1015,11 @@ def ver_oferta(
         # que es cuando se veía —con el PDF ya generado y un error que
         # nombraba las variables de SMTP aunque el modo fuera otro—.
         "envio_posible": _outbound().diagnostico_envio(),
-        "puede_enviar": usuario.puede("rfq:dictaminar"),
+        # Una sola vez: con la oferta ya enviada (o en cola) no hay botón.
+        "puede_enviar": usuario.puede("rfq:dictaminar") and not (
+            isinstance((rfq["datos"] or {}).get("oferta"), dict)
+            and ((rfq["datos"] or {}).get("oferta").get("enviada")
+                 or (rfq["datos"] or {}).get("oferta").get("encolada"))),
     }
 
 

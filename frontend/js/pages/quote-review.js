@@ -181,7 +181,14 @@ const QuoteReviewPage = {
 
     async enviar() {
         if (!API.puede('rfq:dictaminar')) { Toast.error(I18N.t('aviso.sinPermisoRfq')); return; }
+        // Una sola vez: ni un doble clic ni volver a pulsar mientras sale.
+        if (this.enviando) return;
         const o = this.oferta || {};
+        const previa = o.oferta_anterior;
+        if (previa && (previa.enviada || previa.encolada)) {
+            Toast.info(I18N.t('oferta.yaEnviada') + ' ' + (previa.destinatario || ''));
+            return;
+        }
         const c = o.correo || {};
         const valores = await Confirmar.montarFormulario({
             titulo: I18N.t('oferta.dlg.titulo'),
@@ -225,14 +232,27 @@ const QuoteReviewPage = {
             cuerpo.forzar = true;
         }
 
+        this.enviando = true;
+        const botones = document.querySelectorAll('#page-quote-review .rfqd-acciones .btn');
+        botones.forEach((b) => { b.disabled = true; });
         try {
             const r = await API.rfqEnviarOferta(this.currentRfqId, cuerpo);
             Toast.success(I18N.t(r.enviado ? 'oferta.aviso.enviada'
                                  : (r.encolada ? 'oferta.enCola' : 'oferta.aviso.generada')));
+            // Salió (o está en la bandeja de Outlook): este RFQ ya terminó, se
+            // vuelve al Resumen. Si sólo se generó (envío apagado) se queda
+            // aquí, porque todavía hay que mandarla.
+            if (r.enviado || r.encolada) {
+                APP.navigate(API.puede('resumen:ver') ? 'resumen' : APP.inicio());
+                return;
+            }
             this.loadData(document.getElementById('page-quote-review'));
         } catch (err) {
             if (err.sesionExpirada) return;
             Toast.error(err.message);
+            botones.forEach((b) => { b.disabled = false; });
+        } finally {
+            this.enviando = false;
         }
     },
 };
