@@ -599,6 +599,8 @@ def _ventana(detalle, usuario, resorte=None, lectura=None, recalculo=None):
         # Si hizo falta leer el plano al abrir esta ventana, qué salió.
         # `None` = no hizo falta, el resorte ya estaba completo.
         "lectura_plano": lectura,
+        # Los planos guardados, para el botón «Plano del cliente» de la ventana.
+        "planos": _planos_listados(rfq_id),
         "en_revision": datos.get("en_revision") or {},
         "campos_faltantes": datos.get("campos_faltantes") or [],
         "costeo": costeado["costeo"],

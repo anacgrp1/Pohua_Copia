@@ -574,6 +574,10 @@ const Revision = (() => {
         // que DECIDE. En una sola fila, "ver el PDF" quedaba pegado a
         // "Aprobar", que es un clic entre enterarse y cerrar la cotización.
         const ver = [
+            // El dibujo tal cual lo mandó el cliente, desde Pohua (no depende
+            // de la calculadora). Sólo si el RFQ trae plano guardado.
+            ...((d.planos || []).length && typeof PlanoCliente !== 'undefined'
+                ? [PlanoCliente.boton(r.rfq_id, 'btn revision-btn revision-btn--fantasma', d.planos.length)] : []),
             `<button type="button" class="btn revision-btn revision-btn--fantasma" data-accion="pdf">${icono}${esc(t('rev.previewPdf'))}</button>`,
             `<button type="button" class="btn revision-btn revision-btn--fantasma" data-accion="cotizar">${esc(t(r.estado === 'Approved' ? 'rev.abrirOferta' : 'rev.abrirCompleta'))}</button>`,
         ];

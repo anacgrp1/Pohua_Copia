@@ -152,6 +152,9 @@ const RFQDetailPage = {
                     <div class="detail-panel">
                         <div class="detail-panel-title">${esc(I18N.t('ficha.fisica'))}</div>
                         ${this.porQueVacio(r, d.lectura_plano)}
+                        ${(d.lectura_plano && d.lectura_plano.estado && d.lectura_plano.estado !== 'sin_adjunto'
+                            && typeof PlanoCliente !== 'undefined')
+                            ? `<p class="rfqd-plano">${PlanoCliente.boton(rfq.rfq_id, 'btn btn-secondary btn-sm')}</p>` : ''}
                         ${this.botonReleer(r, puedeDictaminar)}
                         ${fila(I18N.t('ficha.tipo'), I18N.tipoResorte(r.tipo_resorte), ' detail-value--tipo')}
                         ${fila(I18N.t('ficha.alambre'), mm(r.diametro_alambre_mm))}

@@ -290,6 +290,10 @@ const API = {
     recalcularRfq(rfqId, cuerpo) {
         return this.request('POST', `/api/rfqs/${rfqId}/recalcular`, cuerpo || {});
     },
+    /** Qué planos llegaron con el RFQ (nombre y tamaño). */
+    rfqPlanos(rfqId) {
+        return this.request('GET', `/api/rfqs/${rfqId}/planos`);
+    },
     /** Un plano de los que llegaron en el correo, tal cual, como Blob. */
     async descargarPlano(rfqId, nombre) {
         const token = this.getToken();

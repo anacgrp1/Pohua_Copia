@@ -110,6 +110,7 @@ const QuotingPage = {
                     <!-- La vuelta a la ventana de revisión. Sólo sale cuando se
                          entró desde un RFQ: en una cotización a mano no hay
                          ningún sitio al que volver. -->
+                    <span id="quotingPlano" class="quoting-plano" hidden></span>
                     <button type="button" class="btn btn-secondary quoting-volver"
                             id="quotingVolver" hidden></button>
                 </div>
@@ -175,6 +176,7 @@ const QuotingPage = {
             // Volver a mandarlo sólo por la versión escogida no necesita los
             // planos: la hoja ya tiene este RFQ y lo único que cambia es el PN.
             datos.ficheros = soloVersion ? [] : await this.bajarPlanos(id, datos.planos);
+            this.pintarPlano(id, datos.planos);
             this.rfqPendiente = datos;
             this.entregarRfq();
             this.vigilarVersion();
@@ -221,10 +223,24 @@ const QuotingPage = {
      * La ventana se vuelve a pedir al servidor al abrirse, así que si el
      * costeo cambió mientras tanto, lo que se ve al volver es lo nuevo.
      */
+    /** El botón del plano del cliente: sólo con un RFQ abierto que traiga plano. */
+    pintarPlano(id, planos) {
+        const sitio = this.contenedor && this.contenedor.querySelector('#quotingPlano');
+        if (!sitio) return;
+        const n = (planos || []).length;
+        if (!id || !n || typeof PlanoCliente === 'undefined') { sitio.hidden = true; sitio.innerHTML = ''; return; }
+        sitio.innerHTML = PlanoCliente.boton(id, 'btn btn-secondary', n);
+        sitio.hidden = false;
+    },
+
     pintarVolver() {
         const b = this.contenedor && this.contenedor.querySelector('#quotingVolver');
         if (!b) return;
-        if (!this.rfqAbierto) { b.hidden = true; return; }
+        if (!this.rfqAbierto) {
+            b.hidden = true;
+            this.pintarPlano(null, []);
+            return;
+        }
         b.textContent = I18N.t('quoting.volverRevision', { rfq: this.rfqAbierto });
         b.hidden = false;
         this.pintarConsulta();

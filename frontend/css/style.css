@@ -6922,3 +6922,58 @@ button.revision-ver-fila:hover .revision-ver-usar { opacity: 1; }
     from { transform: translateY(40px); opacity: 0; }
     to   { transform: translateY(0); opacity: 1; }
 }
+
+
+/* ==========================================================================
+   El plano del cliente, visto desde Pohua (components/plano-cliente.js)
+   ========================================================================== */
+.plano-fondo {
+    position: fixed; inset: 0; z-index: 9400;
+    display: flex; align-items: center; justify-content: center;
+    padding: var(--sp-4);
+    background: rgba(4, 8, 18, 0.7);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+}
+.plano-caja {
+    width: min(1280px, 100%); height: min(920px, 100%);
+    display: flex; flex-direction: column; gap: var(--sp-3);
+    padding: var(--sp-4);
+    background: var(--bg-card); border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+}
+.plano-barra { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.plano-titulo { display: flex; flex-direction: column; min-width: 0; }
+.plano-titulo b { font-size: 15px; color: var(--text-primary); }
+.plano-rfq { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plano-esp { flex: 1; }
+.plano-barra .btn { text-decoration: none; }
+.plano-fichas { display: flex; flex-wrap: wrap; gap: 6px; }
+.plano-ficha {
+    padding: 5px 12px; border-radius: 999px; font: 600 12px/1.4 var(--font-sans); cursor: pointer;
+    border: 1px solid var(--border-default); background: var(--bg-surface); color: var(--text-secondary);
+}
+.plano-ficha.on { background: var(--cgr-primary-light); border-color: var(--cgr-primary-light); color: #fff; }
+.plano-cuerpo {
+    flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+    border-radius: var(--radius-md); border: 1px solid var(--border-default); background: #fff;
+}
+.plano-pdf { flex: 1; width: 100%; border: 0; background: #fff; }
+.plano-nota { margin: 0; padding: 4px 10px; font-size: 11.5px; color: #64748b; background: #f1f5f9; }
+.plano-img { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; background: #fff; }
+.plano-img img { max-width: 100%; max-height: 100%; cursor: zoom-in; }
+.plano-img.grande { align-items: flex-start; justify-content: flex-start; }
+.plano-img.grande img { max-width: none; max-height: none; cursor: zoom-out; }
+.plano-cargando, .plano-vacio {
+    margin: auto; display: flex; align-items: center; gap: 10px;
+    color: var(--text-muted); font-size: 14px; text-align: center; max-width: 520px;
+}
+.plano-boton svg { margin-right: 6px; vertical-align: -2px; }
+.quoting-plano { display: inline-flex; }
+.rfqd-plano { margin: 0 0 var(--sp-3); }
+@media (max-width: 768px) {
+    .plano-fondo { padding: 0; align-items: flex-end; }
+    .plano-caja { height: 100%; border-radius: 18px 18px 0 0; padding: var(--sp-3); }
+    .plano-titulo b { font-size: 14px; }
+    .quoting-plano { flex: 1 1 100%; }
+    .quoting-plano .btn { width: 100%; min-height: 44px; justify-content: center; }
+}

@@ -640,9 +640,15 @@
         zona.addEventListener('click', function () { inp.click(); });
         fichas.addEventListener('click', function (ev) {
             var b = ev.target.closest('[data-narch-ver]');
-            if (!b || !window.ISCPlano) return;
+            if (!b) return;
             ev.preventDefault();
-            window.ISCPlano.ver(Number(b.dataset.narchVer) || 0);
+            ev.stopPropagation();
+            var i = Number(b.dataset.narchVer) || 0;
+            if (window.ISCPlano) { window.ISCPlano.ver(i); return; }
+            // Sin el visor (una capa que no cargó): el fichero en otra
+            // pestaña, que el navegador sabe enseñar. Nunca un clic muerto.
+            var f = inp.files && inp.files[i];
+            if (f) window.open(URL.createObjectURL(f), '_blank', 'noopener');
         });
         zona.addEventListener('keydown', function (ev) {
             if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); inp.click(); }
