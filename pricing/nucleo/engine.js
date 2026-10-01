@@ -190,7 +190,14 @@ const ENGINE=(function(){
   let overridden=false,belowFloor=false;
   const ov=parseNum(tier.override);
   if(ov!==null){ sell=ov; overridden=true; belowFloor=ov<floorPc-1e-9; }
-  return { sellCalc, floorPc, sell, overridden, belowFloor,
+  /* Sin precio: contribucion + comision + HQ + overheads se comen el 95 % o
+     mas del precio, asi que no hay precio que los cubra. Antes se caia en
+     silencio al suelo de ISC -- $1,000 el trabajo repartidos entre las
+     piezas, muy por debajo del coste -- y la tabla salia entera en negativo
+     como si fuera un precio de verdad. `sell` se queda en el suelo para no
+     romper a quien lo lea como numero, pero `sinPrecio` dice que no vale. */
+  const sinPrecio=sellCalc===null&&!overridden;
+  return { sellCalc, floorPc, sell, overridden, belowFloor, sinPrecio,
    floorBinds:!overridden&&sellCalc!==null&&floorPc>sellCalc,
    belowContrib:overridden&&sellCalc!==null&&ov<sellCalc-1e-9 };
  }
@@ -227,6 +234,9 @@ const ENGINE=(function(){
   const contribT=(tCon===null?B.contrib:tCon/100);
   const oh=(tOhP===null?tierOh(pn,tier,P):tOhP)/100;
   const divisor=1-contribT-B.comm-B.hq-oh;
+  /* La contribucion mas alta que admite el tramo con sus overheads, HQ y
+     comision: por encima el divisor baja del 5 % y no hay precio. */
+  const contribMax=Math.max(0,(0.95-B.comm-B.hq-oh)*100);
 
   const batch=parseNum(tier.prodBatch);
   const setups=(batch&&batch>0)?Math.max(1,Math.ceil(Q/batch)):1;
@@ -250,6 +260,7 @@ const ENGINE=(function(){
    subRaw:sc.subRaw,subMk:sc.subMk,subTransp:sc.subTransp,pack,tool,
    run:pr.run,setup:pr.setup,vc,
    ratios:pr.ratios,nOps:tierOpsCount(tier),oh:oh*100,contribPct:contribT*100,divisor,
+   hqPct:B.hq*100,commPct:B.comm*100,contribMax,sinPrecio:v.sinPrecio,
    sellCalc:v.sellCalc,floorPc:v.floorPc,floorJob:fJob,sell:v.sell,
    overridden:v.overridden,belowFloor:v.belowFloor,belowContrib:v.belowContrib,
    floorBinds:v.floorBinds,
@@ -267,7 +278,7 @@ const ENGINE=(function(){
   tiers.forEach((t,i)=>{ if(!t) return;
    const tn='Tier '+(i+1);
    if(t.scrapWarn) flags.push({t:'warn',m:tn+': an operation carries scrap > 5% — customers do not pay for lack of productivity.'});
-   if(t.divisor<=0.05) flags.push({t:'err',m:tn+': gross-up divisor ≤ 5% — no cost coverage left.'});
+   if(t.divisor<=0.05) flags.push({t:'err',m:tn+': contribution '+f1(t.contribPct)+'% + overheads '+f1(t.oh)+'% + HQ '+f1(t.hqPct)+'% + commission '+f1(t.commPct)+'% = '+f1(t.contribPct+t.oh+t.hqPct+t.commPct)+'% of the price (95% max): '+(t.overridden?'only the price override is used.':'NO PRICE. Lower the contribution to under '+f1(t.contribMax)+'% or set a price override.')});
    if(t.oh<ctx.params.ohMin||t.oh>ctx.params.ohMax) flags.push({t:'warn',m:tn+': overheads '+f1(t.oh)+'% outside CGR range '+ctx.params.ohMin+'–'+ctx.params.ohMax+'%.'});
    if(t.moqBind){ const altQty=Math.floor(t.lbBuy/Math.max(B.wt,1e-9));
     flags.push({t:'info',m:tn+': MOQ '+f0(t.lbBuy)+' lb > needed '+f1(t.lbNeeded)+' lb — quoted at MOQ cost. Option: offer ~'+f0(altQty)+' pcs.'}); }

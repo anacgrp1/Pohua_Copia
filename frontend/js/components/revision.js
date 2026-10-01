@@ -119,6 +119,10 @@ const Revision = (() => {
             }
         }
         for (const m of (c.banderas_motor || [])) if (m) lista.push({ nivel: 'warn', texto: m });
+        if (tramo && tramo.sin_precio) {
+            lista.push({ nivel: 'error', texto: t('rev.aviso.sinPrecio', {
+                contrib: num(tramo.contrib_pct, 1), maximo: num(tramo.contrib_max, 1) }) });
+        }
         if (tramo && tramo.avisos) {
             if (tramo.avisos.bajo_piso) lista.push({ nivel: 'warn', texto: t('rev.aviso.bajoPiso') });
             if (tramo.avisos.bajo_contribucion) lista.push({ nivel: 'warn', texto: t('rev.aviso.bajoContribucion') });
@@ -396,11 +400,14 @@ const Revision = (() => {
                             <span class="qty-corta">${qtyCorta(tr.cantidad)}</span>
                         </div>
                         <div class="revision-tramo-cuerpo">
-                            <span class="revision-tramo-precio">
+                            ${tr.sin_precio
+                                ? `<span class="revision-tramo-precio revision-tramo-precio--sin">${esc(t('rev.sinPrecio'))}</span>
+                                   <span class="revision-tramo-margen">—</span>`
+                                : `<span class="revision-tramo-precio">
                                 <span class="precio-largo">${dinero(tr.precio_pc)}/${esc(t('rev.pza'))}</span>
                                 <span class="precio-corto">${dinero(tr.precio_pc)}</span>
                             </span>
-                            <span class="revision-tramo-margen">${pct(tr.resultado_pct)}</span>
+                            <span class="revision-tramo-margen">${pct(tr.resultado_pct)}</span>`}
                         </div>
                     </button>`).join('')}
             </div>`;

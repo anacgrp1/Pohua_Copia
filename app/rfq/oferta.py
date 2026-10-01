@@ -176,6 +176,11 @@ def preparar(rfq_id: str, opciones: Optional[dict] = None, conexion=None) -> Dic
         _motivo("OFERTA_SIN_TRAMOS", faltantes=faltantes_i18n,
                 detalle="; ".join(costeado["costeo"].get("faltantes")
                                   or [costeado.get("error_costeo") or "sin motivo"]))
+    elif any(t.get("sin_precio") for t in tramos):
+        # Bloquea pase lo que pase: no hay precio que mandar.
+        peor = next(t for t in tramos if t.get("sin_precio"))
+        _motivo("OFERTA_SIN_PRECIO", contrib=peor.get("contrib_pct"),
+                maximo=peor.get("contrib_max"))
     elif not costeado["costeo"].get("completo"):
         _motivo("OFERTA_ORIENTATIVA", faltantes=faltantes_i18n,
                 detalle="; ".join(costeado["costeo"].get("faltantes")
@@ -283,7 +288,8 @@ def enviar(rfq_id: str, usuario: Optional[str] = None,
     # empezaba la frase ("El RFQ está en…"), así que el día que esa frase
     # cambie —o se diga en otro idioma— dejarían de detectarse y la oferta
     # saldría sin tramos o sin destinatario.
-    _BLOQUEAN = ("OFERTA_NO_APROBADA", "OFERTA_SIN_TRAMOS", "OFERTA_SIN_DESTINO")
+    _BLOQUEAN = ("OFERTA_NO_APROBADA", "OFERTA_SIN_TRAMOS", "OFERTA_SIN_DESTINO",
+                 "OFERTA_SIN_PRECIO")
     bloqueos = [m.get("texto") or m.get("codigo")
                 for m in prep.get("motivos_i18n") or []
                 if m.get("codigo") in _BLOQUEAN]

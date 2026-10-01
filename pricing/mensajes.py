@@ -76,6 +76,10 @@ TEXTOS = {
         "No hay tramos costeados: {detalle}",
     "OFERTA_ORIENTATIVA":
         "El costeo es orientativo: {detalle}",
+    "OFERTA_SIN_PRECIO":
+        "Hay un tramo sin precio: la contribución ({contrib} %) más overheads, HQ y "
+        "comisión pasan del 95 % del precio. Baja la contribución a menos de {maximo} % "
+        "o pon un precio a mano en la calculadora.",
     "OFERTA_SIN_DESTINO":
         "No hay a quién mandarla: el RFQ no trae remitente.",
     "SIN_MATERIAL_NI_DIAMETRO":

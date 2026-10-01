@@ -71,9 +71,17 @@ def tramo_para_ventana(t: dict, objetivo_pct, entrada: Optional[dict] = None) ->
                      "pph": num(op.get("pph")),
                      "setup_h": num(op.get("setupH")),
                      "costo_h": num(op.get("machH"))})
+    # Sin precio: contribución + overheads + HQ + comisión se comen ≥ 95 % del
+    # precio y el motor no pudo calcular ninguno. `sell` trae el suelo de ISC
+    # —muy por debajo del coste— y la ventana NO lo puede enseñar como precio.
+    sin_precio = bool(t.get("sinPrecio"))
     return {
         "cantidad": num(t.get("qty")),
-        "precio_pc": sell,
+        "precio_pc": None if sin_precio else sell,
+        "sin_precio": sin_precio,
+        "contrib_max": num(t.get("contribMax")),
+        "contrib_pct": num(t.get("contribPct")),
+        "oh_pct": num(t.get("oh")),
         "resultado_pct": resultado_pct,
         "objetivo_pct": objetivo_pct,
         # Verde cuando llega al objetivo; ámbar si queda por debajo o hay
