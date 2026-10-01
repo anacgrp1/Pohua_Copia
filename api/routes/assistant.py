@@ -23,6 +23,7 @@ import io
 import json
 import logging
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -359,42 +360,113 @@ def _texto(mapa, valor):
     return mapa.get(str(valor), valor) if valor not in (None, "") else ""
 
 
-def _datos_de_la_fila(fila, datos: dict) -> dict:
-    """Lo que falta en las columnas de `rfqs`, buscado en `datos_json`.
+def _num(valor):
+    try:
+        if valor in (None, ""):
+            return None
+        return float(str(valor).replace(",", "").replace("$", "").strip())
+    except (TypeError, ValueError):
+        return None
 
-    La hoja salía con «Proyecto», «Veredicto del sistema» y «Score» en blanco:
-    esas columnas sólo se llenan en unos caminos del flujo (el veredicto se
-    escribe al dictaminar; el proyecto casi nunca lo dice el comprador),
-    mientras que `datos_json` sí lo tiene siempre —la factibilidad completa,
-    el asunto, los escalones—. Se toma de la columna y, si está vacía, de ahí.
+
+def _entero_bonito(x) -> str:
+    n = _num(x)
+    return f"{int(n):,}" if n is not None else ""
+
+
+def _primer_tramo(tiers):
+    return next((t for t in (tiers or []) if isinstance(t, dict) and _num(t.get("qty"))), None)
+
+
+def _datos_de_la_fila(fila, datos: dict, resorte: Optional[dict] = None,
+                      costear=None) -> dict:
+    """Cada columna, de la primera fuente que la tenga.
+
+    La hoja salía con huecos —precio, veredicto, score, «Falta»— porque cada
+    dato sólo se escribe en unos caminos del flujo. Aquí se busca en todos,
+    en este orden:
+
+    * la columna de `rfqs`;
+    * `datos_json`: lo que se extrajo del correo y del plano;
+    * la cotización del PM (`cotizacion_pm`): lo que corrigió en la
+      calculadora —número de parte, material, cantidades, precio—;
+    * la oferta que salió (`oferta`): el precio que vio el cliente;
+    * y, si no hay nada de eso, se calcula: el veredicto con el motor de
+      factibilidad sobre el resorte guardado, y el precio con el costeo del
+      sistema (``costear``), que es el mismo de la ventana de revisión.
     """
+    resorte = resorte or (datos.get("resorte") if isinstance(datos.get("resorte"), dict) else {}) or {}
     factibilidad = datos.get("factibilidad") if isinstance(datos.get("factibilidad"), dict) else {}
-    escalones = datos.get("escalones_cantidad")
-    if isinstance(escalones, list):
-        cantidades = " / ".join(f"{int(float(str(x).replace(',', ''))):,}" for x in escalones
-                                if str(x).replace(",", "").replace(".", "", 1).isdigit())
-    else:
-        cantidades = str(escalones or "")
     pm = datos.get("cotizacion_pm") if isinstance(datos.get("cotizacion_pm"), dict) else None
-    precio = None
-    if pm:
-        tiers = ((pm.get("resultado") or {}).get("tiers") or [])
-        primero = next((t for t in tiers if isinstance(t, dict)), None)
+    pn_pm = (pm or {}).get("pn") if isinstance((pm or {}).get("pn"), dict) else {}
+    oferta = datos.get("oferta") if isinstance(datos.get("oferta"), dict) else None
+
+    # --- Veredicto y score: si no se guardaron, se dictamina ahora.
+    veredicto = fila[8] or factibilidad.get("veredicto")
+    score = fila[10] if fila[10] is not None else factibilidad.get("score")
+    if (not veredicto or score is None) and resorte:
         try:
-            venta = primero.get("sell") if primero else None
-            precio = float(venta) if venta is not None else None
-        except (TypeError, ValueError):
-            precio = None
+            import app.feasibility.engine as motor
+            nuevo = motor.evaluar_factibilidad(dict(resorte, material=resorte.get("material")
+                                                    or datos.get("material") or fila[6]))
+            veredicto = veredicto or nuevo.get("veredicto")
+            score = score if score is not None else nuevo.get("score")
+        except Exception as error:
+            log.debug("Export: no se pudo dictaminar %s: %s", fila[0], error)
+
+    # --- Cantidades: los escalones del correo, o los tramos del PM, o el volumen.
+    escalones = datos.get("escalones_cantidad")
+    if isinstance(escalones, list) and escalones:
+        cantidades = " / ".join(x for x in (_entero_bonito(e) for e in escalones) if x)
+    elif escalones:
+        cantidades = str(escalones)
+    else:
+        cantidades = " / ".join(x for x in (_entero_bonito(t.get("qty")) for t in
+                                             (pn_pm.get("tiers") or []) if isinstance(t, dict)) if x)
+    volumen = fila[5] or datos.get("volumen")
+    if not volumen:
+        primero_pm = _primer_tramo(pn_pm.get("tiers"))
+        volumen = (primero_pm or {}).get("qty") or resorte.get("cantidad")
+    if not cantidades and volumen:
+        cantidades = _entero_bonito(volumen)
+
+    # --- Precio del tramo 1 y de dónde sale.
+    precio, origen = None, ""
+    if pm:
+        primero = _primer_tramo((pm.get("resultado") or {}).get("tiers"))
+        precio = _num((primero or {}).get("sell"))
+        origen = f"PM v{pm.get('n')} · {str(pm.get('por') or '').split('@')[0]}"
+    if precio is None and oferta and oferta.get("tramos"):
+        precio = _num(oferta["tramos"][0].get("precio_pc"))
+        origen = origen or ("Oferta enviada" if oferta.get("enviada") else "Oferta")
+    if precio is None and costear is not None:
+        precio = costear()
+        if precio is not None:
+            origen = origen or "Sistema"
+    if not origen:
+        origen = "Sistema" if (factibilidad or veredicto) else ""
+
+    # --- Qué falta: si espera al cliente, lo que se le pidió; si no, «—».
     faltan = datos.get("campos_faltantes") or []
+    if fila[7] == "Incomplete":
+        falta = ", ".join(_FALTANTES.get(f, f) for f in faltan) or "datos del cliente"
+    else:
+        falta = "—"
+
     return {
         "proyecto": fila[3] or datos.get("nombre_proyecto") or datos.get("asunto") or "",
+        "part_number": (fila[4] or datos.get("part_number") or pn_pm.get("pn")
+                        or resorte.get("num_parte") or ""),
+        "volumen": volumen,
         "cantidades": cantidades,
-        "veredicto": fila[8] or factibilidad.get("veredicto"),
-        "score": fila[10] if fila[10] is not None else factibilidad.get("score"),
+        "material": (fila[6] or datos.get("material") or (pm or {}).get("material_nombre")
+                     or ((pn_pm.get("material") or {}).get("code") if isinstance(pn_pm.get("material"), dict) else None)
+                     or resorte.get("material") or ""),
+        "veredicto": veredicto,
+        "score": score,
         "precio": precio,
-        "cotizado_por": (f"PM v{pm.get('n')} · {str(pm.get('por') or '').split('@')[0]}"
-                         if pm else ("Sistema" if factibilidad else "")),
-        "falta": ", ".join(_FALTANTES.get(f, f) for f in faltan) if fila[7] == "Incomplete" else "",
+        "cotizado_por": origen,
+        "falta": falta,
     }
 
 
@@ -453,6 +525,21 @@ def exportar(
                 LIMIT %s;
             """, (limit,))
             filas = cur.fetchall()
+            # El resorte de cada RFQ (lo que se leyó del plano), para dictaminar
+            # y costear las filas a las que les falta.
+            resortes = {}
+            try:
+                cur.execute("""
+                    SELECT DISTINCT ON (rfq_id) rfq_id, datos_json
+                    FROM resortes_cotizacion
+                    WHERE rfq_id = ANY(%s)
+                    ORDER BY rfq_id, id DESC;
+                """, ([f[0] for f in filas],))
+                for rid, crudo in cur.fetchall():
+                    if crudo:
+                        resortes[rid] = crudo if isinstance(crudo, dict) else json.loads(crudo)
+            except Exception as error:
+                log.debug("Export: sin resortes: %s", error)
 
     libro = Workbook()
     hoja = libro.active
@@ -468,6 +555,25 @@ def exportar(
         hoja.column_dimensions[get_column_letter(i)].width = ancho
     hoja.row_dimensions[1].height = 22
 
+    # El precio del sistema se calcula sólo donde no hay otro, y con un tope de
+    # tiempo: cada costeo es una vuelta al motor, y una hoja de mil filas no
+    # puede tardar minutos. Lo que no alcance sale en blanco, como antes.
+    import time as _time
+    limite = _time.monotonic() + 25
+
+    def _costeador(rfq_id, datos, resorte, material):
+        def costear():
+            if _time.monotonic() > limite or not resorte:
+                return None
+            try:
+                import app.rfq.costeo as costeo_rfq
+                tramos = costeo_rfq.costear(rfq_id, datos, resorte, material).get("tramos") or []
+                return next((t["precio_pc"] for t in tramos if t.get("precio_pc") is not None), None)
+            except Exception as error:
+                log.debug("Export: no se pudo costear %s: %s", rfq_id, error)
+                return None
+        return costear
+
     for fila in filas:
         cliente, nuevo = _cliente_de(fila)
         datos = fila[13] or {}
@@ -476,10 +582,12 @@ def exportar(
                 datos = json.loads(datos)
             except ValueError:
                 datos = {}
-        extra = _datos_de_la_fila(fila, datos)
-        volumen = fila[5]
+        resorte = resortes.get(fila[0]) or (datos.get("resorte") if isinstance(datos.get("resorte"), dict) else {})
+        extra = _datos_de_la_fila(fila, datos, resorte,
+                                  _costeador(fila[0], datos, resorte, fila[6]))
+        volumen = extra["volumen"]
         try:
-            volumen = int(str(volumen).replace(",", "")) if volumen else None
+            volumen = int(float(str(volumen).replace(",", ""))) if volumen else None
         except (TypeError, ValueError):
             pass                                        # se queda como texto
         fecha = fila[11]
@@ -496,9 +604,9 @@ def exportar(
         hoja.append([
             fila[0], fila[1], cliente, nuevo,
             f"{contacto} <{remitente}>" if contacto and remitente else (remitente or contacto),
-            extra["proyecto"], fila[4] or datos.get("part_number") or "", volumen,
+            extra["proyecto"], extra["part_number"], volumen,
             extra["cantidades"],
-            fila[6] or datos.get("material") or "",
+            extra["material"],
             _texto(_ESTADOS, fila[7]),
             _texto(_VEREDICTOS, extra["veredicto"]),
             score,
