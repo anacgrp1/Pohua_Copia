@@ -341,7 +341,7 @@ _COLUMNAS = (
     ("Score", 8),
     ("Dictamen final", 18),
     ("Precio tramo 1 (US$/pza)", 14),
-    ("Cotizado por", 22),
+    ("Cotizado por", 28),
     ("Falta", 30),
     ("Entró", 18),
 )
@@ -617,17 +617,72 @@ def exportar(
         ])
 
     ultima = max(hoja.max_row, 1)
+    franja = PatternFill("solid", fgColor="EEF3FA")      # filas alternas
+    arriba = Alignment(vertical="top")
+    envolver = Alignment(vertical="top", wrap_text=True)
+    # Las columnas de texto largo se parten en renglones en vez de cortarse:
+    # en el teléfono la columna es estrecha y el texto cortado no se lee.
+    largas = {3, 5, 6, 9, 10, 16, 17}
     for f in range(2, ultima + 1):
+        for c in range(1, len(_COLUMNAS) + 1):
+            celda = hoja.cell(row=f, column=c)
+            celda.alignment = envolver if c in largas else arriba
+            if f % 2 == 0:
+                celda.fill = franja
         hoja.cell(row=f, column=8).number_format = "#,##0"          # volumen
         hoja.cell(row=f, column=13).number_format = "0"             # score
         hoja.cell(row=f, column=15).number_format = "$#,##0.0000"   # precio
         # Sin microsegundos: la fecha se lee, no se audita.
         hoja.cell(row=f, column=18).number_format = "yyyy-mm-dd hh:mm"
+    for c in range(1, len(_COLUMNAS) + 1):
+        hoja.cell(row=1, column=c).alignment = Alignment(vertical="center", wrap_text=True)
+    hoja.row_dimensions[1].height = 32
 
-    # La cabecera se queda a la vista al bajar, y con filtros para ordenar por
-    # cliente o por estado sin tener que preparar nada.
-    hoja.freeze_panes = "A2"
+    # La cabecera y el número de RFQ se quedan a la vista al bajar y al
+    # deslizar de lado —en el teléfono es lo que dice de qué fila se trata—,
+    # y con filtros para ordenar por cliente o por estado.
+    hoja.freeze_panes = "B2"
     hoja.auto_filter.ref = f"A1:{get_column_letter(len(_COLUMNAS))}{ultima}"
+    # Impresa o en PDF: horizontal y a lo ancho de una hoja.
+    hoja.page_setup.orientation = "landscape"
+    hoja.page_setup.fitToWidth = 1
+    hoja.page_setup.fitToHeight = 0
+    hoja.sheet_properties.pageSetUpPr.fitToPage = True
+    hoja.print_title_rows = "1:1"
+
+    # --- «Teléfono»: lo esencial en seis columnas, para leerla de un vistazo
+    # en la pantalla chica sin deslizar de lado. Es la misma información que
+    # la hoja completa, la primera en abrirse.
+    corta = libro.create_sheet("Teléfono", 0)
+    columnas_cortas = (("RFQ", 15), ("Cliente · N° de parte", 30), ("Estado", 14),
+                       ("Precio T1", 12), ("Entró", 14))
+    for i, (titulo, ancho) in enumerate(columnas_cortas, start=1):
+        celda = corta.cell(row=1, column=i, value=titulo)
+        celda.font = cabecera
+        celda.fill = fondo
+        celda.alignment = Alignment(vertical="center", wrap_text=True)
+        corta.column_dimensions[get_column_letter(i)].width = ancho
+    corta.row_dimensions[1].height = 30
+    for f in range(2, ultima + 1):
+        valor = lambda c: hoja.cell(row=f, column=c).value       # noqa: E731
+        cliente_pn = " · ".join(str(x) for x in (valor(3), valor(7)) if x)
+        estado = valor(11) or ""
+        if valor(14) and valor(14) not in ("Pendiente", estado):
+            estado = f"{estado}\n{valor(14)}" if estado else valor(14)
+        fila_corta = [valor(1), cliente_pn, estado, valor(15), valor(18)]
+        for c, v in enumerate(fila_corta, start=1):
+            celda = corta.cell(row=f, column=c, value=v)
+            celda.alignment = Alignment(vertical="top", wrap_text=c in (2, 3))
+            if f % 2 == 0:
+                celda.fill = franja
+        corta.cell(row=f, column=4).number_format = "$#,##0.00##"
+        corta.cell(row=f, column=5).number_format = "dd-mmm hh:mm"
+    corta.freeze_panes = "B2"
+    corta.auto_filter.ref = f"A1:E{ultima}"
+    corta.page_setup.fitToWidth = 1
+    corta.page_setup.fitToHeight = 0
+    corta.sheet_properties.pageSetUpPr.fitToPage = True
+    libro.active = 0
 
     buffer = io.BytesIO()
     libro.save(buffer)

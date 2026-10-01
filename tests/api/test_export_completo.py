@@ -102,7 +102,13 @@ def test_la_hoja_sale_entera(asis):
             trozos.append(t)
         return b"".join(trozos)
     contenido = asyncio.run(leer())
-    hoja = load_workbook(io.BytesIO(contenido)).active
+    libro = load_workbook(io.BytesIO(contenido))
+    assert libro.sheetnames == ["Teléfono", "RFQs"]
+    corta = libro["Teléfono"]
+    assert [c.value for c in corta[1]] == ["RFQ", "Cliente · N° de parte", "Estado", "Precio T1", "Entró"]
+    assert corta["A2"].value == "INT-1" and "1-633064" in corta["B2"].value and corta["D2"].value == 0.61
+    hoja = libro["RFQs"]
+    assert hoja.freeze_panes == "B2"
     cab = [c.value for c in hoja[1]]
     valores = dict(zip(cab, [c.value for c in hoja[2]]))
     assert valores["N° de parte"] == "1-633064"
