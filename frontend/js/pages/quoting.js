@@ -176,6 +176,8 @@ const QuotingPage = {
             // Volver a mandarlo sólo por la versión escogida no necesita los
             // planos: la hoja ya tiene este RFQ y lo único que cambia es el PN.
             datos.ficheros = soloVersion ? [] : await this.bajarPlanos(id, datos.planos);
+            // Ya están en el navegador: el visor los usa sin volver a bajarlos.
+            if (typeof PlanoCliente !== 'undefined') PlanoCliente.registrar(id, datos.ficheros);
             this.pintarPlano(id, datos.planos);
             this.rfqPendiente = datos;
             this.entregarRfq();
@@ -229,7 +231,7 @@ const QuotingPage = {
         if (!sitio) return;
         const n = (planos || []).length;
         if (!id || !n || typeof PlanoCliente === 'undefined') { sitio.hidden = true; sitio.innerHTML = ''; return; }
-        sitio.innerHTML = PlanoCliente.boton(id, 'btn btn-secondary', n);
+        sitio.innerHTML = PlanoCliente.boton(id, 'btn btn-secondary', n, planos);
         sitio.hidden = false;
     },
 

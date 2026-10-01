@@ -34,7 +34,7 @@
 // para lo que está el service worker.
 // ============================================================================
 
-const VERSION = 'v137';
+const VERSION = 'v138';
 const CACHE = `cgr-quoter-${VERSION}`;
 
 // Lo mínimo para que la aplicación abra sin conexión. No hace falta listarlo

@@ -1120,8 +1120,11 @@ def plano_del_rfq(
     guardado = almacen.leer_de_base(rfq_id, limpio)
     if guardado:
         contenido, tipo = guardado
+        # El navegador se lo queda una hora: un plano guardado no cambia, y
+        # cada viaje a Neon por él es lo que hacía lento abrir el visor.
         return Response(content=contenido, media_type=tipo,
-                        headers={"Content-Disposition": f'inline; filename="{limpio}"'})
+                        headers={"Content-Disposition": f'inline; filename="{limpio}"',
+                                 "Cache-Control": "private, max-age=3600"})
 
     carpeta = _carpeta_de_planos(rfq_id)
     ruta = (carpeta / limpio) if carpeta else None
