@@ -620,9 +620,9 @@
 
         function pintar() {
             var lista = inp.files ? [].slice.call(inp.files) : [];
-            // «Ver» abre el dibujo tal cual (js/isc-plano.js), sólo en la
-            // casilla de planos de la cotización.
-            var conVer = inp.id === 'q-drawing';
+            // Sin «Ver» en la ficha: el plano se mira con el botón «Plano del
+            // cliente» de Pohua (components/plano-cliente.js).
+            var conVer = false;
             fichas.innerHTML = lista.map(function (f, i) {
                 return '<span class="narch-ficha" title="' + esc(f.name) + '">' +
                     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
