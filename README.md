@@ -132,7 +132,7 @@ Cotizador/
 │                                      (MAIL_MODE=outlook) + latido al servidor
 │
 ├── 📁 sql/                          ← Esquema de la BD
-│   ├── schema.sql                   ← DDL principal (6 tablas + roles PostgREST)
+│   ├── schema.sql                   ← DDL principal (tablas base)
 │   └── 📁 migrations/
 │       ├── 004_prep_base.sql        ← Veredictos + score
 │       ├── 005_extension_costeo.sql ← Tablas de costeo, usuarios y roles
@@ -159,8 +159,7 @@ Cotizador/
 ├── ver_local.bat                    ← Vista local en Windows (doble clic)
 ├── Dockerfile                       ← Imagen de despliegue (Python + Node + cliente de PostgreSQL)
 ├── package.json                     ← Declara Node para el motor de costeo
-├── docker-compose.yml               ← PostgreSQL 16 (dev local); PostgREST opcional
-├── postgrest.conf                   ← Config PostgREST (solo dev local)
+├── docker-compose.yml               ← PostgreSQL 16 (dev local, para probar migraciones)
 ├── Makefile                         ← Atajos: db-up, test, lint, usuario
 ├── requirements.txt                 ← Dependencias del servidor
 ├── requirements-desktop.txt         ← Sólo para la app de escritorio (PySide6 + pywin32)

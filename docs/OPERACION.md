@@ -631,7 +631,35 @@ pantalla que no se está usando.
 
 **Logs.** Van a consola y a `app.log` (rotativo, 5 MB × 5 archivos). La
 configuración la aplica cada punto de entrada — `app/main.py`, `api/server.py`,
-`desktop_app/main.py` —, ya no un import con efectos secundarios.
+`desktop_app/main.py` —, ya no un import con efectos secundarios. Desde
+2026-10 los correos salen tachados (`r***@neogen.com`) y el asunto del correo
+no se escribe: el registro es texto plano en cada computadora y los datos del
+cliente están en Neon.
+
+**Dónde vive cada dato (2026-10).** Todo lo del cliente está en Neon y en
+ningún disco:
+
+| Dato | Tabla | Antes, además |
+|---|---|---|
+| Plano que llega por correo | `rfq_planos` | carpeta `planos/` de quien leyó el buzón, o Azure Blob |
+| Plano subido al lector, páginas y recortes | `lector_recortes` | `vendor/lector/_uploads` y `_crops` |
+| JSON de ingeniería de cada lectura | `lector_specs` (033) | `vendor/lector/_specs` |
+| Oferta en PDF | `cotizador_ofertas` | — |
+| Documento de la calculadora | `cotizador_estado` | carpeta compartida de OneDrive |
+
+El disco sólo se usa de respaldo cuando la base no está: un plano que no entra
+en `rfq_planos` va a `planos/` (o al Blob), y una lectura que no se pudo llevar
+a Neon se queda en `vendor/lector/` hasta la retención de 7 días del lector.
+`PLANOS_COPIA_EXTERNA=true` vuelve a guardar siempre la copia fuera.
+
+Los **secretos** (`DATABASE_URL`, `JWT_SECRET`, claves de Anthropic y VAPID)
+NO van a Neon: la contraseña de la base no puede guardarse dentro de la base,
+y juntar llaves y datos en el mismo sitio hace que una sola fuga se lleve las
+dos cosas. Viven en las variables de entorno de Render y en el `.env` local.
+
+Lo que quedó en disco de antes se limpia a mano: sube los planos viejos con
+`python scripts/subir_planos.py --subir` y después borra la carpeta `planos/`, el
+contenido de `vendor/lector/_uploads`, `_crops` y `_specs`, y los `app.log*`.
 
 ---
 

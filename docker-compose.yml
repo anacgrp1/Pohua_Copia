@@ -1,9 +1,9 @@
 # Cotizador RFQ — entorno de desarrollo local.
 #
-# Antes este archivo sólo declaraba PostgREST, pero scripts/db_init.sh y el
-# Makefile hacían `docker compose exec -T db ...`. Como no existía ningún
-# servicio llamado `db`, `make db-up`, `make db-reset` y `make db-psql` fallaban
-# siempre. Aquí está el servicio que faltaba.
+# Sólo PostgreSQL, para probar el esquema y las migraciones antes de que lleguen
+# a Neon (make db-up / db-reset / db-psql / db-smoke). Hasta 2026-10 traía
+# también un PostgREST opcional que la aplicación nunca usó; se quitó junto con
+# el rol `web_anon` que creaba (ver sql/schema.sql).
 #
 # En producción no se usa nada de esto: la app se conecta a Neon vía psycopg2.
 
@@ -24,22 +24,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
-  # PostgREST es opcional: sólo para explorar la base desde el navegador.
-  # La aplicación NO lo usa. Arráncalo con:  docker compose --profile tools up -d
-  postgrest:
-    image: postgrest/postgrest
-    container_name: cotizador_postgrest
-    profiles: ["tools"]
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "3000:3000"
-    environment:
-      PGRST_DB_URI: postgres://${PG_USER:-postgres}:${PG_PASSWORD:-postgres}@db:5432/${PG_DATABASE:-cotizador}
-      PGRST_DB_SCHEMA: public
-      PGRST_DB_ANON_ROLE: web_anon
 
 volumes:
   pgdata:

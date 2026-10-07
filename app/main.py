@@ -56,7 +56,10 @@ def procesar_correo(correo):
     Punto de entrada para la lógica del cotizador.
     Aplica la bifurcación RFQ/trash (flujo_rfq).
     """
-    log.info("Correo NUEVO: %s | %s", correo["remitente"], correo["asunto"])
+    # Sin el asunto: suele llevar el número de parte y el nombre del cliente,
+    # y el registro se queda en texto plano en cada computadora. El asunto
+    # está en Neon (correos_procesados / rfqs) para quien lo necesite.
+    log.info("Correo NUEVO de %s.", correo["remitente"])
     clasificacion = flow.procesar(correo)
     return clasificacion
 

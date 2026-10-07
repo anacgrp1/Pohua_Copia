@@ -13,8 +13,6 @@ PG_USER="${PG_USER:-postgres}"
 PG_DATABASE="${PG_DATABASE:-cotizador}"
 
 echo ">> Levantando el contenedor de PostgreSQL..."
-# Sólo el servicio db: PostgREST está detrás del perfil "tools" y no hace falta
-# para trabajar (la aplicación se conecta por psycopg2, no por PostgREST).
 docker compose up -d db
 
 echo ">> Esperando a que PostgreSQL acepte conexiones..."

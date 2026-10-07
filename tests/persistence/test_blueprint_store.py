@@ -11,9 +11,11 @@ from app.persistence.blueprint_store import AlmacenPlanosError, guardar_planos
 
 
 def _adjuntos():
+    # El PNG va con tamaño de plano: una imagen diminuta ahora se toma por el
+    # logo de la firma (blueprint_store.es_plano) y no se guarda como plano.
     return [
         {"nombre": "plano-1.pdf", "contenido": b"%PDF-1.7 uno"},
-        {"nombre": "plano-2.png", "contenido": b"\x89PNG dos"},
+        {"nombre": "plano-2.png", "contenido": b"\x89PNG dos" + b"\x00" * 200_000},
     ]
 
 
@@ -95,6 +97,65 @@ class TestModoDesconocido(unittest.TestCase):
     def test_modo_invalido_lanza_error(self):
         with self.assertRaises(AlmacenPlanosError):
             guardar_planos("RFQ-1", _adjuntos(), modo="ftp")
+
+
+class TestPlanosSoloEnNeon(unittest.TestCase):
+    """Desde 2026-10 el plano vive en Neon; fuera sólo va lo que la base no tomó."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="planos_neon_")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _guardar(self, en_base, copia_externa=False, modo="outlook"):
+        from unittest import mock
+        with mock.patch("app.persistence.blueprint_store.guardar_en_base",
+                        return_value=en_base) as base, \
+             mock.patch("app.persistence.blueprint_store._copia_externa",
+                        return_value=copia_externa):
+            rutas = guardar_planos("INT-ABC", _adjuntos(), modo=modo, base_dir=self.tmp)
+        base.assert_called_once()
+        return rutas
+
+    def _en_disco(self):
+        return sorted(f for _, _, fs in os.walk(self.tmp) for f in fs)
+
+    def test_si_la_base_los_guarda_no_queda_nada_en_disco(self):
+        rutas = self._guardar(["plano-1.pdf", "plano-2.png"])
+        self.assertEqual(self._en_disco(), [])
+        self.assertEqual(rutas, ["neon:rfq_planos/INT-ABC/plano-1.pdf",
+                                 "neon:rfq_planos/INT-ABC/plano-2.png"])
+
+    def test_solo_lo_que_la_base_no_tomo_va_de_respaldo_al_disco(self):
+        rutas = self._guardar(["plano-1.pdf"])
+        self.assertEqual(self._en_disco(), ["plano-2.png"])
+        self.assertEqual(len(rutas), 2)
+
+    def test_sin_base_todo_va_de_respaldo(self):
+        self._guardar([])
+        self.assertEqual(self._en_disco(), ["plano-1.pdf", "plano-2.png"])
+
+    def test_copia_externa_vuelve_a_guardar_siempre_fuera(self):
+        self._guardar(["plano-1.pdf", "plano-2.png"], copia_externa=True)
+        self.assertEqual(self._en_disco(), ["plano-1.pdf", "plano-2.png"])
+
+    def test_en_modo_token_tampoco_sube_a_blob_si_la_base_los_tiene(self):
+        fake = FakeContenedorBlob()
+        from unittest import mock
+        with mock.patch("app.persistence.blueprint_store.guardar_en_base",
+                        return_value=["plano-1.pdf", "plano-2.png"]), \
+             mock.patch("app.persistence.blueprint_store._copia_externa",
+                        return_value=False):
+            guardar_planos("INT-ABC", _adjuntos(), modo="token", cliente_blob=fake)
+        self.assertEqual(fake.subidas, [])
+
+    def test_el_modo_invalido_se_rechaza_antes_de_tocar_la_base(self):
+        from unittest import mock
+        with mock.patch("app.persistence.blueprint_store.guardar_en_base") as base:
+            with self.assertRaises(AlmacenPlanosError):
+                guardar_planos("RFQ-1", _adjuntos(), modo="ftp")
+        base.assert_not_called()
 
 
 if __name__ == "__main__":

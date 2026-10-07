@@ -171,21 +171,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS udx_contacto_correo ON cliente_contacto_correo
 CREATE INDEX IF NOT EXISTS idx_contacto_correo_dir ON cliente_contacto_correos (lower(correo));
 
 -- -----------------------------------------------------------------------------
--- Configuración para PostgREST
+-- Sin PostgREST
 -- -----------------------------------------------------------------------------
-
--- Crear rol anónimo para PostgREST (si no existe, se hace un bloque anónimo para evitar error)
-DO $$
-BEGIN
-  CREATE ROLE web_anon NOLOGIN;
-EXCEPTION WHEN DUPLICATE_OBJECT THEN
-  RAISE NOTICE 'Role web_anon already exists';
-END
-$$;
-
--- Dar permisos de uso del esquema público
-GRANT USAGE ON SCHEMA public TO web_anon;
-
--- Dar permisos para leer y escribir en todas las tablas y secuencias
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO web_anon;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO web_anon;
+-- Hasta 2026-10 aquí se creaba el rol `web_anon` con SELECT, INSERT, UPDATE y
+-- DELETE sobre TODAS las tablas, para un PostgREST de desarrollo que la
+-- aplicación nunca usó. Como este archivo también se aplica en Neon (workflow
+-- update-neon.yml y la API al arrancar), en producción acabó con acceso a 48
+-- tablas, `usuarios` incluida. Se quitó PostgREST del proyecto; no vuelvas a
+-- crear roles ni a dar permisos desde aquí.

@@ -2,7 +2,7 @@
 Control de duplicados: conteo rápido en PostgreSQL usando el
 message-id del correo entrante ANTES de evaluar el contenido.
 
-Conexión directa vía psycopg2 — no depende de PostgREST en producción.
+Conexión directa vía psycopg2.
 """
 import logging
 from contextlib import contextmanager

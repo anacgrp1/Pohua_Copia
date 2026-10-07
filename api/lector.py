@@ -32,9 +32,12 @@ el núcleo, que es otro repositorio:
 from __future__ import annotations
 
 import importlib.util
+import json
 import logging
 import os
+import re
 import sys
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Tuple
 
@@ -226,6 +229,10 @@ class _InyectarParserURL:
 
         # Los recortes del plano, a prueba de despliegues (ver _recorte).
         cuerpo, captura = _recorte(environ, captura, cuerpo)
+        # El JSON de ingeniería, igual (ver _spec).
+        cuerpo, captura = _spec(environ, captura, cuerpo)
+        # Y la lectura entera, a Neon y fuera del disco (ver _tras_lectura).
+        _tras_lectura(environ, captura, cuerpo)
 
         tipo = ""
         for nombre, valor in captura["cabeceras"]:
@@ -281,7 +288,9 @@ def _recorte(environ, captura, cuerpo):
         _guardar_recorte_en_segundo_plano(cid, cuerpo)
         return cuerpo, captura
 
-    if estado.startswith("404"):
+    # 500 también: si el fichero se borra justo entre que el lector mira que
+    # existe y lo abre (lo acaba de llevar a Neon _tras_lectura), falla así.
+    if estado.startswith("404") or estado.startswith("500"):
         png = _leer_recorte(cid)
         if png:
             log.info("Recorte %s recuperado de la base (el disco ya no lo tenía).", cid)
@@ -331,6 +340,204 @@ def _leer_recorte(cid: str):
         return bytes(fila[0]) if fila else None
     except Exception as error:
         log.debug("No se pudo leer el recorte %s: %s", cid, error)
+        return None
+
+
+# --------------------------------------------------------------------------- #
+# La lectura entera, a Neon
+# --------------------------------------------------------------------------- #
+#
+# El lector escribe en disco, por cada plano que lee, el fichero subido
+# (`_uploads`), un PNG por página y por cota (`_crops`) y el JSON de ingeniería
+# (`_specs`). Son dibujos y datos de clientes de ISC: en la planta se quedaban
+# en esa computadora, y en Render en un disco que se vacía en cada despliegue.
+#
+# Nada más contestar `/api/parse`, Pohua se lleva lo que la calculadora va a
+# volver a pedir —los PNG y el spec— a Neon (`lector_recortes`, `lector_specs`)
+# y borra los tres del disco. Si la base no está, no se borra nada: el lector
+# sigue como siempre y su propia retención limpia a los 7 días.
+#
+# Va en un hilo: la calculadora no espera por esto. Mientras el hilo trabaja,
+# el disco sigue sirviendo; cuando termina, sirve la base (_recorte, _spec).
+
+# Un recorte o una página entera. Las páginas a 200 ppp rondan 1-3 MB.
+MAX_BYTES_LECTURA = 8 * 1024 * 1024
+
+_JOB_VALIDO = re.compile(r"^[0-9A-Za-z_-]{4,64}$")
+_FICHERO_VALIDO = re.compile(r"^[0-9A-Za-z][0-9A-Za-z._-]{0,127}$")
+
+
+def _carpetas_lector() -> Optional[dict]:
+    """Las carpetas de trabajo del lector cargado, o None si no está."""
+    modulo = sys.modules.get("isc_lector_app")
+    if modulo is None:
+        return None
+    carpetas = {}
+    for clave in ("CROPS", "UPLOADS", "SPECS"):
+        valor = getattr(modulo, clave, None)
+        if not valor:
+            return None
+        carpetas[clave] = Path(valor)
+    return carpetas
+
+
+def _nombre_de_url(url: Any) -> Optional[str]:
+    if not isinstance(url, str) or "/api/crop/" not in url:
+        return None
+    nombre = url.rsplit("/", 1)[-1].split("?", 1)[0]
+    return nombre if _FICHERO_VALIDO.match(nombre) and ".." not in nombre else None
+
+
+def recortes_de(datos: dict) -> list:
+    """Los PNG que la respuesta de `/api/parse` le dice a la calculadora que pida."""
+    urls = [datos.get("page")] + list(datos.get("pages") or [])
+    for columna in ("fields", "feasibility"):
+        for item in datos.get(columna) or []:
+            if isinstance(item, dict):
+                urls.append(item.get("crop"))
+    vistos: list = []
+    for url in urls:
+        nombre = _nombre_de_url(url)
+        if nombre and nombre not in vistos:
+            vistos.append(nombre)
+    return vistos
+
+
+def _tras_lectura(environ, captura, cuerpo) -> None:
+    ruta = environ.get("PATH_INFO", "") or ""
+    if (environ.get("REQUEST_METHOD") or "").upper() != "POST" or not ruta.endswith("/api/parse"):
+        return
+    if not str(captura.get("estado", "")).startswith("200"):
+        return
+    try:
+        datos = json.loads(cuerpo or b"{}")
+    except ValueError:
+        return
+    if not isinstance(datos, dict) or not datos.get("ok"):
+        return
+    job = datos.get("job")
+    if not isinstance(job, str) or not _JOB_VALIDO.match(job):
+        return
+    hilo = threading.Thread(target=llevar_lectura_a_neon,
+                            args=(job, datos.get("spec"), recortes_de(datos)),
+                            name="lectura-a-neon", daemon=True)
+    hilo.start()
+
+
+def llevar_lectura_a_neon(job: str, spec: Any, recortes: list,
+                          carpetas: Optional[dict] = None) -> dict:
+    """Guarda en Neon los PNG y el spec de una lectura y borra del disco lo suyo.
+
+    Nunca lanza. Devuelve un resumen (lo usan las pruebas y el registro).
+    """
+    resumen = {"recortes": 0, "spec": False, "borrados": 0, "error": None}
+    carpetas = carpetas or _carpetas_lector()
+    if carpetas is None or not _JOB_VALIDO.match(job or ""):
+        resumen["error"] = "sin lector"
+        return resumen
+
+    guardados: list = []
+    try:
+        import psycopg2
+
+        import app.persistence.duplicates as duplicates
+        with duplicates.conexion_bd() as conn:
+            with conn.cursor() as cur:
+                for nombre in recortes:
+                    ruta = carpetas["CROPS"] / nombre
+                    if not ruta.is_file():
+                        continue
+                    png = ruta.read_bytes()
+                    if not png or len(png) > MAX_BYTES_LECTURA:
+                        continue
+                    cur.execute(
+                        """
+                        INSERT INTO lector_recortes (cid, png, bytes)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (cid) DO UPDATE SET ultimo_uso = now();
+                        """,
+                        (nombre, psycopg2.Binary(png), len(png)))
+                    guardados.append(ruta)
+                resumen["recortes"] = len(guardados)
+
+                ruta_spec = carpetas["SPECS"] / (job + ".json")
+                if spec is None and ruta_spec.is_file():
+                    spec = json.loads(ruta_spec.read_text(encoding="utf-8"))
+                if spec is not None:
+                    cur.execute(
+                        """
+                        INSERT INTO lector_specs (job, spec) VALUES (%s, %s)
+                        ON CONFLICT (job) DO UPDATE SET spec = EXCLUDED.spec,
+                                                        ultimo_uso = now();
+                        """,
+                        (job, json.dumps(spec, ensure_ascii=False)))
+                    resumen["spec"] = True
+    except Exception as error:
+        # Sin base no se borra NADA: lo que no está en Neon sigue en disco.
+        resumen["error"] = str(error)
+        log.info("La lectura %s se queda en disco (no se pudo llevar a Neon: %s).",
+                 job, error)
+        return resumen
+
+    # La conexión va en autocommit: lo de arriba ya está en la base.
+    borrar = list(guardados)
+    if resumen["spec"]:
+        borrar.append(carpetas["SPECS"] / (job + ".json"))
+    # El plano subido sólo servía para leerlo: ya está leído.
+    if carpetas["UPLOADS"].is_dir():
+        borrar.extend(p for p in carpetas["UPLOADS"].glob(job + ".*") if p.is_file())
+    for ruta in borrar:
+        try:
+            ruta.unlink()
+            resumen["borrados"] += 1
+        except FileNotFoundError:
+            pass
+        except OSError as error:        # en Windows, un fichero abierto
+            log.debug("No se pudo borrar %s: %s", ruta, error)
+    log.info("Lectura %s llevada a Neon: %d imagen(es)%s; %d fichero(s) fuera del disco.",
+             job, resumen["recortes"], " y su spec" if resumen["spec"] else "",
+             resumen["borrados"])
+    return resumen
+
+
+def _spec(environ, captura, cuerpo):
+    """Sirve el JSON de ingeniería desde Neon cuando el disco ya no lo tiene."""
+    ruta = environ.get("PATH_INFO", "") or ""
+    if "/api/spec/" not in ruta:
+        return cuerpo, captura
+    job = ruta.rsplit("/", 1)[-1].strip()
+    if not _JOB_VALIDO.match(job):
+        return cuerpo, captura
+    estado = str(captura.get("estado", ""))
+    if not (estado.startswith("404") or estado.startswith("500")):
+        return cuerpo, captura
+    spec = _leer_spec(job)
+    if spec is None:
+        return cuerpo, captura
+    return json.dumps(spec, ensure_ascii=False, indent=2).encode("utf-8"), {
+        "estado": "200 OK",
+        "cabeceras": [("Content-Type", "application/json"),
+                      ("Cache-Control", "private, max-age=600")],
+        "exc_info": None,
+    }
+
+
+def _leer_spec(job: str):
+    try:
+        import app.persistence.duplicates as duplicates
+        with duplicates.conexion_bd() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT spec FROM lector_specs WHERE job = %s;", (job,))
+                fila = cur.fetchone()
+                if fila:
+                    cur.execute("UPDATE lector_specs SET ultimo_uso = now() "
+                                "WHERE job = %s;", (job,))
+        if not fila:
+            return None
+        valor = fila[0]
+        return json.loads(valor) if isinstance(valor, str) else valor
+    except Exception as error:
+        log.debug("No se pudo leer el spec %s: %s", job, error)
         return None
 
 

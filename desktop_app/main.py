@@ -1062,7 +1062,11 @@ class Ventana(QMainWindow):
         except Exception as error:
             self.escribir("error", f"No se pudo revisar el esquema: {error}")
 
-        self.escribir("info", "Comprobando la configuración…")
+        # La configuración, en silencio: aquí sólo sale lo que impide leer
+        # (un paquete o una variable que falta). Los avisos —horario, envío
+        # automático, aviso de privacidad, permiso de Outlook— se quitaron del
+        # arranque en 2026-10: no piden nada a quien abre el lector y tapaban
+        # lo importante. Siguen en Pohua → Perfil → Sistema.
         try:
             import app.core.preflight as preflight
             informe = preflight.revisar(con_buzon=False, desde_escritorio=True)
@@ -1075,49 +1079,10 @@ class Ventana(QMainWindow):
                 self.escribir("error", f"Falta: {punto['titulo']}")
                 if punto["detalle"]:
                     self.escribir("info", f"   {punto['detalle']}")
-            elif punto["estado"] == "ojo":
-                self.escribir("aviso", punto["titulo"])
-                if punto["detalle"]:
-                    self.escribir("info", f"   {punto['detalle']}")
 
-        self._comprobar_confianza_de_outlook()
-
-        if informe["listo"]:
-            self.escribir("ok", "Todo en su sitio. Puedes iniciar el lector.")
-        else:
+        if not informe["listo"]:
             self.escribir("aviso", f"Faltan {informe['bloqueantes']} cosa(s); "
                                    "el lector puede arrancar igual, pero fallará ahí.")
-
-    def _comprobar_confianza_de_outlook(self):
-        """Una vez, al abrir: ¿Outlook va a pedir permiso para cada correo?
-
-        Si no confía en los programas que lo automatizan, saca «A program is
-        trying to send an email message on your behalf» en CADA envío, y esa
-        ventana no tiene «permitir durante un rato». Se dice aquí, con lo que
-        hay que hacer, en lugar de que se descubra a base de ventanas.
-        """
-        modo = str(ajuste("MAIL_MODE", "")).lower()
-        if modo != "outlook":
-            return
-        from app.email.outlook_provider import outlook_confia
-        confia = outlook_confia()
-        if confia is None:
-            return
-        if confia:
-            self.escribir("ok", "Outlook confía en Pohua: los correos salen sin "
-                                "preguntar.")
-            return
-        self.escribir("aviso", "Outlook va a pedir permiso para CADA correo que "
-                               "mande Pohua (el cuadro «A program is trying to "
-                               "send an email…»).")
-        self.escribir("info", "   Se quita en Outlook: Archivo → Opciones → Centro "
-                              "de confianza → Configuración → Acceso mediante "
-                              "programación. «Estado del antivirus» tiene que "
-                              "decir Válido; si no, hay que activar o actualizar "
-                              "el antivirus (o que TI lo configure).")
-        self.escribir("info", "   Mientras tanto: si pulsas «Deny», Pohua deja de "
-                              "preguntar 15 min y las ofertas esperan en la "
-                              "bandeja de salida.")
 
     # ----------------------------------------------------------- arrancar
 

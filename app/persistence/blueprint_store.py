@@ -2,11 +2,16 @@
 
 Propósito
 ---------
-Guarda los planos (adjuntos del RFQ) en el almacenamiento físico según el
-modo del sistema:
+Guarda los planos (adjuntos del RFQ) en **Neon** (tabla ``rfq_planos``). Son
+dibujos de clientes de ISC: desde 2026-10 no se dejan copias en el disco de
+quien leyó el correo ni en Blob. Fuera de la base sólo va lo que la base no
+pudo guardar (sin conexión, o un fichero de más de 8 MB), según el modo:
 
 * ``<Local>`` → **disco local**.
 * ``<Token>`` → **Azure Blob Storage**.
+
+``PLANOS_COPIA_EXTERNA=true`` vuelve al comportamiento anterior: copia fuera
+siempre, además de la base.
 
 Sólo debe llamarse cuando la validación fue correcta (criterio OK): los
 planos se persisten únicamente si el RFQ es válido.
@@ -137,24 +142,45 @@ def guardar_planos(
         log.info("RFQ %s sin planos que persistir.", rfq_id)
         return []
 
-    # Además del disco, a la base. El disco es de quien leyó el correo: si lo
-    # leyó el lector de escritorio, el plano se queda en ESA computadora y la
-    # web no lo tiene; si lo leyó el servidor, se borra en el siguiente
-    # despliegue. En la base lo ve todo el mundo y dura lo que dure el RFQ,
-    # que es lo que hace falta para abrir la cotización con el dibujo puesto.
-    #
-    # Va aparte y no puede tumbar el guardado de siempre: si la base no está,
-    # el plano sigue yendo a disco como hasta ahora.
-    guardar_en_base(rfq_id, adjuntos)
-
     modo = (modo or _modo_por_defecto()).lower()
+    if modo not in _MODOS_LOCAL and modo not in _MODOS_TOKEN:
+        raise AlmacenPlanosError(f"Modo de almacenamiento desconocido: {modo!r}")
+
+    # La base es EL sitio del plano: la ven el lector de escritorio y el
+    # servidor, y dura lo que dure el RFQ. El disco era de quien leyó el
+    # correo —en la planta, una carpeta con dibujos de clientes en una PC; en
+    # Render, un disco que se borra en cada despliegue— y ya no se usa salvo
+    # de respaldo: lo que la base no pudo guardar no se pierde, va fuera.
+    en_base = guardar_en_base(rfq_id, adjuntos, devolver_nombres=True)
+    ubicaciones = [f"neon:rfq_planos/{_slug(rfq_id)}/{n}" for n in en_base
+                   if isinstance(n, str)]
+
+    if _copia_externa():
+        fuera = list(adjuntos)
+    else:
+        fuera = [a for a in adjuntos
+                 if os.path.basename(a.get("nombre") or "adjunto") not in en_base]
+        if fuera:
+            log.warning("RFQ %s: %d plano(s) no entraron en la base; quedan de "
+                        "respaldo fuera de ella (modo %s).", rfq_id, len(fuera), modo)
+    if not fuera:
+        return ubicaciones
 
     if modo in _MODOS_LOCAL:
-        return _guardar_en_disco(rfq_id, adjuntos, base_dir)
-    if modo in _MODOS_TOKEN:
-        return _guardar_en_blob(rfq_id, adjuntos, cliente_blob)
+        return ubicaciones + _guardar_en_disco(rfq_id, fuera, base_dir)
+    return ubicaciones + _guardar_en_blob(rfq_id, fuera, cliente_blob)
 
-    raise AlmacenPlanosError(f"Modo de almacenamiento desconocido: {modo!r}")
+
+def _copia_externa() -> bool:
+    """``PLANOS_COPIA_EXTERNA``: copia en disco/Blob además de la base."""
+    try:
+        import app.core.config as config
+        valor = getattr(config.settings, "PLANOS_COPIA_EXTERNA", False)
+    except Exception:
+        return False
+    if isinstance(valor, str):
+        return valor.strip().lower() in ("1", "true", "si", "sí", "yes", "on")
+    return bool(valor)
 
 
 # --------------------------------------------------------------------------- #
@@ -170,9 +196,14 @@ _TIPOS = {".pdf": "application/pdf", ".png": "image/png",
           ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
 
 
-def guardar_en_base(rfq_id: str, adjuntos: list) -> int:
-    """Guarda (o sustituye) los planos de este RFQ en la base. Nunca lanza."""
+def guardar_en_base(rfq_id: str, adjuntos: list, devolver_nombres: bool = False):
+    """Guarda (o sustituye) los planos de este RFQ en la base. Nunca lanza.
+
+    Devuelve cuántos se guardaron, o con ``devolver_nombres`` la lista de
+    nombres que SÍ quedaron en la base (lo que falte va de respaldo fuera).
+    """
     guardados = 0
+    nombres: list = []
     try:
         import app.persistence.duplicates as duplicates
         with duplicates.conexion_bd() as conexion:
@@ -199,13 +230,16 @@ def guardar_en_base(rfq_id: str, adjuntos: list) -> int:
                         (rfq_id, nombre, _TIPOS.get(ext, "application/octet-stream"),
                          len(contenido), memoryview(contenido)),
                     )
+                    nombres.append(nombre)
                     guardados += 1
         if guardados:
             log.info("RFQ %s: %d plano(s) guardado(s) en la base.", rfq_id, guardados)
     except Exception as error:
         log.warning("RFQ %s: no se pudieron guardar los planos en la base: %s",
                     rfq_id, error)
-    return guardados
+        # La conexión va en autocommit: los que entraron antes del fallo sí
+        # quedaron, y sólo el resto irá de respaldo fuera de la base.
+    return nombres if devolver_nombres else guardados
 
 
 def listar_de_base(rfq_id: str) -> list:

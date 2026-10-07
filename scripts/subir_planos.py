@@ -19,6 +19,7 @@ Se puede repetir: un plano que ya está se sustituye, no se duplica.
 from __future__ import annotations
 
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -30,6 +31,11 @@ os.chdir(RAIZ)          # el .env vive aquí, se lance desde donde se lance
 # Lo que el lector de planos sabe abrir. Lo demás (un .xlsx con la orden, la
 # firma del comprador) no es un plano y no hay por qué moverlo.
 _EXTENSIONES = {".pdf", ".png", ".jpg", ".jpeg"}
+
+# Sólo carpetas de RFQ de verdad. Las pruebas dejaban en `planos/` cosas como
+# «RFQ-1» (un «plano.pdf» de 9 bytes); subirlas metía en Neon planos de un RFQ
+# que no existe (2026-10).
+_RFQ_REAL = re.compile(r"^INT-[0-9A-F]{8}$")
 
 
 def _opcion(argumentos, nombre, por_defecto=None):
@@ -53,7 +59,12 @@ def main() -> int:
         print(f"No hay carpeta de planos en {base.resolve()}.")
         return 0
 
-    carpetas = sorted(c for c in base.iterdir() if c.is_dir())
+    todas = sorted(c for c in base.iterdir() if c.is_dir())
+    carpetas = [c for c in todas if _RFQ_REAL.match(c.name)]
+    ignoradas = [c.name for c in todas if c not in carpetas]
+    if ignoradas:
+        print(f"Se ignoran {len(ignoradas)} carpeta(s) que no son de un RFQ real: "
+              f"{', '.join(ignoradas)}")
     if uno:
         carpetas = [c for c in carpetas if c.name == almacen._slug(uno)]
         if not carpetas:
@@ -91,8 +102,9 @@ def main() -> int:
               f"con --subir se hace de verdad.")
     else:
         print(f"\nHecho: {total_subidos} de {total_ficheros} plano(s) en la base.")
-        print("Los que no subieron pesan más de 8 MB o la base no respondió; "
-              "mira el registro.")
+        if total_subidos < total_ficheros:
+            print("Los que no subieron pesan más de 8 MB o la base no respondió; "
+                  "mira el registro.")
     return 0
 
 

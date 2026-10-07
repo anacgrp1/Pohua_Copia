@@ -1,6 +1,7 @@
 import functools
 import imaplib
 import logging
+import re
 import smtplib
 import socket
 from logging.handlers import RotatingFileHandler
@@ -22,6 +23,9 @@ def configure_logging(log_file_name: str = "app.log", app_env: str | None = None
             app_env = settings.APP_ENV
         except Exception:
             app_env = "dev"
+
+    # Los correos de clientes no se quedan en el registro (ver tachar_correos).
+    _instalar_tachado()
 
     # Crear formateador de logs
     log_format = "%(asctime)s [%(levelname)s] [%(name)s] [%(filename)s:%(lineno)d]: %(message)s"
@@ -60,6 +64,46 @@ def configure_logging(log_file_name: str = "app.log", app_env: str | None = None
         logging.getLogger("LoggerControl").error(
             f"No se pudo crear el archivo de logs '{log_file_name}': {e}"
         )
+
+
+# --- Correos tachados en el registro ---
+#
+# El registro (app.log en cada computadora, la consola de Render, el Monitor)
+# se guarda en texto plano y no se borra con el RFQ. Hasta 2026-10 llevaba la
+# dirección completa de cada comprador. Los datos del cliente viven en Neon;
+# en el registro basta con saber de qué dominio era: «r***@neogen.com».
+#
+# Se hace al CREAR cada línea (setLogRecordFactory) y no con un filtro, porque
+# un filtro de logger no se aplica a lo que llega propagado de los demás y
+# cada punto de entrada añade sus propios manejadores.
+
+_CORREO = re.compile(r"(?<![\w.%+-])([A-Za-z0-9])[A-Za-z0-9._%+-]*@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,})")
+
+
+def tachar_correos(texto: str) -> str:
+    """``roberto.perez@neogen.com`` -> ``r***@neogen.com``."""
+    return _CORREO.sub(lambda m: f"{m.group(1)}***@{m.group(2)}", texto)
+
+
+def _instalar_tachado() -> None:
+    fabrica = logging.getLogRecordFactory()
+    if getattr(fabrica, "_tacha_correos", False):
+        return
+
+    def _fabrica(*args, **kwargs):
+        registro = fabrica(*args, **kwargs)
+        try:
+            mensaje = registro.getMessage()
+        except Exception:
+            return registro          # un mensaje mal formado lo cuenta logging
+        limpio = tachar_correos(mensaje)
+        if limpio != mensaje:
+            registro.msg = limpio
+            registro.args = ()
+        return registro
+
+    _fabrica._tacha_correos = True  # type: ignore[attr-defined]
+    logging.setLogRecordFactory(_fabrica)
 
 
 # NOTA: este módulo ya NO configura el logging al importarse.

@@ -66,7 +66,6 @@ class Settings:
     PG_DATABASE: str = "cotizador"
     PG_USER: str = "postgres"
     PG_PASSWORD: str = ""
-    POSTGREST_URL: str = "http://localhost:3000"  # Solo para dev local con Docker
 
     # --- Lectura del buzón ---
     # Dentro del horario de atención el buzón se lee de forma continua: un
@@ -170,6 +169,10 @@ class Settings:
     # --- Almacenamiento de planos (COT-56) ---
     # <Local>: carpeta en disco. <Token>: contenedor de Azure Blob Storage.
     PLANOS_DIR: str = "planos"
+    # Los planos viven en Neon (tabla rfq_planos). El disco o el Blob sólo se
+    # usan de respaldo para lo que no se pudo guardar en la base. Con esto en
+    # true se vuelve a guardar SIEMPRE una copia fuera (como antes de 2026-10).
+    PLANOS_COPIA_EXTERNA: bool = False
     BLOB_CONNECTION_STRING: str = ""
     BLOB_CONTAINER: str = "planos"
 
